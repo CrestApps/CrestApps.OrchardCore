@@ -1,8 +1,13 @@
 @using CrestApps.OrchardCore.AI.Mcp.Core
+@using CrestApps.OrchardCore.AI.Mcp.Core.Models
 @using CrestApps.OrchardCore.AI.Mcp.ViewModels
 @using OrchardCore
 
 @model SseConnectionFieldsViewModel
+
+@{
+    var securedPlaceholder = T["Securely stored — leave blank to keep, or enter new value"];
+}
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="Endpoint" class="@Orchard.GetLabelClasses()">@T["Endpoint"]</label>
@@ -14,16 +19,232 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="AdditionalHeaders" class="@Orchard.GetLabelClasses()">@T["Additional headers"]</label>
+    <label asp-for="AuthenticationType" class="@Orchard.GetLabelClasses()">@T["Authentication"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <div class="form-control">
-            <div id="@Html.IdFor(x => x.AdditionalHeaders)_editor" asp-for="Filters" style="min-height: 180px;" dir="@Orchard.CultureDir()" data-schema="@Model.Schema"></div>
-        </div>
-        <textarea asp-for="AdditionalHeaders" hidden></textarea>
-        <span class="hint">@T["Additional HTTP header to pass to the server."]</span>
-        <span asp-validation-for="AdditionalHeaders" class="text-danger"></span>
+        <select asp-for="AuthenticationType" class="form-select">
+            <option value="@McpClientAuthenticationType.Anonymous">@T["Anonymous (No Authentication)"]</option>
+            <option value="@McpClientAuthenticationType.ApiKey">@T["API Key"]</option>
+            <option value="@McpClientAuthenticationType.Basic">@T["Basic Authentication"]</option>
+            <option value="@McpClientAuthenticationType.OAuth2ClientCredentials">@T["OAuth 2.0 Client Credentials"]</option>
+            <option value="@McpClientAuthenticationType.OAuth2PrivateKeyJwt">@T["OAuth 2.0 + Private Key JWT"]</option>
+            <option value="@McpClientAuthenticationType.OAuth2Mtls">@T["OAuth 2.0 + Mutual TLS (mTLS)"]</option>
+            <option value="@McpClientAuthenticationType.CustomHeaders">@T["Custom Headers (Advanced)"]</option>
+        </select>
+        <span class="hint">@T["Select the authentication method to use when connecting to the MCP server."]</span>
     </div>
 </div>
+
+@* API Key Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.ApiKey">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ApiKeyHeaderName" class="@Orchard.GetLabelClasses()">@T["Header Name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="ApiKeyHeaderName" class="form-control" placeholder="Authorization" />
+            <span class="hint">@T["The HTTP header name. Defaults to 'Authorization' if left empty."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ApiKeyPrefix" class="@Orchard.GetLabelClasses()">@T["Key Prefix"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="ApiKeyPrefix" class="form-control" placeholder="Bearer" />
+            <span class="hint">@T["Optional prefix prepended to the key (e.g., 'Bearer', 'ApiKey')."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API Key"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="password" asp-for="ApiKey" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey? securedPlaceholder : string.Empty)" />
+            <span asp-validation-for="ApiKey" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+@* Basic Authentication Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.Basic">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="BasicUsername" class="@Orchard.GetLabelClasses()">@T["Username"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="BasicUsername" class="form-control" autocomplete="off" />
+            <span asp-validation-for="BasicUsername" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="BasicPassword" class="@Orchard.GetLabelClasses()">@T["Password"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="password" asp-for="BasicPassword" class="form-control" autocomplete="off" placeholder="@(Model.HasBasicPassword? securedPlaceholder : string.Empty)" />
+            <span asp-validation-for="BasicPassword" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+@* OAuth 2.0 Client Credentials Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2ClientCredentials">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2TokenEndpoint" class="@Orchard.GetLabelClasses()">@T["Token Endpoint"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
+            <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
+            <span class="hint">@T["The OAuth 2.0 token endpoint URL."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientId" class="@Orchard.GetLabelClasses()">@T["Client ID"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
+            <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientSecret" class="@Orchard.GetLabelClasses()">@T["Client Secret"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="password" asp-for="OAuth2ClientSecret" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientSecret? securedPlaceholder : string.Empty)" />
+            <span asp-validation-for="OAuth2ClientSecret" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2Scopes" class="@Orchard.GetLabelClasses()">@T["Scopes"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2Scopes" class="form-control" placeholder="api read write" />
+            <span class="hint">@T["Optional space-separated list of scopes to request."]</span>
+        </div>
+    </div>
+</div>
+
+@* OAuth 2.0 Private Key JWT Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2PrivateKeyJwt">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2TokenEndpoint" class="@Orchard.GetLabelClasses()">@T["Token Endpoint"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
+            <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
+            <span class="hint">@T["The OAuth 2.0 token endpoint URL."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientId" class="@Orchard.GetLabelClasses()">@T["Client ID"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
+            <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2PrivateKey" class="@Orchard.GetLabelClasses()">@T["Private Key (PEM)"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <textarea asp-for="OAuth2PrivateKey" class="form-control" rows="4" autocomplete="off" placeholder="@(Model.HasOAuth2PrivateKey? securedPlaceholder : T["-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"])"></textarea>
+            <span asp-validation-for="OAuth2PrivateKey" class="text-danger"></span>
+            <span class="hint">@T["The PEM-encoded RSA or EC private key used to sign the JWT client assertion."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2KeyId" class="@Orchard.GetLabelClasses()">@T["Key ID (kid)"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2KeyId" class="form-control" />
+            <span class="hint">@T["Optional key identifier included in the JWT header. Required by some identity providers."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2Scopes" class="@Orchard.GetLabelClasses()">@T["Scopes"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2Scopes" class="form-control" placeholder="api read write" />
+            <span class="hint">@T["Optional space-separated list of scopes to request."]</span>
+        </div>
+    </div>
+</div>
+
+@* OAuth 2.0 Mutual TLS (mTLS) Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.OAuth2Mtls">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2TokenEndpoint" class="@Orchard.GetLabelClasses()">@T["Token Endpoint"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="url" asp-for="OAuth2TokenEndpoint" class="form-control" placeholder="https://auth.example.com/oauth2/token" />
+            <span asp-validation-for="OAuth2TokenEndpoint" class="text-danger"></span>
+            <span class="hint">@T["The OAuth 2.0 token endpoint URL."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientId" class="@Orchard.GetLabelClasses()">@T["Client ID"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2ClientId" class="form-control" autocomplete="off" />
+            <span asp-validation-for="OAuth2ClientId" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientCertificate" class="@Orchard.GetLabelClasses()">@T["Client Certificate (Base64 PFX)"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <textarea asp-for="OAuth2ClientCertificate" class="form-control" rows="4" autocomplete="off" placeholder="@(Model.HasOAuth2ClientCertificate? securedPlaceholder : string.Empty)"></textarea>
+            <span asp-validation-for="OAuth2ClientCertificate" class="text-danger"></span>
+            <span class="hint">@T["The Base64-encoded PFX/PKCS#12 client certificate."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2ClientCertificatePassword" class="@Orchard.GetLabelClasses()">@T["Certificate Password"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="password" asp-for="OAuth2ClientCertificatePassword" class="form-control" autocomplete="off" placeholder="@(Model.HasOAuth2ClientCertificatePassword? securedPlaceholder : string.Empty)" />
+            <span asp-validation-for="OAuth2ClientCertificatePassword" class="text-danger"></span>
+            <span class="hint">@T["Optional password for the PFX certificate file."]</span>
+        </div>
+    </div>
+
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="OAuth2Scopes" class="@Orchard.GetLabelClasses()">@T["Scopes"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <input type="text" asp-for="OAuth2Scopes" class="form-control" placeholder="api read write" />
+            <span class="hint">@T["Optional space-separated list of scopes to request."]</span>
+        </div>
+    </div>
+</div>
+
+@* Custom Headers Fields *@
+<div class="d-none authentication-type-dependent authentication-type-dependent-@McpClientAuthenticationType.CustomHeaders">
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="AdditionalHeaders" class="@Orchard.GetLabelClasses()">@T["Additional headers"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <div class="form-control">
+                <div id="@Html.IdFor(x => x.AdditionalHeaders)_editor" style="min-height: 180px;" dir="@Orchard.CultureDir()" data-schema="@Model.Schema"></div>
+            </div>
+            <textarea asp-for="AdditionalHeaders" hidden></textarea>
+            <span asp-validation-for="AdditionalHeaders" class="text-danger"></span>
+            <span class="hint">@T["Additional HTTP headers as a JSON object (e.g., {0}).", """{"Authorization": "Bearer token"}"""]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var authSelect = document.getElementById('@Html.IdFor(x => x.AuthenticationType)');
+
+        if (!authSelect) {
+            return;
+        }
+
+        function toggleSections() {
+            var allSections = document.querySelectorAll('.authentication-type-dependent');
+            for (var i = 0; i < allSections.length; i++) {
+                allSections[i].classList.add('d-none');
+
+                if (allSections[i].classList.contains('authentication-type-dependent-' + authSelect.value)) {
+                    allSections[i].classList.remove('d-none');
+                }
+            }
+        }
+
+        authSelect.addEventListener('change', toggleSections);
+        toggleSections();
+    });
+</script>
 
 <script at="Foot" asp-name="monaco"></script>
 <script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
@@ -47,9 +268,9 @@
             setTheme();
 
             var modelUri = monaco.Uri.parse("x://crestapps.orchardcore.ai.mcp.additionalheaders.json");
-            var editor = document.getElementById('@Html.IdFor(x => x.AdditionalHeaders)_editor');
+            var editorContainer = document.getElementById('@Html.IdFor(x => x.AdditionalHeaders)_editor');
             var textArea = document.getElementById('@Html.IdFor(x => x.AdditionalHeaders)');
-            var schema = JSON.parse(editor.dataset.schema)
+            var schema = JSON.parse(editorContainer.dataset.schema)
             var model = monaco.editor.createModel(textArea.value, "json", modelUri);
 
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -61,9 +282,13 @@
                 }]
             });
 
-            var editor = monaco.editor.create(editor, {
+            var editor = monaco.editor.create(editorContainer, {
                 model: model
             });
+
+            new ResizeObserver(function () {
+                editor.layout();
+            }).observe(editorContainer);
 
             window.addEventListener("submit", function () {
                 textArea.value = editor.getValue();

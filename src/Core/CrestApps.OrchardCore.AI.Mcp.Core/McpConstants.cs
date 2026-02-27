@@ -2,6 +2,8 @@ namespace CrestApps.OrchardCore.AI.Mcp.Core;
 
 public static class McpConstants
 {
+    public const string DataProtectionPurpose = "McpClientConnection";
+
     public static class Feature
     {
         public const string Area = "CrestApps.OrchardCore.AI.Mcp";

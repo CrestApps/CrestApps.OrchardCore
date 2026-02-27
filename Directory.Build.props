@@ -24,6 +24,7 @@
     <Authors>Mike Alhayek</Authors>
     <Company>CrestApps</Company>
     <PackageIcon>CrestAppsLogo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <IsPackable>true</IsPackable>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/CrestApps/CrestApps.OrchardCore</RepositoryUrl>
@@ -36,6 +37,10 @@
     <None Include="$(MSBuildThisFileDirectory)/CrestAppsLogo.png">
       <Pack>True</Pack>
       <PackagePath>CrestAppsLogo.png</PackagePath>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)/src/README.md">
+      <Pack>True</Pack>
+      <PackagePath>README.md</PackagePath>
     </None>
   </ItemGroup>
 
