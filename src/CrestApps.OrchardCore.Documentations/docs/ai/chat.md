@@ -86,4 +86,4 @@ A **frontend chat widget** is available to add to your site's public-facing page
 
 Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
 
-For complete documentation, see the [AI Chat Analytics](./ai-chat-analytics.md) guide.
+For complete documentation, see the [AI Chat Analytics](./chat-analytics.md) guide.

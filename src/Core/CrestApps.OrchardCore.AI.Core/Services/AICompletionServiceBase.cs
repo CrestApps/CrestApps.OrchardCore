@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -5,10 +6,14 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public abstract class AICompletionServiceBase
 {
     protected readonly AIProviderOptions ProviderOptions;
+    protected readonly IAITemplateService AITemplateService;
 
-    protected AICompletionServiceBase(AIProviderOptions providerOptions)
+    protected AICompletionServiceBase(
+        AIProviderOptions providerOptions,
+        IAITemplateService aiTemplateService)
     {
         ProviderOptions = providerOptions;
+        AITemplateService = aiTemplateService;
     }
 
     protected virtual string GetDefaultConnectionName(AIProvider provider, string connectionName)
@@ -51,7 +56,7 @@ public abstract class AICompletionServiceBase
         return Task.FromResult<AIDeployment>(null);
     }
 
-    protected static string GetSystemMessage(AICompletionContext context)
+    protected async Task<string> GetSystemMessageAsync(AICompletionContext context)
     {
         var systemMessage = string.Empty;
 
@@ -62,7 +67,8 @@ public abstract class AICompletionServiceBase
 
         if (context.UserMarkdownInResponse)
         {
-            systemMessage += Environment.NewLine + AIConstants.SystemMessages.UseMarkdownSyntax;
+            var markdownInstruction = await AITemplateService.RenderAsync(AITemplateIds.UseMarkdownSyntax);
+            systemMessage += Environment.NewLine + markdownInstruction;
         }
 
         return systemMessage;

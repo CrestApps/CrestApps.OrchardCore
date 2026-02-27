@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
 using Cysharp.Text;
@@ -25,6 +26,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
@@ -34,6 +36,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     public DefaultOrchestrator(
         IAICompletionService completionService,
         IAIClientFactory aiClientFactory,
+        IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
@@ -42,6 +45,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         _completionService = completionService;
         _aiClientFactory = aiClientFactory;
+        _aiTemplateService = aiTemplateService;
         _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
@@ -99,9 +103,14 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 // Add the plan as additional system context for the execution phase.
                 if (!string.IsNullOrWhiteSpace(plan))
                 {
-                    context.CompletionContext.SystemMessage =
-                        (context.CompletionContext.SystemMessage ?? string.Empty) +
-                        "\n\n[Execution Plan]\n" + plan;
+                    var msg = context.CompletionContext.SystemMessage;
+
+                    context.CompletionContext.SystemMessage = plan;
+
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        context.CompletionContext.SystemMessage += '\n' + msg;
+                    }
                 }
             }
             else
@@ -142,32 +151,19 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         try
         {
-            var userSelectedSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.Local));
-            var systemToolSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.System));
-            var mcpToolSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.McpServer));
+            var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["tools"] = availableTools.Select(t => new
+                {
+                    t.Name,
+                    t.Description,
+                    Source = t.Source.ToString(),
+                }).ToList(),
+            };
 
-            var planningSystemPrompt = $"""
-                You are a task planner. Analyze the user's request and identify what capabilities/tools are needed to fulfill it.
+            var planningSystemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.TaskPlanning, arguments);
 
-                The following tools were explicitly selected by the user and are always available:
-                {userSelectedSummary}
-
-                The following system tools are always available:
-                {systemToolSummary}
-
-                Additional external capabilities that may be relevant:
-                {mcpToolSummary}
-
-                Respond with a brief plan listing the required steps and which capabilities are needed.
-                Focus on identifying the NAMES of relevant capabilities from the lists above.
-                Prefer using the user-selected and system tools when they match the request.
-                Keep your response concise (under 200 words).
-                """;
-
-            var chatClient = await TryCreateUtilityChatClientAsync(context);
+            var chatClient = await GetUtilityChatClientAsync(context);
 
             string plan;
 
@@ -395,32 +391,11 @@ public sealed class DefaultOrchestrator : IOrchestrator
         return sb.ToString();
     }
 
-    private static string BuildToolSummary(IEnumerable<ToolRegistryEntry> tools)
-    {
-        using var sb = ZString.CreateStringBuilder();
-
-        foreach (var tool in tools)
-        {
-            sb.Append("- ");
-            sb.Append(tool.Name);
-
-            if (!string.IsNullOrEmpty(tool.Description))
-            {
-                sb.Append(": ");
-                sb.Append(tool.Description);
-            }
-
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
-    }
-
     /// <summary>
     /// Attempts to create a chat client using the utility deployment name.
     /// Returns <c>null</c> if no utility or default deployment is configured.
     /// </summary>
-    private async Task<IChatClient> TryCreateUtilityChatClientAsync(OrchestrationContext context)
+    private async Task<IChatClient> GetUtilityChatClientAsync(OrchestrationContext context)
     {
         var providerName = context.SourceName;
         var connectionName = context.CompletionContext?.ConnectionName;

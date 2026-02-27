@@ -4,14 +4,6 @@ namespace CrestApps.OrchardCore.AI.Core;
 
 public static class AIConstants
 {
-    public const string TitleGeneratorSystemMessage =
-    """
-    - Create a concise title that reflects the main topic of the user's prompt.
-    - Use Title Case.
-    - Do not use markdown, symbols, or decorative formatting.
-    - Keep the title under 255 characters.
-    """;
-
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
 
     public const string DefaultBlankSessionTitle = "Untitled";
@@ -21,11 +13,6 @@ public static class AIConstants
     public const string ConnectionProtectorName = "AIProviderConnection";
 
     public const string AISettingsGroupId = "ai-settings";
-
-    public static class SystemMessages
-    {
-        public const string UseMarkdownSyntax = "- Provide a response using Markdown syntax.";
-    }
 
     public static class Feature
     {

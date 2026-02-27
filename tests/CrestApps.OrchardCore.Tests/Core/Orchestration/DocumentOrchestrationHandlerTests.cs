@@ -1,3 +1,5 @@
+using CrestApps.AI.Prompting.Models;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
@@ -12,7 +14,8 @@ public sealed class DocumentOrchestrationHandlerTests
         toolOptions ??= new AIToolDefinitionOptions();
 
         return new DocumentOrchestrationHandler(
-            Options.Create(toolOptions));
+            Options.Create(toolOptions),
+            new FakeAITemplateService());
     }
 
     private static AIToolDefinitionOptions CreateToolOptionsWithDocTools()
@@ -20,6 +23,7 @@ public sealed class DocumentOrchestrationHandlerTests
         var options = new AIToolDefinitionOptions();
         options.SetTool("read_document", new AIToolDefinitionEntry(typeof(object))
         {
+            Name = "read_document",
             Description = "Reads document content",
             Purpose = AIToolPurposes.DocumentProcessing,
         });
@@ -224,5 +228,51 @@ public sealed class DocumentOrchestrationHandlerTests
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
 
         Assert.False(context.CompletionContext.AdditionalProperties.ContainsKey(AICompletionContextKeys.HasDocuments));
+    }
+
+    private sealed class FakeAITemplateService : IAITemplateService
+    {
+        public Task<IReadOnlyList<AITemplate>> ListAsync()
+            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+
+        public Task<AITemplate> GetAsync(string id)
+            => Task.FromResult<AITemplate>(null);
+
+        public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
+        {
+            if (arguments != null && arguments.TryGetValue("tools", out var toolsObj) && toolsObj is IEnumerable<object> tools)
+            {
+                var lines = new List<string>
+                {
+                    "[Available Documents or attachments]",
+                    "The user has uploaded the following documents as supplementary context.",
+                    "",
+                    "Available document tools:",
+                };
+
+                foreach (dynamic tool in tools)
+                {
+                    lines.Add($"- {tool.Name}: {tool.Description}");
+                }
+
+                if (arguments.TryGetValue("availableDocuments", out var docsObj) && docsObj is IEnumerable<object> docs)
+                {
+                    lines.Add("");
+                    lines.Add("Available documents:");
+
+                    foreach (dynamic doc in docs)
+                    {
+                        lines.Add($"- {doc.FileName} ({doc.ContentType}, {doc.FileSize} bytes)");
+                    }
+                }
+
+                return Task.FromResult(string.Join(Environment.NewLine, lines));
+            }
+
+            return Task.FromResult($"[Template: {id}]");
+        }
+
+        public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
+            => Task.FromResult(string.Join(separator, ids.Select(id => $"[Template: {id}]")));
     }
 }

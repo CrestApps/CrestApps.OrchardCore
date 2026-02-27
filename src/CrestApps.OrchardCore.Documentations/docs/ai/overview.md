@@ -1,7 +1,7 @@
 ---
 sidebar_label: AI Services and Configuration
 sidebar_position: 1
-slug: /ai/ai
+slug: /ai/overview
 title: AI Services
 description: Foundational infrastructure for interacting with AI models through configurable profiles and service integrations in Orchard Core.
 ---
@@ -134,10 +134,10 @@ Below is an example configuration:
 
 The following providers are supported **out of the box**:
 
-* **OpenAI** — [View configuration guide](../providers/openai)
-* **Azure** — [View configuration guide](../providers/azure-openai)
-* **AzureAIInference** — [View configuration guide](../providers/azure-ai-inference)
-* **Ollama** — [View configuration guide](../providers/ollama)
+* **OpenAI** — [View configuration guide](./providers/openai)
+* **Azure** — [View configuration guide](./providers/azure-openai)
+* **AzureAIInference** — [View configuration guide](./providers/azure-ai-inference)
+* **Ollama** — [View configuration guide](./providers/ollama)
 
 > **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**.
 > For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
@@ -269,7 +269,7 @@ If a connection with the same `Name` and `Source` already exists, the recipe upd
 
 Data source (retrieval-augmented generation (RAG) / Knowledge Base) documentation is in the `CrestApps.OrchardCore.AI.DataSources` module: [README](data-sources/).
 
-For managing AI tools, see [AI Tools](ai-tools).
+For managing AI tools, see [AI Tools](tools).
 
 For consuming AI services programmatically, see [Consuming AI Services](consuming-ai-services).
 
@@ -277,7 +277,7 @@ For consuming AI services programmatically, see [Consuming AI Services](consumin
 
 ### AI Chat with Workflows
 
-See [AI Workflows](ai-workflows) for details on using AI completion tasks in Orchard Core Workflows.
+See [AI Workflows](workflows) for details on using AI completion tasks in Orchard Core Workflows.
 
 ---
 

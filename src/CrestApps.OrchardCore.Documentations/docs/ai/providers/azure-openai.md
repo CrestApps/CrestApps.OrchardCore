@@ -107,4 +107,4 @@ Define an AI profile with the following step in your recipe:
 
 Data sources and RAG are now implemented in the provider-agnostic `CrestApps.OrchardCore.AI.DataSources` module.
 
-See: [AI Data Sources](../ai/data-sources/)
+See: [AI Data Sources](../data-sources/)

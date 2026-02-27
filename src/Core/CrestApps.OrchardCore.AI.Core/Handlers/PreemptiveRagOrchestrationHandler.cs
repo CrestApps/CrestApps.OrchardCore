@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
@@ -19,17 +20,20 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 {
     private readonly IEnumerable<IPreemptiveRagHandler> _handlers;
     private readonly PreemptiveSearchQueryProvider _queryProvider;
+    private readonly IAITemplateService _templateService;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
 
     public PreemptiveRagOrchestrationHandler(
         IEnumerable<IPreemptiveRagHandler> handlers,
         PreemptiveSearchQueryProvider queryProvider,
+        IAITemplateService templateService,
         ISiteService siteService,
         ILogger<PreemptiveRagOrchestrationHandler> logger)
     {
         _handlers = handlers;
         _queryProvider = queryProvider;
+        _templateService = templateService;
         _siteService = siteService;
         _logger = logger;
     }
@@ -77,7 +81,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
         // search but still inject instructions so the model knows to call search tools.
         if (!settings.EnablePreemptiveRag && !buildContext.OrchestrationContext.DisableTools)
         {
-            InjectToolSearchInstructions(buildContext, ragMetadata);
+            await InjectToolSearchInstructionsAsync(buildContext, ragMetadata);
             return;
         }
 
@@ -107,14 +111,12 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
             if (hasAnyRefs)
             {
-                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                    """
+                var prompt = await _templateService.RenderAsync(AITemplateIds.RagResponseGuidelines);
 
-                    [Response Guidelines]
-                    Use the provided knowledge source content as the primary basis for your answer.
-                    If the provided context does not fully cover the user's question, you may supplement your response with your general knowledge.
-                    When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline immediately after the relevant statement.
-                    """);
+                if (!string.IsNullOrEmpty(prompt))
+                {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+                }
             }
 
             return;
@@ -127,40 +129,31 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
         {
             if (buildContext.OrchestrationContext.DisableTools)
             {
-                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                    """
+                var prompt = await _templateService.RenderAsync(AITemplateIds.RagScopeNoRefsToolsDisabled);
 
-                    [Scope Constraint]
-                    No relevant content was found in the configured knowledge sources.
-                    CRITICAL: You MUST only answer based on the provided knowledge source content.
-                    DO NOT use your general knowledge or training data under any circumstances.
-                    You MUST inform the user that the answer is not available in the current knowledge sources.
-                    """);
+                if (!string.IsNullOrEmpty(prompt))
+                {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+                }
             }
             else
             {
-                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                    """
+                var prompt = await _templateService.RenderAsync(AITemplateIds.RagScopeNoRefsToolsEnabled);
 
-                    [Scope Constraint]
-                    No relevant content was found during the initial search of the configured knowledge sources.
-                    CRITICAL: You MUST only answer based on knowledge source content. DO NOT use your general knowledge or training data.
-                    Before concluding that no answer is available, you MUST call the available search tools (e.g., search_data_source, search_documents) to look for relevant information.
-                    If the search tools also return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources.
-                    """);
+                if (!string.IsNullOrEmpty(prompt))
+                {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+                }
             }
         }
         else
         {
-            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                """
+            var prompt = await _templateService.RenderAsync(AITemplateIds.RagScopeWithRefs);
 
-                [Scope Constraint]
-                CRITICAL: You MUST only answer using the knowledge source content provided above.
-                DO NOT use your general knowledge or training data under any circumstances.
-                If the provided context does not contain information that directly answers the user's question, you MUST respond by telling the user that the requested information is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
-                When citing information from the provided context, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
-                """);
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+            }
         }
     }
 
@@ -168,36 +161,27 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
     /// Injects system-message instructions telling the model to use search tools
     /// when preemptive RAG is disabled but data sources or documents are available.
     /// </summary>
-    private static void InjectToolSearchInstructions(OrchestrationContextBuiltContext buildContext, AIDataSourceRagMetadata ragMetadata)
+    private async Task InjectToolSearchInstructionsAsync(OrchestrationContextBuiltContext buildContext, AIDataSourceRagMetadata ragMetadata)
     {
         if (ragMetadata?.IsInScope == true)
         {
             // IsInScope ON: the model MUST call search tools and MUST NOT use general knowledge.
-            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                """
+            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchStrict);
 
-                [Knowledge Source Instructions]
-                CRITICAL: You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
-                You MUST call the relevant search tools to find information BEFORE generating any response.
-                DO NOT use your general knowledge or training data under any circumstances.
-                If the search tools return no relevant results, you MUST inform the user that the answer is not available in the current knowledge sources. Do not guess, infer, or supplement with outside knowledge.
-                When citing information retrieved via tools, include the corresponding reference marker (e.g., [doc:1], [doc:2]) inline in your response immediately after the relevant statement.
-                """);
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+            }
         }
         else
         {
             // IsInScope OFF: the model MUST try search tools first, then may supplement with general knowledge.
-            buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(
-                """
+            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchRelaxed);
 
-                [Knowledge Source Instructions]
-                IMPORTANT: You have access to internal knowledge sources via search tools (e.g., search_data_source, search_documents).
-                You MUST call the relevant search tools to check for information BEFORE generating any response. Do NOT skip this step.
-                After reviewing the search results:
-                1. If relevant results are found, use them as the primary basis for your answer and cite using reference markers (e.g., [doc:1], [doc:2]) inline immediately after the relevant statement.
-                2. If no relevant results are found, you may then use your general knowledge to answer the question.
-                Always search first, then respond.
-                """);
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
+            }
         }
     }
 

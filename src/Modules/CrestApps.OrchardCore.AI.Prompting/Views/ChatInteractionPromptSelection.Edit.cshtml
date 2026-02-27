@@ -1,0 +1,98 @@
+@using CrestApps.OrchardCore.AI.Prompting.ViewModels
+@using System.Text.Json
+
+@model AITemplateSelectionViewModel
+
+@if (Model.AvailablePrompts is null || Model.AvailablePrompts.Count == 0)
+{
+    return;
+}
+
+<div class="mb-3">
+    <label asp-for="SelectedPromptId" class="form-label">
+        @T["Prompt Template"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a reusable prompt template for system instructions. The template output is combined with any custom system message you provide."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector data-json="@Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions))" data-params="@Html.Raw(JsonSerializer.Serialize(Model.PromptParameterDescriptors))">
+        <option value="">@T["No prompt template"]</option>
+    </select>
+    <div class="mt-2 text-muted small d-none" data-ci-prompt-description></div>
+</div>
+
+<div class="mb-3 @(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
+    <label asp-for="PromptParameters" class="form-label">@T["Template Parameters"]</label>
+    <div class="mb-1 d-none" data-ci-prompt-parameters-info>
+        <small class="text-muted">@T["Expected parameters:"]</small>
+        <ul class="mb-0 small text-muted" data-ci-prompt-parameters-list></ul>
+    </div>
+    <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {{\"key1\": \"value1\", \"key2\": \"value2\"}}"]' data-ci-prompt-parameters></textarea>
+    <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments."]</span>
+    <div class="text-danger small d-none" data-ci-prompt-parameters-error></div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var selector = document.querySelector('[data-ci-prompt-selector]');
+        var descriptions = JSON.parse(selector.dataset.json);
+        var paramDescriptors = JSON.parse(selector.dataset.params);
+        var descriptionEl = document.querySelector('[data-ci-prompt-description]');
+        var paramsWrapper = document.querySelector('[data-ci-prompt-parameters-wrapper]');
+        var paramsInput = document.querySelector('[data-ci-prompt-parameters]');
+        var paramsError = document.querySelector('[data-ci-prompt-parameters-error]');
+        var paramsInfo = document.querySelector('[data-ci-prompt-parameters-info]');
+        var paramsList = document.querySelector('[data-ci-prompt-parameters-list]');
+
+        function updateUI() {
+            var id = selector.value;
+            if (id && descriptions[id]) {
+                descriptionEl.textContent = descriptions[id];
+                descriptionEl.classList.remove('d-none');
+            } else {
+                descriptionEl.classList.add('d-none');
+            }
+
+            if (id) {
+                paramsWrapper.classList.remove('d-none');
+            } else {
+                paramsWrapper.classList.add('d-none');
+            }
+
+            if (id && paramDescriptors[id] && paramDescriptors[id].length > 0) {
+                paramsList.innerHTML = '';
+                paramDescriptors[id].forEach(function (p) {
+                    var li = document.createElement('li');
+                    li.innerHTML = '<strong>' + p.Name + '</strong>' + (p.Description ? ': ' + p.Description : '');
+                    paramsList.appendChild(li);
+                });
+                paramsInfo.classList.remove('d-none');
+            } else {
+                paramsInfo.classList.add('d-none');
+            }
+        }
+
+        function validateJson() {
+            var val = paramsInput.value.trim();
+            if (!val) {
+                paramsError.classList.add('d-none');
+                return;
+            }
+            try {
+                var obj = JSON.parse(val);
+                if (typeof obj !== 'object' || Array.isArray(obj)) throw 'not object';
+                for (var k in obj) {
+                    if (typeof obj[k] !== 'string') throw 'not string value';
+                }
+                paramsError.classList.add('d-none');
+            } catch (e) {
+                paramsError.textContent = '@T["Must be valid JSON with string key-value pairs."]';
+                paramsError.classList.remove('d-none');
+            }
+        }
+
+        selector.addEventListener('change', updateUI);
+        paramsInput.addEventListener('input', validateJson);
+        updateUI();
+    });
+</script>

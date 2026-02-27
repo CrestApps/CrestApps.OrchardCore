@@ -1,0 +1,162 @@
+name: Validate Prompt Templates
+on: 
+  pull_request:
+    branches: [ main, release/** ]
+    paths:
+      - '**/AITemplates/Prompts/**/*.md'
+concurrency:
+  group: validate-prompts-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+jobs:
+  validate_prompts:
+    runs-on: ubuntu-latest
+    name: Validate AI Prompt Templates
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          10.0.x
+    - name: Build prompt validation tool
+      run: |
+        dotnet build -c Release src/Common/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj /p:NuGetAudit=false
+    - name: Validate prompt template syntax
+      shell: bash
+      run: |
+        EXIT_CODE=0
+        shopt -s globstar nullglob
+
+        for file in src/**/AITemplates/Prompts/**/*.md; do
+          [ -f "$file" ] || continue
+
+          # Check for valid front matter structure
+          if head -1 "$file" | grep -q "^---"; then
+            # Has front matter; verify it has a closing delimiter
+            CLOSE_COUNT=$(grep -c "^---" "$file" || true)
+            if [ "$CLOSE_COUNT" -lt 2 ]; then
+              echo "::error file=$file::Front matter is missing closing '---' delimiter"
+              EXIT_CODE=1
+            fi
+          fi
+
+          # Check that file is not empty
+          if [ ! -s "$file" ]; then
+            echo "::error file=$file::Prompt template file is empty"
+            EXIT_CODE=1
+          fi
+
+          echo "✓ $file"
+        done
+
+        if [ $EXIT_CODE -ne 0 ]; then
+          echo ""
+          echo "::error::One or more prompt template files have syntax issues"
+        fi
+
+        exit $EXIT_CODE
+    - name: Validate JSON in fenced code blocks
+      shell: python3 {0}
+      run: |
+        import glob, json, re, sys
+
+        # Pattern to extract fenced ```json blocks
+        fence_pattern = re.compile(r'```json\s*\n(.*?)```', re.DOTALL)
+        # Patterns that indicate an intentional schema description, not literal JSON
+        schema_indicators = re.compile(r'\btrue\s*\|\s*false\b|<[a-zA-Z_]+>')
+
+        exit_code = 0
+
+        for path in sorted(glob.glob('src/**/AITemplates/Prompts/**/*.md', recursive=True)):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            for i, match in enumerate(fence_pattern.finditer(content), 1):
+                json_text = match.group(1).strip()
+                if not json_text:
+                    continue
+
+                try:
+                    json.loads(json_text)
+                except json.JSONDecodeError:
+                    # If it contains schema description patterns (e.g., "true | false",
+                    # "<placeholder>"), it is intentionally not literal JSON.
+                    if schema_indicators.search(json_text):
+                        continue
+
+                    line_num = content[:match.start()].count('\n') + 1
+                    print(f"::error file={path},line={line_num}::Fenced ```json block #{i} "
+                          f"contains invalid JSON. If this is a schema description, use "
+                          f"placeholders like <value> or true | false.")
+                    exit_code = 1
+
+        if exit_code == 0:
+            print("✓ All fenced JSON blocks are valid")
+
+        sys.exit(exit_code)
+    - name: Validate Parameters front matter syntax
+      shell: python3 {0}
+      run: |
+        import glob, re, sys
+
+        exit_code = 0
+
+        for path in sorted(glob.glob('src/**/AITemplates/Prompts/**/*.md', recursive=True)):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Only check files with front matter
+            if not content.lstrip().startswith('---'):
+                continue
+
+            # Extract front matter between --- delimiters
+            parts = content.lstrip().split('---', 2)
+            if len(parts) < 3:
+                continue
+
+            front_matter = parts[1]
+            lines = front_matter.split('\n')
+
+            in_parameters = False
+            param_line_num = 0
+
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+
+                # Detect Parameters: key
+                if stripped.startswith('Parameters:'):
+                    in_parameters = True
+                    param_line_num = i + 2  # +2 for 1-based and the --- line
+                    continue
+
+                # Lines within Parameters block start with whitespace
+                if in_parameters and (line.startswith('\t') or line.startswith(' ')):
+                    entry = stripped
+                    # Strip bullet marker
+                    if entry.startswith('- '):
+                        entry = entry[2:]
+
+                    # Each parameter entry must have name: description format
+                    if ':' not in entry:
+                        actual_line = i + 2
+                        print(f"::error file={path},line={actual_line}::Parameter entry "
+                              f"'{stripped}' is missing ':' separator. Expected format: "
+                              f"'- name: description'")
+                        exit_code = 1
+                    elif entry.index(':') == 0:
+                        actual_line = i + 2
+                        print(f"::error file={path},line={actual_line}::Parameter entry "
+                              f"'{stripped}' has empty name. Expected format: "
+                              f"'- name: description'")
+                        exit_code = 1
+                else:
+                    in_parameters = False
+
+        if exit_code == 0:
+            print("✓ All Parameters entries are valid")
+
+        sys.exit(exit_code)

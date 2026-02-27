@@ -3,7 +3,7 @@
 
 @model EditChatInteractionViewModel
 
-<div class="mb-3">
+<div class="mb-3" data-ci-system-message-wrapper>
     <label asp-for="SystemMessage" class="form-label">
         @T["System instructions"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses."]">

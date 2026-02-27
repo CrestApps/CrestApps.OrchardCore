@@ -48,6 +48,7 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp.Resources.Sftp\CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Prompting\CrestApps.OrchardCore.AI.Prompting.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AzureAIInference\CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.ContentAccessControl\CrestApps.OrchardCore.ContentAccessControl.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.Ollama\CrestApps.OrchardCore.Ollama.csproj" PrivateAssets="none" />

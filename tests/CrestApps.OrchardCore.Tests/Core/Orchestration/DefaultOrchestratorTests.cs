@@ -1,3 +1,5 @@
+using CrestApps.AI.Prompting.Models;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
@@ -325,6 +327,7 @@ public sealed class DefaultOrchestratorTests
         return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
             new FakeAIClientFactory(),
+            new FakeAITemplateService(),
             Options.Create(new AIProviderOptions()),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
@@ -470,5 +473,23 @@ public sealed class DefaultOrchestratorTests
         public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
             => new((IImageGenerator)null);
 #pragma warning restore MEAI001
+    }
+
+    /// <summary>
+    /// A fake prompt template service that returns null for all operations.
+    /// </summary>
+    private sealed class FakeAITemplateService : IAITemplateService
+    {
+        public Task<IReadOnlyList<AITemplate>> ListAsync()
+            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+
+        public Task<AITemplate> GetAsync(string id)
+            => Task.FromResult<AITemplate>(null);
+
+        public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
+            => Task.FromResult<string>(null);
+
+        public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
+            => Task.FromResult<string>(null);
     }
 }

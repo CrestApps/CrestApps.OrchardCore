@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
@@ -36,8 +37,9 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ILoggerFactory loggerFactory,
         IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
         IOptions<DefaultAIOptions> defaultOptions,
+        IAITemplateService aiTemplateService,
         ILogger<AzureOpenAICompletionClient> logger)
-        : base(providerOptions.Value)
+        : base(providerOptions.Value, aiTemplateService)
     {
         _deploymentStore = deploymentStore;
         _serviceProvider = serviceProvider;
@@ -107,7 +109,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             }
         }
 
-        var prompts = GetPrompts(context, azureMessages);
+        var prompts = await GetPromptsAsync(context, azureMessages);
 
         var azureClient = GetChatClient(connectionProperties);
 
@@ -224,7 +226,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         ChatCompletionOptions subSequenceContext = null;
 
-        var prompts = GetPrompts(context, azureMessages);
+        var prompts = await GetPromptsAsync(context, azureMessages);
 
         var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
         var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
@@ -528,11 +530,11 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return chatOptions.Tools.OfType<Microsoft.Extensions.AI.AIFunction>().ToList();
     }
 
-    private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages)
+    private async Task<List<ChatMessage>> GetPromptsAsync(AICompletionContext context, List<ChatMessage> azureMessages)
     {
         var prompts = new List<ChatMessage>();
 
-        var systemMessage = GetSystemMessage(context);
+        var systemMessage = await GetSystemMessageAsync(context);
 
         if (!string.IsNullOrEmpty(systemMessage))
         {

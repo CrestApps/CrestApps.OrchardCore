@@ -22,16 +22,16 @@ CrestApps provides a collection of open-source modules designed to enhance **[Or
 Integrate most AI providers like **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and more into your Orchard Core website. The AI suite includes:
 
 - **[Overview](ai/)** – Introduction to the AI Suite
-- **[AI](ai/ai/)** – Foundation for all AI modules with profile and connection management
-- **[AI Chat](ai/ai-chat)** – Chat interfaces for interacting with AI models
-- **[AI Chat Interactions](ai/ai-chat-interactions)** – Ad-hoc chat with configurable parameters and document upload
+- **[AI](ai/overview)** – Foundation for all AI modules with profile and connection management
+- **[AI Chat](ai/chat)** – Chat interfaces for interacting with AI models
+- **[AI Chat Interactions](ai/chat-interactions)** – Ad-hoc chat with configurable parameters and document upload
 - **[Consuming AI Services](ai/consuming-ai-services)** – Using AI services programmatically via code
-- **[Copilot Integration](ai/ai-copilot)** – GitHub Copilot SDK-based orchestration
+- **[Copilot Integration](ai/copilot)** – GitHub Copilot SDK-based orchestration
 - **[Data Sources](ai/data-sources/)** – Retrieval-augmented generation (RAG) / knowledge base indexing and vector search
 - **[Documents](ai/documents/)** – Document upload, text extraction, and embedding
 - **[MCP](ai/mcp/)** – Model Context Protocol client and server support
-- **[Orchard Core Agent](ai/ai-agent)** – Intelligent agents that perform tasks on your site
-- **[AI Providers](providers/)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more
+- **[Orchard Core Agent](ai/agent)** – Intelligent agents that perform tasks on your site
+- **[AI Providers](ai/providers/)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more
 
 ### Standard Modules
 

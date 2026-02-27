@@ -49,6 +49,11 @@ public sealed class Startup : StartupBase
             o.MemberAccessStrategy.Register<AIProfile>();
             o.MemberAccessStrategy.Register<AIChatSession>();
             o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
+            o.MemberAccessStrategy.Register<ExtractedFieldState>();
+            o.MemberAccessStrategy.Register<PostSessionResult>();
+            o.MemberAccessStrategy.Register<AICompletionReference>();
+            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
+            o.MemberAccessStrategy.Register<ChatInteractionDocumentInfo>();
         });
 
         services

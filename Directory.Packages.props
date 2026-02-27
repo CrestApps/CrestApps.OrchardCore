@@ -9,6 +9,7 @@
     <PackageVersion Include="CrestApps.AgentSkills.OrchardCore" Version="1.0.0-preview-0001" />
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0001" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
+    <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="FluentFTP" Version="53.0.2" />
     <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
@@ -97,6 +98,9 @@
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
     <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="10.0.0-preview.1.25559.3" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.3.0" />
   </ItemGroup>
   <ItemGroup>

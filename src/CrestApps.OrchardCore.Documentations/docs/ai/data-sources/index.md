@@ -99,7 +99,7 @@ When the AI model uses content from a data source, the system produces `[doc:N]`
 
 References are collected from both **preemptive RAG** (context injected before AI completion) and **tool-based search** (the `SearchDataSources` tool invoked by the AI model during conversation).
 
-All reference indices are coordinated through a shared counter on `AIInvocationScope.Current`, ensuring that `[doc:N]` indices are unique across data source references, document references, and tool-invoked searches within the same request. See [AI Tools — Invocation Context](../ai-tools.md#invocation-context-aiinvocationscope) for details.
+All reference indices are coordinated through a shared counter on `AIInvocationScope.Current`, ensuring that `[doc:N]` indices are unique across data source references, document references, and tool-invoked searches within the same request. See [AI Tools — Invocation Context](../tools.md#invocation-context-aiinvocationscope) for details.
 
 ### Custom Link Resolvers
 

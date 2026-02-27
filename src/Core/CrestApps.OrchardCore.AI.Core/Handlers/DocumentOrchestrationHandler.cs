@@ -1,5 +1,5 @@
+using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
-using Cysharp.Text;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
@@ -20,10 +20,14 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IAITemplateService _templateService;
 
-    public DocumentOrchestrationHandler(IOptions<AIToolDefinitionOptions> toolDefinitions)
+    public DocumentOrchestrationHandler(
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IAITemplateService templateService)
     {
         _toolDefinitions = toolDefinitions.Value;
+        _templateService = templateService;
     }
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
@@ -46,7 +50,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         return Task.CompletedTask;
     }
 
-    public Task BuiltAsync(OrchestrationContextBuiltContext context)
+    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
         // Check for session documents after configure has run,
         // since the session is set via the configure callback
@@ -64,7 +68,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
             context.OrchestrationContext.CompletionContext is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         // Signal document availability so system tools (e.g., search_documents)
@@ -75,66 +79,21 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         // to list their descriptions in the system message.
         var docTools = _toolDefinitions.Tools
             .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
+            .Select(t => t.Value)
             .ToList();
 
-        using var sb = ZString.CreateStringBuilder();
-        sb.AppendLine("\n\n[Available Documents or attachments]");
-
-        if (docTools.Count > 0)
+        var arguments = new Dictionary<string, object>
         {
-            sb.AppendLine("The user has uploaded the following documents as supplementary context.");
-            sb.AppendLine("Search the uploaded documents first using the document tools before answering.");
-            sb.AppendLine("If the documents contain relevant information, base your answer on that content.");
-            sb.AppendLine("If the documents do not contain relevant information, use your general knowledge to answer instead.");
-            sb.AppendLine("Do not refuse to answer simply because the documents lack the requested information.");
-            sb.AppendLine();
-            sb.AppendLine("Available document tools:");
+            ["tools"] = docTools,
+            ["availableDocuments"] = context.OrchestrationContext.Documents,
+        };
 
-            foreach (var (name, entry) in docTools)
-            {
-                sb.Append("- ");
-                sb.Append(name);
-                sb.Append(": ");
-                sb.AppendLine(entry.Description ?? entry.Title ?? name);
-            }
+        var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);
 
-            sb.AppendLine();
-        }
-        else
+        if (!string.IsNullOrEmpty(header))
         {
-            sb.AppendLine("The user has uploaded the following documents as supplementary context.");
+            context.OrchestrationContext.SystemMessageBuilder.AppendLine();
+            context.OrchestrationContext.SystemMessageBuilder.Append(header);
         }
-
-        foreach (var doc in context.OrchestrationContext.Documents)
-        {
-            sb.Append("- ");
-            sb.Append(doc.DocumentId);
-            sb.Append(": \"");
-            sb.Append(doc.FileName);
-            sb.Append("\" (");
-            sb.Append(doc.ContentType ?? "unknown");
-            sb.Append(", ");
-            sb.Append(FormatFileSize(doc.FileSize));
-            sb.AppendLine(")");
-        }
-
-        context.OrchestrationContext.SystemMessageBuilder.Append(sb);
-
-        return Task.CompletedTask;
-    }
-
-    private static string FormatFileSize(long bytes)
-    {
-        if (bytes < 1024)
-        {
-            return $"{bytes} B";
-        }
-
-        if (bytes < 1024 * 1024)
-        {
-            return $"{bytes / 1024.0:F1} KB";
-        }
-
-        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 }

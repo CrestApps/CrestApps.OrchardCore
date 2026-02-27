@@ -42,6 +42,7 @@ using OrchardCore.Modules.Manifest;
     [
         "OrchardCore.Liquid",
         "CrestApps.OrchardCore.Resources",
+        "CrestApps.OrchardCore.AI.Prompting",
         AIConstants.Feature.Area,
     ]
 )]
