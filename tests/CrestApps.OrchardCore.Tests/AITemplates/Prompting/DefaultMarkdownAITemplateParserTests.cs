@@ -294,6 +294,54 @@ public sealed class DefaultMarkdownAITemplateParserTests
     }
 
     [Fact]
+    public void Parse_MultiLineDescription_JoinsWithNewline()
+    {
+        var content = """
+            ---
+            Title: Test
+            Description: First line
+              second line
+              third line
+            ---
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("Test", result.Metadata.Title);
+        Assert.Equal("First line\nsecond line\nthird line", result.Metadata.Description);
+    }
+
+    [Fact]
+    public void Parse_MultiLineCustomProperty_JoinsWithNewline()
+    {
+        var content = """
+            ---
+            Title: Test
+            Notes: Line one
+              Line two
+            Category: General
+            ---
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("Line one\nLine two", result.Metadata.AdditionalProperties["Notes"]);
+        Assert.Equal("General", result.Metadata.Category);
+    }
+
+    [Fact]
+    public void Parse_TabIndentedContinuation_JoinsWithNewline()
+    {
+        var content = "---\nDescription: Start\n\tindented with tab\n---\nBody.";
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("Start\nindented with tab", result.Metadata.Description);
+    }
+
+    [Fact]
     public void Parse_CompactsJsonFencedBlocks()
     {
         var content = """

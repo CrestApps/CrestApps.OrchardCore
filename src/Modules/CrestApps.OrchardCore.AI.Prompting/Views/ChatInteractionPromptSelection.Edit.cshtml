@@ -15,7 +15,7 @@
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector>
+    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector data-json="@Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions))">
         <option value="">@T["Custom Instructions"]</option>
     </select>
     <div class="mt-2 text-muted small d-none" data-ci-prompt-description></div>
@@ -23,15 +23,16 @@
 
 <div class="mb-3 @(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
     <label asp-for="PromptParameters" class="form-label">@T["Template Parameters"]</label>
-    <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {\"key1\": \"value1\", \"key2\": \"value2\"}"]' data-ci-prompt-parameters></textarea>
+    <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {{\"key1\": \"value1\", \"key2\": \"value2\"}}"]' data-ci-prompt-parameters></textarea>
     <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments."]</span>
     <div class="text-danger small d-none" data-ci-prompt-parameters-error></div>
 </div>
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        var descriptions = @Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions));
         var selector = document.querySelector('[data-ci-prompt-selector]');
+        var descriptions = JSON.parse(selector.dataset.json);
+
         var descriptionEl = document.querySelector('[data-ci-prompt-description]');
         var paramsWrapper = document.querySelector('[data-ci-prompt-parameters-wrapper]');
         var paramsInput = document.querySelector('[data-ci-prompt-parameters]');

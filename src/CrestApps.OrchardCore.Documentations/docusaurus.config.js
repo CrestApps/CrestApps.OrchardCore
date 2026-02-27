@@ -113,7 +113,7 @@ const config = {
               },
               {
                 label: 'AI Providers',
-                to: '/docs/providers',
+                to: '/docs/ai/providers',
               },
               {
                 label: 'Consuming AI Services',

@@ -31,28 +31,28 @@ The **Orchestrator** (`IOrchestrator`) is the central runtime that manages AI co
 
 ### AI Providers
 
-**Providers** are modules that implement the connection to specific AI services. Each provider knows how to create chat clients, embedding generators, and image generators for its platform. See [AI Providers](../providers/) for details.
+**Providers** are modules that implement the connection to specific AI services. Each provider knows how to create chat clients, embedding generators, and image generators for its platform. See [AI Providers](./providers/) for details.
 
 ## Modules
 
 | Module | Description |
 |--------|-------------|
-| [AI](ai) | Foundation for all AI modules with profile and connection management |
-| [AI Chat](ai-chat) | Admin and frontend chat interfaces |
-| [AI Chat Interactions](ai-chat-interactions) | Ad-hoc chat with configurable parameters and document upload |
-| [AI Prompt Templates](ai-prompt-templates) | Centralized prompt management with Liquid templates and file-based discovery |
+| [AI](overview) | Foundation for all AI modules with profile and connection management |
+| [AI Chat](chat) | Admin and frontend chat interfaces |
+| [AI Chat Interactions](chat-interactions) | Ad-hoc chat with configurable parameters and document upload |
+| [AI Prompt Templates](prompt-templates) | Centralized prompt management with Liquid templates and file-based discovery |
 | [Consuming AI Services](consuming-ai-services) | Using AI services programmatically via code |
-| [Copilot Integration](ai-copilot) | GitHub Copilot SDK-based orchestration |
+| [Copilot Integration](copilot) | GitHub Copilot SDK-based orchestration |
 | [Data Sources](data-sources/) | Retrieval-augmented generation (RAG) / knowledge base indexing and vector search |
 | [Documents](documents/) | Document upload, text extraction, and embedding |
 | [MCP](mcp/) | Model Context Protocol client and server support |
-| [Orchard Core Agent](ai-agent) | Intelligent agents that perform tasks on your site |
+| [Orchard Core Agent](agent) | Intelligent agents that perform tasks on your site |
 
 ## Getting Started
 
 1. Install the `CrestApps.OrchardCore.Cms.Core.Targets` package (includes all modules), or install individual AI packages
 2. Enable the desired AI features in the Orchard Core admin dashboard (**Tools → Features**)
-3. Configure at least one [AI provider](../providers/) with connection credentials
+3. Configure at least one [AI provider](./providers/) with connection credentials
 4. Create an AI Profile and start interacting with AI models
 
 ### Quick Start Configuration
@@ -85,4 +85,4 @@ Add the following to your `appsettings.json` to get started with OpenAI:
 }
 ```
 
-For full configuration details, see [AI Services and Configuration](ai).
+For full configuration details, see [AI Services and Configuration](overview).

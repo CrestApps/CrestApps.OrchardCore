@@ -1,7 +1,7 @@
 ---
 sidebar_label: AI Templates
 sidebar_position: 15
-slug: /ai/ai-prompt-templates
+slug: /ai/prompt-templates
 title: AI Templates
 description: Centralized management for AI system prompts with Liquid template rendering, extensible parsers, file-based discovery, and reusable prompt composition.
 ---
@@ -103,6 +103,8 @@ Fenced ` ```json ``` ` code blocks in template files are automatically compacted
 ````
 
 Non-JSON fenced blocks and invalid JSON are left unchanged.
+
+> **Tip:** Feel free to format JSON with indentation and line breaks in your template files for readability — the parser automatically optimizes it into compact form when the templates are loaded, reducing token usage without sacrificing source clarity.
 
 ### Code-Based Registration
 

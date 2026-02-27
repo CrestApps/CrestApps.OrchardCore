@@ -1,5 +1,4 @@
 @using CrestApps.OrchardCore.AI.Prompting.ViewModels
-@using OrchardCore
 @using System.Text.Json
 
 @model AITemplateSelectionViewModel
@@ -9,34 +8,34 @@
     return;
 }
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SelectedPromptId" class="@Orchard.GetLabelClasses()">@T["Prompt Template"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-prompt-selector>
-            <option value="">@T["Custom Instructions"]</option>
-        </select>
-        <span class="hint">@T["Select a reusable prompt template to use as the system instructions, or choose 'Custom Instructions' to provide your own."]</span>
-        <div class="mt-2 text-muted small d-none" data-prompt-description></div>
-    </div>
+<div class="mb-3">
+    <label asp-for="SelectedPromptId" class="form-label">
+        @T["Prompt Template"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a reusable prompt template to use as the system instructions, or choose 'Custom Instructions' to provide your own below."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector data-json="@Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions))">
+        <option value="">@T["Custom Instructions"]</option>
+    </select>
+    <div class="mt-2 text-muted small d-none" data-ci-prompt-description></div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses() @(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-prompt-parameters-wrapper>
-    <label asp-for="PromptParameters" class="@Orchard.GetLabelClasses()">@T["Template Parameters"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {\"key1\": \"value1\", \"key2\": \"value2\"}"]' data-prompt-parameters></textarea>
-        <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments."]</span>
-        <div class="text-danger small d-none" data-prompt-parameters-error></div>
-    </div>
+<div class="mb-3 @(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
+    <label asp-for="PromptParameters" class="form-label">@T["Template Parameters"]</label>
+    <textarea asp-for="PromptParameters" class="form-control" rows="3" placeholder='@T["e.g., {{\"key1\": \"value1\", \"key2\": \"value2\"}}"]' data-ci-prompt-parameters></textarea>
+    <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments."]</span>
+    <div class="text-danger small d-none" data-ci-prompt-parameters-error></div>
 </div>
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        var descriptions = @Html.Raw(JsonSerializer.Serialize(Model.PromptDescriptions));
-        var selector = document.querySelector('[data-prompt-selector]');
-        var descriptionEl = document.querySelector('[data-prompt-description]');
-        var paramsWrapper = document.querySelector('[data-prompt-parameters-wrapper]');
-        var paramsInput = document.querySelector('[data-prompt-parameters]');
-        var paramsError = document.querySelector('[data-prompt-parameters-error]');
+        var selector = document.querySelector('[data-ci-prompt-selector]');
+        var descriptions = JSON.parse(selector.dataset.json);
+        var descriptionEl = document.querySelector('[data-ci-prompt-description]');
+        var paramsWrapper = document.querySelector('[data-ci-prompt-parameters-wrapper]');
+        var paramsInput = document.querySelector('[data-ci-prompt-parameters]');
+        var paramsError = document.querySelector('[data-ci-prompt-parameters-error]');
 
         function updateUI() {
             var id = selector.value;
@@ -46,6 +45,7 @@
             } else {
                 descriptionEl.classList.add('d-none');
             }
+
             if (id) {
                 paramsWrapper.classList.remove('d-none');
             } else {
@@ -61,9 +61,12 @@
             }
             try {
                 var obj = JSON.parse(val);
-                if (typeof obj !== 'object' || Array.isArray(obj)) throw 'not object';
+                if (typeof obj !== 'object' || Array.isArray(obj))
+                    throw 'not object';
+
                 for (var k in obj) {
-                    if (typeof obj[k] !== 'string') throw 'not string value';
+                    if (typeof obj[k] !== 'string')
+                        throw 'not string value';
                 }
                 paramsError.classList.add('d-none');
             } catch (e) {

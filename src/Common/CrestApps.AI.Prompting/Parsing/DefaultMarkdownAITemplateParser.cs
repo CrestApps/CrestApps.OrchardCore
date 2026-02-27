@@ -161,6 +161,9 @@ public sealed class DefaultMarkdownAITemplateParser : IAITemplateParser
 
     private static void ParseFrontMatter(ReadOnlySpan<char> frontMatter, AITemplateMetadata metadata)
     {
+        string currentKey = null;
+        string currentValue = null;
+
         foreach (var line in EnumerateLines(frontMatter))
         {
             var trimmedLine = line.Trim();
@@ -169,16 +172,35 @@ public sealed class DefaultMarkdownAITemplateParser : IAITemplateParser
                 continue;
             }
 
-            var colonIndex = trimmedLine.IndexOf(':');
-            if (colonIndex <= 0)
+            // Continuation line: starts with whitespace and we have a current key.
+            if (currentKey != null && (line.Length > 0 && (line[0] == ' ' || line[0] == '\t')))
             {
+                currentValue = currentValue + "\n" + trimmedLine.ToString();
                 continue;
             }
 
-            var key = trimmedLine[..colonIndex].Trim().ToString();
-            var value = trimmedLine[(colonIndex + 1)..].Trim().ToString();
+            // Flush the previous key-value pair.
+            if (currentKey != null)
+            {
+                SetMetadataValue(metadata, currentKey, currentValue);
+            }
 
-            SetMetadataValue(metadata, key, value);
+            var colonIndex = trimmedLine.IndexOf(':');
+            if (colonIndex <= 0)
+            {
+                currentKey = null;
+                currentValue = null;
+                continue;
+            }
+
+            currentKey = trimmedLine[..colonIndex].Trim().ToString();
+            currentValue = trimmedLine[(colonIndex + 1)..].Trim().ToString();
+        }
+
+        // Flush the last key-value pair.
+        if (currentKey != null)
+        {
+            SetMetadataValue(metadata, currentKey, currentValue);
         }
     }
 

@@ -103,9 +103,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 // Add the plan as additional system context for the execution phase.
                 if (!string.IsNullOrWhiteSpace(plan))
                 {
-                    context.CompletionContext.SystemMessage =
-                        (context.CompletionContext.SystemMessage ?? string.Empty) +
-                        "\n\n[Execution Plan]\n" + plan;
+                    context.CompletionContext.SystemMessage += plan;
                 }
             }
             else
@@ -393,6 +391,11 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private static string BuildToolSummary(IEnumerable<ToolRegistryEntry> tools)
     {
         using var sb = ZString.CreateStringBuilder();
+
+        if (tools.Any())
+        {
+            sb.AppendLine("[Execution Plan]");
+        }
 
         foreach (var tool in tools)
         {
