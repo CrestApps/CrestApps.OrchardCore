@@ -69,11 +69,37 @@ You are a data visualization expert. Generate a Chart.js configuration...
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `Title` | string | Derived from filename | Display title for UI |
-| `Description` | string | `null` | Description shown in prompt selection UI. For templates with parameters, describe the available parameters here. |
+| `Description` | string | `null` | Description shown in prompt selection UI |
 | `IsListable` | bool | `true` | Whether this prompt appears in selection dropdowns |
 | `Category` | string | `null` | Category for grouping prompts in the UI |
+| `Parameters` | list | `[]` | Describes expected template arguments (see below) |
 
 Any additional `Key: Value` pairs are stored in `AdditionalProperties` for custom use.
+
+#### Parameter Descriptors
+
+Use the `Parameters` metadata field to document the arguments a template expects. Each entry uses tab-indented `- name: description` format:
+
+```markdown
+---
+Title: Document Availability Instructions
+Description: Instructs the AI about uploaded documents and available tools.
+Parameters:
+	- tools: array of AIToolDefinitionEntry objects for document processing.
+	- availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
+IsListable: false
+Category: Documents
+---
+
+{% if tools.size > 0 %}
+Available document tools:
+{% for tool in tools %}
+- {{ tool.Name }}: {{ tool.Description }}
+{% endfor %}
+{% endif %}
+```
+
+Parameter descriptors are informational — they appear in the UI when a user selects a template, helping them understand what arguments are available. The template still renders even if no arguments are supplied (missing variables render as empty strings).
 
 ### JSON Compaction
 
@@ -292,9 +318,11 @@ When the `CrestApps.OrchardCore.AI.Prompting` feature is enabled:
 - **Module Discovery** — Prompts in `AITemplates/Prompts/` directories of all Orchard Core modules are automatically discovered.
 - **Feature Filtering** — Prompts placed in `AITemplates/Prompts/{featureId}/` subdirectories are only available when that feature is enabled.
 - **Caching** — Templates are parsed once and cached in memory. The cache is invalidated when the tenant shell is released or the application restarts.
+- **Runtime Template Consumption** — When a prompt template is selected on an AI Profile or Chat Interaction, the template is rendered at runtime during orchestration. The rendered output replaces the custom system message.
 - **UI Integration** — A prompt selection dropdown is added to AI Profile and Chat Interaction editors:
   - Prompts are grouped by category in the dropdown using `<optgroup>` elements.
-  - Selecting a template shows its description (which documents available parameters).
+  - Selecting a template shows its description and lists any parameter descriptors.
+  - When a template is selected, the system message textarea is hidden since the template provides the system message.
   - A **Template Parameters** field accepts JSON key-value pairs for passing arguments to Liquid templates.
   - Choosing **Custom Instructions** (the default) allows free-form system message input.
 
@@ -330,6 +358,7 @@ The CI pipeline validates all prompt template files on every pull request:
 - Checks for valid front matter structure (matching `---` delimiters)
 - Verifies files are not empty
 - **Validates fenced ` ```json ``` ` blocks** — If a fenced JSON block contains invalid JSON and doesn't appear to be a schema description (e.g., containing `true | false` or `<placeholder>` patterns), the CI fails. This catches accidental JSON typos that could cause the AI model to produce malformed output.
+- **Validates `Parameters:` entries** — Each parameter entry must use the `- name: description` format with a colon separator. Malformed entries fail the CI.
 
 To validate locally:
 

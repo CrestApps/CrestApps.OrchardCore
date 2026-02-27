@@ -1,6 +1,5 @@
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
-using Cysharp.Text;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
@@ -80,53 +79,21 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         // to list their descriptions in the system message.
         var docTools = _toolDefinitions.Tools
             .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
-            .Select(t => new { name = t.Key, description = t.Value.Description ?? t.Value.Title ?? t.Key })
+            .Select(t => t.Value)
             .ToList();
 
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,
+            ["availableDocuments"] = context.OrchestrationContext.Documents,
         };
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);
 
-        using var sb = ZString.CreateStringBuilder();
-
         if (!string.IsNullOrEmpty(header))
         {
-            sb.AppendLine();
-            sb.AppendLine();
-            sb.Append(header);
+            context.OrchestrationContext.SystemMessageBuilder.AppendLine();
+            context.OrchestrationContext.SystemMessageBuilder.Append(header);
         }
-
-        foreach (var doc in context.OrchestrationContext.Documents)
-        {
-            sb.Append("- ");
-            sb.Append(doc.DocumentId);
-            sb.Append(": \"");
-            sb.Append(doc.FileName);
-            sb.Append("\" (");
-            sb.Append(doc.ContentType ?? "unknown");
-            sb.Append(", ");
-            sb.Append(FormatFileSize(doc.FileSize));
-            sb.AppendLine(")");
-        }
-
-        context.OrchestrationContext.SystemMessageBuilder.Append(sb);
-    }
-
-    private static string FormatFileSize(long bytes)
-    {
-        if (bytes < 1024)
-        {
-            return $"{bytes} B";
-        }
-
-        if (bytes < 1024 * 1024)
-        {
-            return $"{bytes / 1024.0:F1} KB";
-        }
-
-        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 }

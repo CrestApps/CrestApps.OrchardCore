@@ -53,7 +53,9 @@ public sealed class FluidAITemplateEngine : IAITemplateEngine
             }
         }
 
-        return await fluidTemplate.RenderAsync(context);
+        var result = await fluidTemplate.RenderAsync(context);
+
+        return NormalizeWhitespace(result);
     }
 
     public bool TryValidate(string template, out IList<string> errors)
@@ -73,5 +75,49 @@ public sealed class FluidAITemplateEngine : IAITemplateEngine
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Normalizes whitespace in the rendered output so templates can be written
+    /// with readable formatting while producing clean output for AI consumption.
+    /// Collapses runs of blank lines into a single blank line and trims each line.
+    /// </summary>
+    internal static string NormalizeWhitespace(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var lines = text.Split('\n');
+        var builder = new List<string>(lines.Length);
+        var previousWasBlank = true;
+
+        foreach (var rawLine in lines)
+        {
+            var trimmed = rawLine.TrimEnd('\r').Trim();
+
+            if (trimmed.Length == 0)
+            {
+                if (!previousWasBlank)
+                {
+                    builder.Add(string.Empty);
+                    previousWasBlank = true;
+                }
+
+                continue;
+            }
+
+            builder.Add(trimmed);
+            previousWasBlank = false;
+        }
+
+        // Remove trailing blank lines.
+        while (builder.Count > 0 && builder[^1].Length == 0)
+        {
+            builder.RemoveAt(builder.Count - 1);
+        }
+
+        return string.Join('\n', builder);
     }
 }

@@ -103,7 +103,14 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 // Add the plan as additional system context for the execution phase.
                 if (!string.IsNullOrWhiteSpace(plan))
                 {
-                    context.CompletionContext.SystemMessage += plan;
+                    var msg = context.CompletionContext.SystemMessage;
+
+                    context.CompletionContext.SystemMessage = plan;
+
+                    if (!string.IsNullOrWhiteSpace(msg))
+                    {
+                        context.CompletionContext.SystemMessage += '\n' + msg;
+                    }
                 }
             }
             else
@@ -144,23 +151,19 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         try
         {
-            var userSelectedSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.Local));
-            var systemToolSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.System));
-            var mcpToolSummary = BuildToolSummary(
-                availableTools.Where(t => t.Source == ToolRegistryEntrySource.McpServer));
-
             var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
-                ["userTools"] = userSelectedSummary,
-                ["systemTools"] = systemToolSummary,
-                ["mcpTools"] = mcpToolSummary,
+                ["tools"] = availableTools.Select(t => new
+                {
+                    t.Name,
+                    t.Description,
+                    Source = t.Source.ToString(),
+                }).ToList(),
             };
 
             var planningSystemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.TaskPlanning, arguments);
 
-            var chatClient = await TryCreateUtilityChatClientAsync(context);
+            var chatClient = await GetUtilityChatClientAsync(context);
 
             string plan;
 
@@ -388,37 +391,11 @@ public sealed class DefaultOrchestrator : IOrchestrator
         return sb.ToString();
     }
 
-    private static string BuildToolSummary(IEnumerable<ToolRegistryEntry> tools)
-    {
-        using var sb = ZString.CreateStringBuilder();
-
-        if (tools.Any())
-        {
-            sb.AppendLine("[Execution Plan]");
-        }
-
-        foreach (var tool in tools)
-        {
-            sb.Append("- ");
-            sb.Append(tool.Name);
-
-            if (!string.IsNullOrEmpty(tool.Description))
-            {
-                sb.Append(": ");
-                sb.Append(tool.Description);
-            }
-
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
-    }
-
     /// <summary>
     /// Attempts to create a chat client using the utility deployment name.
     /// Returns <c>null</c> if no utility or default deployment is configured.
     /// </summary>
-    private async Task<IChatClient> TryCreateUtilityChatClientAsync(OrchestrationContext context)
+    private async Task<IChatClient> GetUtilityChatClientAsync(OrchestrationContext context)
     {
         var providerName = context.SourceName;
         var connectionName = context.CompletionContext?.ConnectionName;

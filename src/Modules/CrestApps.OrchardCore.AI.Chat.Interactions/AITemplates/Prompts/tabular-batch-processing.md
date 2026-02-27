@@ -1,6 +1,8 @@
 ---
 Title: Tabular Batch Processing
-Description: System instructions for row-level analysis over tabular data. Accepts an optional 'baseSystemMessage' parameter for additional context.
+Description: System instructions for row-level analysis over tabular data.
+Parameters:
+	- baseSystemMessage: additional context or instructions for the analysis (optional).
 IsListable: false
 Category: Chat Interactions
 ---

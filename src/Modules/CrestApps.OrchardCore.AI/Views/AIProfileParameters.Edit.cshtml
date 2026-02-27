@@ -7,7 +7,7 @@
 
 @inject IOptions<DefaultAIOptions> DefaultAIOptions
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses()" data-ci-system-message-wrapper>
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System instructions"]</label>
     <div class="@Orchard.GetEndClasses()">
         <div class="hint mb-1">@T["The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>

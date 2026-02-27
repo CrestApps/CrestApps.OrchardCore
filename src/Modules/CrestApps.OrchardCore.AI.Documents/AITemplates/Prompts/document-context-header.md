@@ -1,6 +1,8 @@
 ---
 Title: Document Context Header
-Description: Header for uploaded document RAG context injection. Parameters - searchToolName (string, optional): the name of the search tool for additional lookups.
+Description: Header for uploaded document RAG context injection.
+Parameters:
+	- searchToolName: the name of the search tool for additional lookups (optional).
 IsListable: false
 Category: RAG
 ---

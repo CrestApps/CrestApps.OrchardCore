@@ -95,7 +95,7 @@ public sealed class FluidAITemplateEngineTests
 
         var result = await _renderer.RenderAsync(template, arguments);
 
-        Assert.Equal("Items: a, b, c, ", result);
+        Assert.Equal("Items: a, b, c,", result);
     }
 
     [Fact]
@@ -152,5 +152,80 @@ public sealed class FluidAITemplateEngineTests
 
         Assert.True(valid);
         Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_CollapsesMultipleBlankLines()
+    {
+        var input = "Line 1\n\n\n\n\nLine 2";
+
+        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+
+        Assert.Equal("Line 1\n\nLine 2", result);
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_TrimsLineWhitespace()
+    {
+        var input = "  Line 1  \n  Line 2  ";
+
+        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+
+        Assert.Equal("Line 1\nLine 2", result);
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_RemovesLeadingAndTrailingBlanks()
+    {
+        var input = "\n\n\nContent\n\n\n";
+
+        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+
+        Assert.Equal("Content", result);
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_PreservesSingleBlankLine()
+    {
+        var input = "Line 1\n\nLine 2";
+
+        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+
+        Assert.Equal("Line 1\n\nLine 2", result);
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_EmptyString_ReturnsEmpty()
+    {
+        Assert.Equal(string.Empty, FluidAITemplateEngine.NormalizeWhitespace(string.Empty));
+        Assert.Equal(string.Empty, FluidAITemplateEngine.NormalizeWhitespace(null));
+    }
+
+    [Fact]
+    public void NormalizeWhitespace_PreservesListFormatting()
+    {
+        var input = "Items:\n- Item A\n- Item B\n\nNext section";
+
+        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+
+        Assert.Equal("Items:\n- Item A\n- Item B\n\nNext section", result);
+    }
+
+    [Fact]
+    public async Task RenderAsync_NormalizesWhitespaceFromLiquidBlocks()
+    {
+        var template = """
+            {% if true %}
+
+            Hello
+
+            {% endif %}
+
+            World
+            """;
+
+        var result = await _renderer.RenderAsync(template);
+
+        Assert.Equal("Hello\n\nWorld", result);
     }
 }

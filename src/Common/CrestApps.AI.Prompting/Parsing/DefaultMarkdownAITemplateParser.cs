@@ -225,10 +225,64 @@ public sealed class DefaultMarkdownAITemplateParser : IAITemplateParser
         {
             metadata.Category = value;
         }
+        else if (string.Equals(key, nameof(AITemplateMetadata.Parameters), StringComparison.OrdinalIgnoreCase))
+        {
+            metadata.Parameters = ParseParameterDescriptors(value);
+        }
         else
         {
             metadata.AdditionalProperties[key] = value;
         }
+    }
+
+    /// <summary>
+    /// Parses parameter descriptors from the multi-line <c>Parameters:</c> value.
+    /// Each parameter line has the format: <c>- name: description</c>.
+    /// </summary>
+    private static List<AITemplateParameterDescriptor> ParseParameterDescriptors(string value)
+    {
+        var parameters = new List<AITemplateParameterDescriptor>();
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return parameters;
+        }
+
+        foreach (var rawLine in value.Split('\n'))
+        {
+            var line = rawLine.Trim();
+
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            // Strip leading "- " bullet marker.
+            if (line.StartsWith("- "))
+            {
+                line = line[2..];
+            }
+
+            var colonIndex = line.IndexOf(':');
+            if (colonIndex <= 0)
+            {
+                continue;
+            }
+
+            var name = line[..colonIndex].Trim();
+            var description = line[(colonIndex + 1)..].Trim();
+
+            if (name.Length > 0)
+            {
+                parameters.Add(new AITemplateParameterDescriptor
+                {
+                    Name = name,
+                    Description = description,
+                });
+            }
+        }
+
+        return parameters;
     }
 
     private static int IndexOf(ReadOnlySpan<char> content, string value)

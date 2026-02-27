@@ -27,6 +27,12 @@ public sealed class AITemplateMetadata
     public string Category { get; set; }
 
     /// <summary>
+    /// Gets or sets the expected parameters for this template.
+    /// Parsed from the <c>Parameters:</c> front matter block.
+    /// </summary>
+    public List<AITemplateParameterDescriptor> Parameters { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets additional metadata properties for extensibility.
     /// Used for future use cases such as AI Profile parameters.
     /// </summary>

@@ -23,6 +23,7 @@ public sealed class DocumentOrchestrationHandlerTests
         var options = new AIToolDefinitionOptions();
         options.SetTool("read_document", new AIToolDefinitionEntry(typeof(object))
         {
+            Name = "read_document",
             Description = "Reads document content",
             Purpose = AIToolPurposes.DocumentProcessing,
         });
@@ -251,7 +252,18 @@ public sealed class DocumentOrchestrationHandlerTests
 
                 foreach (dynamic tool in tools)
                 {
-                    lines.Add($"- {tool.name}: {tool.description}");
+                    lines.Add($"- {tool.Name}: {tool.Description}");
+                }
+
+                if (arguments.TryGetValue("availableDocuments", out var docsObj) && docsObj is IEnumerable<object> docs)
+                {
+                    lines.Add("");
+                    lines.Add("Available documents:");
+
+                    foreach (dynamic doc in docs)
+                    {
+                        lines.Add($"- {doc.FileName} ({doc.ContentType}, {doc.FileSize} bytes)");
+                    }
                 }
 
                 return Task.FromResult(string.Join(Environment.NewLine, lines));

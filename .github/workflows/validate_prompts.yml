@@ -96,3 +96,67 @@ jobs:
             print("✓ All fenced JSON blocks are valid")
 
         sys.exit(exit_code)
+    - name: Validate Parameters front matter syntax
+      shell: python3 {0}
+      run: |
+        import glob, re, sys
+
+        exit_code = 0
+
+        for path in sorted(glob.glob('src/**/AITemplates/Prompts/**/*.md', recursive=True)):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Only check files with front matter
+            if not content.lstrip().startswith('---'):
+                continue
+
+            # Extract front matter between --- delimiters
+            parts = content.lstrip().split('---', 2)
+            if len(parts) < 3:
+                continue
+
+            front_matter = parts[1]
+            lines = front_matter.split('\n')
+
+            in_parameters = False
+            param_line_num = 0
+
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+
+                # Detect Parameters: key
+                if stripped.startswith('Parameters:'):
+                    in_parameters = True
+                    param_line_num = i + 2  # +2 for 1-based and the --- line
+                    continue
+
+                # Lines within Parameters block start with whitespace
+                if in_parameters and (line.startswith('\t') or line.startswith(' ')):
+                    entry = stripped
+                    # Strip bullet marker
+                    if entry.startswith('- '):
+                        entry = entry[2:]
+
+                    # Each parameter entry must have name: description format
+                    if ':' not in entry:
+                        actual_line = i + 2
+                        print(f"::error file={path},line={actual_line}::Parameter entry "
+                              f"'{stripped}' is missing ':' separator. Expected format: "
+                              f"'- name: description'")
+                        exit_code = 1
+                    elif entry.index(':') == 0:
+                        actual_line = i + 2
+                        print(f"::error file={path},line={actual_line}::Parameter entry "
+                              f"'{stripped}' has empty name. Expected format: "
+                              f"'- name: description'")
+                        exit_code = 1
+                else:
+                    in_parameters = False
+
+        if exit_code == 0:
+            print("✓ All Parameters entries are valid")
+
+        sys.exit(exit_code)

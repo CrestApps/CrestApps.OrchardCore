@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -30,8 +31,10 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
 
         return Initialize<AITemplateSelectionViewModel>("AIProfilePromptSelection_Edit", model =>
         {
-            model.SelectedPromptId = profile.Properties["PromptTemplateId"]?.ToString();
-            model.PromptParameters = profile.Properties["PromptParameters"]?.ToString();
+            var promptMetadata = profile.As<PromptTemplateMetadata>();
+
+            model.SelectedPromptId = promptMetadata.TemplateId;
+            model.PromptParameters = SerializeParameters(promptMetadata.Parameters);
 
             PopulateViewModel(model, listableTemplates);
         }).Location("Content:9");
@@ -42,15 +45,31 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
         var model = new AITemplateSelectionViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var promptMetadata = new PromptTemplateMetadata();
+
         if (!string.IsNullOrEmpty(model.SelectedPromptId))
         {
-            profile.Properties["PromptTemplateId"] = model.SelectedPromptId;
+            promptMetadata.TemplateId = model.SelectedPromptId;
 
             if (!string.IsNullOrEmpty(model.PromptParameters))
             {
-                if (IsValidJsonKeyValuePair(model.PromptParameters))
+                var parameters = ParseAndValidateParameters(model.PromptParameters);
+
+                if (parameters != null)
                 {
-                    profile.Properties["PromptParameters"] = model.PromptParameters;
+                    var template = await _aiTemplateService.GetAsync(model.SelectedPromptId);
+                    var invalidKeys = GetInvalidParameterKeys(parameters, template);
+
+                    if (invalidKeys.Count > 0)
+                    {
+                        context.Updater.ModelState.AddModelError(
+                            Prefix + '.' + nameof(model.PromptParameters),
+                            $"The following parameter keys are not supported by this template: {string.Join(", ", invalidKeys)}");
+                    }
+                    else
+                    {
+                        promptMetadata.Parameters = parameters;
+                    }
                 }
                 else
                 {
@@ -59,16 +78,9 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
                         "The parameters must be valid JSON with string key-value pairs. Example: {\"key1\": \"value1\"}");
                 }
             }
-            else
-            {
-                profile.Properties.Remove("PromptParameters");
-            }
         }
-        else
-        {
-            profile.Properties.Remove("PromptTemplateId");
-            profile.Properties.Remove("PromptParameters");
-        }
+
+        profile.Put(promptMetadata);
 
         return await EditAsync(profile, context);
     }
@@ -102,35 +114,86 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
             {
                 model.PromptDescriptions[template.Id] = template.Metadata.Description;
             }
+
+            if (template.Metadata.Parameters is { Count: > 0 })
+            {
+                model.PromptParameterDescriptors[template.Id] = template.Metadata.Parameters;
+            }
         }
 
         model.AvailableGroups = groups.Values.ToList();
     }
 
-    private static bool IsValidJsonKeyValuePair(string json)
+    internal static Dictionary<string, object> ParseAndValidateParameters(string json)
     {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
         try
         {
             using var doc = JsonDocument.Parse(json);
 
             if (doc.RootElement.ValueKind != JsonValueKind.Object)
             {
-                return false;
+                return null;
             }
+
+            var parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var property in doc.RootElement.EnumerateObject())
             {
                 if (property.Value.ValueKind != JsonValueKind.String)
                 {
-                    return false;
+                    return null;
                 }
+
+                parameters[property.Name] = property.Value.GetString();
             }
 
-            return true;
+            return parameters;
         }
         catch
         {
-            return false;
+            return null;
         }
+    }
+
+    internal static string SerializeParameters(Dictionary<string, object> parameters)
+    {
+        if (parameters is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        return JsonSerializer.Serialize(parameters);
+    }
+
+    internal static List<string> GetInvalidParameterKeys(
+        Dictionary<string, object> providedParameters,
+        global::CrestApps.AI.Prompting.Models.AITemplate template)
+    {
+        var invalidKeys = new List<string>();
+
+        if (template?.Metadata.Parameters is not { Count: > 0 })
+        {
+            // Template declares no parameters; all provided keys are invalid.
+            return [.. providedParameters.Keys];
+        }
+
+        var declaredNames = new HashSet<string>(
+            template.Metadata.Parameters.Select(p => p.Name),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var key in providedParameters.Keys)
+        {
+            if (!declaredNames.Contains(key))
+            {
+                invalidKeys.Add(key);
+            }
+        }
+
+        return invalidKeys;
     }
 }

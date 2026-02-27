@@ -664,4 +664,133 @@ public sealed class DefaultMarkdownAITemplateParserTests
         Assert.Contains("""{"response_format":{"type":"json_object"}}""", result.Body);
         Assert.Contains("Some instructions after JSON.", result.Body);
     }
+
+    [Fact]
+    public void Parse_ParametersSingleEntry_ParsedCorrectly()
+    {
+        var content = """
+            ---
+            Title: Test
+            Parameters:
+            	- tools: array of tool objects for document processing.
+            ---
+
+            Body text.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Single(result.Metadata.Parameters);
+        Assert.Equal("tools", result.Metadata.Parameters[0].Name);
+        Assert.Equal("array of tool objects for document processing.", result.Metadata.Parameters[0].Description);
+    }
+
+    [Fact]
+    public void Parse_ParametersMultipleEntries_ParsedCorrectly()
+    {
+        var content = """
+            ---
+            Title: Test
+            Parameters:
+            	- tools: array of tool objects.
+            	- availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
+            	- searchToolName: the name of the search tool.
+            ---
+
+            Body text.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal(3, result.Metadata.Parameters.Count);
+        Assert.Equal("tools", result.Metadata.Parameters[0].Name);
+        Assert.Equal("availableDocuments", result.Metadata.Parameters[1].Name);
+        Assert.Equal("searchToolName", result.Metadata.Parameters[2].Name);
+        Assert.Equal("the name of the search tool.", result.Metadata.Parameters[2].Description);
+    }
+
+    [Fact]
+    public void Parse_ParametersEmpty_ReturnsEmptyList()
+    {
+        var content = """
+            ---
+            Title: Test
+            Parameters:
+            ---
+
+            Body text.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Empty(result.Metadata.Parameters);
+    }
+
+    [Fact]
+    public void Parse_ParametersWithOtherMetadata_ParsedCorrectly()
+    {
+        var content = """
+            ---
+            Title: My Template
+            Description: A test template with parameters.
+            Parameters:
+            	- name: the user name.
+            IsListable: false
+            Category: Testing
+            ---
+
+            Hello {{ name }}.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("My Template", result.Metadata.Title);
+        Assert.Equal("A test template with parameters.", result.Metadata.Description);
+        Assert.False(result.Metadata.IsListable);
+        Assert.Equal("Testing", result.Metadata.Category);
+        Assert.Single(result.Metadata.Parameters);
+        Assert.Equal("name", result.Metadata.Parameters[0].Name);
+        Assert.Contains("Hello {{ name }}.", result.Body);
+    }
+
+    [Fact]
+    public void Parse_ParametersMalformedEntry_SkipsInvalid()
+    {
+        var content = """
+            ---
+            Title: Test
+            Parameters:
+            	- validParam: a valid parameter.
+            	- missingcolon
+            	- : no name
+            ---
+
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Single(result.Metadata.Parameters);
+        Assert.Equal("validParam", result.Metadata.Parameters[0].Name);
+    }
+
+    [Fact]
+    public void Parse_ParametersWithoutBullets_ParsedCorrectly()
+    {
+        var content = """
+            ---
+            Title: Test
+            Parameters:
+            	toolName: the tool to use.
+            ---
+
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Single(result.Metadata.Parameters);
+        Assert.Equal("toolName", result.Metadata.Parameters[0].Name);
+        Assert.Equal("the tool to use.", result.Metadata.Parameters[0].Description);
+    }
 }
