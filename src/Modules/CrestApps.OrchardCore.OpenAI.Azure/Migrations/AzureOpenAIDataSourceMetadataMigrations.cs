@@ -119,8 +119,9 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     profile.Source = "Azure";
                 }
 
-                var dataSourceMetadata = profile.As<AIProfileDataSourceMetadata>();
-                if (string.IsNullOrEmpty(dataSourceMetadata?.DataSourceId))
+                var dataSourceId = profile.Properties?["AIProfileDataSourceMetadata"]?["DataSourceId"]?.GetValue<string>()
+                    ?? profile.Properties?["DataSourceMetadata"]?["DataSourceId"]?.GetValue<string>();
+                if (string.IsNullOrEmpty(dataSourceId))
                 {
                     continue;
                 }
@@ -136,7 +137,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 }
 
                 // Find the associated data source
-                var dataSource = await dataSourceStore.FindByIdAsync(dataSourceMetadata.DataSourceId);
+                var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
                 if (dataSource is null)
                 {
                     continue;

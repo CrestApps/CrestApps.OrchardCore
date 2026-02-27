@@ -40,7 +40,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
-            var metadata = interaction.As<ChatInteractionDataSourceMetadata>();
+            var metadata = interaction.As<DataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
 
             var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
@@ -66,7 +66,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
             if (dataSource != null)
             {
-                interaction.Put(new ChatInteractionDataSourceMetadata
+                interaction.Put(new DataSourceMetadata
                 {
                     DataSourceId = dataSource.ItemId,
                 });
@@ -75,7 +75,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         else
         {
             // Clear the metadata if no data source is selected
-            interaction.Put(new ChatInteractionDataSourceMetadata());
+            interaction.Put(new DataSourceMetadata());
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();

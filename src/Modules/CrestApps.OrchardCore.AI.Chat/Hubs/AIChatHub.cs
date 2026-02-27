@@ -423,9 +423,18 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         var existingPrompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
 
-        var transcript = existingPrompts
+        var conversationHistory = new List<ChatMessage>();
+
+        // If the profile has a welcome message, include it as the first assistant message
+        // so the model is aware of what was shown to the user before their first response.
+        if (!string.IsNullOrEmpty(profile.WelcomeMessage))
+        {
+            conversationHistory.Add(new ChatMessage(ChatRole.Assistant, profile.WelcomeMessage));
+        }
+
+        conversationHistory.AddRange(existingPrompts
             .Where(x => !x.IsGeneratedPrompt)
-            .Select(prompt => new ChatMessage(prompt.Role, prompt.Content));
+            .Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
 
         var assistantMessage = new AIChatSessionPrompt
         {
@@ -441,7 +450,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(profile, ctx =>
         {
             ctx.UserMessage = prompt;
-            ctx.ConversationHistory = transcript.ToList();
+            ctx.ConversationHistory = conversationHistory;
             ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
         });
 

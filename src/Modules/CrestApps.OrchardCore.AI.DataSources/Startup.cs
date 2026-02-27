@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.DataSources.Deployments;
 using CrestApps.OrchardCore.AI.DataSources.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Endpoints;
 using CrestApps.OrchardCore.AI.DataSources.Handlers;
+using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
 using CrestApps.OrchardCore.AI.DataSources.Tools;
@@ -16,6 +17,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
+using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Indexing.Core;
@@ -32,6 +34,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIDataSourceServices();
+        services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();

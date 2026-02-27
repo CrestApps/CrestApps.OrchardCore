@@ -189,6 +189,11 @@ internal sealed class OpenXmlIngestionDocumentReader : IngestionDocumentReader
 
     private static string GetCellValue(Cell cell, SharedStringTable table)
     {
+        if (cell.DataType?.Value == CellValues.InlineString)
+        {
+            return cell.InlineString?.InnerText ?? string.Empty;
+        }
+
         if (cell.CellValue == null)
         {
             return string.Empty;
@@ -197,9 +202,19 @@ internal sealed class OpenXmlIngestionDocumentReader : IngestionDocumentReader
         var value = cell.CellValue.InnerText;
 
         if (cell.DataType?.Value == CellValues.SharedString &&
-            int.TryParse(value, out var index))
+            int.TryParse(value, out var index) &&
+            table != null)
         {
-            return table?.ElementAtOrDefault(index)?.InnerText ?? value;
+            var item = table.ChildElements.Count > index
+                ? table.ChildElements[index]
+                : null;
+
+            return item?.InnerText ?? value;
+        }
+
+        if (cell.DataType?.Value == CellValues.Boolean)
+        {
+            return value == "1" ? "TRUE" : "FALSE";
         }
 
         return value;

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Entities;
 
@@ -9,7 +8,7 @@ internal sealed class DataSourceAICompletionContextBuilderHandler : IAICompletio
     public Task BuildingAsync(AICompletionContextBuildingContext context)
     {
         if (context.Resource is AIProfile profile &&
-            profile.TryGet<AIProfileDataSourceMetadata>(out var dataSourceMetadata) &&
+            profile.TryGet<DataSourceMetadata>(out var dataSourceMetadata) &&
             !string.IsNullOrEmpty(dataSourceMetadata.DataSourceId))
         {
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;

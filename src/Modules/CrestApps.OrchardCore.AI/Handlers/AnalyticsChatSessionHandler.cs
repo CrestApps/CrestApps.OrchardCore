@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 /// when chat sessions are active and closed (for the AI Chat Session metrics feature).
 /// Only records metrics when the profile has session metrics enabled.
 /// </summary>
-public sealed class AnalyticsChatSessionHandler : IAIChatSessionHandler
+public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly AIChatSessionEventService _eventService;
     private readonly ILogger _logger;
@@ -24,7 +25,7 @@ public sealed class AnalyticsChatSessionHandler : IAIChatSessionHandler
         _logger = logger;
     }
 
-    public async Task MessageCompletedAsync(ChatMessageCompletedContext context)
+    public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
     {
         if (!context.Profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics)
         {

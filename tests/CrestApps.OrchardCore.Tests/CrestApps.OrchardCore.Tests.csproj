@@ -24,6 +24,9 @@
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.OpenAI.Azure.Core\CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.DataSources.AzureAI\CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.DataSources.Elasticsearch\CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents\CrestApps.OrchardCore.AI.Documents.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.OpenXml\CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.Pdf\CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" />
   </ItemGroup>

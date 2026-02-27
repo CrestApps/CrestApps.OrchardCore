@@ -55,5 +55,5 @@ To use these files, please convert them to the newer formats (.docx, .xlsx, .ppt
 ### Content Extraction Notes
 
 - **Word**: Extracts text from all paragraphs in the main document body
-- **Excel**: Extracts data row-by-row, with cells separated by tabs
+- **Excel**: Extracts data row-by-row, with cells separated by tabs. Supports shared strings, inline strings, numeric values, and boolean cells.
 - **PowerPoint**: Extracts text from all text elements across all slides

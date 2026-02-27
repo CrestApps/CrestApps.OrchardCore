@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -15,6 +16,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -48,6 +50,9 @@ public sealed class Startup : StartupBase
 
         // Register the document Preemptive RAG handler.
         services.AddScoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>();
+
+        // Register the session document cleanup handler to remove documents when a chat session is deleted.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
 
         // Register the RAG search system tool.
         services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)

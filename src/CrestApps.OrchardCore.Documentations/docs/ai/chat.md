@@ -23,6 +23,10 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 - **Azure AI Inference Chat** (`CrestApps.OrchardCore.AzureAIInference`): AI services using Azure AI Inference (GitHub models) models.
 - **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Ollama service.
 
+### Welcome Message Behavior
+
+When an AI profile has a **Welcome Message** configured, it is displayed to the user as the first message in the chat. The welcome message is also included in the conversation history sent to the AI model as an assistant message, ensuring the model understands the full context of the conversation — including any questions posed in the welcome message that the user may respond to in their first prompt.
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)

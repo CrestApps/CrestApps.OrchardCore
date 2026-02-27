@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI;
 
@@ -6,8 +7,11 @@ namespace CrestApps.OrchardCore.AI;
 /// Handles lifecycle events raised during an AI chat session, such as when
 /// a message exchange completes. Implementations can perform post-processing
 /// tasks like data extraction, analytics, or workflow triggers.
+/// Inherits from <see cref="ICatalogEntryHandler{T}"/> to support standard
+/// lifecycle events (Initializing, Initialized, Creating, Created, Loaded,
+/// Deleting, Deleted, Updating, Updated, Validating, Validated).
 /// </summary>
-public interface IAIChatSessionHandler
+public interface IAIChatSessionHandler : ICatalogEntryHandler<AIChatSession>
 {
     /// <summary>
     /// Called after a user message has been processed and the assistant response

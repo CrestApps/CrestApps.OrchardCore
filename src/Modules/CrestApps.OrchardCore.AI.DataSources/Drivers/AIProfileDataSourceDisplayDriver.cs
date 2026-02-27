@@ -44,7 +44,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             model.IsInScope = ragMetadata.IsInScope;
             model.Filter = ragMetadata.Filter;
 
-            var metadata = profile.As<AIProfileDataSourceMetadata>();
+            var metadata = profile.As<DataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Content:2");
@@ -54,7 +54,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
     {
         var model = new EditProfileDataSourcesViewModel();
 
-        var metadata = profile.As<AIProfileDataSourceMetadata>();
+        var metadata = profile.As<DataSourceMetadata>();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
