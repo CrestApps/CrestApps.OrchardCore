@@ -28,7 +28,7 @@
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.0.0" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.0.0" />
     <PackageVersion Include="PdfPig" Version="0.1.13" />
-    <PackageVersion Include="GitHub.Copilot.SDK" Version="0.1.26" />
+    <PackageVersion Include="GitHub.Copilot.SDK" Version="0.1.29" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
