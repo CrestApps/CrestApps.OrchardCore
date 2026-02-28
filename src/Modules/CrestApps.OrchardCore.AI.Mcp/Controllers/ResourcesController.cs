@@ -112,8 +112,13 @@ public sealed class ResourcesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/mcp/resources", "AIMCPResourcesIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpResources))
+        {
+            return Forbid();
+        }
+
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },

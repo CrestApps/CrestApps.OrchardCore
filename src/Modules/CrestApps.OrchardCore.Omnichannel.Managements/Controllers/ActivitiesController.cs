@@ -164,6 +164,11 @@ public sealed class ActivitiesController : Controller
     public async Task<ActionResult> ActivitiesFilterPost(
         [FromServices] IDisplayManager<ListOmnichannelActivityFilter> filterDisplayManager)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListActivities))
+        {
+            return Forbid();
+        }
+
         var options = new ListOmnichannelActivityFilter();
 
         // Evaluate the values provided in the form post and map them to the filter result and route values.

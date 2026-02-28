@@ -46,11 +46,23 @@ window.chatInteractionManager = function () {
         clearHistoryCancelText: 'Cancel'
     };
 
+    // Sanitize URLs to prevent javascript: protocol injection.
+    function sanitizeUrl(url) {
+        if (!url) return '';
+        var trimmed = url.trim();
+        if (/^javascript:/i.test(trimmed) || /^vbscript:/i.test(trimmed) || /^data:text\/html/i.test(trimmed)) {
+            return '';
+        }
+        return url;
+    }
+
     const renderer = new marked.Renderer();
 
     // Modify the link rendering to open in a new tab
     renderer.link = function (data) {
-        return `<a href="${data.href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+        var href = sanitizeUrl(data.href);
+        if (!href) return data.text || '';
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
     };
 
     // Custom code block renderer with highlight.js integration and copy button.
@@ -80,7 +92,8 @@ window.chatInteractionManager = function () {
     // Custom image renderer for generated images with thumbnail styling and download button.
     // Handles both URL and data-URI sources (data URIs are converted to blobs for download).
     renderer.image = function (data) {
-        const src = data.href;
+        const src = sanitizeUrl(data.href);
+        if (!src) return '';
         const alt = data.text || defaultConfig.generatedImageAltText;
         const maxWidth = defaultConfig.generatedImageMaxWidth;
         return `<div class="generated-image-container">
