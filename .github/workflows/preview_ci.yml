@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Build, Test, Deploy
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Check if should publish
       id: check-publish
       shell: pwsh
@@ -21,11 +21,11 @@ jobs:
         Write-Output "Commits found in the last 24 hours: $hasCommitFromLastDay."
         $shouldPublish = ($hasCommitFromLastDay -and '${{ github.event_name }}' -eq 'schedule') -or ('${{ github.event_name }}' -eq 'workflow_dispatch')
         "should-publish=$($shouldPublish ? 'true' : 'false')" >> $Env:GITHUB_OUTPUT
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         node-version: "15"
-    - uses: actions/setup-dotnet@v4
+    - uses: actions/setup-dotnet@v5
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
         dotnet-version: |
