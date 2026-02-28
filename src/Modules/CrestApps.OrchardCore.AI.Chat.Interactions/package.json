@@ -10,5 +10,8 @@
   "license": "ISC",
   "devDependencies": {
     "eslint": "^9.39.2"
+  },
+  "overrides": {
+    "minimatch": "^10.0.1"
   }
 }

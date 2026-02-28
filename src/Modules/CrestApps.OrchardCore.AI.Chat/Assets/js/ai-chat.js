@@ -64,6 +64,13 @@ window.openAIChatManager = function () {
         return url;
     }
 
+    // Safely HTML-encode a string using the DOM (avoids regex-based HTML filtering).
+    function escapeHtmlEntities(text) {
+        var span = document.createElement('span');
+        span.textContent = text;
+        return span.innerHTML;
+    }
+
     const renderer = new marked.Renderer();
 
     // Modify the link rendering to open in a new tab
@@ -90,7 +97,7 @@ window.openAIChatManager = function () {
                 } catch (_) { }
             }
         } else {
-            highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            highlighted = escapeHtmlEntities(code);
         }
 
         var langLabel = lang ? ` data-lang="${lang}"` : '';
@@ -280,7 +287,7 @@ window.openAIChatManager = function () {
         _pendingCharts = [];
         const html = marked.parse(content, { renderer });
         message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-        return html;
+        return DOMPurify.sanitize(html);
     }
 
     const initialize = (instanceConfig) => {
@@ -510,7 +517,7 @@ window.openAIChatManager = function () {
 
                     html += '</div>';
 
-                    this.documentBar.innerHTML = html;
+                    this.documentBar.innerHTML = DOMPurify.sanitize(html);
 
                     // Bind remove handlers
                     var self = this;
@@ -908,7 +915,7 @@ window.openAIChatManager = function () {
                     var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
 
                     if (stopIcon) {
-                        this.buttonElement.innerHTML = stopIcon;
+                        this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
                     }
 
                     if (this.inputElement) {
@@ -919,7 +926,7 @@ window.openAIChatManager = function () {
                     var startIcon = this.buttonElement.getAttribute('data-start-icon');
 
                     if (startIcon) {
-                        this.buttonElement.innerHTML = startIcon;
+                        this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
                     }
 
                     if (this.inputElement) {
@@ -1275,12 +1282,20 @@ window.openAIChatManager = function () {
                     // the entire button content and let Font Awesome re-process.
                     if (upBtn) {
                         var upClass = userRating === true ? 'fa-solid fa-thumbs-up' : 'fa-regular fa-thumbs-up';
-                        upBtn.innerHTML = '<i class="' + upClass + '" style="font-size: 0.9rem;"></i>';
+                        var upIcon = document.createElement('i');
+                        upIcon.className = upClass;
+                        upIcon.style.fontSize = '0.9rem';
+                        upBtn.textContent = '';
+                        upBtn.appendChild(upIcon);
                     }
 
                     if (downBtn) {
                         var downClass = userRating === false ? 'fa-solid fa-thumbs-down' : 'fa-regular fa-thumbs-down';
-                        downBtn.innerHTML = '<i class="' + downClass + '" style="font-size: 0.9rem;"></i>';
+                        var downIcon = document.createElement('i');
+                        downIcon.className = downClass;
+                        downIcon.style.fontSize = '0.9rem';
+                        downBtn.textContent = '';
+                        downBtn.appendChild(downIcon);
                     }
 
                     // Trigger Font Awesome SVG+JS to convert the new <i> elements.

@@ -11,7 +11,6 @@ flatpickrCulture = function () {
             .replace(/yyyy/g, "Y")
             .replace(/yyy/g, "Y")
             .replace(/yy/g, "y")
-            .replace(/y/g, "y")
 
             // Month
             .replace(/MMMM/g, "F")
@@ -45,11 +44,11 @@ flatpickrCulture = function () {
 
         // Hours
         if (is12Hour) {
-            p = p.replace(/hh/g, "h").replace(/h/g, "h");
+            p = p.replace(/hh/g, "h");
             p = p.replace(/HH/g, "h").replace(/H/g, "h");
             p = p.replace(/tt/g, "K").replace(/t/g, "K");
         } else {
-            p = p.replace(/HH/g, "H").replace(/H/g, "H");
+            p = p.replace(/HH/g, "H");
             p = p.replace(/hh/g, "H").replace(/h/g, "H");
             p = p.replace(/tt/g, "").replace(/t/g, "");
         }

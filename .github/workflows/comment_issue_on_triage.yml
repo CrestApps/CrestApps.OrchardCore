@@ -7,11 +7,12 @@ on:
     # of hoops, and that should be rare anyway.
     types: [milestoned]
 
+permissions:
+  issues: write
+
 jobs:
   comment-issue-on-triage:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
     # Despite the trigger being called "issues", this would still run for setting the milestone of PRs too.
     if: github.event.issue.pull_request == null && github.event.issue.state == 'open'
     steps:

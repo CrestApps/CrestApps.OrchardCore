@@ -97,6 +97,20 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/dompurify/dist/purify.js"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/dompurify/dist/purify.min.js"
+    ],
+    "output": "wwwroot/vendors/dompurify/purify.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/highlight.js/styles/github.css"
     ],
     "output": "wwwroot/vendors/highlightjs/css/highlightjs.css"

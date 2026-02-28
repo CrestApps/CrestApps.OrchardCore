@@ -10,6 +10,9 @@ on:
       - 'src/CrestApps.OrchardCore.Documentations/**'
     branches: [ main, release/** ]
 
+permissions:
+  contents: read
+
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true

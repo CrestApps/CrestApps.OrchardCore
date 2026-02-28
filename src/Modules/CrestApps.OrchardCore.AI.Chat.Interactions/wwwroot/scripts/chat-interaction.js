@@ -48,6 +48,13 @@ window.chatInteractionManager = function () {
     }
     return url;
   }
+
+  // Safely HTML-encode a string using the DOM (avoids regex-based HTML filtering).
+  function escapeHtmlEntities(text) {
+    var span = document.createElement('span');
+    span.textContent = text;
+    return span.innerHTML;
+  }
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
@@ -75,7 +82,7 @@ window.chatInteractionManager = function () {
         } catch (_) {}
       }
     } else {
-      highlighted = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      highlighted = escapeHtmlEntities(code);
     }
     var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
     return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
@@ -247,7 +254,7 @@ window.chatInteractionManager = function () {
       renderer: renderer
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return html;
+    return DOMPurify.sanitize(html);
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -717,13 +724,13 @@ window.chatInteractionManager = function () {
         streamingStarted: function streamingStarted() {
           var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
           if (stopIcon) {
-            this.buttonElement.innerHTML = stopIcon;
+            this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
           }
         },
         streamingFinished: function streamingFinished() {
           var startIcon = this.buttonElement.getAttribute('data-start-icon');
           if (startIcon) {
-            this.buttonElement.innerHTML = startIcon;
+            this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
           }
 
           // Directly manipulate the DOM to stop all streaming animations.
