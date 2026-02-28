@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[3.0.0-preview-18908, )</OrchardCoreVersion>
+    <OrchardCoreVersion>3.0.0-preview-18930</OrchardCoreVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
@@ -11,15 +11,15 @@
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="FluentFTP" Version="53.0.2" />
-    <PackageVersion Include="JsonSchema.Net" Version="7.4.0" />
+    <PackageVersion Include="JsonSchema.Net" Version="9.1.1" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
-    <PackageVersion Include="Markdig" Version="1.0.0" />
+    <PackageVersion Include="Markdig" Version="1.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.3.0-preview.1.26109.11" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.3.0-preview.1.26109.11" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
-    <PackageVersion Include="NuGet.Versioning" Version="7.0.1" />
-    <PackageVersion Include="OllamaSharp" Version="5.4.16" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.3.0" />
+    <PackageVersion Include="OllamaSharp" Version="5.4.18" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
@@ -89,7 +89,7 @@
   <ItemGroup>
     <!-- Microsoft Packages -->
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.8.0-beta.1" />
-    <PackageVersion Include="Azure.Identity" Version="1.17.1" />
+    <PackageVersion Include="Azure.Identity" Version="1.18.0" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.3" />
@@ -114,13 +114,13 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Benchmark Packages -->
-    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.1" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.2" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.1.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.1.1" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.1.2" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.1.1" />
   </ItemGroup>
 </Project>
