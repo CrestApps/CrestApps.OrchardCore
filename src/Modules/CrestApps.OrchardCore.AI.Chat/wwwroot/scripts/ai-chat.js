@@ -34,7 +34,7 @@ window.openAIChatManager = function () {
     thumbsUpTitle: 'Thumbs up',
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent || message.content\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
 
@@ -528,7 +528,9 @@ window.openAIChatManager = function () {
           }
           html += '</button>';
           html += '</div>';
-          this.documentBar.innerHTML = DOMPurify.sanitize(html);
+          this.documentBar.replaceChildren(DOMPurify.sanitize(html, {
+            RETURN_DOM_FRAGMENT: true
+          }));
 
           // Bind remove handlers
           var self = this;
@@ -631,6 +633,9 @@ window.openAIChatManager = function () {
         },
         addMessageInternal: function addMessageInternal(message) {
           var _this4 = this;
+          if (message.content && !message.htmlContent) {
+            message.htmlContent = parseMarkdownContent(message.content, message);
+          }
           this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", {
             detail: {
               message: message
@@ -977,7 +982,9 @@ window.openAIChatManager = function () {
         streamingStarted: function streamingStarted() {
           var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
           if (stopIcon) {
-            this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(stopIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
           }
           if (this.inputElement) {
             this.inputElement.setAttribute('disabled', 'disabled');
@@ -986,7 +993,9 @@ window.openAIChatManager = function () {
         streamingFinished: function streamingFinished() {
           var startIcon = this.buttonElement.getAttribute('data-start-icon');
           if (startIcon) {
-            this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(startIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
           }
           if (this.inputElement) {
             this.inputElement.removeAttribute('disabled');

@@ -1,7 +1,7 @@
 name: "CodeQL Config for CrestApps.OrchardCore"
 
-# This configuration file is automatically used by GitHub's default CodeQL
-# setup. It does NOT require a separate workflow file.
+# This configuration file is referenced by .github/workflows/codeql.yml.
+# It is NOT automatically used by GitHub's default CodeQL setup.
 
 # Paths to ignore during analysis.
 paths-ignore:
@@ -12,6 +12,8 @@ paths-ignore:
   - "docs/**"
   - "BenchmarkDotNet.Artifacts/**"
   - "TestResults/**"
+  # Third-party / generated files that should not be analysed.
+  - "**/Assets/js/flatpickr-culture.js"
 
 query-filters:
   # Exclude CSRF (missing antiforgery token) alerts.

@@ -25,7 +25,7 @@ window.openAIChatManager = function () {
                     </div>
                     <div class="lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
-                        <div v-html="message.htmlContent || message.content"></div>
+                        <div v-html="message.htmlContent"></div>
                         <span class="message-buttons-container" v-if="!isIndicator(message)">
                             <template v-if="metricsEnabled && message.role === 'assistant'">
                                 <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
@@ -517,7 +517,7 @@ window.openAIChatManager = function () {
 
                     html += '</div>';
 
-                    this.documentBar.innerHTML = DOMPurify.sanitize(html);
+                    this.documentBar.replaceChildren(DOMPurify.sanitize(html, { RETURN_DOM_FRAGMENT: true }));
 
                     // Bind remove handlers
                     var self = this;
@@ -613,6 +613,9 @@ window.openAIChatManager = function () {
                     }
                 },
                 addMessageInternal(message) {
+                    if (message.content && !message.htmlContent) {
+                        message.htmlContent = parseMarkdownContent(message.content, message);
+                    }
                     this.fireEvent(new CustomEvent("addingOpenAIPromotMessage", { detail: { message: message } }));
                     this.messages.push(message);
 
@@ -915,7 +918,7 @@ window.openAIChatManager = function () {
                     var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
 
                     if (stopIcon) {
-                        this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
+                        this.buttonElement.replaceChildren(DOMPurify.sanitize(stopIcon, { RETURN_DOM_FRAGMENT: true }));
                     }
 
                     if (this.inputElement) {
@@ -926,7 +929,7 @@ window.openAIChatManager = function () {
                     var startIcon = this.buttonElement.getAttribute('data-start-icon');
 
                     if (startIcon) {
-                        this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
+                        this.buttonElement.replaceChildren(DOMPurify.sanitize(startIcon, { RETURN_DOM_FRAGMENT: true }));
                     }
 
                     if (this.inputElement) {
