@@ -125,6 +125,6 @@ public sealed class SendEmailTool : AIFunction
             return "The email was sent successfully.";
         }
 
-        return $"The email was not sent successfully due to the following: {string.Join(' ', result.Errors.Values)}";
+        return $"The email was not sent successfully due to the following: {string.Join(' ', result.Errors)}";
     }
 }
