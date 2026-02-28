@@ -1,5 +1,8 @@
 name: "CodeQL Config for CrestApps.OrchardCore"
 
+# This configuration file is automatically used by GitHub's default CodeQL
+# setup. It does NOT require a separate workflow file.
+
 # Paths to ignore during analysis.
 paths-ignore:
   - node_modules
