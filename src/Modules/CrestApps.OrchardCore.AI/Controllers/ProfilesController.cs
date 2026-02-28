@@ -108,8 +108,13 @@ public sealed class ProfilesController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/profiles", "AIProfilesIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
+        {
+            return Forbid();
+        }
+
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },

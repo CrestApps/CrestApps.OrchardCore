@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Services;
+using CrestApps.Support;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -85,7 +86,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (endpoint is null)
         {
-            _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel, omnichannelEvent.Message.ServiceAddress);
+            _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), omnichannelEvent.Message.ServiceAddress.SanitizeLogValue());
 
             return;
         }
@@ -97,7 +98,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         if (activity is null)
         {
-            _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel, omnichannelEvent.Message.ServiceAddress, omnichannelEvent.Message.CustomerAddress);
+            _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), omnichannelEvent.Message.ServiceAddress.SanitizeLogValue(), omnichannelEvent.Message.CustomerAddress.SanitizeLogValue());
 
             return;
         }
@@ -333,7 +334,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination, activity.ItemId);
+            _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination.SanitizeLogValue(), activity.ItemId);
         }
 
         await _session.SaveAsync(chatSession);

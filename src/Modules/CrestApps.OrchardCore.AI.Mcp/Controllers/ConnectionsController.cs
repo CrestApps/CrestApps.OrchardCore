@@ -110,8 +110,13 @@ public sealed class ConnectionsController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/mcp/connections", "AIMcpConnectionsIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, McpPermissions.ManageMcpConnections))
+        {
+            return Forbid();
+        }
+
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },

@@ -16,7 +16,7 @@ var fs = require("graceful-fs"),
     concat = require("gulp-concat"),
     header = require("gulp-header"),
     eol = require("gulp-eol"),
-    util = require('gulp-util'),
+    log = require('fancy-log'),
     postcss = require('gulp-postcss'),
     rtl = require('postcss-rtl'),
     babel = require('gulp-babel');
@@ -81,7 +81,7 @@ gulp.task("watch", function () {
 });
 
 gulp.task('help', function () {
-    util.log(`
+    log(`
   Usage: gulp [TASK]
   Tasks:
       build     Incremental build (each asset group is built only if one or more inputs are newer than the output).

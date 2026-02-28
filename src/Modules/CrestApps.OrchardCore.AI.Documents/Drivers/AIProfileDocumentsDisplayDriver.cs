@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -153,7 +154,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Failed to process file {FileName}", file.FileName);
+                        _logger.LogError(ex, "Failed to process file {FileName}", file.FileName.SanitizeLogValue());
                         context.Updater.ModelState.AddModelError(
                             Prefix + "." + nameof(model.Files),
                             S["Failed to process file '{0}'.", file.FileName]);

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
@@ -151,7 +152,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
                 }
                 catch (Exception embeddingEx)
                 {
-                    _logger.LogWarning(embeddingEx, "Failed to generate embeddings for file {FileName}. File will be stored without vector search support.", file.FileName);
+                    _logger.LogWarning(embeddingEx, "Failed to generate embeddings for file {FileName}. File will be stored without vector search support.", file.FileName.SanitizeLogValue());
                 }
             }
         }

@@ -4,6 +4,13 @@ namespace CrestApps.Support;
 
 public static class StringExtensions
 {
+    /// <summary>
+    /// Sanitizes a string value for safe inclusion in log messages by removing
+    /// carriage return and newline characters that could be used for log injection.
+    /// </summary>
+    public static string SanitizeLogValue(this string value)
+        => value?.Replace("\r", "").Replace("\n", "") ?? string.Empty;
+
     public static bool Like(this string toSearch, string toFind)
     {
         var match = new Regex(@"\.|\$|\^|\{|\[|\(|\||\)|\*|\+|\?|\\").Replace(toFind, ch => @"\" + ch)

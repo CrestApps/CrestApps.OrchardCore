@@ -1,6 +1,7 @@
 using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -59,7 +60,7 @@ internal static class TwilioEventGridEndpoint
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
-                SanitizeLogValue(from), SanitizeLogValue(to), SanitizeLogValue(messageSid));
+                from.SanitizeLogValue(), to.SanitizeLogValue(), messageSid.SanitizeLogValue());
         }
 
         // Map to OmnichannelMessage
@@ -135,7 +136,4 @@ internal static class TwilioEventGridEndpoint
 
         return isValid;
     }
-
-    private static string SanitizeLogValue(string value)
-        => value.Replace("\r", "").Replace("\n", "");
 }
