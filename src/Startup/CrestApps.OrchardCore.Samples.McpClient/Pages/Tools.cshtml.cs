@@ -71,9 +71,9 @@ public sealed class ToolsModel : PageModel
 
             return new JsonResult(new { contents, isError = result.IsError });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new JsonResult(new { error = ex.Message });
+            return new JsonResult(new { error = "An error occurred while invoking the tool." });
         }
     }
 
@@ -84,9 +84,9 @@ public sealed class ToolsModel : PageModel
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Tools = await client.ListToolsAsync(options: null, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ErrorMessage ??= ex.Message;
+            ErrorMessage ??= "An error occurred while loading tools.";
             Tools = [];
         }
     }

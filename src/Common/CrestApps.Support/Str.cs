@@ -184,8 +184,7 @@ public partial class Str
     public static string Random(int length = 40)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwzyz";
-        var random = new Random();
-        return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+        return new string(System.Security.Cryptography.RandomNumberGenerator.GetItems<char>(chars.AsSpan(), length));
     }
 
     public static string ToLower(string str, string defaultValue = "")

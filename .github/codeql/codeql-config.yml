@@ -1,0 +1,26 @@
+name: "CodeQL Config for CrestApps.OrchardCore"
+
+# This configuration file is automatically used by GitHub's default CodeQL
+# setup. It does NOT require a separate workflow file.
+
+# Paths to ignore during analysis.
+paths-ignore:
+  - node_modules
+  - "**/wwwroot/**"
+  - "**/bin/**"
+  - "**/obj/**"
+  - "docs/**"
+  - "BenchmarkDotNet.Artifacts/**"
+  - "TestResults/**"
+
+query-filters:
+  # Exclude CSRF (missing antiforgery token) alerts.
+  # OrchardCore framework automatically validates antiforgery tokens for all
+  # POST requests via its ModularApplicationModelProvider. Every module in this
+  # repository references OrchardCore.Module.Targets, which enables this global
+  # validation. Adding [ValidateAntiForgeryToken] to individual actions is
+  # therefore redundant.
+  - exclude:
+      id: cs/web/missing-token-validation
+  - exclude:
+      id: cs/web/missing-csrf-token-validation

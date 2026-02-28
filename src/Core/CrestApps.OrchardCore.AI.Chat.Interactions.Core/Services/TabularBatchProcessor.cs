@@ -334,7 +334,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 batch.RowStartIndex,
                 batch.RowEndIndex,
                 batch.RowCount,
-                $"Error: {ex.Message}");
+                $"An error occurred while processing the batch.");
         }
     }
 

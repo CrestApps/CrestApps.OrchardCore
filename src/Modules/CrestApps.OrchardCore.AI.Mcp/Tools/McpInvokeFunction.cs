@@ -102,7 +102,7 @@ public sealed class McpInvokeFunction : AIFunction
 
             logger.LogError(ex, "Error invoking MCP capability '{Type}/{Id}' on server '{ClientId}'.", type, id, clientId);
 
-            return JsonSerializer.Serialize(new { error = $"Error invoking MCP capability: {ex.Message}" });
+            return JsonSerializer.Serialize(new { error = "Error invoking MCP capability." });
         }
     }
 

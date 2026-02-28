@@ -384,7 +384,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                     ? "The function arguments were truncated because the response exceeded the output token limit. "
                       + "Please significantly reduce the size of the arguments. For content creation, use much shorter text, "
                       + "omit optional fields, or split the operation into multiple smaller calls."
-                    : $"Invalid JSON in function arguments: {ex.Message}. Please fix the JSON structure and try again.";
+                    : "Invalid JSON in function arguments. Please fix the JSON structure and try again.";
 
                 prompts.Add(new ToolChatMessage(toolCall.Id,
                     JsonSerializer.Serialize(new { error = errorMessage })));
@@ -418,7 +418,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 _logger.LogError(ex, "Error invoking function '{FunctionName}'.", toolCall.FunctionName);
 
                 prompts.Add(new ToolChatMessage(toolCall.Id,
-                    JsonSerializer.Serialize(new { error = $"Error invoking function: {ex.Message}" })));
+                    JsonSerializer.Serialize(new { error = "Error invoking function." })));
             }
         }
     }

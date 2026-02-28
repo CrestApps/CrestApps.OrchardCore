@@ -6,8 +6,7 @@ public class NumberHelpers
 
     public static long GetRandomNumber(int length = 10)
     {
-        var random = new Random();
-        var values = Enumerable.Repeat(_numericChars, length).Select(s => s[random.Next(s.Length)]).ToArray();
+        var values = System.Security.Cryptography.RandomNumberGenerator.GetItems<char>(_numericChars.AsSpan(), length);
 
         return Convert.ToInt64(new string(values));
     }
