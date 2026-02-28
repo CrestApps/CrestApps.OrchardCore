@@ -58,7 +58,8 @@ internal static class TwilioEventGridEndpoint
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
+                SanitizeLogValue(from), SanitizeLogValue(to), SanitizeLogValue(messageSid));
         }
 
         // Map to OmnichannelMessage
@@ -134,4 +135,7 @@ internal static class TwilioEventGridEndpoint
 
         return isValid;
     }
+
+    private static string SanitizeLogValue(string value)
+        => value.Replace("\r", "").Replace("\n", "");
 }
