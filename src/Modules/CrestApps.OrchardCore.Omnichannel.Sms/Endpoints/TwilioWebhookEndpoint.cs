@@ -84,7 +84,8 @@ internal static class TwilioWebhookEndpoint
 
         if (logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}", from, to, messageSid);
+            logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
+                SanitizeLogValue(from), SanitizeLogValue(to), SanitizeLogValue(messageSid));
         }
 
         var omnichannelMessage = new OmnichannelMessage
@@ -113,4 +114,7 @@ internal static class TwilioWebhookEndpoint
         // Return empty 200 OK to Twilio
         return TypedResults.Ok();
     }
+
+    private static string SanitizeLogValue(string value)
+        => value.Replace("\r", "").Replace("\n", "");
 }

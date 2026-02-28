@@ -67,7 +67,7 @@ public sealed class CopilotAuthController : Controller
     {
         if (!string.IsNullOrEmpty(error))
         {
-            _logger.LogWarning("GitHub OAuth error: {Error}", error);
+            _logger.LogWarning("GitHub OAuth error: {Error}", SanitizeLogValue(error));
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
             return HandleOAuthReturn(state, success: false, username: null);
@@ -221,4 +221,7 @@ public sealed class CopilotAuthController : Controller
 
         return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
     }
+
+    private static string SanitizeLogValue(string value)
+        => value.Replace("\r", "").Replace("\n", "");
 }

@@ -198,6 +198,18 @@ public sealed class AdminController : Controller
     [ActionName(nameof(History))]
     public async Task<ActionResult> HistoryPost(string profileId)
     {
+        var profile = await _profileManager.FindByIdAsync(profileId);
+
+        if (profile is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
+        {
+            return Forbid();
+        }
+
         var options = new AIChatSessionListOptions();
         // Evaluate the values provided in the form post and map them to the filter result and route values.
         await _optionsDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, false);

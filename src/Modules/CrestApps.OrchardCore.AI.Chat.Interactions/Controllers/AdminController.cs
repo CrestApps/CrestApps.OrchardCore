@@ -120,8 +120,13 @@ public sealed class AdminController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("ai/chat-interactions", "AIInteractionsIndex")]
-    public ActionResult IndexFilterPost(ListCatalogEntryViewModel model)
+    public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractions))
+        {
+            return Forbid();
+        }
+
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
