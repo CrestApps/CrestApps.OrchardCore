@@ -60,9 +60,9 @@ public sealed class PromptsModel : PageModel
 
             return new JsonResult(new { description = result.Description, messages });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new JsonResult(new { error = ex.Message });
+            return new JsonResult(new { error = "An error occurred while getting the prompt." });
         }
     }
 
@@ -73,9 +73,9 @@ public sealed class PromptsModel : PageModel
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Prompts = await client.ListPromptsAsync(options: null, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ErrorMessage ??= ex.Message;
+            ErrorMessage ??= "An error occurred while loading prompts.";
             Prompts = [];
         }
     }

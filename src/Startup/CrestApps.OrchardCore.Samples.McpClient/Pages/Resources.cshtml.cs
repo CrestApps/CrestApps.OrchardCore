@@ -62,9 +62,9 @@ public sealed class ResourcesModel : PageModel
 
             return new JsonResult(new { contents });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new JsonResult(new { error = ex.Message });
+            return new JsonResult(new { error = "An error occurred while reading the resource." });
         }
     }
 
@@ -76,9 +76,9 @@ public sealed class ResourcesModel : PageModel
             var result = await client.ListResourcesAsync(options: null, cancellationToken);
             Resources = result;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ErrorMessage ??= ex.Message;
+            ErrorMessage ??= "An error occurred while loading resources.";
             Resources = [];
         }
     }

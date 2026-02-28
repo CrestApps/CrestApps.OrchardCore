@@ -77,7 +77,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             model.Schema =
             """
             {
-              "$schema": "http://json-schema.org/draft-04/schema#",
+              "$schema": "https://json-schema.org/draft-04/schema#",
               "type": "object",
               "additionalProperties": {
                 "type": "string"

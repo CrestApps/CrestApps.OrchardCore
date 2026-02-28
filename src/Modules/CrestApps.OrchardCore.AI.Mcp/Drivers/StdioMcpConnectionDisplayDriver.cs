@@ -53,7 +53,7 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
             model.ArgumentsSchema =
             """
             {
-              "$schema": "http://json-schema.org/draft-04/schema#",
+              "$schema": "https://json-schema.org/draft-04/schema#",
               "type": "array",
               "items": {
                 "type": "string"
@@ -64,7 +64,7 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
             model.EnvironmentVariablesSchema =
             """
             {
-              "$schema": "http://json-schema.org/draft-04/schema#",
+              "$schema": "https://json-schema.org/draft-04/schema#",
               "type": "object",
               "additionalProperties": {
                 "type": "string"

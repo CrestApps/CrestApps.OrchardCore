@@ -157,7 +157,7 @@ public sealed class GenerateChartTool : AIFunction
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error during chart generation.");
-            return $"An error occurred while generating the chart: {ex.Message}";
+            return $"An error occurred while generating the chart.";
         }
     }
 

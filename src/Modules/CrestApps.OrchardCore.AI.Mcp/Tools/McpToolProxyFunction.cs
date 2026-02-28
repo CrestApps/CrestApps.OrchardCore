@@ -98,7 +98,10 @@ internal sealed class McpToolProxyFunction : AIFunction
                 "Error invoking MCP tool '{ToolName}' on server '{ConnectionId}'.",
                 _name, _connectionId);
 
-            return JsonSerializer.Serialize(new { error = $"Error invoking MCP tool '{_name}': {ex.Message}" });
+            return JsonSerializer.Serialize(new
+            {
+                error = $"Error invoking MCP tool '{_name}'.",
+            });
         }
     }
 

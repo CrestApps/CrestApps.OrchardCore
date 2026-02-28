@@ -63,9 +63,9 @@ public sealed partial class ResourceTemplatesModel : PageModel
 
             return new JsonResult(new { contents });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new JsonResult(new { error = ex.Message });
+            return new JsonResult(new { error = "An error occurred while reading the resource template." });
         }
     }
 
@@ -103,9 +103,9 @@ public sealed partial class ResourceTemplatesModel : PageModel
             var client = await _clientFactory.CreateAsync(cancellationToken);
             Templates = await client.ListResourceTemplatesAsync(options: null, cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ErrorMessage ??= ex.Message;
+            ErrorMessage ??= "An error occurred while loading resource templates.";
             Templates = [];
         }
     }

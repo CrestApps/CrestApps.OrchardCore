@@ -112,7 +112,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
 
         if (filterField != null)
         {
-            var filterValues = string.Join(" or ", idList.Select(id => $"{filterField} eq '{id}'"));
+            var filterValues = string.Join(" or ", idList.Select(id => $"{filterField} eq '{SanitizeODataValue(id)}'"));
 
             var searchOptions = new SearchOptions
             {
@@ -241,5 +241,14 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
         }
 
         return firstLine.ToString().Trim();
+    }
+
+    /// <summary>
+    /// Escapes a value for safe use in an OData filter expression by replacing
+    /// single quotes with doubled single quotes.
+    /// </summary>
+    private static string SanitizeODataValue(string value)
+    {
+        return value.Replace("'", "''");
     }
 }

@@ -147,7 +147,7 @@ public sealed class GenerateImageTool : AIFunction
         catch (Exception ex)
         {
             logger?.LogError(ex, "Error during image generation.");
-            return $"An error occurred while generating the image: {ex.Message}";
+            return $"An error occurred while generating the image.";
         }
     }
 
