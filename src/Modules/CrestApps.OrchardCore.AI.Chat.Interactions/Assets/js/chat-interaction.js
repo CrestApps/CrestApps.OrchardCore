@@ -21,7 +21,7 @@ window.chatInteractionManager = function () {
                         </div>
                         <div class="lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
-                            <div v-html="message.htmlContent || message.content"></div>
+                            <div v-html="message.htmlContent"></div>
                             <span class="message-buttons-container" v-if="!isIndicator(message)">
                                 <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @click="copyResponse(message.content)" title="Click here to copy response to clipboard.">
                                     <i class="fa-solid fa-copy"></i>
@@ -415,6 +415,9 @@ window.chatInteractionManager = function () {
                     }
                 },
                 addMessageInternal(message) {
+                    if (message.content && !message.htmlContent) {
+                        message.htmlContent = parseMarkdownContent(message.content, message);
+                    }
                     this.fireEvent(new CustomEvent("addingChatInteractionMessage", { detail: { message: message } }));
                     this.messages.push(message);
 
@@ -688,14 +691,14 @@ window.chatInteractionManager = function () {
                     var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
 
                     if (stopIcon) {
-                        this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
+                        this.buttonElement.replaceChildren(DOMPurify.sanitize(stopIcon, { RETURN_DOM_FRAGMENT: true }));
                     }
                 },
                 streamingFinished() {
                     var startIcon = this.buttonElement.getAttribute('data-start-icon');
 
                     if (startIcon) {
-                        this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
+                        this.buttonElement.replaceChildren(DOMPurify.sanitize(startIcon, { RETURN_DOM_FRAGMENT: true }));
                     }
 
                     // Directly manipulate the DOM to stop all streaming animations.

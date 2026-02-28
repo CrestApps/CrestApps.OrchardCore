@@ -29,7 +29,7 @@ window.chatInteractionManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent || message.content\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
@@ -386,6 +386,9 @@ window.chatInteractionManager = function () {
         },
         addMessageInternal: function addMessageInternal(message) {
           var _this2 = this;
+          if (message.content && !message.htmlContent) {
+            message.htmlContent = parseMarkdownContent(message.content, message);
+          }
           this.fireEvent(new CustomEvent("addingChatInteractionMessage", {
             detail: {
               message: message
@@ -724,13 +727,17 @@ window.chatInteractionManager = function () {
         streamingStarted: function streamingStarted() {
           var stopIcon = this.buttonElement.getAttribute('data-stop-icon');
           if (stopIcon) {
-            this.buttonElement.innerHTML = DOMPurify.sanitize(stopIcon);
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(stopIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
           }
         },
         streamingFinished: function streamingFinished() {
           var startIcon = this.buttonElement.getAttribute('data-start-icon');
           if (startIcon) {
-            this.buttonElement.innerHTML = DOMPurify.sanitize(startIcon);
+            this.buttonElement.replaceChildren(DOMPurify.sanitize(startIcon, {
+              RETURN_DOM_FRAGMENT: true
+            }));
           }
 
           // Directly manipulate the DOM to stop all streaming animations.

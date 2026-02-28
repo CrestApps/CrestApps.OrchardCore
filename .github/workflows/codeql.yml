@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  analyze:
+  analyze-csharp:
     name: Analyze C#
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -41,3 +41,23 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:csharp"
+
+  analyze-javascript:
+    name: Analyze JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
