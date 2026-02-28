@@ -95,6 +95,16 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("dompurify")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.js")
+            .SetCdn(
+                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.min.js",
+                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.js")
+            .SetVersion("3.3.1");
+
+        _manifest
             .DefineScript("highlightjs")
             .SetCdn(
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",

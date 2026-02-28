@@ -41,5 +41,9 @@
   },
   "engines": {
     "node": ">=20.0"
+  },
+  "overrides": {
+    "minimatch": "^10.0.1",
+    "serialize-javascript": "^7.0.3"
   }
 }
