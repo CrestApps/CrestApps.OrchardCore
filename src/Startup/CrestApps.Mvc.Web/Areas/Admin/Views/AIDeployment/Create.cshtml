@@ -1,0 +1,37 @@
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AIDeploymentViewModel
+@{
+    ViewData["Title"] = "Create AI Deployment";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Create AI Deployment</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" required placeholder="e.g., gpt-4o-mini" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <div class="form-text">The model or deployment name (e.g., gpt-4o-mini, llama3.2).</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ProviderName" class="form-label">Provider</label>
+                <select asp-for="ProviderName" class="form-select" asp-items="Model.Providers">
+                    <option value="">— Select Provider —</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ConnectionName" class="form-label">Connection</label>
+                <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections"></select>
+                <div class="form-text">The connection this deployment belongs to.</div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Create
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>

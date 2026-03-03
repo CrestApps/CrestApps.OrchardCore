@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.AI.Extensions;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Tests.Extensions;

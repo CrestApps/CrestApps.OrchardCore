@@ -1,0 +1,13 @@
+@using CrestApps.AI.Models
+
+@{
+    var entry = (AIChatSessionEntry)Model.Entry;
+    var isCurrent = false;
+
+    if (ViewContext.HttpContext.Request.RouteValues.TryGetValue("sessionId", out var sessionId))
+    {
+        isCurrent = entry.SessionId == sessionId.ToString();
+    }
+}
+
+<a class="list-group-item list-group-item-action@(isCurrent ? " active" : string.Empty)" aria-current="@(isCurrent ? "true" : "false")" asp-action="Index" asp-controller="Admin" asp-route-profileId="@entry.ProfileId" asp-route-sessionId="@entry.SessionId">@entry.Title</a>

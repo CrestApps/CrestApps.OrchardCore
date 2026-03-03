@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Mvc.Web</RootNamespace>
+    <UserSecretsId>CrestApps-Mvc-Web</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog" />
+    <PackageReference Include="NLog.Web.AspNetCore" />
+    <PackageReference Include="YesSql.Provider.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="nlog.config" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.SignalR/CrestApps.SignalR.csproj" />
+    <ProjectReference Include="../../Framework/Utilities/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj" />
+    <ProjectReference Include="../../Framework/Stores/CrestApps.Data.YesSql/CrestApps.Data.YesSql.csproj" />
+  </ItemGroup>
+
+</Project>

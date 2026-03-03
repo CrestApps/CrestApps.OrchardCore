@@ -1,0 +1,116 @@
+using System.Text.Json;
+using CrestApps.AI;
+using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
+
+/// <summary>
+/// System tool that lists documents available in the current chat session.
+/// Returns metadata (ID, name, type, size) so the LLM can decide which to read.
+/// </summary>
+public sealed class ListDocumentsTool : AIFunction
+{
+    public const string TheName = SystemToolNames.ListDocuments;
+
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
+        {
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        }
+        """);
+
+    public override string Name => TheName;
+
+    public override string Description => "Lists all documents attached to the current chat session, returning their ID, file name, content type, and file size.";
+
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    {
+        ["Strict"] = false,
+    };
+
+    protected override async ValueTask<object> InvokeCoreAsync(
+        AIFunctionArguments arguments,
+        CancellationToken cancellationToken)
+    {
+        var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
+
+        if (executionContext?.Resource is ChatInteraction interaction)
+        {
+            var chatInteractionId = interaction.ItemId;
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
+
+            if (documentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var documents = await documentStore.GetDocumentsAsync(chatInteractionId, AIConstants.DocumentReferenceTypes.ChatInteraction);
+
+            if (documents is null || documents.Count == 0)
+            {
+                return "No documents are attached to this session.";
+            }
+
+            var result = documents.Select(d => new
+            {
+                d.ItemId,
+                d.FileName,
+                d.ContentType,
+                FileSize = FormatFileSize(d.FileSize),
+            });
+
+            return JsonSerializer.Serialize(result);
+        }
+
+        if (executionContext?.Resource is AIProfile profile)
+        {
+            var documentStore = arguments.Services.GetService<IAIDocumentStore>();
+
+            if (documentStore is null)
+            {
+                return "Document store is not available.";
+            }
+
+            var documents = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
+
+            if (documents is null || documents.Count == 0)
+            {
+                return "No documents are attached to this profile.";
+            }
+
+            var result = documents.Select(d => new
+            {
+                d.ItemId,
+                d.FileName,
+                d.ContentType,
+                FileSize = FormatFileSize(d.FileSize),
+            });
+
+            return JsonSerializer.Serialize(result);
+        }
+
+        return "Document access requires an active chat interaction session or AI profile.";
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024.0:F1} KB";
+        }
+
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

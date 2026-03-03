@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore OpenAI Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      OrchardCore-specific OpenAI services that extend the framework-independent CrestApps.AI.OpenAI.Core.
+    </Description>
+    <PackageTags>$(PackageTags) OpenAI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Liquid.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Framework/Core/CrestApps.Azure/CrestApps.Azure.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
+  </ItemGroup>
+
+</Project>

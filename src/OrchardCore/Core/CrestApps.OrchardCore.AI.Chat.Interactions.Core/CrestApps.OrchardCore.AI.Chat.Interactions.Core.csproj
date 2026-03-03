@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore AI Chat Interactions Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      OrchardCore-specific AI chat interaction services that extend the framework-independent CrestApps.AI.Chat.Core.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Indexing.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+  </ItemGroup>
+
+</Project>

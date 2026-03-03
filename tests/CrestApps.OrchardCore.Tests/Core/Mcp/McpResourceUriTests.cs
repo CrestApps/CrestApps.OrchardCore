@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.AI.Mcp;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 

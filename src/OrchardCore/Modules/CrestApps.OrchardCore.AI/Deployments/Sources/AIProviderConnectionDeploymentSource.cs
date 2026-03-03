@@ -1,0 +1,76 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Deployments.Steps;
+using CrestApps.Services;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Deployment;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.AI.Deployments.Sources;
+
+internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBase<AIProviderConnectionDeploymentStep>
+{
+    private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
+    private readonly ILogger _logger;
+
+    public AIProviderConnectionDeploymentSource(
+        INamedCatalog<AIProviderConnection> connectionsCatalog,
+        IEnumerable<IAIProviderConnectionHandler> handlers,
+        ILogger<AIProviderConnectionDeploymentSource> logger)
+    {
+        _connectionsCatalog = connectionsCatalog;
+        _handlers = handlers;
+        _logger = logger;
+    }
+
+    protected override async Task ProcessAsync(AIProviderConnectionDeploymentStep step, DeploymentPlanResult result)
+    {
+        var connections = await _connectionsCatalog.GetAllAsync();
+
+        var connectionObjects = new JsonArray();
+
+        var connectionIds = step.IncludeAll
+            ? []
+            : step.ConnectionIds ?? [];
+
+        foreach (var connection in connections)
+        {
+            if (connectionIds.Length > 0 && !connectionIds.Contains(connection.ItemId))
+            {
+                continue;
+            }
+
+            var connectionObject = new JsonObject()
+            {
+                { "ItemId", connection.ItemId },
+                { "Source", connection.Source },
+                { "Name", connection.Name },
+                { "ChatDeploymentName", connection.ChatDeploymentName },
+                { "EmbeddingDeploymentName", connection.EmbeddingDeploymentName },
+                { "ImagesDeploymentName", connection.ImagesDeploymentName },
+                { "UtilityDeploymentName", connection.UtilityDeploymentName },
+                { "IsDefault", connection.IsDefault },
+                { "DisplayText", connection.DisplayText },
+                { "CreatedUtc", connection.CreatedUtc },
+                { "OwnerId", connection.OwnerId },
+                { "Author", connection.Author },
+                { "Properties", JsonSerializer.SerializeToNode(connection.Properties) },
+            };
+
+            var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
+
+            _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
+
+            connectionObjects.Add(connectionObject);
+        }
+
+        result.Steps.Add(new JsonObject
+        {
+            ["name"] = step.Name,
+            ["connections"] = connectionObjects,
+        });
+    }
+}
+

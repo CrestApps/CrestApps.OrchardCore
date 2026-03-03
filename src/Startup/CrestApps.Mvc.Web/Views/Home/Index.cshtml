@@ -1,0 +1,72 @@
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<h2 class="mb-4">Dashboard</h2>
+
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-plug fs-2 text-success me-3"></i>
+                    <h5 class="card-title mb-0">AI Connections</h5>
+                </div>
+                <p class="card-text">Configure connections to AI providers (OpenAI, Azure OpenAI, Ollama, Azure AI Inference).</p>
+                <a asp-area="Admin" asp-controller="AIConnection" asp-action="Index" class="btn btn-success">
+                    <i class="bi bi-arrow-right"></i> Manage Connections
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-primary">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-person-gear fs-2 text-primary me-3"></i>
+                    <h5 class="card-title mb-0">AI Profiles</h5>
+                </div>
+                <p class="card-text">Create and manage AI profiles with system prompts, parameters, and provider configurations.</p>
+                <a asp-area="Admin" asp-controller="AIProfile" asp-action="Index" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Manage Profiles
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-chat-dots fs-2 text-info me-3"></i>
+                    <h5 class="card-title mb-0">AI Chat</h5>
+                </div>
+                <p class="card-text">Start real-time conversations with AI assistants using SignalR streaming.</p>
+                <a asp-area="Admin" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
+                    <i class="bi bi-arrow-right"></i> Start Chat
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-box-seam fs-2 text-warning me-3"></i>
+                    <h5 class="card-title mb-0">AI Deployments</h5>
+                </div>
+                <p class="card-text">Map model deployments to connections for fine-grained control over which models are used.</p>
+                <a asp-area="Admin" asp-controller="AIDeployment" asp-action="Index" class="btn btn-warning">
+                    <i class="bi bi-arrow-right"></i> Manage Deployments
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!User.Identity.IsAuthenticated)
+{
+    <div class="alert alert-warning mt-4">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Getting Started:</strong> <a asp-controller="Account" asp-action="Login">Sign in</a> to access the admin features and start using AI chat.
+    </div>
+}

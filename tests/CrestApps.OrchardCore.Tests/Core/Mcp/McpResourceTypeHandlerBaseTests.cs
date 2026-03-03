@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Models;
 using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;

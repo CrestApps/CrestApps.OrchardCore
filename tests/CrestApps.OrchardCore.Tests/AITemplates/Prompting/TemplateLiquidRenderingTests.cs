@@ -1,6 +1,6 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Rendering;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 

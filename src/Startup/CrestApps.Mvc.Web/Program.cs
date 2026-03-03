@@ -1,0 +1,223 @@
+using CrestApps;
+using CrestApps.AI;
+using CrestApps.AI.AzureAIInference;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Models;
+using CrestApps.AI.Ollama;
+using CrestApps.AI.OpenAI;
+using CrestApps.AI.OpenAI.Azure;
+using CrestApps.Data.YesSql;
+using CrestApps.Mvc.Web.Hubs;
+using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Services;
+using CrestApps.Mvc.Web.Tools;
+using CrestApps.SignalR;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using NLog.Web;
+using YesSql;
+using YesSql.Provider.Sqlite;
+using YesSql.Sql;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ---------------------------------------------------------------------------
+// Logging — NLog writes daily log files to App_Data/logs/.
+// ---------------------------------------------------------------------------
+builder.Logging.ClearProviders();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+builder.WebHost.UseNLog();
+
+var appDataPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
+Directory.CreateDirectory(appDataPath);
+
+// ---------------------------------------------------------------------------
+// Authentication & Authorization
+// ---------------------------------------------------------------------------
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("Admin", policy => policy.RequireRole("Administrator"));
+
+// ---------------------------------------------------------------------------
+// CrestApps AI Framework — core services, orchestration, and SignalR.
+// These registrations are required regardless of the data store you choose.
+// ---------------------------------------------------------------------------
+builder.Services
+    .AddCrestAppsCoreServices()
+    .AddCrestAppsAI()
+    .AddOrchestrationServices()
+    .AddChatInteractionHandlers()
+    .AddCrestAppsSignalR();
+
+// ---------------------------------------------------------------------------
+// AI Providers — register the completion clients you want to use.
+// Each provider reads its configuration from appsettings.json automatically.
+// ---------------------------------------------------------------------------
+builder.Services
+    .AddOpenAIProvider()
+    .AddAzureOpenAIProvider()
+    .AddOllamaProvider()
+    .AddAzureAIInferenceProvider();
+
+builder.Services.Configure<AIProviderOptions>(
+    builder.Configuration.GetSection("CrestApps:AI:Providers"));
+
+// ---------------------------------------------------------------------------
+// AI Tools — register custom tools that AI profiles can invoke.
+// ---------------------------------------------------------------------------
+builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
+    .WithTitle("Calculator")
+    .WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
+    .WithCategory("Utilities")
+    .Selectable();
+
+// ---------------------------------------------------------------------------
+// Data Store — YesSql with SQLite (default).
+// If you prefer a different ORM (e.g., EF Core), replace this entire section
+// with your own implementations of IAIProfileManager, IAIChatSessionManager,
+// IAIChatSessionPromptStore, and IAIDocumentStore.
+// ---------------------------------------------------------------------------
+builder.Services.AddSingleton(sp =>
+{
+    var dbPath = Path.Combine(appDataPath, "crestapps.db");
+
+    var store = StoreFactory.CreateAndInitializeAsync(
+        new Configuration()
+            .UseSqLite($"Data Source={dbPath};Cache=Shared")
+            .SetTablePrefix("CA_"))
+        .GetAwaiter().GetResult();
+
+    store.RegisterIndexes<AIProfileIndexProvider>();
+    store.RegisterIndexes<AIProviderConnectionIndexProvider>();
+    store.RegisterIndexes<AIDeploymentIndexProvider>();
+    store.RegisterIndexes<AIChatSessionIndexProvider>();
+    store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
+    store.RegisterIndexes<AIDocumentIndexProvider>();
+
+    return store;
+});
+
+builder.Services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
+
+// YesSql-backed catalogs and managers.
+builder.Services
+    .AddNamedSourceDocumentCatalog<AIProfile, AIProfileIndex>()
+    .AddNamedSourceDocumentCatalog<AIProviderConnection, AIProviderConnectionIndex>()
+    .AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>()
+    .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
+    .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
+    .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
+    .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>();
+
+// Local file store for uploaded documents.
+builder.Services.AddSingleton(new FileSystemFileStore(
+    Path.Combine(appDataPath, "Documents")));
+
+// ---------------------------------------------------------------------------
+// MVC & SignalR
+// ---------------------------------------------------------------------------
+builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
+
+var app = builder.Build();
+
+// ---------------------------------------------------------------------------
+// YesSql Schema Initialization — creates tables on first run.
+// This block is only needed for YesSql; remove it if using another ORM.
+// ---------------------------------------------------------------------------
+await InitializeYesSqlSchemaAsync(app.Services);
+
+// ---------------------------------------------------------------------------
+// Middleware Pipeline
+// ---------------------------------------------------------------------------
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error")
+        .UseHsts();
+}
+
+app.UseHttpsRedirection()
+    .UseStaticFiles()
+    .UseRouting()
+    .UseAuthentication()
+    .UseAuthorization();
+
+app.MapHub<AIChatHub>("/hubs/ai-chat");
+app.MapHub<ChatInteractionHub>("/hubs/chat-interaction");
+
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+await app.RunAsync();
+
+// ---------------------------------------------------------------------------
+// YesSql schema helper — creates index tables if they do not already exist.
+// ---------------------------------------------------------------------------
+static async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
+{
+    var store = services.GetRequiredService<IStore>();
+    await using var connection = store.Configuration.ConnectionFactory.CreateConnection();
+    await connection.OpenAsync();
+    await using var transaction = await connection.BeginTransactionAsync();
+    var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIProfileIndex>(t => t
+            .Column<string>(nameof(AIProfileIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIProfileIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIProfileIndex.Source), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIProviderConnectionIndex>(t => t
+            .Column<string>(nameof(AIProviderConnectionIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIProviderConnectionIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIProviderConnectionIndex.Source), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIDeploymentIndex>(t => t
+            .Column<string>(nameof(AIDeploymentIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDeploymentIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIDeploymentIndex.Source), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIChatSessionIndex>(t => t
+            .Column<string>(nameof(AIChatSessionIndex.ItemId), c => c.WithLength(44))
+            .Column<string>(nameof(AIChatSessionIndex.SessionId), c => c.WithLength(44))
+            .Column<string>(nameof(AIChatSessionIndex.ProfileId), c => c.WithLength(26))
+            .Column<string>(nameof(AIChatSessionIndex.UserId), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIChatSessionPromptIndex>(t => t
+            .Column<string>(nameof(AIChatSessionPromptIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIChatSessionPromptIndex.SessionId), c => c.WithLength(44))
+            .Column<string>(nameof(AIChatSessionPromptIndex.Role), c => c.WithLength(50))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIDocumentIndex>(t => t
+            .Column<string>(nameof(AIDocumentIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDocumentIndex.ReferenceId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDocumentIndex.ReferenceType), c => c.WithLength(50))
+            .Column<string>(nameof(AIDocumentIndex.FileName), c => c.WithLength(255))));
+
+    await transaction.CommitAsync();
+}
+
+static async Task TryCreateTableAsync(SchemaBuilder _, Func<Task> createTable)
+{
+    try { await createTable(); }
+    catch { /* Table already exists. */ }
+}
