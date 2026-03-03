@@ -115,6 +115,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
                 if (!string.IsNullOrEmpty(prompt))
                 {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                     buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
                 }
             }
@@ -133,6 +134,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
                 if (!string.IsNullOrEmpty(prompt))
                 {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                     buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
                 }
             }
@@ -142,6 +144,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
                 if (!string.IsNullOrEmpty(prompt))
                 {
+                    buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                     buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
                 }
             }
@@ -152,6 +155,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
             if (!string.IsNullOrEmpty(prompt))
             {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
             }
         }
@@ -170,6 +174,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
             if (!string.IsNullOrEmpty(prompt))
             {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
             }
         }
@@ -180,6 +185,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 
             if (!string.IsNullOrEmpty(prompt))
             {
+                buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine();
                 buildContext.OrchestrationContext.SystemMessageBuilder.AppendLine(prompt);
             }
         }

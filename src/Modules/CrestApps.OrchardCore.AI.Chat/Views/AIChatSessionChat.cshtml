@@ -154,7 +154,7 @@
             @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
             @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
             @:allowedExtensions: '@allowedExtensions',
-            @:existingDocuments: @Html.Raw(JsonSerializer.Serialize(Model.Session.Documents ?? new List<ChatInteractionDocumentInfo>(), JOptions.CamelCase)),
+            @:existingDocuments: @Html.Raw(JsonSerializer.Serialize(Model.Session.Documents ?? new List<ChatDocumentInfo>(), JOptions.CamelCase)),
         }
     });
 </script>

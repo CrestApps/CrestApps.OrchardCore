@@ -70,33 +70,27 @@ public sealed class SearchDocumentsTool : AIFunction
             var invocationContext = AIInvocationScope.Current;
             var executionContext = invocationContext?.ToolExecutionContext;
 
-            string resourceId = null;
-            string referenceType = null;
+            // Collect all resource scopes to search across.
+            var searchScopes = new List<(string ResourceId, string ReferenceType)>();
 
             if (executionContext?.Resource is ChatInteraction interaction)
             {
-                resourceId = interaction.ItemId;
-                referenceType = AIConstants.DocumentReferenceTypes.ChatInteraction;
+                searchScopes.Add((interaction.ItemId, AIConstants.DocumentReferenceTypes.ChatInteraction));
             }
             else if (executionContext?.Resource is AIProfile profile)
             {
-                resourceId = profile.ItemId;
-                referenceType = AIConstants.DocumentReferenceTypes.Profile;
-            }
+                searchScopes.Add((profile.ItemId, AIConstants.DocumentReferenceTypes.Profile));
 
-            // When the resource is a profile, check if there's a session with documents.
-            if (referenceType == AIConstants.DocumentReferenceTypes.Profile)
-            {
+                // Also search session documents if a session with documents exists.
                 if (invocationContext?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                     sessionObj is AIChatSession session &&
                     session.Documents is { Count: > 0 })
                 {
-                    resourceId = session.SessionId;
-                    referenceType = AIConstants.DocumentReferenceTypes.ChatSession;
+                    searchScopes.Add((session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession));
                 }
             }
 
-            if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
+            if (searchScopes.Count == 0)
             {
                 return "Document search requires an active chat interaction session or AI profile.";
             }
@@ -173,15 +167,48 @@ public sealed class SearchDocumentsTool : AIFunction
                 topN = 3;
             }
 
-            var results = await searchService.SearchAsync(
-                indexProfile,
-                embeddings[0].Vector.ToArray(),
-                resourceId,
-                referenceType,
-                topN,
-                cancellationToken);
+            // Search across all resource scopes and combine results.
+            var allResults = new List<DocumentChunkSearchResult>();
+            var seenChunkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (results is null || !results.Any())
+            foreach (var (scopeResourceId, scopeReferenceType) in searchScopes)
+            {
+                var results = await searchService.SearchAsync(
+                    indexProfile,
+                    embeddings[0].Vector.ToArray(),
+                    scopeResourceId,
+                    scopeReferenceType,
+                    topN,
+                    cancellationToken);
+
+                if (results is null)
+                {
+                    continue;
+                }
+
+                foreach (var result in results)
+                {
+                    if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                    {
+                        continue;
+                    }
+
+                    var chunkKey = $"{result.DocumentKey}:{result.Chunk.Index}";
+
+                    if (seenChunkKeys.Add(chunkKey))
+                    {
+                        allResults.Add(result);
+                    }
+                }
+            }
+
+            // Sort by score descending and take top N.
+            var finalResults = allResults
+                .OrderByDescending(r => r.Score)
+                .Take(topN)
+                .ToList();
+
+            if (finalResults.Count == 0)
             {
                 return "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead.";
             }
@@ -191,7 +218,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var result in results)
+            foreach (var result in finalResults)
             {
                 if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
                 {

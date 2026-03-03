@@ -6,7 +6,7 @@ public class ChatInteractionDocumentsViewModel
 {
     public string ItemId { get; set; }
 
-    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+    public IList<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the number of top matching document chunks to include in AI context.

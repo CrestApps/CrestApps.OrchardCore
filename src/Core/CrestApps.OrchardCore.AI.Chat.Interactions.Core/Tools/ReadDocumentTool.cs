@@ -80,11 +80,24 @@ public sealed class ReadDocumentTool : AIFunction
                 return "Document store is not available.";
             }
 
+            // The document could belong to either the profile or a chat session.
+            var validReferenceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                profile.ItemId,
+            };
+
+            if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                validReferenceIds.Add(session.SessionId);
+            }
+
             var document = await documentStore.FindByIdAsync(documentId);
 
-            if (document is null || document.ReferenceId != profile.ItemId)
+            if (document is null || !validReferenceIds.Contains(document.ReferenceId))
             {
-                return $"Document with ID '{documentId}' was not found in this profile.";
+                return $"Document with ID '{documentId}' was not found.";
             }
 
             return FormatDocumentText(document.FileName, document.Text);

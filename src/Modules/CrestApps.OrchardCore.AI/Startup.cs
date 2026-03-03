@@ -53,7 +53,7 @@ public sealed class Startup : StartupBase
             o.MemberAccessStrategy.Register<PostSessionResult>();
             o.MemberAccessStrategy.Register<AICompletionReference>();
             o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
-            o.MemberAccessStrategy.Register<ChatInteractionDocumentInfo>();
+            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
             o.MemberAccessStrategy.Register<ExtractedFieldChange>();
             o.MemberAccessStrategy.Register<ConversionGoalResult>();
         });

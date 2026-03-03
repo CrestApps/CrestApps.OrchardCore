@@ -3,12 +3,12 @@ Title: Document Availability Instructions
 Description: Instructs the AI about uploaded documents and available tools.
 Parameters:
 	- tools: array of AIToolDefinitionEntry objects for document processing tools available.
-	- availableDocuments: array of ChatInteractionDocumentInfo objects with DocumentId, FileName, ContentType, and FileSize.
+	- availableDocuments: array of ChatDocumentInfo objects with DocumentId, FileName, ContentType, and FileSize.
 IsListable: false
 Category: Documents
 ---
 
-[Available Documents or attachments]
+[Available Documents, attachments or files]
 
 {% if tools.size > 0 %}
 The user has uploaded the following documents as supplementary context.
@@ -26,6 +26,7 @@ The user has uploaded the following documents as supplementary context.
 {% endif %}
 
 {% if availableDocuments.size > 0 %}
+Available documents:
 {% for doc in availableDocuments %}
 - {{ doc.DocumentId }}: "{{ doc.FileName }}" ({{ doc.ContentType | default: "unknown" }}, {{ doc.FileSize }} bytes)
 {% endfor %}

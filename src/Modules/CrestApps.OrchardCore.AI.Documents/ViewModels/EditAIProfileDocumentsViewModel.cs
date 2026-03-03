@@ -7,7 +7,7 @@ public class EditAIProfileDocumentsViewModel
 {
     public string ProfileId { get; set; }
 
-    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+    public IList<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the files uploaded for the profile.

@@ -300,6 +300,7 @@ window.openAIChatManager = function () {
           prompt: '',
           documents: config.existingDocuments || [],
           isUploading: false,
+          uploadErrors: [],
           isDragOver: false,
           documentBar: null,
           metricsEnabled: !!config.metricsEnabled,
@@ -356,7 +357,7 @@ window.openAIChatManager = function () {
         uploadFiles: function uploadFiles(files) {
           var _this = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-            var sessionId, profileId, formData, i, response, errorText, result, j, k, _t;
+            var sessionId, profileId, formData, i, response, errorText, result, j, _t;
             return _regenerator().w(function (_context) {
               while (1) switch (_context.p = _context.n) {
                 case 0:
@@ -376,6 +377,8 @@ window.openAIChatManager = function () {
                   return _context.a(2);
                 case 2:
                   _this.isUploading = true;
+                  _this.uploadErrors = [];
+                  _this.renderDocumentBar();
                   _context.p = 3;
                   formData = new FormData();
                   if (sessionId) {
@@ -402,6 +405,10 @@ window.openAIChatManager = function () {
                 case 5:
                   errorText = _context.v;
                   console.error('Upload failed:', errorText);
+                  _this.uploadErrors = [{
+                    fileName: '',
+                    error: 'Upload failed. Please try again.'
+                  }];
                   return _context.a(2);
                 case 6:
                   _context.n = 7;
@@ -418,9 +425,7 @@ window.openAIChatManager = function () {
                     }
                   }
                   if (result.failed && result.failed.length > 0) {
-                    for (k = 0; k < result.failed.length; k++) {
-                      console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
-                    }
+                    _this.uploadErrors = result.failed;
                   }
                   _context.n = 9;
                   break;
@@ -428,9 +433,14 @@ window.openAIChatManager = function () {
                   _context.p = 8;
                   _t = _context.v;
                   console.error('Upload error:', _t);
+                  _this.uploadErrors = [{
+                    fileName: '',
+                    error: 'Upload failed. Please try again.'
+                  }];
                 case 9:
                   _context.p = 9;
                   _this.isUploading = false;
+                  _this.renderDocumentBar();
                   return _context.f(9);
                 case 10:
                   return _context.a(2);
@@ -516,6 +526,17 @@ window.openAIChatManager = function () {
             html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"></button>';
             html += '</span>';
           }
+          for (var m = 0; m < this.uploadErrors.length; m++) {
+            var failedItem = this.uploadErrors[m];
+            var failedName = failedItem.fileName || 'File';
+            var errorMsg = failedItem.error || 'Upload failed';
+            if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
+            html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
+            html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+            html += this.escapeHtml(failedName);
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
+            html += '</span>';
+          }
           if (this.isUploading) {
             html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
             html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
@@ -534,7 +555,7 @@ window.openAIChatManager = function () {
 
           // Bind remove handlers
           var self = this;
-          var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+          var closeButtons = this.documentBar.querySelectorAll('[data-doc-index]');
           for (var j = 0; j < closeButtons.length; j++) {
             closeButtons[j].addEventListener('click', function (idx) {
               return function (e) {
@@ -544,6 +565,19 @@ window.openAIChatManager = function () {
                 if (docToRemove) self.removeDocument(docToRemove);
               };
             }(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+          }
+
+          // Bind error dismiss handlers
+          var errorCloseButtons = this.documentBar.querySelectorAll('[data-error-index]');
+          for (var n = 0; n < errorCloseButtons.length; n++) {
+            errorCloseButtons[n].addEventListener('click', function (idx) {
+              return function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.uploadErrors.splice(idx, 1);
+                self.renderDocumentBar();
+              };
+            }(parseInt(errorCloseButtons[n].getAttribute('data-error-index'))));
           }
 
           // Bind add button

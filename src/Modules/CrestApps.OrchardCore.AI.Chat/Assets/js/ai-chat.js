@@ -342,6 +342,7 @@ window.openAIChatManager = function () {
                     prompt: '',
                     documents: config.existingDocuments || [],
                     isUploading: false,
+                    uploadErrors: [],
                     isDragOver: false,
                     documentBar: null,
                     metricsEnabled: !!config.metricsEnabled,
@@ -407,6 +408,8 @@ window.openAIChatManager = function () {
                     }
 
                     this.isUploading = true;
+                    this.uploadErrors = [];
+                    this.renderDocumentBar();
                     try {
                         var formData = new FormData();
                         if (sessionId) {
@@ -426,6 +429,7 @@ window.openAIChatManager = function () {
                         if (!response.ok) {
                             var errorText = await response.text();
                             console.error('Upload failed:', errorText);
+                            this.uploadErrors = [{ fileName: '', error: 'Upload failed. Please try again.' }];
                             return;
                         }
 
@@ -442,14 +446,14 @@ window.openAIChatManager = function () {
                             }
                         }
                         if (result.failed && result.failed.length > 0) {
-                            for (var k = 0; k < result.failed.length; k++) {
-                                console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
-                            }
+                            this.uploadErrors = result.failed;
                         }
                     } catch (err) {
                         console.error('Upload error:', err);
+                        this.uploadErrors = [{ fileName: '', error: 'Upload failed. Please try again.' }];
                     } finally {
                         this.isUploading = false;
+                        this.renderDocumentBar();
                     }
                 },
                 async removeDocument(doc) {
@@ -502,6 +506,18 @@ window.openAIChatManager = function () {
                         html += '</span>';
                     }
 
+                    for (var m = 0; m < this.uploadErrors.length; m++) {
+                        var failedItem = this.uploadErrors[m];
+                        var failedName = failedItem.fileName || 'File';
+                        var errorMsg = failedItem.error || 'Upload failed';
+                        if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
+                        html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
+                        html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+                        html += this.escapeHtml(failedName);
+                        html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
+                        html += '</span>';
+                    }
+
                     if (this.isUploading) {
                         html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
                         html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
@@ -521,7 +537,7 @@ window.openAIChatManager = function () {
 
                     // Bind remove handlers
                     var self = this;
-                    var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+                    var closeButtons = this.documentBar.querySelectorAll('[data-doc-index]');
                     for (var j = 0; j < closeButtons.length; j++) {
                         closeButtons[j].addEventListener('click', (function (idx) {
                             return function (e) {
@@ -531,6 +547,19 @@ window.openAIChatManager = function () {
                                 if (docToRemove) self.removeDocument(docToRemove);
                             };
                         })(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+                    }
+
+                    // Bind error dismiss handlers
+                    var errorCloseButtons = this.documentBar.querySelectorAll('[data-error-index]');
+                    for (var n = 0; n < errorCloseButtons.length; n++) {
+                        errorCloseButtons[n].addEventListener('click', (function (idx) {
+                            return function (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                self.uploadErrors.splice(idx, 1);
+                                self.renderDocumentBar();
+                            };
+                        })(parseInt(errorCloseButtons[n].getAttribute('data-error-index'))));
                     }
 
                     // Bind add button
