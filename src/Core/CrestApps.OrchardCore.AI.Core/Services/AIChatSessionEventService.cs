@@ -115,6 +115,42 @@ public sealed class AIChatSessionEventService
     }
 
     /// <summary>
+    /// Updates the resolution status for a session based on AI analysis.
+    /// </summary>
+    public async Task UpdateResolutionStatusAsync(string sessionId, bool isResolved)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null)
+        {
+            return;
+        }
+
+        evt.IsResolved = isResolved;
+
+        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+    }
+
+    /// <summary>
+    /// Records conversion goal evaluation results for a session.
+    /// </summary>
+    public async Task RecordConversionMetricsAsync(string sessionId, List<ConversionGoalResult> goalResults)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null)
+        {
+            return;
+        }
+
+        evt.ConversionGoalResults = goalResults;
+        evt.ConversionScore = goalResults.Sum(r => r.Score);
+        evt.ConversionMaxScore = goalResults.Sum(r => r.MaxScore);
+
+        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+    }
+
+    /// <summary>
     /// Records the user's feedback rating for a session.
     /// </summary>
     public async Task RecordUserRatingAsync(string sessionId, bool isPositive)

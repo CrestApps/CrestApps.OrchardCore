@@ -13,6 +13,10 @@ public static class AITemplateIds
 
     public const string PostSessionAnalysis = "post-session-analysis";
 
+    public const string ResolutionAnalysis = "resolution-analysis";
+
+    public const string ConversionGoalEvaluation = "conversion-goal-evaluation";
+
     public const string DataExtraction = "data-extraction";
 
     public const string UseMarkdownSyntax = "use-markdown-syntax";

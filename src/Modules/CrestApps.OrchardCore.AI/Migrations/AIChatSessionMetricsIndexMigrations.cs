@@ -26,6 +26,8 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 .Column<int>("TotalOutputTokens", column => column.WithDefault(0))
                 .Column<double>("AverageResponseLatencyMs", column => column.WithDefault(0))
                 .Column<bool?>("UserRating", column => column.Nullable())
+                .Column<int?>("ConversionScore", column => column.Nullable())
+                .Column<int?>("ConversionMaxScore", column => column.Nullable())
                 .Column<DateTime>("CreatedUtc"),
             collection: AIConstants.CollectionName
         );
@@ -68,6 +70,17 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
             collection: AIConstants.CollectionName
         );
 
-        return 1;
+        return 2;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
+        {
+            table.AddColumn<int?>("ConversionScore", column => column.Nullable());
+            table.AddColumn<int?>("ConversionMaxScore", column => column.Nullable());
+        }, collection: AIConstants.CollectionName);
+
+        return 2;
     }
 }

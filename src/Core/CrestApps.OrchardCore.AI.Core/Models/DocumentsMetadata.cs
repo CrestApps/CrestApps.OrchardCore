@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// Metadata stored on <see cref="AIProfile.Properties"/> to track
 /// documents attached to the profile for RAG functionality.
 /// </summary>
-public sealed class AIProfileDocumentsMetadata
+public sealed class DocumentsMetadata
 {
     /// <summary>
     /// Gets or sets the collection of attached document metadata.

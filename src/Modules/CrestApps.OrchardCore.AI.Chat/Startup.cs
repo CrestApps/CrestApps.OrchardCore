@@ -90,6 +90,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
         services
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
+            .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()
@@ -97,6 +98,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsDayOfWeekDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsUserSegmentDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
+            .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
     }
 }

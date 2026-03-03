@@ -118,6 +118,33 @@ Metrics about AI model response speed and resource consumption. These are captur
 Performance metrics are only available when the AI provider reports token usage. Not all providers return this data for streaming responses.
 :::
 
+### 🎯 Resolution & Conversion Metrics
+
+These metrics are powered by AI-based post-session analysis.
+
+#### Resolution Detection
+
+| Metric | Description |
+| --- | --- |
+| **Resolution Rate** | The percentage of closed sessions that were determined to be semantically resolved. Unlike simple timeout-based detection, this uses semantic analysis of the conversation content to determine if the user's needs were met. |
+| **Resolved** | Sessions where semantic analysis determined the user's query or task was successfully addressed, regardless of how the session ended. |
+| **Unresolved** | Sessions where semantic analysis determined the user's needs were not fully met. Review these to identify areas for improvement. |
+
+#### Goal-Based Conversion
+
+| Metric | Description |
+| --- | --- |
+| **Avg Conversion Score** | The average conversion score as a percentage of the maximum possible score across all evaluated sessions. Based on AI evaluation of configured conversion goals. |
+| **Evaluated Sessions** | The number of sessions that were evaluated against the configured conversion goals. |
+| **High Performing** | Percentage of evaluated sessions that scored 70% or higher on conversion goals. These sessions are meeting or exceeding expectations. |
+| **Low Performing** | Percentage of evaluated sessions that scored below 30% on conversion goals. These sessions need attention and may indicate configuration or response quality issues. |
+
+A progress bar visualizes the **overall conversion progress** as a ratio of total score to maximum possible score.
+
+:::note
+Resolution and conversion metrics require enabling **Resolution Detection** and/or **Conversion Metrics** in the profile's analytics settings. Data only appears after sessions have been closed and processed.
+:::
+
 ### 😊 User Feedback
 
 Summary of user satisfaction ratings collected during chat sessions.
@@ -219,6 +246,46 @@ Ratings are per-session (not per-message). The most recent rating is stored and 
 ### Inactivity Timeout
 
 Sessions are considered "abandoned" when they exceed the inactivity timeout configured on the AI profile's **Data Extraction** settings. The background task runs every 10 minutes to close inactive sessions.
+
+### AI Resolution Detection
+
+By default, sessions closed by inactivity timeout are marked as "abandoned." When **Enable AI Resolution Detection** is checked in the Analytics section, the system uses AI to analyze the conversation transcript and determine if the user's query was semantically resolved — even if no explicit close action occurred.
+
+This dramatically reduces false-positive abandonment rates. For example, a user who asks a question, receives a satisfactory answer, and simply stops chatting would be correctly classified as "resolved" rather than "abandoned."
+
+AI Resolution Detection is enabled by default when session metrics are active.
+
+### Conversion Metrics
+
+Conversion metrics allow you to define **custom goals** for each AI profile and measure how well chat sessions achieve them. This follows industry-standard approaches similar to CSAT (Customer Satisfaction), NPS (Net Promoter Score), and task completion rate — but is fully customizable per profile.
+
+#### Configuring Conversion Goals
+
+1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
+2. Open the **Analytics** section.
+3. Check **Enable Conversion Metrics**.
+4. Define one or more goals:
+   - **Name**: A unique identifier for the goal (alphanumeric + underscores).
+   - **Description**: Instructions for the AI on how to evaluate this goal.
+   - **Min Score** / **Max Score**: The scoring range (default: 0–10).
+5. Save the profile.
+
+After a session closes, the AI evaluates the conversation against each configured goal and assigns a score within the defined range. The results include per-goal scores with reasoning, an aggregate conversion score, and a conversion rate percentage.
+
+#### Example Goals
+
+| Goal | Description | Range |
+| --- | --- | --- |
+| `customer_satisfaction` | Rate how satisfied the user appeared based on their responses and tone. | 0–10 |
+| `issue_resolution` | Rate whether the user's primary issue was fully resolved. | 0–10 |
+| `product_recommendation` | Rate whether the assistant successfully recommended relevant products. | 0–5 |
+
+#### Analytics Dashboard
+
+Conversion metrics appear in the analytics dashboard and are available through the `queryChatSessionMetrics` AI tool. The tool returns:
+- Number of sessions evaluated
+- Average conversion rate (percentage)
+- Average score and max score
 
 ### Token Usage
 
@@ -340,13 +407,20 @@ Post-session processing runs after a chat session is closed and performs AI-powe
 1. Edit the AI profile in **Artificial Intelligence** > **Profiles**.
 2. Open the **Data Processing** tab.
 3. Check **Enable Post-Session Processing**.
-4. Click **Add Task** to create a new task.
+4. Click **Add Task** to create a new task in the **Tasks** tab.
 5. Configure the task:
    - **Name**: A unique identifier (alphanumeric + underscores only).
    - **Type**: Choose **Predefined Options** or **Semantic**.
    - **Instructions**: Guidance for the AI model on how to process this task.
    - For **Predefined Options**: Add options with values and optional descriptions.
-6. Save the profile.
+6. Optionally, switch to the **Capabilities** tab to select AI tools that should be available during post-session processing.
+7. Save the profile.
+
+### Tool Capabilities
+
+When AI tools are registered in the system, a **Capabilities** tab appears alongside the Tasks tab in the post-session processing configuration. Tools selected here are made available to the AI model during post-session analysis, enabling it to perform actions beyond text generation — such as querying external systems, sending notifications, or updating records.
+
+Only tools the current user has permission to access are shown. Tools are organized by category with search and bulk-selection controls.
 
 ### Example: Disposition Task
 

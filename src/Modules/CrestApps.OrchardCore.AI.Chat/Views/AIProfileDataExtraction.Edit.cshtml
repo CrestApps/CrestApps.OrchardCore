@@ -10,26 +10,19 @@
     </div>
 </div>
 
-@if (Model.IsAnalyticsFeatureEnabled)
-{
-    <div class="mb-3">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="EnableSessionMetrics" />
-            <label class="form-check-label" asp-for="EnableSessionMetrics">@T["Enable Session Metrics"]</label>
-            <span class="hint">@T["When enabled, session metrics such as usage, token consumption, response latency, and user feedback are captured for analytics. Metrics can be viewed in the Chat Analytics dashboard."]</span>
-        </div>
-    </div>
-}
-
 <div class="mb-3">
     <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" data-toggle-target="#dataExtractionSettings">
+        <input type="checkbox" class="form-check-input" asp-for="EnableDataExtraction" />
         <label class="form-check-label" asp-for="EnableDataExtraction">@T["Enable Data Extraction"]</label>
         <span class="hint dashed">@T["When enabled, the system will extract structured data from chat messages."]</span>
     </div>
 </div>
 
-<div id="dataExtractionSettings" style="@(Model.EnableDataExtraction ? "" : "display:none")">
+@{
+    var dataExtractionSettingsId = Html.IdFor(m => m.EnableDataExtraction) + "_settings";
+}
+
+<div id="@dataExtractionSettingsId" class="@(Model.EnableDataExtraction ? "" : "d-none")">
     <div class="alert alert-info mb-3">
         <i class="fa-solid fa-circle-info me-1"></i>
         @T["Data extraction runs after each qualifying message exchange. Additionally, when an AI session is closed (either due to inactivity or natural conversation ending), a final extraction is automatically performed to capture any remaining data."]
@@ -93,11 +86,11 @@
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        var toggleCheckbox = document.querySelector('[data-toggle-target="#dataExtractionSettings"]');
-        var target = document.getElementById('dataExtractionSettings');
+        var toggleCheckbox = document.getElementById('@Html.IdFor(m => m.EnableDataExtraction)');
+        var target = document.getElementById('@dataExtractionSettingsId');
         if (toggleCheckbox && target) {
             toggleCheckbox.addEventListener('change', function () {
-                target.style.display = this.checked ? '' : 'none';
+                target.classList.toggle('d-none', !this.checked);
             });
         }
 

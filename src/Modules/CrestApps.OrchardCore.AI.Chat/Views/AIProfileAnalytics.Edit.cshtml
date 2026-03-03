@@ -2,6 +2,13 @@
 
 @model EditAIProfileAnalyticsViewModel
 
+@{
+    var sessionMetricsSettingsId = Html.IdFor(m => m.EnableSessionMetrics) + "_settings";
+    var conversionGoalsSettingsId = Html.IdFor(m => m.EnableConversionMetrics) + "_settings";
+    var goalsContainerId = Html.IdFor(m => m.ConversionGoals) + "_container";
+    var addGoalBtnId = Html.IdFor(m => m.ConversionGoals) + "_add";
+}
+
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="EnableSessionMetrics" />
@@ -9,3 +16,151 @@
         <span class="hint">@T["When enabled, session metrics such as usage, token consumption, response latency, and user feedback are captured for analytics. Metrics can be viewed in the Chat Analytics dashboard."]</span>
     </div>
 </div>
+
+<div id="@sessionMetricsSettingsId" class="@(Model.EnableSessionMetrics ? "" : "d-none")">
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableAIResolutionDetection" />
+            <label class="form-check-label" asp-for="EnableAIResolutionDetection">@T["Enable AI Resolution Detection"]</label>
+            <span class="hint dashed">@T["When enabled, AI semantically analyzes conversations to determine if the user's request was resolved, rather than relying only on timeout-based abandonment detection."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableConversionMetrics" />
+            <label class="form-check-label" asp-for="EnableConversionMetrics">@T["Enable Conversion Metrics"]</label>
+            <span class="hint dashed">@T["When enabled, AI evaluates each session against defined goals and assigns scores to measure session success and conversion rates."]</span>
+        </div>
+    </div>
+
+    <div id="@conversionGoalsSettingsId" class="@(Model.EnableConversionMetrics ? "" : "d-none")">
+        <div class="alert alert-info mb-3">
+            <i class="fa-solid fa-circle-info me-1"></i>
+            @T["Define one or more goals that represent success criteria for chat sessions. After each session closes, AI evaluates the conversation against these goals and assigns a score within the configured range. The aggregate score is used to calculate the conversion rate."]
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">@T["Conversion Goals"]</label>
+            <span class="hint dashed d-block mb-2">@T["Each goal defines a success criterion with a scoring range. Higher scores indicate better goal achievement."]</span>
+
+            <div id="@goalsContainerId">
+                @for (var i = 0; i < Model.ConversionGoals.Count; i++)
+                {
+                    var goal = Model.ConversionGoals[i];
+                    <div class="card mb-2 conversion-goal-card">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 goal-collapse-toggle" data-bs-toggle="collapse" href="#@(goalsContainerId)_collapse_@i" role="button" aria-expanded="true">
+                                <i class="fa-solid fa-chevron-down me-1"></i>
+                                <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? T["New Goal"] : goal.Name)</span>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="@T["Remove"]">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        <div id="@(goalsContainerId)_collapse_@i" class="collapse show">
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">@T["Name"]</label>
+                                    <input type="text" class="form-control goal-name-input" name="@Html.NameFor(m => m.ConversionGoals[i].Name)" value="@goal.Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., issue_resolved"]" />
+                                    <span class="hint">@T["A unique identifier for this goal. Only alphanumeric characters and underscores are allowed."]</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">@T["Description"]</label>
+                                    <textarea class="form-control" name="@Html.NameFor(m => m.ConversionGoals[i].Description)" rows="2" required placeholder="@T["Describe what constitutes success for this goal"]">@goal.Description</textarea>
+                                    <span class="hint">@T["A clear description of the success criteria. This is provided to the AI model as evaluation criteria."]</span>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">@T["Min Score"]</label>
+                                        <input type="number" class="form-control" name="@Html.NameFor(m => m.ConversionGoals[i].MinScore)" value="@goal.MinScore" min="0" />
+                                        <span class="hint">@T["Minimum score (default: 0)."]</span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">@T["Max Score"]</label>
+                                        <input type="number" class="form-control" name="@Html.NameFor(m => m.ConversionGoals[i].MaxScore)" value="@goal.MaxScore" min="1" />
+                                        <span class="hint">@T["Maximum score (default: 10)."]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <button type="button" class="btn btn-sm btn-success" id="@addGoalBtnId"><i class="fa-solid fa-plus"></i> @T["Add Goal"]</button>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        // Toggle session metrics settings visibility.
+        var metricsCheckbox = document.getElementById('@Html.IdFor(m => m.EnableSessionMetrics)');
+        var metricsTarget = document.getElementById('@sessionMetricsSettingsId');
+        if (metricsCheckbox && metricsTarget) {
+            metricsCheckbox.addEventListener('change', function () {
+                metricsTarget.classList.toggle('d-none', !this.checked);
+            });
+        }
+
+        // Toggle conversion goals settings visibility.
+        var conversionCheckbox = document.getElementById('@Html.IdFor(m => m.EnableConversionMetrics)');
+        var conversionTarget = document.getElementById('@conversionGoalsSettingsId');
+        if (conversionCheckbox && conversionTarget) {
+            conversionCheckbox.addEventListener('change', function () {
+                conversionTarget.classList.toggle('d-none', !this.checked);
+            });
+        }
+
+        var goalsContainer = document.getElementById('@goalsContainerId');
+        var addGoalButton = document.getElementById('@addGoalBtnId');
+        var goalsPrefix = '@Html.NameFor(m => m.ConversionGoals)';
+        var goalsContainerIdPrefix = '@goalsContainerId';
+
+        if (addGoalButton && goalsContainer) {
+            addGoalButton.addEventListener('click', function () {
+                var index = goalsContainer.querySelectorAll('.conversion-goal-card').length;
+                var collapseId = goalsContainerIdPrefix + '_collapse_' + index;
+                var card = document.createElement('div');
+                card.className = 'card mb-2 conversion-goal-card';
+                card.innerHTML =
+                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 goal-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                            '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                            '<span class="goal-name-display fw-semibold">@T["New Goal"]</span>' +
+                        '</a>' +
+                        '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                    '<div id="' + collapseId + '" class="collapse show">' +
+                        '<div class="card-body">' +
+                            '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control goal-name-input" name="' + goalsPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., issue_resolved"]" /><span class="hint">@T["A unique identifier for this goal. Only alphanumeric characters and underscores are allowed."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Description"]</label><textarea class="form-control" name="' + goalsPrefix + '[' + index + '].Description" rows="2" required placeholder="@T["Describe what constitutes success for this goal"]"></textarea><span class="hint">@T["A clear description of the success criteria. This is provided to the AI model as evaluation criteria."]</span></div>' +
+                            '<div class="row"><div class="col-md-6 mb-3"><label class="form-label">@T["Min Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MinScore" value="0" min="0" /><span class="hint">@T["Minimum score (default: 0)."]</span></div><div class="col-md-6 mb-3"><label class="form-label">@T["Max Score"]</label><input type="number" class="form-control" name="' + goalsPrefix + '[' + index + '].MaxScore" value="10" min="1" /><span class="hint">@T["Maximum score (default: 10)."]</span></div></div>' +
+                        '</div>' +
+                    '</div>';
+                goalsContainer.appendChild(card);
+            });
+        }
+
+        // Remove goal card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-goal-btn')) {
+                var card = e.target.closest('.conversion-goal-card');
+                if (card) card.remove();
+            }
+        });
+
+        // Update goal card header name display.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('goal-name-input')) {
+                var card = e.target.closest('.conversion-goal-card');
+                if (card) {
+                    var display = card.querySelector('.goal-name-display');
+                    if (display) {
+                        display.textContent = e.target.value || '@T["New Goal"]';
+                    }
+                }
+            }
+        });
+    });
+</script>
