@@ -91,6 +91,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             {
                 { "SessionId", context.ChatSession.SessionId },
                 { "ProfileId", context.Profile.ItemId },
+                { "Session", context.ChatSession },
+                { "Profile", context.Profile },
                 { "Results", context.ChatSession.PostSessionResults },
                 { "Timestamp", _clock.UtcNow },
             };

@@ -65,7 +65,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
+            var metadata = profile.As<FunctionInvocationMetadata>();
 
             model.Tools = accessibleTools
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
@@ -94,7 +94,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        var metadata = new AIProfileFunctionInvocationMetadata();
+        var metadata = new FunctionInvocationMetadata();
 
         if (selectedToolKeys is null || !selectedToolKeys.Any())
         {

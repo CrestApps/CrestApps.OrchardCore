@@ -39,7 +39,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         }
         else if (context.Resource is AIProfile profile)
         {
-            var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+            var documentsMetadata = profile.As<DocumentsMetadata>();
 
             if (documentsMetadata.Documents is { Count: > 0 })
             {

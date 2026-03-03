@@ -126,10 +126,32 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
                 thumbsDown = ratingsNegative,
                 positiveRate = ratingsTotal > 0 ? Math.Round((double)ratingsPositive / ratingsTotal * 100, 1) : 0,
             },
+            conversion = GetConversionMetrics(metrics),
             hourOfDayDistribution = hourDistribution,
             dayOfWeekDistribution = dayDistribution,
         };
 
         return JsonSerializer.Serialize(result);
+    }
+
+    private static object GetConversionMetrics(List<AIChatSessionMetricsIndex> metrics)
+    {
+        var sessionsWithConversion = metrics.Where(m => m.ConversionScore.HasValue && m.ConversionMaxScore.HasValue).ToList();
+
+        if (sessionsWithConversion.Count == 0)
+        {
+            return new { evaluated = 0 };
+        }
+
+        var totalScore = sessionsWithConversion.Sum(m => m.ConversionScore.Value);
+        var totalMaxScore = sessionsWithConversion.Sum(m => m.ConversionMaxScore.Value);
+
+        return new
+        {
+            evaluated = sessionsWithConversion.Count,
+            averageConversionRate = totalMaxScore > 0 ? Math.Round((double)totalScore / totalMaxScore * 100, 1) : 0,
+            averageScore = sessionsWithConversion.Count > 0 ? Math.Round(sessionsWithConversion.Average(m => m.ConversionScore.Value), 1) : 0,
+            averageMaxScore = sessionsWithConversion.Count > 0 ? Math.Round(sessionsWithConversion.Average(m => m.ConversionMaxScore.Value), 1) : 0,
+        };
     }
 }

@@ -36,6 +36,8 @@ internal sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSe
                     TotalOutputTokens = evt.TotalOutputTokens,
                     AverageResponseLatencyMs = evt.AverageResponseLatencyMs,
                     UserRating = evt.UserRating,
+                    ConversionScore = evt.ConversionScore,
+                    ConversionMaxScore = evt.ConversionMaxScore,
                     CreatedUtc = evt.CreatedUtc,
                 };
             });

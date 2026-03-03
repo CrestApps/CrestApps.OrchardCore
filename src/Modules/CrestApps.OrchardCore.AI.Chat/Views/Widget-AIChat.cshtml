@@ -74,7 +74,7 @@
     }
 
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-        && profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics;
+        && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
 }
 
 <!-- Toggle Button -->

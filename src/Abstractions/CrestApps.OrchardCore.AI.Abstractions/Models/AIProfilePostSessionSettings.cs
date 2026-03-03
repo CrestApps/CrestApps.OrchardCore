@@ -16,4 +16,10 @@ public class AIProfilePostSessionSettings
     /// Gets or sets the list of post-session processing tasks to execute when a session closes.
     /// </summary>
     public List<PostSessionTask> PostSessionTasks { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the tool names to make available during post-session processing.
+    /// When tools are configured, the AI model can invoke them during post-session analysis.
+    /// </summary>
+    public string[] ToolNames { get; set; } = [];
 }

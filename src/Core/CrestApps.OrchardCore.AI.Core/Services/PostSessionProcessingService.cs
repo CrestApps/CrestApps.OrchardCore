@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class PostSessionProcessingService
 {
     private readonly IAIClientFactory _clientFactory;
+    private readonly IAIToolsService _toolsService;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IClock _clock;
     private readonly AIProviderOptions _providerOptions;
@@ -23,16 +24,187 @@ public sealed class PostSessionProcessingService
 
     public PostSessionProcessingService(
         IAIClientFactory clientFactory,
+        IAIToolsService toolsService,
         IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
         IClock clock,
         ILogger<PostSessionProcessingService> logger)
     {
         _clientFactory = clientFactory;
+        _toolsService = toolsService;
         _aiTemplateService = aiTemplateService;
         _clock = clock;
         _providerOptions = providerOptions.Value;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Uses AI to determine whether the conversation was semantically resolved,
+    /// regardless of how the session was closed (natural farewell, inactivity, etc.).
+    /// Returns <see langword="true"/> if the AI determines the user's query was addressed.
+    /// </summary>
+    public async Task<bool> EvaluateResolutionAsync(
+        AIProfile profile,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
+        CancellationToken cancellationToken = default)
+    {
+        if (!prompts.Any(p => p.Role == ChatRole.User))
+        {
+            return false;
+        }
+
+        try
+        {
+            var chatClient = await GetChatClientAsync(profile);
+
+            if (chatClient == null)
+            {
+                return false;
+            }
+
+            var transcript = BuildConversationTranscript(prompts);
+
+            if (string.IsNullOrEmpty(transcript))
+            {
+                return false;
+            }
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ResolutionAnalysis)),
+                new(ChatRole.User, transcript),
+            };
+
+            var response = await chatClient.GetResponseAsync<ResolutionAnalysisResponse>(messages, new ChatOptions
+            {
+                Temperature = 0f,
+            }, null, cancellationToken);
+
+            return response.Result?.Resolved ?? false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI resolution analysis failed for profile '{ProfileId}'.", profile.ItemId);
+            return false;
+        }
+    }
+
+    private static string BuildConversationTranscript(IReadOnlyList<AIChatSessionPrompt> prompts)
+    {
+        var builder = new StringBuffer("Conversation transcript:");
+
+        foreach (var prompt in prompts)
+        {
+            if (prompt.IsGeneratedPrompt)
+            {
+                continue;
+            }
+
+            builder.AppendLine();
+            builder.Append(prompt.Role == ChatRole.User ? "User: " : "Assistant: ");
+            builder.Append(prompt.Content?.Trim());
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Evaluates the conversation against configured conversion goals using AI.
+    /// Returns a list of goal results with scores, or null if evaluation fails.
+    /// </summary>
+    public async Task<List<ConversionGoalResult>> EvaluateConversionGoalsAsync(
+        AIProfile profile,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
+        List<ConversionGoal> goals,
+        CancellationToken cancellationToken = default)
+    {
+        if (goals is null || goals.Count == 0 || !prompts.Any(p => p.Role == ChatRole.User))
+        {
+            return null;
+        }
+
+        try
+        {
+            var chatClient = await GetChatClientAsync(profile);
+
+            if (chatClient == null)
+            {
+                return null;
+            }
+
+            var transcript = BuildConversationTranscript(prompts);
+
+            if (string.IsNullOrEmpty(transcript))
+            {
+                return null;
+            }
+
+            var goalsPrompt = new StringBuffer("Evaluate the following conversation against each goal and assign a score.\n\nGoals:\n");
+
+            foreach (var goal in goals)
+            {
+                goalsPrompt.Append("- ");
+                goalsPrompt.Append(goal.Name);
+                goalsPrompt.Append(": ");
+                goalsPrompt.Append(goal.Description);
+                goalsPrompt.Append(" (score range: ");
+                goalsPrompt.Append(goal.MinScore.ToString());
+                goalsPrompt.Append("-");
+                goalsPrompt.Append(goal.MaxScore.ToString());
+                goalsPrompt.Append(")");
+                goalsPrompt.AppendLine();
+            }
+
+            goalsPrompt.AppendLine();
+            goalsPrompt.Append(transcript);
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ConversionGoalEvaluation)),
+                new(ChatRole.User, goalsPrompt.ToString()),
+            };
+
+            var response = await chatClient.GetResponseAsync<ConversionGoalEvaluationResponse>(messages, new ChatOptions
+            {
+                Temperature = 0f,
+            }, null, cancellationToken);
+
+            if (response.Result?.Goals is null || response.Result.Goals.Count == 0)
+            {
+                return null;
+            }
+
+            var results = new List<ConversionGoalResult>();
+
+            foreach (var result in response.Result.Goals)
+            {
+                var goal = goals.FirstOrDefault(g =>
+                    string.Equals(g.Name, result.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (goal == null)
+                {
+                    continue;
+                }
+
+                // Clamp score to valid range.
+                var score = Math.Clamp(result.Score, goal.MinScore, goal.MaxScore);
+
+                results.Add(new ConversionGoalResult
+                {
+                    Name = goal.Name,
+                    Score = score,
+                    MaxScore = goal.MaxScore,
+                    Reasoning = result.Reasoning,
+                });
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Conversion goal evaluation failed for profile '{ProfileId}'.", profile.ItemId);
+            return null;
+        }
     }
 
     /// <summary>
@@ -80,7 +252,7 @@ public sealed class PostSessionProcessingService
             var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(messages, new ChatOptions
             {
                 Temperature = 0f,
-                MaxOutputTokens = 2048,
+                Tools = await ResolveToolsAsync(settings.ToolNames),
             }, null, cancellationToken);
 
             if (response.Result?.Tasks == null || response.Result.Tasks.Count == 0)
@@ -198,6 +370,28 @@ public sealed class PostSessionProcessingService
         return await _clientFactory.CreateChatClientAsync(profile.Source, connectionName, deploymentName);
     }
 
+    private async Task<IList<AITool>> ResolveToolsAsync(string[] toolNames)
+    {
+        if (toolNames is null || toolNames.Length == 0)
+        {
+            return null;
+        }
+
+        var tools = new List<AITool>();
+
+        foreach (var name in toolNames)
+        {
+            var tool = await _toolsService.GetByNameAsync(name);
+
+            if (tool is not null)
+            {
+                tools.Add(tool);
+            }
+        }
+
+        return tools.Count > 0 ? tools : null;
+    }
+
     private static string BuildProcessingPrompt(List<PostSessionTask> tasks, IReadOnlyList<AIChatSessionPrompt> prompts)
     {
         var builder = new StringBuffer("Analyze the following completed chat conversation and produce results for the requested tasks.");
@@ -281,4 +475,23 @@ public sealed class PostSessionTaskResult
     public string Name { get; set; }
 
     public string Value { get; set; }
+}
+
+public sealed class ResolutionAnalysisResponse
+{
+    public bool Resolved { get; set; }
+}
+
+public sealed class ConversionGoalEvaluationResponse
+{
+    public List<ConversionGoalEvaluationResult> Goals { get; set; } = [];
+}
+
+public sealed class ConversionGoalEvaluationResult
+{
+    public string Name { get; set; }
+
+    public int Score { get; set; }
+
+    public string Reasoning { get; set; }
 }

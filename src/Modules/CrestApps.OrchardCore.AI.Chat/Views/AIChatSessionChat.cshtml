@@ -49,7 +49,7 @@
 
     var metricsEnabled = Model.Profile != null
         && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-        && Model.Profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics;
+        && Model.Profile.As<AnalyticsMetadata>().EnableSessionMetrics;
 }
 
 <div class="container-fluid d-flex flex-column h-100">

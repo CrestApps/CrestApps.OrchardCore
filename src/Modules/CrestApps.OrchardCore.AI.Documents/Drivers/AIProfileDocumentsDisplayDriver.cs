@@ -54,7 +54,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         {
             model.ProfileId = profile.ItemId;
 
-            var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+            var documentsMetadata = profile.As<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
 
@@ -79,7 +79,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         var model = new EditAIProfileDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+        var documentsMetadata = profile.As<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.Documents ??= [];
 

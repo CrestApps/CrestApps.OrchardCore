@@ -54,6 +54,8 @@ public sealed class Startup : StartupBase
             o.MemberAccessStrategy.Register<AICompletionReference>();
             o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
             o.MemberAccessStrategy.Register<ChatInteractionDocumentInfo>();
+            o.MemberAccessStrategy.Register<ExtractedFieldChange>();
+            o.MemberAccessStrategy.Register<ConversionGoalResult>();
         });
 
         services
@@ -113,6 +115,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
         services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
     }

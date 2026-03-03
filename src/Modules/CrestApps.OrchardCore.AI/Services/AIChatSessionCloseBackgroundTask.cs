@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.AI.Services;
     Schedule = "*/10 * * * *",
     Description = "Periodically closes inactive AI chat sessions and triggers workflow events.",
     LockTimeout = 5_000,
-    LockExpiration = 300_000)]
+    LockExpiration = 300_00)]
 public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 {
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -73,8 +73,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 // Run post-session processing if configured.
                 await RunPostSessionProcessingAsync(serviceProvider, profile, chatSession, prompts, logger, cancellationToken);
 
-                // Record analytics event for abandoned session (inactivity = not resolved).
-                await RecordAnalyticsEventAsync(serviceProvider, profile, chatSession, prompts.Count, logger);
+                // Record analytics event for session (use AI to determine resolution).
+                await RecordAnalyticsEventAsync(serviceProvider, profile, chatSession, prompts.Count, prompts, logger);
 
                 await session.SaveAsync(chatSession, false, collection: AIConstants.CollectionName, cancellationToken);
 
@@ -94,6 +94,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                         {
                             { "SessionId", chatSession.SessionId },
                             { "ProfileId", profile.ItemId },
+                            { "Session", chatSession },
+                            { "Profile", profile },
                             { "ClosedAtUtc", utcNow },
                         };
 
@@ -153,6 +155,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 {
                     { "SessionId", chatSession.SessionId },
                     { "ProfileId", profile.ItemId },
+                    { "Session", chatSession },
+                    { "Profile", profile },
                     { "Results", results },
                 };
 
@@ -173,9 +177,12 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         AIProfile profile,
         AIChatSession chatSession,
         int promptCount,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
         ILogger logger)
     {
-        if (!profile.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics)
+        var analyticsMetadata = profile.As<AnalyticsMetadata>();
+
+        if (!analyticsMetadata.EnableSessionMetrics)
         {
             return;
         }
@@ -189,8 +196,37 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 return;
             }
 
-            // Inactivity timeout = abandoned (not resolved).
-            await eventService.RecordSessionEndedAsync(chatSession, promptCount, isResolved: false);
+            var isResolved = false;
+
+            // Use AI resolution detection when enabled instead of assuming abandoned.
+            if (analyticsMetadata.EnableAIResolutionDetection)
+            {
+                var postSessionService = serviceProvider.GetService<PostSessionProcessingService>();
+
+                if (postSessionService is not null)
+                {
+                    isResolved = await postSessionService.EvaluateResolutionAsync(profile, prompts);
+                }
+            }
+
+            await eventService.RecordSessionEndedAsync(chatSession, promptCount, isResolved);
+
+            // Evaluate conversion goals when enabled.
+            if (analyticsMetadata.EnableConversionMetrics && analyticsMetadata.ConversionGoals.Count > 0)
+            {
+                var postSessionService = serviceProvider.GetService<PostSessionProcessingService>();
+
+                if (postSessionService is not null)
+                {
+                    var goalResults = await postSessionService.EvaluateConversionGoalsAsync(
+                        profile, prompts, analyticsMetadata.ConversionGoals);
+
+                    if (goalResults is not null && goalResults.Count > 0)
+                    {
+                        await eventService.RecordConversionMetricsAsync(chatSession.SessionId, goalResults);
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {

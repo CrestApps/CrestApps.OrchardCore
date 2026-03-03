@@ -36,7 +36,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
             context.Context.UseCaching = metadata.UseCaching;
         }
 
-        if (profile.TryGet<AIProfileFunctionInvocationMetadata>(out var functionInvocationMetadata))
+        if (profile.TryGet<FunctionInvocationMetadata>(out var functionInvocationMetadata))
         {
             context.Context.ToolNames = functionInvocationMetadata.Names;
         }

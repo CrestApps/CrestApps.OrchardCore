@@ -63,6 +63,13 @@ public sealed class DataExtractionService
         var changeSet = ApplyExtraction(session, settings, results);
         changeSet.SessionEnded = sessionEnded;
 
+        // Check if all configured fields now have at least one value.
+        if (changeSet.NewFields.Count > 0)
+        {
+            changeSet.AllFieldsCollected = settings.DataExtractionEntries
+                .All(entry => session.ExtractedData.TryGetValue(entry.Name, out var state) && state.Values.Count > 0);
+        }
+
         return changeSet;
     }
 
@@ -397,6 +404,11 @@ public sealed class ExtractionChangeSet
     public List<ExtractedFieldChange> NewFields { get; set; } = [];
 
     public bool SessionEnded { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether all configured extraction fields have been collected.
+    /// </summary>
+    public bool AllFieldsCollected { get; set; }
 }
 
 public sealed record ExtractedFieldChange(string FieldName, string Value, bool IsMultiple);
