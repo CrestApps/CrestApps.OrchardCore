@@ -157,7 +157,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
             }
         }
 
-        var documentInfo = new ChatInteractionDocumentInfo
+        var documentInfo = new ChatDocumentInfo
         {
             DocumentId = document.ItemId,
             FileName = document.FileName,

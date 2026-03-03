@@ -69,12 +69,35 @@ public sealed class ReadTabularDataTool : AIFunction
 
         var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
-        if (executionContext?.Resource is not ChatInteraction interaction)
+        string referenceId = null;
+        HashSet<string> validReferenceIds = null;
+
+        if (executionContext?.Resource is ChatInteraction interaction)
         {
-            return "Document access requires an active chat interaction session.";
+            referenceId = interaction.ItemId;
+        }
+        else if (executionContext?.Resource is AIProfile profile)
+        {
+            referenceId = profile.ItemId;
+            validReferenceIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                profile.ItemId,
+            };
+
+            // Documents could be attached at the profile or the session level.
+            if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                validReferenceIds.Add(session.SessionId);
+            }
         }
 
-        var chatInteractionId = interaction.ItemId;
+        if (string.IsNullOrEmpty(referenceId))
+        {
+            return "Document access requires an active chat interaction session or AI profile.";
+        }
+
         var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
         if (documentStore is null)
@@ -82,12 +105,13 @@ public sealed class ReadTabularDataTool : AIFunction
             return "Document store is not available.";
         }
 
-        // Query only documents belonging to this interaction to prevent cross-session access.
+        // Query only documents belonging to this resource to prevent cross-session access.
         var document = await documentStore.FindByIdAsync(documentId);
 
-        if (document is null || document.ReferenceId != chatInteractionId)
+        if (document is null ||
+            (validReferenceIds is not null ? !validReferenceIds.Contains(document.ReferenceId) : document.ReferenceId != referenceId))
         {
-            return $"Document with ID '{documentId}' was not found in this session.";
+            return $"Document with ID '{documentId}' was not found.";
         }
 
         if (string.IsNullOrWhiteSpace(document.Text))

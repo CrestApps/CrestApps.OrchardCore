@@ -52,14 +52,14 @@ public sealed class TemplateLiquidRenderingTests
 
         var docs = new[]
         {
-            new ChatInteractionDocumentInfo
+            new ChatDocumentInfo
             {
                 DocumentId = "doc1",
                 FileName = "report.pdf",
                 ContentType = "application/pdf",
                 FileSize = 2048,
             },
-            new ChatInteractionDocumentInfo
+            new ChatDocumentInfo
             {
                 DocumentId = "doc2",
                 FileName = "data.csv",
@@ -255,7 +255,7 @@ public sealed class TemplateLiquidRenderingTests
     }
 
     [Fact]
-    public async Task ChatInteractionDocumentInfo_DefaultFilter_HandlesNullContentType()
+    public async Task ChatDocumentInfo_DefaultFilter_HandlesNullContentType()
     {
         var template = """
             {% for doc in docs %}
@@ -265,7 +265,7 @@ public sealed class TemplateLiquidRenderingTests
 
         var docs = new[]
         {
-            new ChatInteractionDocumentInfo
+            new ChatDocumentInfo
             {
                 DocumentId = "doc1",
                 FileName = "file.txt",

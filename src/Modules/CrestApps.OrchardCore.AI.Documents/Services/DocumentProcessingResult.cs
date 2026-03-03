@@ -8,11 +8,11 @@ public sealed class DocumentProcessingResult
 
     public AIDocument Document { get; private set; }
 
-    public ChatInteractionDocumentInfo DocumentInfo { get; private set; }
+    public ChatDocumentInfo DocumentInfo { get; private set; }
 
     public string Error { get; private set; }
 
-    public static DocumentProcessingResult Succeeded(AIDocument document, ChatInteractionDocumentInfo documentInfo)
+    public static DocumentProcessingResult Succeeded(AIDocument document, ChatDocumentInfo documentInfo)
     {
         return new DocumentProcessingResult
         {

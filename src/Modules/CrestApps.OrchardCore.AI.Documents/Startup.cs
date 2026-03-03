@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -37,7 +36,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
-             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Register unified document store, index provider, and migration.
         services.AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();

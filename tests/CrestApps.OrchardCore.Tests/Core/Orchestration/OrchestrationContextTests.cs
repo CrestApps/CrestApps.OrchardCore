@@ -33,7 +33,7 @@ public sealed class OrchestrationContextTests
     {
         var context = new OrchestrationContext();
 
-        context.Documents.Add(new ChatInteractionDocumentInfo
+        context.Documents.Add(new ChatDocumentInfo
         {
             DocumentId = "test",
             FileName = "test.pdf",
@@ -48,7 +48,7 @@ public sealed class OrchestrationContextTests
     {
         var context = new OrchestrationContext();
 
-        var docs = new List<ChatInteractionDocumentInfo>
+        var docs = new List<ChatDocumentInfo>
         {
             new() { DocumentId = "a" },
             new() { DocumentId = "b" },

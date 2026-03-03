@@ -78,14 +78,34 @@ public sealed class ListDocumentsTool : AIFunction
                 return "Document store is not available.";
             }
 
-            var documents = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
+            // Collect documents from both profile-level and session-level sources.
+            var allDocuments = new List<AIDocument>();
 
-            if (documents is null || documents.Count == 0)
+            var profileDocs = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
+
+            if (profileDocs is { Count: > 0 })
             {
-                return "No documents are attached to this profile.";
+                allDocuments.AddRange(profileDocs);
             }
 
-            var result = documents.Select(d => new
+            if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                var sessionDocs = await documentStore.GetDocumentsAsync(session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession);
+
+                if (sessionDocs is { Count: > 0 })
+                {
+                    allDocuments.AddRange(sessionDocs);
+                }
+            }
+
+            if (allDocuments.Count == 0)
+            {
+                return "No documents are attached.";
+            }
+
+            var result = allDocuments.Select(d => new
             {
                 d.ItemId,
                 d.FileName,

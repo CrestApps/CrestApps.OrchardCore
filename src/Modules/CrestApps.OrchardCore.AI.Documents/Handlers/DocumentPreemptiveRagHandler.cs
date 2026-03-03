@@ -45,11 +45,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
     public ValueTask<bool> CanHandleAsync(OrchestrationContextBuiltContext context)
     {
-        // Only proceed if documents are attached (either on the orchestration context
-        // or on the session via AdditionalProperties, since session documents are
-        // populated after BuildingAsync via the configure callback).
-        if (context.OrchestrationContext.Documents is { Count: > 0 } &&
-            HasSessionDocuments(context.OrchestrationContext))
+        if (context.OrchestrationContext.Documents is { Count: > 0 })
         {
             return ValueTask.FromResult(true);
         }
@@ -122,39 +118,35 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        // Resolve the resource ID and reference type.
-        string resourceId = null;
-        string referenceType = null;
+        // Resolve the resource scopes to search across.
+        var searchScopes = new List<(string ResourceId, string ReferenceType)>();
 
         if (context.Resource is ChatInteraction interaction)
         {
-            resourceId = interaction.ItemId;
-            referenceType = AIConstants.DocumentReferenceTypes.ChatInteraction;
+            searchScopes.Add((interaction.ItemId, AIConstants.DocumentReferenceTypes.ChatInteraction));
         }
         else if (context.Resource is AIProfile profile)
         {
-            resourceId = profile.ItemId;
-            referenceType = AIConstants.DocumentReferenceTypes.Profile;
+            searchScopes.Add((profile.ItemId, AIConstants.DocumentReferenceTypes.Profile));
 
-            // If the profile has no documents, check for session documents.
+            // Also search session documents if a session with documents exists.
             if (context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
                 context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
                 sessionObj is AIChatSession session &&
                 session.Documents is { Count: > 0 })
             {
-                resourceId = session.SessionId;
-                referenceType = AIConstants.DocumentReferenceTypes.ChatSession;
+                searchScopes.Add((session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession));
             }
         }
 
-        if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
+        if (searchScopes.Count == 0)
         {
             return;
         }
 
         var topN = settings.TopN > 0 ? settings.TopN : 3;
 
-        // Perform vector search for each embedding and combine results.
+        // Perform vector search for each embedding across all scopes and combine results.
         var allResults = new List<DocumentChunkSearchResult>();
         var seenChunkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -165,31 +157,34 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
                 continue;
             }
 
-            var results = await searchService.SearchAsync(
-                indexProfile,
-                embedding.Vector.ToArray(),
-                resourceId,
-                referenceType,
-                topN);
-
-            if (results == null)
+            foreach (var (scopeResourceId, scopeReferenceType) in searchScopes)
             {
-                continue;
-            }
+                var results = await searchService.SearchAsync(
+                    indexProfile,
+                    embedding.Vector.ToArray(),
+                    scopeResourceId,
+                    scopeReferenceType,
+                    topN);
 
-            foreach (var result in results)
-            {
-                if (result.Chunk == null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                if (results == null)
                 {
                     continue;
                 }
 
-                // Deduplicate by chunk index to avoid injecting the same chunk multiple times.
-                var chunkKey = $"{result.Chunk.Index}";
-
-                if (seenChunkKeys.Add(chunkKey))
+                foreach (var result in results)
                 {
-                    allResults.Add(result);
+                    if (result.Chunk == null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                    {
+                        continue;
+                    }
+
+                    // Deduplicate by chunk key to avoid injecting the same chunk multiple times.
+                    var chunkKey = $"{result.DocumentKey}:{result.Chunk.Index}";
+
+                    if (seenChunkKeys.Add(chunkKey))
+                    {
+                        allResults.Add(result);
+                    }
                 }
             }
         }
@@ -292,13 +287,5 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         }
 
         orchestrationContext.SystemMessageBuilder.Append(sb);
-    }
-
-    private static bool HasSessionDocuments(OrchestrationContext orchestrationContext)
-    {
-        return orchestrationContext.CompletionContext?.AdditionalProperties is not null &&
-            orchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
-            sessionObj is AIChatSession session &&
-            session.Documents is { Count: > 0 };
     }
 }

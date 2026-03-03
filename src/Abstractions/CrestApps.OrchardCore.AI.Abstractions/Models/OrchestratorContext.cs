@@ -48,7 +48,7 @@ public sealed class OrchestrationContext
     /// Gets or sets the document references available for this session.
     /// System tools use these to load document content on demand.
     /// </summary>
-    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+    public List<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets whether tools should be disabled for this orchestration.

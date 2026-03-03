@@ -35,7 +35,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         if (context.Resource is ChatInteraction interaction &&
             interaction.Documents is { Count: > 0 })
         {
-            context.Context.Documents = interaction.Documents;
+            context.Context.Documents ??= [];
+            context.Context.Documents.AddRange(interaction.Documents);
         }
         else if (context.Resource is AIProfile profile)
         {
@@ -43,7 +44,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
             if (documentsMetadata.Documents is { Count: > 0 })
             {
-                context.Context.Documents = documentsMetadata.Documents;
+                context.Context.Documents ??= [];
+                context.Context.Documents.AddRange(documentsMetadata.Documents);
             }
         }
 
@@ -62,7 +64,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             sessionObj is AIChatSession session &&
             session.Documents is { Count: > 0 })
         {
-            context.OrchestrationContext.Documents = session.Documents;
+            context.OrchestrationContext.Documents ??= [];
+            context.OrchestrationContext.Documents.AddRange(session.Documents);
         }
 
         if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
