@@ -148,11 +148,18 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             await contentManager.UpdateAsync(contentItem);
 
-            var result = await contentManager.ValidateAsync(contentItem);
+            // TODO, when https://github.com/OrchardCMS/OrchardCore/pull/18939 is meregd,
+            // we can similfy this by calling contentManager.ValidateAsync(contentItem);
+            var handler = arguments.Services.GetServices<IContentHandler>();
 
-            if (!result.Succeeded)
+            var validateContext = new ValidateContentContext(contentItem);
+            var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
+            await handler.InvokeAsync((handler, context) => handler.ValidatingAsync(context), validateContext, logger);
+            await handler.Reverse().InvokeAsync((handler, context) => handler.ValidatedAsync(context), validateContext, logger);
+
+            if (!validateContext.ContentValidateResult.Succeeded)
             {
-                return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
+                return "Unable to update the content item due to the following errors: " + string.Join(';', validateContext.ContentValidateResult.Errors.Select(x => x.ErrorMessage));
             }
         }
 

@@ -9,6 +9,7 @@ window.chatInteractionManager = function () {
         downloadImageTitle: 'Download image',
         downloadChartTitle: 'Download chart as image',
         downloadChartButtonText: 'Download',
+        codeCopiedText: 'Copied!',
 
         messageTemplate: `
             <div class="ai-chat-messages">
@@ -93,7 +94,7 @@ window.chatInteractionManager = function () {
         }
 
         var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang">${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i> Copy</button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
+        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang"><i class="fa-solid fa-code"></i> ${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i></button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
     };
 
     // Custom image renderer for generated images with thumbnail styling and download button.
@@ -279,7 +280,7 @@ window.chatInteractionManager = function () {
         _pendingCharts = [];
         const html = marked.parse(content, { renderer });
         message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-        return DOMPurify.sanitize(html);
+        return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
     }
 
     const initialize = (instanceConfig) => {
@@ -877,9 +878,10 @@ window.chatInteractionManager = function () {
                             var codeEl = block.querySelector('code');
                             if (codeEl) {
                                 navigator.clipboard.writeText(codeEl.textContent);
-                                btn.innerHTML = '<i class="fa-regular fa-check"></i> Copied!';
+                                var copiedText = config.codeCopiedText || 'Copied!';
+                                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
                                 setTimeout(() => {
-                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
                                 }, 2000);
                             }
                         });

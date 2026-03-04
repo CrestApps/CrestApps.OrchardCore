@@ -29,6 +29,7 @@ window.chatInteractionManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
+    codeCopiedText: 'Copied!',
     messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n                Assistant\n            </div>\n        ",
     // Localizable strings
@@ -85,7 +86,7 @@ window.chatInteractionManager = function () {
       highlighted = escapeHtmlEntities(code);
     }
     var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\">".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i> Copy</button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -254,7 +255,9 @@ window.chatInteractionManager = function () {
       renderer: renderer
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target']
+    });
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -901,9 +904,10 @@ window.chatInteractionManager = function () {
               var codeEl = block.querySelector('code');
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
-                btn.innerHTML = '<i class="fa-regular fa-check"></i> Copied!';
+                var copiedText = config.codeCopiedText || 'Copied!';
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
                 setTimeout(function () {
-                  btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
                 }, 2000);
               }
             });

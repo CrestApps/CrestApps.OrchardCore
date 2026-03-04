@@ -14,6 +14,7 @@ window.openAIChatManager = function () {
         thumbsUpTitle: 'Thumbs up',
         thumbsDownTitle: 'Thumbs down',
         copyTitle: 'Click here to copy response to clipboard.',
+        codeCopiedText: 'Copied!',
         messageTemplate: `
         <div class="ai-chat-messages">
             <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
@@ -101,7 +102,7 @@ window.openAIChatManager = function () {
         }
 
         var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang">${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i> Copy</button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
+        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang"><i class="fa-solid fa-code"></i> ${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i></button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
     };
 
     // Custom image renderer for generated images with thumbnail styling and download button.
@@ -287,7 +288,7 @@ window.openAIChatManager = function () {
         _pendingCharts = [];
         const html = marked.parse(content, { renderer });
         message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-        return DOMPurify.sanitize(html);
+        return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
     }
 
     const initialize = (instanceConfig) => {
@@ -1206,9 +1207,10 @@ window.openAIChatManager = function () {
                             var codeEl = block.querySelector('code');
                             if (codeEl) {
                                 navigator.clipboard.writeText(codeEl.textContent);
-                                btn.innerHTML = '<i class="fa-regular fa-check"></i> Copied!';
+                                var copiedText = config.codeCopiedText || 'Copied!';
+                                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
                                 setTimeout(() => {
-                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
                                 }, 2000);
                             }
                         });
