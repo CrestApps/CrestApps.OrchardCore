@@ -100,8 +100,8 @@ window.openAIChatManager = function () {
             highlighted = escapeHtmlEntities(code);
         }
 
-        var langLabel = lang ? ` data-lang="${lang}"` : '';
-        return `<pre${langLabel}><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-solid fa-copy"></i></button><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
+        var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang">${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i> Copy</button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
     };
 
     // Custom image renderer for generated images with thumbnail styling and download button.
@@ -770,6 +770,7 @@ window.openAIChatManager = function () {
 
                     var content = '';
                     var references = {};
+                    var lastResponseId = null;
 
                     // Get the index after showing typing indicator.
                     var messageIndex = this.messages.length;
@@ -816,6 +817,16 @@ window.openAIChatManager = function () {
                                 }
 
                                 if (chunk.content) {
+
+                                    // When the responseId changes (e.g., after an internal tool call),
+                                    // insert a line break to visually separate response segments.
+                                    if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                                        content += '\n\n';
+                                    }
+
+                                    if (chunk.responseId) {
+                                        lastResponseId = chunk.responseId;
+                                    }
 
                                     let processedContent = chunk.content;
 
@@ -1187,14 +1198,18 @@ window.openAIChatManager = function () {
                                 return;
                             }
 
-                            var pre = btn.closest('pre');
-                            if (!pre) {
+                            var block = btn.closest('.ai-code-block') || btn.closest('pre');
+                            if (!block) {
                                 return;
                             }
 
-                            var codeEl = pre.querySelector('code');
+                            var codeEl = block.querySelector('code');
                             if (codeEl) {
                                 navigator.clipboard.writeText(codeEl.textContent);
+                                btn.innerHTML = '<i class="fa-regular fa-check"></i> Copied!';
+                                setTimeout(() => {
+                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                                }, 2000);
                             }
                         });
                     }

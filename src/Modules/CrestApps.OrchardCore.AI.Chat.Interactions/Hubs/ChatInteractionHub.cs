@@ -16,9 +16,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Data.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -34,7 +34,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     private readonly CitationReferenceCollector _citationCollector;
     private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
-    private readonly IDocumentStore _documentStore;
+    private readonly ISession _session;
 
     protected readonly IStringLocalizer S;
 
@@ -49,7 +49,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         CitationReferenceCollector citationCollector,
         IClock clock,
         ILogger<ChatInteractionHub> logger,
-        IDocumentStore documentStore,
+        ISession session,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
         _authorizationService = authorizationService;
@@ -62,7 +62,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         _citationCollector = citationCollector;
         _clock = clock;
         _logger = logger;
-        _documentStore = documentStore;
+        _session = session;
         S = stringLocalizer;
     }
 
@@ -203,7 +203,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
 
         await _interactionManager.UpdateAsync(interaction);
-        await _documentStore.CommitAsync();
+        await _session.SaveChangesAsync();
 
         // Let handlers react after the interaction has been persisted.
         foreach (var handler in _settingsHandlers)
@@ -341,7 +341,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         // Clear prompts using the prompt store
         await _promptStore.DeleteAllPromptsAsync(itemId);
-        await _documentStore.CommitAsync();
+        await _session.SaveChangesAsync();
 
         await Clients.Caller.HistoryCleared(interaction.ItemId);
     }
@@ -455,6 +455,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 {
                     SessionId = interaction.ItemId,
                     MessageId = assistantPrompt.ItemId,
+                    ResponseId = chunk.ResponseId,
                     Content = chunk.Text,
                     References = references,
                 };
@@ -489,7 +490,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 await _interactionManager.UpdateAsync(interaction);
             }
 
-            await _documentStore.CommitAsync();
+            await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {

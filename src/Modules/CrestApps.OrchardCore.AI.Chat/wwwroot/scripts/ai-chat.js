@@ -83,8 +83,8 @@ window.openAIChatManager = function () {
     } else {
       highlighted = escapeHtmlEntities(code);
     }
-    var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
-    return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
+    var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\">".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i> Copy</button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -827,6 +827,7 @@ window.openAIChatManager = function () {
           this.autoScroll = true;
           var content = '';
           var references = {};
+          var lastResponseId = null;
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
@@ -865,6 +866,14 @@ window.openAIChatManager = function () {
                 }
               }
               if (chunk.content) {
+                // When the responseId changes (e.g., after an internal tool call),
+                // insert a line break to visually separate response segments.
+                if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                  content += '\n\n';
+                }
+                if (chunk.responseId) {
+                  lastResponseId = chunk.responseId;
+                }
                 var processedContent = chunk.content;
                 for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
                   var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
@@ -1242,13 +1251,17 @@ window.openAIChatManager = function () {
               if (!btn) {
                 return;
               }
-              var pre = btn.closest('pre');
-              if (!pre) {
+              var block = btn.closest('.ai-code-block') || btn.closest('pre');
+              if (!block) {
                 return;
               }
-              var codeEl = pre.querySelector('code');
+              var codeEl = block.querySelector('code');
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
+                btn.innerHTML = '<i class="fa-regular fa-check"></i> Copied!';
+                setTimeout(function () {
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i> Copy';
+                }, 2000);
               }
             });
           }

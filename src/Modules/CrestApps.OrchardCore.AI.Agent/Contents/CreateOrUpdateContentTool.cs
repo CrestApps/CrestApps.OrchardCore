@@ -2,12 +2,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
-using OrchardCore.Data.Documents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -86,7 +87,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
-        var documentStore = arguments.Services.GetRequiredService<IDocumentStore>();
 
         if (contentItem is null)
         {
@@ -146,21 +146,42 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             }
         }
 
+        string response;
+
         if (isDraft)
         {
             await contentManager.SaveDraftAsync(contentItem);
 
-            await documentStore.CommitAsync();
-
-            return $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
+            response = $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
         else
         {
             await contentManager.PublishAsync(contentItem);
 
-            await documentStore.CommitAsync();
-
-            return $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
+            response = $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
         }
+
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
+
+        var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+        if (await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
+        {
+            if (metadata.AdminRouteValues is not null)
+            {
+                response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
+            }
+        }
+
+        if (await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent, contentItem))
+        {
+            if (metadata.DisplayRouteValues is not null)
+            {
+                response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+            }
+        }
+
+        return response;
     }
 }

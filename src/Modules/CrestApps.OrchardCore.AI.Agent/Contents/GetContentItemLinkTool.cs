@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -43,7 +44,7 @@ public sealed class GetContentItemLinkTool : AIFunction
         ["Strict"] = false,
     };
 
-    protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    protected async override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -53,10 +54,28 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
-            return ValueTask.FromResult<object>("Unable to find a contentItemId argument in the function arguments.");
+            return "Unable to find a contentItemId argument in the function arguments.";
         }
 
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
         var type = arguments.GetFirstValueOrDefault("type", "display");
+
+        var contentItem = await contentManager.GetAsync(contentItemId);
+
+        if (contentItem is not null)
+        {
+            var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+            if (type == "edit" && metadata.AdminRouteValues is not null)
+            {
+                return linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
+            }
+            else if (metadata.DisplayRouteValues is not null)
+            {
+                return linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+            }
+        }
 
         var routeValues = type switch
         {
@@ -78,6 +97,11 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         var link = linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, routeValues);
 
-        return ValueTask.FromResult<object>(link);
+        if (string.IsNullOrEmpty(link))
+        {
+            return "Unable to generate a link for the given content item.";
+        }
+
+        return link;
     }
 }

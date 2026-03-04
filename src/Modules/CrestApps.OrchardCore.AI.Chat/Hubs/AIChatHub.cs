@@ -17,9 +17,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Data.Documents;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
@@ -30,7 +30,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly IDocumentStore _documentStore;
+    private readonly ISession _session;
     private readonly IAICompletionService _completionService;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
@@ -49,7 +49,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         IAIChatSessionManager sessionManager,
         IAIChatSessionPromptStore promptStore,
         ILiquidTemplateManager liquidTemplateManager,
-        IDocumentStore documentStore,
+        ISession session,
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
         IOrchestrationContextBuilder orchestrationContextBuilder,
@@ -66,7 +66,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         _sessionManager = sessionManager;
         _promptStore = promptStore;
         _liquidTemplateManager = liquidTemplateManager;
-        _documentStore = documentStore;
+        _session = session;
         _completionService = completionService;
         _completionContextBuilder = completionContextBuilder;
         _orchestrationContextBuilder = orchestrationContextBuilder;
@@ -213,7 +213,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // Notify the caller of the updated rating.
         await Clients.Caller.MessageRated(messageId, prompt.UserRating);
 
-        await _documentStore.CommitAsync();
+        await _session.SaveChangesAsync();
     }
 
     private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -287,7 +287,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 await ProcessChatPromptAsync(writer, profile, sessionId, prompt?.Trim(), cancellationToken);
             }
 
-            await _documentStore.CommitAsync();
+            await _session.SaveChangesAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -486,6 +486,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             {
                 SessionId = chatSession.SessionId,
                 MessageId = assistantMessage.ItemId,
+                ResponseId = chunk.ResponseId,
                 Content = chunk.Text,
                 References = references,
             };

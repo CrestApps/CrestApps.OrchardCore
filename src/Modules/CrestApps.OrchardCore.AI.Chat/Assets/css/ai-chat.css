@@ -95,28 +95,63 @@
 
 .ai-chat-messages pre {
     position: relative;
+    margin: 0;
 }
 
-.ai-chat-messages pre .ai-code-copy-btn {
-    position: absolute;
-    top: 0.35rem;
-    right: 0.35rem;
-    display: none;
-    padding: 0.15rem 0.4rem;
-    font-size: 0.75rem;
-    background: var(--bs-body-bg, #fff);
+.ai-chat-messages .ai-code-block {
     border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 0.75rem 0;
+}
+
+.ai-chat-messages .ai-code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.75rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    font-size: 0.75rem;
+}
+
+.ai-chat-messages .ai-code-lang {
+    font-weight: 600;
+    color: var(--bs-secondary-color, #6c757d);
+    text-transform: lowercase;
+}
+
+.ai-chat-messages .ai-code-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    background: transparent;
+    border: none;
     border-radius: 0.25rem;
     cursor: pointer;
-    color: var(--bs-body-color, #212529);
-    z-index: 2;
+    color: var(--bs-secondary-color, #6c757d);
+    transition: color 0.15s, background-color 0.15s;
 }
 
-.ai-chat-messages pre:hover .ai-code-copy-btn {
-    display: inline-block;
+.ai-chat-messages .ai-code-copy-btn:hover {
+    color: var(--bs-body-color, #212529);
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+
+.ai-chat-messages .ai-code-block pre {
+    border-radius: 0;
+}
+
+.ai-chat-messages .ai-code-block pre code.hljs {
+    border-radius: 0;
 }
 
 .ai-chat-messages pre code.hljs {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     border-radius: 0.375rem;
 }
 
