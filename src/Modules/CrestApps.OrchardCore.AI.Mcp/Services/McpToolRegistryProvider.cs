@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 /// Provides MCP server tool metadata to the unified tool registry.
 /// Reads cached capabilities from configured MCP connections and
 /// produces <see cref="ToolRegistryEntry"/> instances for each tool.
-/// Each entry carries a <see cref="ToolRegistryEntry.ToolFactory"/> that creates
+/// Each entry carries a <see cref="ToolRegistryEntry.CreateAsync"/> that creates
 /// a <see cref="McpToolProxyFunction"/> to transparently route calls to the MCP server.
 /// </summary>
 internal sealed class McpToolRegistryProvider : IToolRegistryProvider
@@ -86,7 +86,7 @@ internal sealed class McpToolRegistryProvider : IToolRegistryProvider
                         Description = toolDescription,
                         Source = ToolRegistryEntrySource.McpServer,
                         SourceId = connectionId,
-                        ToolFactory = (_) => ValueTask.FromResult<AITool>(
+                        CreateAsync = (_) => ValueTask.FromResult<AITool>(
                             new McpToolProxyFunction(toolName, toolDescription, toolSchema, connectionId)),
                     });
                 }

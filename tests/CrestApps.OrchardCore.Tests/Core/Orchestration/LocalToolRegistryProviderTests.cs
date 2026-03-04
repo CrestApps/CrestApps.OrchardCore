@@ -46,7 +46,7 @@ public sealed class LocalToolRegistryProviderTests
         Assert.Contains(result, t => t.Name == "tool1" && t.Description == "First tool");
         Assert.Contains(result, t => t.Name == "tool3" && t.Description == "Third tool");
         Assert.All(result, t => Assert.Equal(ToolRegistryEntrySource.Local, t.Source));
-        Assert.All(result, t => Assert.NotNull(t.ToolFactory));
+        Assert.All(result, t => Assert.NotNull(t.CreateAsync));
     }
 
     [Fact]

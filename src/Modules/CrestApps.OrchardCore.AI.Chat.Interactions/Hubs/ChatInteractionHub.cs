@@ -17,52 +17,22 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
 public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
-    private readonly IAuthorizationService _authorizationService;
-    private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
-    private readonly IChatInteractionPromptStore _promptStore;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
-    private readonly IOrchestratorResolver _orchestratorResolver;
-    private readonly IEnumerable<IChatInteractionSettingsHandler> _settingsHandlers;
-    private readonly CitationReferenceCollector _citationCollector;
-    private readonly IClock _clock;
     private readonly ILogger<ChatInteractionHub> _logger;
-    private readonly ISession _session;
 
     protected readonly IStringLocalizer S;
 
     public ChatInteractionHub(
-        IAuthorizationService authorizationService,
-        ISourceCatalogManager<ChatInteraction> interactionManager,
-        IChatInteractionPromptStore promptStore,
-        IServiceProvider serviceProvider,
-        IOrchestrationContextBuilder orchestrationContextBuilder,
-        IOrchestratorResolver orchestratorResolver,
-        IEnumerable<IChatInteractionSettingsHandler> settingsHandlers,
-        CitationReferenceCollector citationCollector,
-        IClock clock,
         ILogger<ChatInteractionHub> logger,
-        ISession session,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
     {
-        _authorizationService = authorizationService;
-        _interactionManager = interactionManager;
-        _promptStore = promptStore;
-        _serviceProvider = serviceProvider;
-        _orchestrationContextBuilder = orchestrationContextBuilder;
-        _orchestratorResolver = orchestratorResolver;
-        _settingsHandlers = settingsHandlers;
-        _citationCollector = citationCollector;
-        _clock = clock;
         _logger = logger;
-        _session = session;
         S = stringLocalizer;
     }
 
@@ -84,41 +54,53 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        var httpContext = Context.GetHttpContext();
-
-        var interaction = await _interactionManager.FindByIdAsync(itemId);
-
-        if (interaction is null)
+        // SignalR connections share a single DI scope for the entire WebSocket lifetime,
+        // but OrchardCore scoped services (ISession, IDocumentStore) expect per-request
+        // lifetimes. A child scope gives each hub invocation its own services with
+        // proper commit/rollback lifecycle on disposal.
+        await ShellScope.UsingChildScopeAsync(async scope =>
         {
-            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            var services = scope.ServiceProvider;
+            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
-            return;
-        }
+            var httpContext = Context.GetHttpContext();
 
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
-        {
-            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+            var interaction = await interactionManager.FindByIdAsync(itemId);
 
-            return;
-        }
-
-        var prompts = await _promptStore.GetPromptsAsync(itemId);
-
-        await Clients.Caller.LoadInteraction(new
-        {
-            interaction.ItemId,
-            interaction.Title,
-            interaction.ConnectionName,
-            interaction.DeploymentId,
-            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
+            if (interaction is null)
             {
-                Id = message.ItemId,
-                Role = message.Role.Value,
-                IsGeneratedPrompt = message.IsGeneratedPrompt,
-                Title = message.Title,
-                Content = message.Text,
-                References = message.References,
-            })
+                await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
+                return;
+            }
+
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
+                return;
+            }
+
+            var prompts = await promptStore.GetPromptsAsync(itemId);
+
+            await Clients.Caller.LoadInteraction(new
+            {
+                interaction.ItemId,
+                interaction.Title,
+                interaction.ConnectionName,
+                interaction.DeploymentId,
+                Messages = prompts.Select(message => new AIChatResponseMessageDetailed
+                {
+                    Id = message.ItemId,
+                    Role = message.Role.Value,
+                    IsGeneratedPrompt = message.IsGeneratedPrompt,
+                    Title = message.Title,
+                    Content = message.Text,
+                    References = message.References,
+                })
+            });
         });
     }
 
@@ -131,87 +113,95 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        var interaction = await _interactionManager.FindByIdAsync(itemId);
-
-        if (interaction == null)
+        // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
+        await ShellScope.UsingChildScopeAsync(async scope =>
         {
-            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            var services = scope.ServiceProvider;
+            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var settingsHandlers = services.GetRequiredService<IEnumerable<IChatInteractionSettingsHandler>>();
 
-            return;
-        }
+            var interaction = await interactionManager.FindByIdAsync(itemId);
 
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
-        {
-            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
-
-            return;
-        }
-
-        // Let module-specific handlers bind their own properties first.
-        foreach (var handler in _settingsHandlers)
-        {
-            await handler.UpdatingAsync(interaction, settings);
-        }
-
-        // Apply core properties from the settings payload.
-        interaction.Title = GetString(settings, "title") ?? "Untitled";
-        interaction.OrchestratorName = GetString(settings, "orchestratorName");
-        interaction.ConnectionName = GetString(settings, "connectionName");
-        interaction.DeploymentId = GetString(settings, "deploymentId");
-        interaction.SystemMessage = GetString(settings, "systemMessage");
-        interaction.Temperature = GetFloat(settings, "temperature");
-        interaction.TopP = GetFloat(settings, "topP");
-        interaction.FrequencyPenalty = GetFloat(settings, "frequencyPenalty");
-        interaction.PresencePenalty = GetFloat(settings, "presencePenalty");
-        interaction.MaxTokens = GetInt(settings, "maxTokens");
-        interaction.PastMessagesCount = GetInt(settings, "pastMessagesCount");
-        interaction.ToolNames = GetStringArray(settings, "toolNames");
-        interaction.McpConnectionIds = GetStringArray(settings, "mcpConnectionIds");
-
-        var dataSourceId = GetString(settings, "dataSourceId");
-
-        if (!string.IsNullOrWhiteSpace(dataSourceId))
-        {
-            var dataSourceStore = _serviceProvider.GetService<ICatalog<AIDataSource>>();
-            if (dataSourceStore is not null)
+            if (interaction == null)
             {
-                var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
+                await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
 
-                if (dataSource is not null)
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
+                return;
+            }
+
+            // Let module-specific handlers bind their own properties first.
+            foreach (var handler in settingsHandlers)
+            {
+                await handler.UpdatingAsync(interaction, settings);
+            }
+
+            // Apply core properties from the settings payload.
+            interaction.Title = GetString(settings, "title") ?? "Untitled";
+            interaction.OrchestratorName = GetString(settings, "orchestratorName");
+            interaction.ConnectionName = GetString(settings, "connectionName");
+            interaction.DeploymentId = GetString(settings, "deploymentId");
+            interaction.SystemMessage = GetString(settings, "systemMessage");
+            interaction.Temperature = GetFloat(settings, "temperature");
+            interaction.TopP = GetFloat(settings, "topP");
+            interaction.FrequencyPenalty = GetFloat(settings, "frequencyPenalty");
+            interaction.PresencePenalty = GetFloat(settings, "presencePenalty");
+            interaction.MaxTokens = GetInt(settings, "maxTokens");
+            interaction.PastMessagesCount = GetInt(settings, "pastMessagesCount");
+            interaction.ToolNames = GetStringArray(settings, "toolNames");
+            interaction.McpConnectionIds = GetStringArray(settings, "mcpConnectionIds");
+
+            var dataSourceId = GetString(settings, "dataSourceId");
+
+            if (!string.IsNullOrWhiteSpace(dataSourceId))
+            {
+                var dataSourceStore = services.GetService<ICatalog<AIDataSource>>();
+                if (dataSourceStore is not null)
                 {
-                    interaction.Put(new DataSourceMetadata()
-                    {
-                        DataSourceId = dataSource.ItemId,
-                    });
+                    var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
 
-                    interaction.Put(new AIDataSourceRagMetadata()
+                    if (dataSource is not null)
                     {
-                        Strictness = GetInt(settings, "strictness"),
-                        TopNDocuments = GetInt(settings, "topNDocuments"),
-                        IsInScope = GetBool(settings, "isInScope") ?? true,
-                        Filter = GetString(settings, "filter"),
-                    });
+                        interaction.Put(new DataSourceMetadata()
+                        {
+                            DataSourceId = dataSource.ItemId,
+                        });
+
+                        interaction.Put(new AIDataSourceRagMetadata()
+                        {
+                            Strictness = GetInt(settings, "strictness"),
+                            TopNDocuments = GetInt(settings, "topNDocuments"),
+                            IsInScope = GetBool(settings, "isInScope") ?? true,
+                            Filter = GetString(settings, "filter"),
+                        });
+                    }
                 }
             }
-        }
-        else
-        {
-            interaction.Put(new DataSourceMetadata());
-            interaction.Put(new AIDataSourceRagMetadata());
-        }
+            else
+            {
+                interaction.Put(new DataSourceMetadata());
+                interaction.Put(new AIDataSourceRagMetadata());
+            }
 
-        await _interactionManager.UpdateAsync(interaction);
-        await _session.SaveChangesAsync();
+            await interactionManager.UpdateAsync(interaction);
 
-        // Let handlers react after the interaction has been persisted.
-        foreach (var handler in _settingsHandlers)
-        {
-            await handler.UpdatedAsync(interaction, settings);
-        }
+            // Let handlers react after the interaction has been persisted.
+            foreach (var handler in settingsHandlers)
+            {
+                await handler.UpdatedAsync(interaction, settings);
+            }
 
-        await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
+            await Clients.Caller.SettingsSaved(interaction.ItemId, interaction.Title);
+        });
     }
 
     private static string GetString(JsonElement el, string name)
@@ -321,45 +311,15 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
-        var interaction = await _interactionManager.FindByIdAsync(itemId);
-
-        if (interaction == null)
+        // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
+        await ShellScope.UsingChildScopeAsync(async scope =>
         {
-            await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+            var services = scope.ServiceProvider;
+            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
-            return;
-        }
-
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
-        {
-            await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
-
-            return;
-        }
-
-        // Clear prompts using the prompt store
-        await _promptStore.DeleteAllPromptsAsync(itemId);
-        await _session.SaveChangesAsync();
-
-        await Clients.Caller.HistoryCleared(interaction.ItemId);
-    }
-
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
-    {
-        using var invocationScope = AIInvocationScope.Begin();
-
-        try
-        {
-            if (string.IsNullOrWhiteSpace(itemId))
-            {
-                await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
-
-                return;
-            }
-
-            var interaction = await _interactionManager.FindByIdAsync(itemId);
+            var interaction = await interactionManager.FindByIdAsync(itemId);
 
             if (interaction == null)
             {
@@ -370,158 +330,210 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var httpContext = Context.GetHttpContext();
 
-            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
             {
                 await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
 
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(prompt))
-            {
-                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+            // Clear prompts using the prompt store.
+            await promptStore.DeleteAllPromptsAsync(itemId);
 
-                return;
-            }
+            await Clients.Caller.HistoryCleared(interaction.ItemId);
+        });
+    }
 
-            prompt = prompt.Trim();
-
-            // Create and save user prompt
-            var userPrompt = new ChatInteractionPrompt
-            {
-                ItemId = IdGenerator.GenerateId(),
-                ChatInteractionId = itemId,
-                Role = ChatRole.User,
-                Text = prompt,
-                CreatedUtc = _clock.UtcNow,
-            };
-
-            await _promptStore.CreateAsync(userPrompt);
-
-            var needsTitleUpdate = string.IsNullOrEmpty(interaction.Title);
-            if (needsTitleUpdate)
-            {
-                interaction.Title = Str.Truncate(prompt, 255);
-            }
-
-            // Load all prompts for building transcript
-            var existingPrompts = await _promptStore.GetPromptsAsync(itemId);
-
-            var assistantPrompt = new ChatInteractionPrompt
-            {
-                ItemId = IdGenerator.GenerateId(),
-                ChatInteractionId = itemId,
-                Role = ChatRole.Assistant,
-                CreatedUtc = _clock.UtcNow,
-            };
-
-            var builder = ZString.CreateStringBuilder();
-
-            // Build the orchestration context using the handler pipeline.
-            var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(interaction, ctx =>
-            {
-                ctx.UserMessage = prompt;
-                ctx.ConversationHistory = existingPrompts
-                    .Where(x => !x.IsGeneratedPrompt)
-                    .Select(p => new ChatMessage(p.Role, p.Text))
-                    .ToList();
-            });
-
-            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-            // Resolve the orchestrator for this interaction and execute the completion.
-            var orchestrator = _orchestratorResolver.Resolve(interaction.OrchestratorName);
-
-            var contentItemIds = new HashSet<string>();
-            var references = new Dictionary<string, AICompletionReference>();
-
-            // Collect preemptive RAG references before streaming so the first chunk
-            // already contains any references from data sources and documents.
-            _citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
-
-            await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
-            {
-                if (string.IsNullOrEmpty(chunk.Text))
-                {
-                    continue;
-                }
-
-                builder.Append(chunk.Text);
-
-                // Incrementally collect any new tool references that appeared during streaming.
-                _citationCollector.CollectToolReferences(references, contentItemIds);
-
-                var partialMessage = new CompletionPartialMessage
-                {
-                    SessionId = interaction.ItemId,
-                    MessageId = assistantPrompt.ItemId,
-                    ResponseId = chunk.ResponseId,
-                    Content = chunk.Text,
-                    References = references,
-                };
-
-                await writer.WriteAsync(partialMessage, cancellationToken);
-            }
-
-            // Final pass to collect any tool references added by the last tool call.
-            _citationCollector.CollectToolReferences(references, contentItemIds);
-
-            if (builder.Length > 0)
-            {
-                assistantPrompt.Text = builder.ToString();
-                assistantPrompt.References = references;
-
-                if (contentItemIds.Count > 0)
-                {
-                    assistantPrompt.Put(new ChatInteractionPromptContentMetadata
-                    {
-                        ContentItemIds = contentItemIds.ToList(),
-                    });
-                }
-
-                await _promptStore.CreateAsync(assistantPrompt);
-            }
-
-            // Update the interaction title after streaming is done to avoid holding
-            // database locks for the duration of the AI response, which can cause
-            // deadlocks with concurrent SaveSettings calls.
-            if (needsTitleUpdate)
-            {
-                await _interactionManager.UpdateAsync(interaction);
-            }
-
-            await _session.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
+    {
+        try
         {
-            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
+            await ShellScope.UsingChildScopeAsync(async scope =>
             {
-                _logger.LogDebug("Chat interaction processing was cancelled.");
-                return;
-            }
+                using var invocationScope = AIInvocationScope.Begin();
+                var services = scope.ServiceProvider;
 
-            _logger.LogError(ex, "An error occurred while processing the chat interaction.");
-
-            try
-            {
-                var errorMessage = new CompletionPartialMessage
+                try
                 {
-                    SessionId = itemId,
-                    MessageId = IdGenerator.GenerateId(),
-                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-                };
+                    if (string.IsNullOrWhiteSpace(itemId))
+                    {
+                        await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
 
-                await writer.WriteAsync(errorMessage, CancellationToken.None);
-            }
-            catch (Exception writeEx)
-            {
-                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-            }
+                        return;
+                    }
+
+                    var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                    var authorizationService = services.GetRequiredService<IAuthorizationService>();
+
+                    var interaction = await interactionManager.FindByIdAsync(itemId);
+
+                    if (interaction == null)
+                    {
+                        await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+
+                        return;
+                    }
+
+                    var httpContext = Context.GetHttpContext();
+
+                    if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+                    {
+                        await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(prompt))
+                    {
+                        await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+
+                        return;
+                    }
+
+                    prompt = prompt.Trim();
+
+                    var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
+                    var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
+                    var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+                    var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
+                    var clock = services.GetRequiredService<IClock>();
+
+                    // Create and save user prompt
+                    var userPrompt = new ChatInteractionPrompt
+                    {
+                        ItemId = IdGenerator.GenerateId(),
+                        ChatInteractionId = itemId,
+                        Role = ChatRole.User,
+                        Text = prompt,
+                        CreatedUtc = clock.UtcNow,
+                    };
+
+                    await promptStore.CreateAsync(userPrompt);
+
+                    var needsTitleUpdate = string.IsNullOrEmpty(interaction.Title);
+                    if (needsTitleUpdate)
+                    {
+                        interaction.Title = Str.Truncate(prompt, 255);
+                    }
+
+                    // Load all prompts for building transcript
+                    var existingPrompts = await promptStore.GetPromptsAsync(itemId);
+
+                    var assistantPrompt = new ChatInteractionPrompt
+                    {
+                        ItemId = IdGenerator.GenerateId(),
+                        ChatInteractionId = itemId,
+                        Role = ChatRole.Assistant,
+                        CreatedUtc = clock.UtcNow,
+                    };
+
+                    var builder = ZString.CreateStringBuilder();
+
+                    // Build the orchestration context using the handler pipeline.
+                    var orchestratorContext = await orchestrationContextBuilder.BuildAsync(interaction, ctx =>
+                    {
+                        ctx.UserMessage = prompt;
+                        ctx.ConversationHistory = existingPrompts
+                            .Where(x => !x.IsGeneratedPrompt)
+                            .Select(p => new ChatMessage(p.Role, p.Text))
+                            .ToList();
+                    });
+
+                    AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
+
+                    // Resolve the orchestrator for this interaction and execute the completion.
+                    var orchestrator = orchestratorResolver.Resolve(interaction.OrchestratorName);
+
+                    var contentItemIds = new HashSet<string>();
+                    var references = new Dictionary<string, AICompletionReference>();
+
+                    // Collect preemptive RAG references before streaming so the first chunk
+                    // already contains any references from data sources and documents.
+                    citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+
+                    await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+                    {
+                        if (string.IsNullOrEmpty(chunk.Text))
+                        {
+                            continue;
+                        }
+
+                        builder.Append(chunk.Text);
+
+                        // Incrementally collect any new tool references that appeared during streaming.
+                        citationCollector.CollectToolReferences(references, contentItemIds);
+
+                        var partialMessage = new CompletionPartialMessage
+                        {
+                            SessionId = interaction.ItemId,
+                            MessageId = assistantPrompt.ItemId,
+                            ResponseId = chunk.ResponseId,
+                            Content = chunk.Text,
+                            References = references,
+                        };
+
+                        await writer.WriteAsync(partialMessage, cancellationToken);
+                    }
+
+                    // Final pass to collect any tool references added by the last tool call.
+                    citationCollector.CollectToolReferences(references, contentItemIds);
+
+                    if (builder.Length > 0)
+                    {
+                        assistantPrompt.Text = builder.ToString();
+                        assistantPrompt.References = references;
+
+                        if (contentItemIds.Count > 0)
+                        {
+                            assistantPrompt.Put(new ChatInteractionPromptContentMetadata
+                            {
+                                ContentItemIds = contentItemIds.ToList(),
+                            });
+                        }
+
+                        await promptStore.CreateAsync(assistantPrompt);
+                    }
+
+                    // Update the interaction title after streaming is done to avoid holding
+                    // database locks for the duration of the AI response, which can cause
+                    // deadlocks with concurrent SaveSettings calls.
+                    if (needsTitleUpdate)
+                    {
+                        await interactionManager.UpdateAsync(interaction);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+                    {
+                        _logger.LogDebug("Chat interaction processing was cancelled.");
+                        return;
+                    }
+
+                    _logger.LogError(ex, "An error occurred while processing the chat interaction.");
+
+                    try
+                    {
+                        var errorMessage = new CompletionPartialMessage
+                        {
+                            SessionId = itemId,
+                            MessageId = IdGenerator.GenerateId(),
+                            Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                        };
+
+                        await writer.WriteAsync(errorMessage, CancellationToken.None);
+                    }
+                    catch (Exception writeEx)
+                    {
+                        _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+                    }
+                }
+            });
         }
         finally
         {
             writer.Complete();
         }
     }
-
 }

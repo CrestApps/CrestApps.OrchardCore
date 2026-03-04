@@ -78,7 +78,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         foreach (var entry in allTools)
         {
-            if (entry.Source == ToolRegistryEntrySource.McpServer || entry.ToolFactory is null)
+            if (entry.Source == ToolRegistryEntrySource.McpServer || entry.CreateAsync is null)
             {
                 continue;
             }
@@ -86,7 +86,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             try
             {
                 var aiTool = context.ServiceProvider is not null
-                    ? await entry.ToolFactory(context.ServiceProvider)
+                    ? await entry.CreateAsync(context.ServiceProvider)
                     : null;
 
                 if (aiTool is AIFunction function)

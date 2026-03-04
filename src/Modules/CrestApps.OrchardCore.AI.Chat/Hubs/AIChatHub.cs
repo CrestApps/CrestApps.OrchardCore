@@ -11,70 +11,29 @@ using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
 public class AIChatHub : Hub<IAIChatHubClient>
 {
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IAIProfileManager _profileManager;
-    private readonly IAIChatSessionManager _sessionManager;
-    private readonly IAIChatSessionPromptStore _promptStore;
-    private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly ISession _session;
-    private readonly IAICompletionService _completionService;
-    private readonly IAICompletionContextBuilder _completionContextBuilder;
-    private readonly IOrchestrationContextBuilder _orchestrationContextBuilder;
-    private readonly IOrchestratorResolver _orchestratorResolver;
-    private readonly IEnumerable<IAIChatSessionHandler> _sessionHandlers;
-    private readonly CitationReferenceCollector _citationCollector;
-    private readonly IAITemplateService _aiTemplateService;
-    private readonly IClock _clock;
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
 
     public AIChatHub(
-        IAuthorizationService authorizationService,
-        IAIProfileManager profileManager,
-        IAIChatSessionManager sessionManager,
-        IAIChatSessionPromptStore promptStore,
-        ILiquidTemplateManager liquidTemplateManager,
-        ISession session,
-        IAICompletionService completionService,
-        IAICompletionContextBuilder completionContextBuilder,
-        IOrchestrationContextBuilder orchestrationContextBuilder,
-        IOrchestratorResolver orchestratorResolver,
-        IEnumerable<IAIChatSessionHandler> sessionHandlers,
-        CitationReferenceCollector citationCollector,
-        IAITemplateService aiTemplateService,
-        IClock clock,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
     {
-        _authorizationService = authorizationService;
-        _profileManager = profileManager;
-        _sessionManager = sessionManager;
-        _promptStore = promptStore;
-        _liquidTemplateManager = liquidTemplateManager;
-        _session = session;
-        _completionService = completionService;
-        _completionContextBuilder = completionContextBuilder;
-        _orchestrationContextBuilder = orchestrationContextBuilder;
-        _orchestratorResolver = orchestratorResolver;
-        _sessionHandlers = sessionHandlers;
-        _citationCollector = citationCollector;
-        _aiTemplateService = aiTemplateService;
-        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -99,137 +58,28 @@ public class AIChatHub : Hub<IAIChatHubClient>
             return;
         }
 
-        var chatSession = await _sessionManager.FindAsync(sessionId);
-
-        if (chatSession == null)
+        // SignalR connections share a single DI scope for the entire WebSocket lifetime,
+        // but OrchardCore scoped services (ISession, IDocumentStore) expect per-request
+        // lifetimes. A child scope gives each hub invocation its own services with
+        // proper commit/rollback lifecycle on disposal.
+        await ShellScope.UsingChildScopeAsync(async scope =>
         {
-            await Clients.Caller.ReceiveError(S["Session not found."].Value);
+            var services = scope.ServiceProvider;
+            var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+            var profileManager = services.GetRequiredService<IAIProfileManager>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
 
-            return;
-        }
+            var chatSession = await sessionManager.FindAsync(sessionId);
 
-        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
-
-        if (profile is null)
-        {
-            await Clients.Caller.ReceiveError(S["Profile not found."].Value);
-
-            return;
-        }
-
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-        {
-            await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
-
-            return;
-        }
-
-        var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
-
-        await Clients.Caller.LoadSession(new
-        {
-            chatSession.SessionId,
-            Profile = new
+            if (chatSession == null)
             {
-                Id = chatSession.ProfileId,
-                Type = profile.Type.ToString()
-            },
-            chatSession.Documents,
-            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
-            {
-                Id = message.ItemId,
-                Role = message.Role.Value,
-                IsGeneratedPrompt = message.IsGeneratedPrompt,
-                Title = message.Title,
-                Content = message.Content,
-                UserRating = message.UserRating,
-                References = message.References,
-            })
-        });
-    }
-
-    public async Task RateMessage(string sessionId, string messageId, bool isPositive)
-    {
-        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(messageId))
-        {
-            return;
-        }
-
-        var chatSession = await _sessionManager.FindAsync(sessionId);
-
-        if (chatSession is null)
-        {
-            return;
-        }
-
-        var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
-
-        if (profile is null)
-        {
-            return;
-        }
-
-        var httpContext = Context.GetHttpContext();
-
-        if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-        {
-            return;
-        }
-
-        var prompt = (await _promptStore.GetPromptsAsync(chatSession.SessionId))
-            .FirstOrDefault(p => p.ItemId == messageId);
-
-        if (prompt is null)
-        {
-            return;
-        }
-
-        // Toggle: if the user clicks the same rating again, clear it.
-        prompt.UserRating = prompt.UserRating == isPositive ? null : isPositive;
-
-        await _promptStore.UpdateAsync(prompt);
-
-        // Also update session-level rating for analytics.
-        var eventService = httpContext.RequestServices.GetService<AIChatSessionEventService>();
-
-        if (eventService is not null)
-        {
-            // Compute session-level rating from the latest message ratings.
-            var allPrompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
-            var ratings = allPrompts
-                .Where(p => p.UserRating.HasValue)
-                .Select(p => p.UserRating.Value)
-                .ToList();
-
-            if (ratings.Count > 0)
-            {
-                var positiveCount = ratings.Count(r => r);
-                await eventService.RecordUserRatingAsync(sessionId, positiveCount >= ratings.Count - positiveCount);
-            }
-        }
-
-        // Notify the caller of the updated rating.
-        await Clients.Caller.MessageRated(messageId, prompt.UserRating);
-
-        await _session.SaveChangesAsync();
-    }
-
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
-    {
-        using var invocationScope = AIInvocationScope.Begin();
-
-        try
-        {
-            if (string.IsNullOrWhiteSpace(profileId))
-            {
-                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+                await Clients.Caller.ReceiveError(S["Session not found."].Value);
 
                 return;
             }
 
-            var profile = await _profileManager.FindByIdAsync(profileId);
+            var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
 
             if (profile is null)
             {
@@ -240,81 +90,223 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             var httpContext = Context.GetHttpContext();
 
-            if (!await _authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
             {
                 await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
 
                 return;
             }
 
-            if (profile.Type == AIProfileType.Utility)
+            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            await Clients.Caller.LoadSession(new
             {
-                if (string.IsNullOrWhiteSpace(prompt))
+                chatSession.SessionId,
+                Profile = new
                 {
-                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
-                    return;
-                }
-
-                await ProcessUtilityAsync(writer, profile, prompt.Trim(), cancellationToken);
-
-                // We don't need to save the session for utility profiles.
-                return;
-            }
-
-            if (profile.Type == AIProfileType.TemplatePrompt)
-            {
-                if (string.IsNullOrWhiteSpace(sessionProfileId))
+                    Id = chatSession.ProfileId,
+                    Type = profile.Type.ToString()
+                },
+                chatSession.Documents,
+                Messages = prompts.Select(message => new AIChatResponseMessageDetailed
                 {
-                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionProfileId)].Value);
+                    Id = message.ItemId,
+                    Role = message.Role.Value,
+                    IsGeneratedPrompt = message.IsGeneratedPrompt,
+                    Title = message.Title,
+                    Content = message.Content,
+                    UserRating = message.UserRating,
+                    References = message.References,
+                })
+            });
+        });
+    }
 
-                    return;
-                }
-
-                var parentProfile = await _profileManager.FindByIdAsync(sessionProfileId);
-
-                if (parentProfile is null)
-                {
-                    await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
-
-                    return;
-                }
-
-                await ProcessGeneratedPromptAsync(writer, profile, sessionId, parentProfile, cancellationToken);
-            }
-            else
-            {
-                // At this point, we are dealing with a chat profile.
-                await ProcessChatPromptAsync(writer, profile, sessionId, prompt?.Trim(), cancellationToken);
-            }
-
-            await _session.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex)
+    public async Task RateMessage(string sessionId, string messageId, bool isPositive)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(messageId))
         {
-            // Don't write error messages if the operation was cancelled (e.g., user navigated away).
-            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            return;
+        }
+
+        // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            var services = scope.ServiceProvider;
+            var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+            var profileManager = services.GetRequiredService<IAIProfileManager>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+
+            var chatSession = await sessionManager.FindAsync(sessionId);
+
+            if (chatSession is null)
             {
-                _logger.LogDebug("Chat prompt processing was cancelled.");
                 return;
             }
 
-            _logger.LogError(ex, "An error occurred while processing the chat prompt.");
+            var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
 
-            try
+            if (profile is null)
             {
-                var errorMessage = new CompletionPartialMessage
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                return;
+            }
+
+            var prompt = (await promptStore.GetPromptsAsync(chatSession.SessionId))
+                .FirstOrDefault(p => p.ItemId == messageId);
+
+            if (prompt is null)
+            {
+                return;
+            }
+
+            // Toggle: if the user clicks the same rating again, clear it.
+            prompt.UserRating = prompt.UserRating == isPositive ? null : isPositive;
+
+            await promptStore.UpdateAsync(prompt);
+
+            // Also update session-level rating for analytics.
+            var eventService = services.GetService<AIChatSessionEventService>();
+
+            if (eventService is not null)
+            {
+                // Compute session-level rating from the latest message ratings.
+                var allPrompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+                var ratings = allPrompts
+                    .Where(p => p.UserRating.HasValue)
+                    .Select(p => p.UserRating.Value)
+                    .ToList();
+
+                if (ratings.Count > 0)
                 {
-                    SessionId = sessionId,
-                    MessageId = IdGenerator.GenerateId(),
-                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-                };
+                    var positiveCount = ratings.Count(r => r);
+                    await eventService.RecordUserRatingAsync(sessionId, positiveCount >= ratings.Count - positiveCount);
+                }
+            }
 
-                await writer.WriteAsync(errorMessage, CancellationToken.None);
-            }
-            catch (Exception writeEx)
+            // Notify the caller of the updated rating.
+            await Clients.Caller.MessageRated(messageId, prompt.UserRating);
+
+            // Child scope auto-commits on disposal via IDocumentStore.CommitAsync().
+        });
+    }
+
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
+            // This ensures each invocation has a fresh YesSql ISession with auto-commit on disposal,
+            // preventing cross-invocation state leakage in long-lived SignalR connections.
+            await ShellScope.UsingChildScopeAsync(async scope =>
             {
-                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-            }
+                using var invocationScope = AIInvocationScope.Begin();
+                var services = scope.ServiceProvider;
+
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(profileId))
+                    {
+                        await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
+
+                        return;
+                    }
+
+                    var profileManager = services.GetRequiredService<IAIProfileManager>();
+                    var profile = await profileManager.FindByIdAsync(profileId);
+
+                    if (profile is null)
+                    {
+                        await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+
+                        return;
+                    }
+
+                    var httpContext = Context.GetHttpContext();
+                    var authorizationService = services.GetRequiredService<IAuthorizationService>();
+
+                    if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+                    {
+                        await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
+
+                        return;
+                    }
+
+                    if (profile.Type == AIProfileType.Utility)
+                    {
+                        if (string.IsNullOrWhiteSpace(prompt))
+                        {
+                            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+                            return;
+                        }
+
+                        await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
+
+                        // We don't need to save the session for utility profiles.
+                        return;
+                    }
+
+                    if (profile.Type == AIProfileType.TemplatePrompt)
+                    {
+                        if (string.IsNullOrWhiteSpace(sessionProfileId))
+                        {
+                            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionProfileId)].Value);
+
+                            return;
+                        }
+
+                        var parentProfile = await profileManager.FindByIdAsync(sessionProfileId);
+
+                        if (parentProfile is null)
+                        {
+                            await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
+
+                            return;
+                        }
+
+                        await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
+                    }
+                    else
+                    {
+                        // At this point, we are dealing with a chat profile.
+                        await ProcessChatPromptAsync(writer, services, profile, sessionId, prompt?.Trim(), cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Don't write error messages if the operation was cancelled (e.g., user navigated away).
+                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+                    {
+                        _logger.LogDebug("Chat prompt processing was cancelled.");
+                        return;
+                    }
+
+                    _logger.LogError(ex, "An error occurred while processing the chat prompt.");
+
+                    try
+                    {
+                        var errorMessage = new CompletionPartialMessage
+                        {
+                            SessionId = sessionId,
+                            MessageId = IdGenerator.GenerateId(),
+                            Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                        };
+
+                        await writer.WriteAsync(errorMessage, CancellationToken.None);
+                    }
+                    catch (Exception writeEx)
+                    {
+                        _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+                    }
+                }
+            });
         }
         finally
         {
@@ -322,9 +314,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-
-    private async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, string userPrompt)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionAsync(IServiceProvider services, string sessionId, AIProfile profile, string userPrompt)
     {
+        var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
             var existingChatSession = await sessionManager.FindAsync(sessionId);
@@ -340,7 +333,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt);
+            chatSession.Title = await GetGeneratedTitleAsync(services, profile, userPrompt);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
@@ -351,11 +344,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
         return (chatSession, true);
     }
 
-    private async Task<string> GetGeneratedTitleAsync(AIProfile profile, string userPrompt)
+    private static async Task<string> GetGeneratedTitleAsync(IServiceProvider services, AIProfile profile, string userPrompt)
     {
-        var titleSystemMessage = await _aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
+        var aiTemplateService = services.GetRequiredService<IAITemplateService>();
+        var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+        var completionService = services.GetRequiredService<IAICompletionService>();
 
-        var context = await _completionContextBuilder.BuildAsync(profile, c =>
+        var titleSystemMessage = await aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
+
+        var context = await completionContextBuilder.BuildAsync(profile, c =>
         {
             c.SystemMessage = titleSystemMessage;
             c.FrequencyPenalty = 0;
@@ -370,7 +367,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             c.DisableTools = true;
         });
 
-        var titleResponse = await _completionService.CompleteAsync(profile.Source,
+        var titleResponse = await completionService.CompleteAsync(profile.Source,
         [
             new (ChatRole.User, userPrompt),
         ], context);
@@ -381,11 +378,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
             : Str.Truncate(userPrompt, 255);
     }
 
-    private async Task ProcessChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)
+    private async Task ProcessChatPromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, AIProfile profile, string sessionId, string prompt, CancellationToken cancellationToken)
     {
-        (var chatSession, var isNew) = await GetSessionsAsync(_sessionManager, sessionId, profile, prompt);
+        var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+        var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+        var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
+        var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+        var sessionHandlers = services.GetRequiredService<IEnumerable<IAIChatSessionHandler>>();
+        var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
+        var clock = services.GetRequiredService<IClock>();
 
-        var utcNow = _clock.UtcNow;
+        (var chatSession, var isNew) = await GetSessionAsync(services, sessionId, profile, prompt);
+
+        var utcNow = clock.UtcNow;
 
         // Handle session reopen if closed.
         if (chatSession.Status == ChatSessionStatus.Closed)
@@ -402,7 +407,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         {
             if (profile.TitleType == AISessionTitleType.Generated)
             {
-                chatSession.Title = await GetGeneratedTitleAsync(profile, prompt);
+                chatSession.Title = await GetGeneratedTitleAsync(services, profile, prompt);
             }
 
             if (string.IsNullOrEmpty(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle)
@@ -419,9 +424,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Content = prompt,
         };
 
-        await _promptStore.CreateAsync(userPromptRecord);
+        await promptStore.CreateAsync(userPromptRecord);
 
-        var existingPrompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+        var existingPrompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
         var conversationHistory = new List<ChatMessage>();
 
@@ -447,7 +452,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var builder = ZString.CreateStringBuilder();
 
         // Build the orchestration context using the handler pipeline.
-        var orchestratorContext = await _orchestrationContextBuilder.BuildAsync(profile, ctx =>
+        var orchestratorContext = await orchestrationContextBuilder.BuildAsync(profile, ctx =>
         {
             ctx.UserMessage = prompt;
             ctx.ConversationHistory = conversationHistory;
@@ -459,7 +464,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
         // Resolve the orchestrator for this profile and execute the completion.
-        var orchestrator = _orchestratorResolver.Resolve(profile.OrchestratorName);
+        var orchestrator = orchestratorResolver.Resolve(profile.OrchestratorName);
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
@@ -467,7 +472,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Collect preemptive RAG references before streaming so the first chunk
         // already contains any references from data sources and documents.
-        _citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+        citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
 
         await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
         {
@@ -480,7 +485,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             // Incrementally collect any new tool references that appeared during streaming
             // (e.g., from DataSourceSearchTool or SearchDocumentsTool invoked by the AI model).
-            _citationCollector.CollectToolReferences(references, contentItemIds);
+            citationCollector.CollectToolReferences(references, contentItemIds);
 
             var partialMessage = new CompletionPartialMessage
             {
@@ -495,7 +500,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
 
         // Final pass to collect any tool references added by the last tool call.
-        _citationCollector.CollectToolReferences(references, contentItemIds);
+        citationCollector.CollectToolReferences(references, contentItemIds);
 
         stopwatch.Stop();
 
@@ -505,10 +510,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
             assistantMessage.ContentItemIds = contentItemIds.ToList();
             assistantMessage.References = references;
 
-            await _promptStore.CreateAsync(assistantMessage);
+            await promptStore.CreateAsync(assistantMessage);
         }
 
-        var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
+        var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
         var context = new ChatMessageCompletedContext
         {
@@ -518,16 +523,22 @@ public class AIChatHub : Hub<IAIChatHubClient>
             ResponseLatencyMs = stopwatch.Elapsed.TotalMilliseconds,
         };
 
-        await _sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);
+        await sessionHandlers.InvokeAsync((handler, ctx) => handler.MessageCompletedAsync(ctx), context, _logger);
 
-        await _sessionManager.SaveAsync(chatSession);
+        await sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessGeneratedPromptAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string sessionId, AIProfile parentProfile, CancellationToken cancellationToken)
+    private static async Task ProcessGeneratedPromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, AIProfile profile, string sessionId, AIProfile parentProfile, CancellationToken cancellationToken)
     {
-        (var chatSession, _) = await GetSessionsAsync(_sessionManager, sessionId, parentProfile, userPrompt: profile.Name);
+        var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+        var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+        var liquidTemplateManager = services.GetRequiredService<ILiquidTemplateManager>();
+        var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+        var completionService = services.GetRequiredService<IAICompletionService>();
 
-        var generatedPrompt = await _liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
+        (var chatSession, _) = await GetSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
+
+        var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
             new Dictionary<string, FluidValue>()
             {
                 ["Profile"] = new ObjectValue(profile),
@@ -543,7 +554,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = await _completionContextBuilder.BuildAsync(profile, c =>
+        var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });
@@ -553,7 +564,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
+        await foreach (var chunk in completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {
@@ -577,23 +588,26 @@ public class AIChatHub : Hub<IAIChatHubClient>
         assistantMessage.ContentItemIds = contentItemIds.ToList();
         assistantMessage.References = references;
 
-        await _promptStore.CreateAsync(assistantMessage);
+        await promptStore.CreateAsync(assistantMessage);
 
-        await _sessionManager.SaveAsync(chatSession);
+        await sessionManager.SaveAsync(chatSession);
     }
 
-    private async Task ProcessUtilityAsync(ChannelWriter<CompletionPartialMessage> writer, AIProfile profile, string prompt, CancellationToken cancellationToken)
+    private static async Task ProcessUtilityAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, AIProfile profile, string prompt, CancellationToken cancellationToken)
     {
+        var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+        var completionService = services.GetRequiredService<IAICompletionService>();
+
         var messageId = IdGenerator.GenerateId();
 
-        var completionContext = await _completionContextBuilder.BuildAsync(profile, c =>
+        var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
             c.UserMarkdownInResponse = true;
         });
 
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in _completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
+        await foreach (var chunk in completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {

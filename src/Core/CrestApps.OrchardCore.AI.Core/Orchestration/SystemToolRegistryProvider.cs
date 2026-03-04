@@ -59,7 +59,7 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
                 Name = name,
                 Description = entry.Description ?? entry.Title ?? name,
                 Source = ToolRegistryEntrySource.System,
-                ToolFactory = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
+                CreateAsync = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });
         }
 
