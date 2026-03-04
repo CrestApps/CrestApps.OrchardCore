@@ -426,12 +426,21 @@ public sealed class DataSourceIndexingService
             }
 
             // Normalize content and title, then chunk using token-aware splitter.
-            sourceDoc.Title = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
+            var normalizedTitle = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
+
+            sourceDoc.Title = normalizedTitle;
+
             var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
 
             if (chunkTexts.Count == 0)
             {
                 continue;
+            }
+
+            // Prepend the title to the first chunk so it is embedded and becomes searchable.
+            if (!string.IsNullOrWhiteSpace(sourceDoc.Title))
+            {
+                chunkTexts[0] = normalizedTitle + "\n" + chunkTexts[0];
             }
 
             try
@@ -672,6 +681,12 @@ public sealed class DataSourceIndexingService
             if (chunkTexts.Count == 0)
             {
                 continue;
+            }
+
+            // Prepend the title to the first chunk so it is embedded and becomes searchable.
+            if (!string.IsNullOrWhiteSpace(sourceDoc.Title))
+            {
+                chunkTexts[0] = sourceDoc.Title + "\n" + chunkTexts[0];
             }
 
             // Generate embeddings for all chunks.

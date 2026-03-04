@@ -27,7 +27,7 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
         var client = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new ChatCompletionsClient(endpoint, new AzureKeyCredential(connection.GetApiKey())),
-            AzureAuthenticationType.ManagedIdentity => new ChatCompletionsClient(endpoint, new ManagedIdentityCredential()),
+            AzureAuthenticationType.ManagedIdentity => new ChatCompletionsClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)),
             AzureAuthenticationType.Default => new ChatCompletionsClient(endpoint, new DefaultAzureCredential()),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
@@ -42,7 +42,7 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
         var client = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new EmbeddingsClient(endpoint, new AzureKeyCredential(connection.GetApiKey())),
-            AzureAuthenticationType.ManagedIdentity => new EmbeddingsClient(endpoint, new ManagedIdentityCredential()),
+            AzureAuthenticationType.ManagedIdentity => new EmbeddingsClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)),
             AzureAuthenticationType.Default => new EmbeddingsClient(endpoint, new DefaultAzureCredential()),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };

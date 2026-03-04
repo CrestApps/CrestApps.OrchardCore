@@ -70,7 +70,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), options),
-            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), options),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned), options),
             AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };

@@ -441,7 +441,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), _clientOptions),
-            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(), _clientOptions),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned), _clientOptions),
             AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), _clientOptions),
             _ => throw new NotSupportedException("The specified authentication type is not supported.")
         };

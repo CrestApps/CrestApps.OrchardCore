@@ -183,9 +183,10 @@
 
 <style asp-name="AIChatWidget" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
+<style asp-name="AIChatApp" at="Head"></style>
 <script asp-name="AIChatWidget" at="Foot"></script>
-<script asp-name="OpenAIChatApp" at="Foot"></script>
-<script at="Foot" depends-on="AIChatWidget, OpenAIChatApp">
+<script asp-name="AIChatApp" at="Foot"></script>
+<script at="Foot" depends-on="AIChatWidget, AIChatApp">
     aiChatAdminWidget.initialize({
         containerSelector: '#@widgetContainerId',
         toggleSelector: '#@toggleBtnId',
@@ -208,15 +209,15 @@
             metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)
             {
-                @:sessionDocumentsEnabled: true,
-                @:documentBarSelector: '#@documentBarHtmlId',
-                @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
-                @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
-                @:allowedExtensions: '@allowedExtensions',
-                @:existingDocuments: [],
+                        @:sessionDocumentsEnabled: true,
+                        @:documentBarSelector: '#@documentBarHtmlId',
+                        @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
+                        @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
+                        @:allowedExtensions: '@allowedExtensions',
+                        @:existingDocuments: [],
             }
             messageTemplate: `
-                <div>
+                <div class="ai-chat-messages">
                     <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
                         <div>
                             <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>

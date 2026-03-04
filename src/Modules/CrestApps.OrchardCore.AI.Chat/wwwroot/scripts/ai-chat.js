@@ -34,6 +34,7 @@ window.openAIChatManager = function () {
     thumbsUpTitle: 'Thumbs up',
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
+    codeCopiedText: 'Copied!',
     messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
@@ -83,8 +84,8 @@ window.openAIChatManager = function () {
     } else {
       highlighted = escapeHtmlEntities(code);
     }
-    var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
-    return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
+    var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -253,7 +254,9 @@ window.openAIChatManager = function () {
       renderer: renderer
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target']
+    });
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -827,6 +830,7 @@ window.openAIChatManager = function () {
           this.autoScroll = true;
           var content = '';
           var references = {};
+          var lastResponseId = null;
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
@@ -865,6 +869,14 @@ window.openAIChatManager = function () {
                 }
               }
               if (chunk.content) {
+                // When the responseId changes (e.g., after an internal tool call),
+                // insert a line break to visually separate response segments.
+                if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                  content += '\n\n';
+                }
+                if (chunk.responseId) {
+                  lastResponseId = chunk.responseId;
+                }
                 var processedContent = chunk.content;
                 for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
                   var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
@@ -1242,13 +1254,18 @@ window.openAIChatManager = function () {
               if (!btn) {
                 return;
               }
-              var pre = btn.closest('pre');
-              if (!pre) {
+              var block = btn.closest('.ai-code-block') || btn.closest('pre');
+              if (!block) {
                 return;
               }
-              var codeEl = pre.querySelector('code');
+              var codeEl = block.querySelector('code');
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
+                var copiedText = config.codeCopiedText || 'Copied!';
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                setTimeout(function () {
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                }, 2000);
               }
             });
           }

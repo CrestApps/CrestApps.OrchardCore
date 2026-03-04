@@ -2,12 +2,16 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
-using OrchardCore.Data.Documents;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -86,7 +90,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         var contentItem = await contentManager.GetAsync(model.ContentItemId, VersionOptions.DraftRequired);
-        var documentStore = arguments.Services.GetRequiredService<IDocumentStore>();
 
         if (contentItem is null)
         {
@@ -112,13 +115,20 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             contentItem.Merge(model);
 
-            var result = await contentManager.ValidateAsync(contentItem);
+            // TODO, when https://github.com/OrchardCMS/OrchardCore/pull/18939 is meregd,
+            // we can similfy this by calling contentManager.ValidateAsync(contentItem);
+            var handler = arguments.Services.GetServices<IContentHandler>();
 
-            if (!result.Succeeded)
+            var validateContext = new ValidateContentContext(contentItem);
+            var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
+            await handler.InvokeAsync((handler, context) => handler.ValidatingAsync(context), validateContext, logger);
+            await handler.Reverse().InvokeAsync((handler, context) => handler.ValidatedAsync(context), validateContext, logger);
+
+            if (!validateContext.ContentValidateResult.Succeeded)
             {
                 return
                    $"""
-                    Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
+                    Unable to create the content item due to the following errors: {string.Join(", ", validateContext.ContentValidateResult.Errors.Select(x => x.ErrorMessage))}.
                     For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
                     """;
             }
@@ -138,29 +148,61 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             await contentManager.UpdateAsync(contentItem);
 
-            var result = await contentManager.ValidateAsync(contentItem);
+            // TODO, when https://github.com/OrchardCMS/OrchardCore/pull/18939 is meregd,
+            // we can similfy this by calling contentManager.ValidateAsync(contentItem);
+            var handler = arguments.Services.GetServices<IContentHandler>();
 
-            if (!result.Succeeded)
+            var validateContext = new ValidateContentContext(contentItem);
+            var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
+            await handler.InvokeAsync((handler, context) => handler.ValidatingAsync(context), validateContext, logger);
+            await handler.Reverse().InvokeAsync((handler, context) => handler.ValidatedAsync(context), validateContext, logger);
+
+            if (!validateContext.ContentValidateResult.Succeeded)
             {
-                return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
+                return "Unable to update the content item due to the following errors: " + string.Join(';', validateContext.ContentValidateResult.Errors.Select(x => x.ErrorMessage));
             }
         }
+
+        string response;
 
         if (isDraft)
         {
             await contentManager.SaveDraftAsync(contentItem);
 
-            await documentStore.CommitAsync();
-
-            return $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
+            response = $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
         else
         {
             await contentManager.PublishAsync(contentItem);
 
-            await documentStore.CommitAsync();
-
-            return $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
+            response = $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
         }
+
+        // Flush the changes to allow other tools to access it in the same function execution, such as a tool that generates a link to the content item after creation.
+        var session = arguments.Services.GetRequiredService<global::YesSql.ISession>();
+        await session.FlushAsync(cancellationToken);
+
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
+
+        var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+        if (await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
+        {
+            if (metadata.AdminRouteValues is not null)
+            {
+                response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
+            }
+        }
+
+        if (await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent, contentItem))
+        {
+            if (metadata.DisplayRouteValues is not null)
+            {
+                response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+            }
+        }
+
+        return response;
     }
 }
