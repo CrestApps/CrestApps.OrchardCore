@@ -52,6 +52,8 @@
 
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
         && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
+    var profileMetadata = profile.As<AIProfileMetadata>();
+    var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
 }
 
 <!-- Toggle Button (green circle ring with robot icon) -->
@@ -88,8 +90,8 @@
 
     <!-- Chat Body -->
     <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
-        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder">
-            <h4>@(string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
+        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder @(addInitialPrompt ? "d-none" : string.Empty)">
+            <h4>@(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
         </div>
         <div id="@chatAppHtmlId"></div>
     </div>
@@ -168,16 +170,17 @@
             inputElementSelector: '#@userPromptHtmlId',
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
+            autoCreateSession: @(addInitialPrompt ? "true" : "false"),
             messages: [],
             metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)
             {
-                                    @:sessionDocumentsEnabled: true,
-                                    @:documentBarSelector: '#@documentBarHtmlId',
-                                    @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
-                                    @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
-                                    @:allowedExtensions: '@allowedExtensions',
-                                    @:existingDocuments: [],
+                                                    @:sessionDocumentsEnabled: true,
+                                                    @:documentBarSelector: '#@documentBarHtmlId',
+                                                    @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
+                                                    @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
+                                                    @:allowedExtensions: '@allowedExtensions',
+                                                    @:existingDocuments: [],
             }
             messageTemplate: `
                 <div class="ai-chat-messages">

@@ -1,9 +1,12 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -67,6 +70,25 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
 
             chatSession.ClientId = clientId;
+        }
+
+        if (profile.Type == AIProfileType.Chat)
+        {
+            var profileMetadata = profile.As<AIProfileMetadata>();
+            var initialPrompt = profileMetadata.InitialPrompt;
+
+            if (!string.IsNullOrEmpty(initialPrompt))
+            {
+                await _promptStore.CreateAsync(new AIChatSessionPrompt
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    SessionId = chatSession.SessionId,
+                    Role = ChatRole.Assistant,
+                    Title = profile.PromptSubject,
+                    Content = initialPrompt,
+                    CreatedUtc = _clock.UtcNow,
+                });
+            }
         }
 
         return chatSession;

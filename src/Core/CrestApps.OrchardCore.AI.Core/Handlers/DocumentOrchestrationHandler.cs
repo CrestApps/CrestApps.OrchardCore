@@ -54,6 +54,9 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
+        var hasSessionDocuments = false;
+        IReadOnlyList<ChatDocumentInfo> sessionDocuments = null;
+
         // Check for session documents after configure has run,
         // since the session is set via the configure callback
         // which executes between BuildingAsync and BuiltAsync.
@@ -66,6 +69,17 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         {
             context.OrchestrationContext.Documents ??= [];
             context.OrchestrationContext.Documents.AddRange(session.Documents);
+            hasSessionDocuments = true;
+            sessionDocuments = session.Documents;
+        }
+        else if (context.Resource is AIProfile &&
+            context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+            context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out sessionObj) &&
+            sessionObj is AIChatSession currentSession &&
+            currentSession.Documents is { Count: > 0 })
+        {
+            hasSessionDocuments = true;
+            sessionDocuments = currentSession.Documents;
         }
 
         if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
@@ -88,7 +102,12 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,
-            ["availableDocuments"] = context.OrchestrationContext.Documents,
+            ["showUserDocumentAwareness"] = context.Resource is not AIProfile || hasSessionDocuments,
+            ["availableDocuments"] = context.Resource is AIProfile && hasSessionDocuments
+                ? sessionDocuments
+                : context.Resource is AIProfile
+                    ? Array.Empty<ChatDocumentInfo>()
+                    : context.OrchestrationContext.Documents,
         };
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);

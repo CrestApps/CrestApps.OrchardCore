@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -99,26 +100,51 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
-            await Clients.Caller.LoadSession(new
+            await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
+        });
+    }
+
+    public async Task StartSession(string profileId)
+    {
+        if (string.IsNullOrWhiteSpace(profileId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(profileId)].Value);
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            var services = scope.ServiceProvider;
+            var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+            var profileManager = services.GetRequiredService<IAIProfileManager>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+
+            var profile = await profileManager.FindByIdAsync(profileId);
+            if (profile is null)
             {
-                chatSession.SessionId,
-                Profile = new
-                {
-                    Id = chatSession.ProfileId,
-                    Type = profile.Type.ToString()
-                },
-                chatSession.Documents,
-                Messages = prompts.Select(message => new AIChatResponseMessageDetailed
-                {
-                    Id = message.ItemId,
-                    Role = message.Role.Value,
-                    IsGeneratedPrompt = message.IsGeneratedPrompt,
-                    Title = message.Title,
-                    Content = message.Content,
-                    UserRating = message.UserRating,
-                    References = message.References,
-                })
-            });
+                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
+                return;
+            }
+
+            if (profile.Type != AIProfileType.Chat)
+            {
+                await Clients.Caller.ReceiveError(S["Only chat profiles can start chat sessions."].Value);
+                return;
+            }
+
+            var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+            await sessionManager.SaveAsync(chatSession);
+            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
         });
     }
 
@@ -330,15 +356,16 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+        var titleUserPrompt = BuildTitleUserPrompt(profile, userPrompt);
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-            chatSession.Title = await GetGeneratedTitleAsync(services, profile, userPrompt);
+            chatSession.Title = await GetGeneratedTitleAsync(services, profile, titleUserPrompt);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
         {
-            chatSession.Title = Str.Truncate(userPrompt, 255);
+            chatSession.Title = Str.Truncate(titleUserPrompt, 255);
         }
 
         return (chatSession, true);
@@ -403,16 +430,19 @@ public class AIChatHub : Hub<IAIChatHubClient>
         chatSession.LastActivityUtc = utcNow;
 
         // Generate a title when the session was created without one (e.g., via document upload).
-        if (!isNew && chatSession.Title == AIConstants.DefaultBlankSessionTitle && !string.IsNullOrWhiteSpace(prompt))
+        if (!isNew &&
+            !string.IsNullOrWhiteSpace(prompt) &&
+            (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle))
         {
+            var titleUserPrompt = BuildTitleUserPrompt(profile, prompt);
             if (profile.TitleType == AISessionTitleType.Generated)
             {
-                chatSession.Title = await GetGeneratedTitleAsync(services, profile, prompt);
+                chatSession.Title = await GetGeneratedTitleAsync(services, profile, titleUserPrompt);
             }
 
             if (string.IsNullOrEmpty(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle)
             {
-                chatSession.Title = Str.Truncate(prompt, 255);
+                chatSession.Title = Str.Truncate(titleUserPrompt, 255);
             }
         }
 
@@ -429,13 +459,6 @@ public class AIChatHub : Hub<IAIChatHubClient>
         var existingPrompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
         var conversationHistory = new List<ChatMessage>();
-
-        // If the profile has a welcome message, include it as the first assistant message
-        // so the model is aware of what was shown to the user before their first response.
-        if (!string.IsNullOrEmpty(profile.WelcomeMessage))
-        {
-            conversationHistory.Add(new ChatMessage(ChatRole.Assistant, profile.WelcomeMessage));
-        }
 
         conversationHistory.AddRange(existingPrompts
             .Where(x => !x.IsGeneratedPrompt)
@@ -623,5 +646,43 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             await writer.WriteAsync(partialMessage, cancellationToken);
         }
+    }
+
+    private static object CreateSessionPayload(AIChatSession chatSession, AIProfile profile, IReadOnlyList<AIChatSessionPrompt> prompts)
+        => new
+        {
+            chatSession.SessionId,
+            Profile = new
+            {
+                Id = chatSession.ProfileId,
+                Type = profile.Type.ToString()
+            },
+            chatSession.Documents,
+            Messages = prompts.Select(message => new AIChatResponseMessageDetailed
+            {
+                Id = message.ItemId,
+                Role = message.Role.Value,
+                IsGeneratedPrompt = message.IsGeneratedPrompt,
+                Title = message.Title,
+                Content = message.Content,
+                UserRating = message.UserRating,
+                References = message.References,
+            })
+        };
+
+    private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)
+    {
+        var trimmedUserPrompt = userPrompt?.Trim();
+        var profileMetadata = profile.As<AIProfileMetadata>();
+        var initialPrompt = profileMetadata.InitialPrompt?.Trim();
+
+        if (string.IsNullOrWhiteSpace(initialPrompt))
+        {
+            return trimmedUserPrompt;
+        }
+
+        return string.IsNullOrWhiteSpace(trimmedUserPrompt)
+            ? initialPrompt
+            : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 }

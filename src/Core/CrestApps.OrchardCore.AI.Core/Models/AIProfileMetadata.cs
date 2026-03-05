@@ -4,6 +4,10 @@ public class AIProfileMetadata
 {
     public string SystemMessage { get; set; }
 
+    public bool AddInitialPrompt { get; set; }
+
+    public string InitialPrompt { get; set; }
+
     public float? Temperature { get; set; }
 
     public float? TopP { get; set; }

@@ -144,11 +144,18 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
+        var showUserDocumentAwareness =
+            context.Resource is not AIProfile ||
+            searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
+
         var topN = settings.TopN > 0 ? settings.TopN : 3;
 
         // Perform vector search for each embedding across all scopes and combine results.
-        var allResults = new List<DocumentChunkSearchResult>();
+        var allResults = new List<(DocumentChunkSearchResult Result, string ReferenceType)>();
         var seenChunkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasProfileScope = searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.Profile);
+        var hasSessionScope = searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
+        var keepProfileDocumentAwareness = !(context.Resource is AIProfile && hasProfileScope && hasSessionScope);
 
         foreach (var embedding in embeddings)
         {
@@ -183,7 +190,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
                     if (seenChunkKeys.Add(chunkKey))
                     {
-                        allResults.Add(result);
+                        allResults.Add((result, scopeReferenceType));
                     }
                 }
             }
@@ -191,7 +198,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         // Sort by score descending and take top N.
         var finalResults = allResults
-            .OrderByDescending(r => r.Score)
+            .OrderByDescending(r => r.Result.Score)
             .Take(topN)
             .ToList();
 
@@ -211,6 +218,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         {
             arguments["searchToolName"] = SystemToolNames.SearchDocuments;
         }
+        arguments["showUserDocumentAwareness"] = showUserDocumentAwareness;
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentContextHeader, arguments);
 
@@ -221,69 +229,87 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             sb.Append(header);
         }
 
-        var invocationContext = AIInvocationScope.Current;
-        var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var result in finalResults)
+        if (showUserDocumentAwareness)
         {
-            var documentKey = result.DocumentKey;
+            var invocationContext = AIInvocationScope.Current;
+            var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
 
-            if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
+            foreach (var (result, scopeReferenceType) in finalResults)
             {
-                seenDocuments[documentKey] = (invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1, RagTextNormalizer.NormalizeTitle(result.FileName));
-            }
-
-            var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
-                ? entry.Index
-                : invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1;
-
-            sb.AppendLine("---");
-            sb.Append("[doc:");
-            sb.Append(refIdx);
-            sb.Append("] ");
-            sb.AppendLine(result.Chunk.Text);
-        }
-
-        if (seenDocuments.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine("References:");
-
-            foreach (var kvp in seenDocuments)
-            {
-                sb.Append("[doc:");
-                sb.Append(kvp.Value.Index);
-                sb.Append("] = {DocumentId: \"");
-                sb.Append(kvp.Key);
-                sb.Append('"');
-
-                if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                if (!keepProfileDocumentAwareness && scopeReferenceType == AIConstants.DocumentReferenceTypes.Profile)
                 {
-                    sb.Append(", FileName: \"");
-                    sb.Append(kvp.Value.FileName);
-                    sb.Append('"');
+                    sb.AppendLine("---");
+                    sb.AppendLine(result.Chunk.Text);
+                    continue;
                 }
 
-                sb.AppendLine("}");
-            }
+                var documentKey = result.DocumentKey;
 
-            // Store citation metadata on the orchestration context for downstream consumers.
-            var citationMap = new Dictionary<string, AICompletionReference>();
-
-            foreach (var kvp in seenDocuments)
-            {
-                var template = $"[doc:{kvp.Value.Index}]";
-                citationMap[template] = new AICompletionReference
+                if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
                 {
-                    Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
-                    Title = kvp.Value.FileName,
-                    Index = kvp.Value.Index,
-                    ReferenceId = kvp.Key,
-                    ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
-                };
+                    seenDocuments[documentKey] = (invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1, RagTextNormalizer.NormalizeTitle(result.FileName));
+                }
+
+                var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
+                    ? entry.Index
+                    : invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1;
+
+                sb.AppendLine("---");
+                sb.Append("[doc:");
+                sb.Append(refIdx);
+                sb.Append("] ");
+                sb.AppendLine(result.Chunk.Text);
             }
 
-            orchestrationContext.Properties["DocumentReferences"] = citationMap;
+            if (seenDocuments.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("References:");
+
+                foreach (var kvp in seenDocuments)
+                {
+                    sb.Append("[doc:");
+                    sb.Append(kvp.Value.Index);
+                    sb.Append("] = {DocumentId: \"");
+                    sb.Append(kvp.Key);
+                    sb.Append('"');
+
+                    if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                    {
+                        sb.Append(", FileName: \"");
+                        sb.Append(kvp.Value.FileName);
+                        sb.Append('"');
+                    }
+
+                    sb.AppendLine("}");
+                }
+
+                // Store citation metadata on the orchestration context for downstream consumers.
+                var citationMap = new Dictionary<string, AICompletionReference>();
+
+                foreach (var kvp in seenDocuments)
+                {
+                    var template = $"[doc:{kvp.Value.Index}]";
+                    citationMap[template] = new AICompletionReference
+                    {
+                        Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
+                        Title = kvp.Value.FileName,
+                        Index = kvp.Value.Index,
+                        ReferenceId = kvp.Key,
+                        ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
+                    };
+                }
+
+                orchestrationContext.Properties["DocumentReferences"] = citationMap;
+            }
+        }
+        else
+        {
+            foreach (var (result, _) in finalResults)
+            {
+                sb.AppendLine("---");
+                sb.AppendLine(result.Chunk.Text);
+            }
         }
 
         orchestrationContext.SystemMessageBuilder.Append(sb);

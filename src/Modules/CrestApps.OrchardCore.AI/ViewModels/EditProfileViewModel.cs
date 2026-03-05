@@ -8,6 +8,10 @@ public class EditProfileViewModel
 {
     public string WelcomeMessage { get; set; }
 
+    public bool AddInitialPrompt { get; set; }
+
+    public string InitialPrompt { get; set; }
+
     public string PromptTemplate { get; set; }
 
     public string PromptSubject { get; set; }

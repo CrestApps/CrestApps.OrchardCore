@@ -115,9 +115,12 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var fieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", model =>
         {
+            var metadata = profile.As<AIProfileMetadata>();
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
+            model.AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt);
+            model.InitialPrompt = metadata.InitialPrompt;
             model.TitleType = profile.TitleType;
             model.ProfileType = profile.Type;
             model.TitleTypes =
@@ -224,8 +227,14 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
 
         var metadata = profile.As<AIProfileMetadata>();
+        metadata.InitialPrompt = model.InitialPrompt?.Trim();
 
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
+
+        if (model.ProfileType == AIProfileType.Chat && model.AddInitialPrompt && string.IsNullOrWhiteSpace(metadata.InitialPrompt))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.InitialPrompt), S["Initial prompt is required when add initial prompt is enabled."]);
+        }
 
         if (model.ProfileType == AIProfileType.Chat)
         {
