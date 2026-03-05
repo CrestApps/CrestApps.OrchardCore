@@ -624,6 +624,12 @@ window.openAIChatManager = function () {
 
                     this.connection.onreconnected(() => {
                         console.info("SignalR: reconnected.");
+
+                        if (this.isSessionStarted) {
+                            this.reloadCurrentSession();
+                        } else if (config.autoCreateSession) {
+                            this.startNewSession();
+                        }
                     });
 
                     this.connection.onclose((error) => {

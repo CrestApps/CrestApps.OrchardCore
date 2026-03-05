@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
@@ -12,8 +11,9 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Contents;
 using OrchardCore.Modules;
-using OrchardCore.Users;
+using Usr = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -80,7 +80,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             json = str;
         }
-        else if (arguments.TryGetFirst("contentItem", out object raw) && raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        else if (arguments.TryGetFirst("contentItem", out var raw) && raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
         {
             json = je.GetRawText();
         }
@@ -195,7 +195,9 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
-        if (metadata.AdminRouteValues is not null)
+        var user = httpContextAccessor.HttpContext?.User;
+
+        if (metadata.AdminRouteValues is not null && user?.Identity?.IsAuthenticated == true && await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
         {
             response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
         }
@@ -223,9 +225,9 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             return;
         }
 
-        var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
+        var userManager = arguments.Services.GetRequiredService<UserManager<Usr.IUser>>();
 
-        IUser user = null;
+        Usr.IUser user = null;
 
         if (arguments.TryGetFirstString("ownerUserId", out var ownerUserId))
         {

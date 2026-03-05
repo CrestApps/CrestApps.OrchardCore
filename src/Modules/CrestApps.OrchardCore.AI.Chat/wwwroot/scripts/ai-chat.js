@@ -643,6 +643,11 @@ window.openAIChatManager = function () {
                   });
                   _this3.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
+                    if (_this3.isSessionStarted) {
+                      _this3.reloadCurrentSession();
+                    } else if (config.autoCreateSession) {
+                      _this3.startNewSession();
+                    }
                   });
                   _this3.connection.onclose(function (error) {
                     if (_this3.isNavigatingAway) {
