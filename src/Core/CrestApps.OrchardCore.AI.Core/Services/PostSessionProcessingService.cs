@@ -19,6 +19,7 @@ public sealed class PostSessionProcessingService
     private readonly IAIClientFactory _clientFactory;
     private readonly IAIToolsService _toolsService;
     private readonly IAITemplateService _aiTemplateService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly AIProviderOptions _providerOptions;
     private readonly DefaultAIOptions _defaultOptions;
@@ -30,12 +31,14 @@ public sealed class PostSessionProcessingService
         IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<DefaultAIOptions> defaultOptions,
+        IServiceProvider serviceProvider,
         IClock clock,
         ILoggerFactory loggerFactory)
     {
         _clientFactory = clientFactory;
         _toolsService = toolsService;
         _aiTemplateService = aiTemplateService;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         _providerOptions = providerOptions.Value;
         _defaultOptions = defaultOptions.Value;
@@ -263,7 +266,7 @@ public sealed class PostSessionProcessingService
             {
                 c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
             })
-            .Build();
+            .Build(_serviceProvider);
 
         var response = await client.GetResponseAsync(messages, new ChatOptions
         {
