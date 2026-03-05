@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithConfigTask>
 {
     private readonly AIProviderOptions _aiProviderOptions;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IAIClientFactory _aIClientFactory;
     private readonly IAIToolsService _aIToolsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -27,6 +28,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     public AICompletionWithConfigTask(
         IOptions<AIProviderOptions> aiProviderOptions,
+        IServiceProvider serviceProvider,
         IAIClientFactory aIClientFactory,
         IAIToolsService aIToolsService,
         ILiquidTemplateManager liquidTemplateManager,
@@ -36,6 +38,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
         _aiProviderOptions = aiProviderOptions.Value;
+        _serviceProvider = serviceProvider;
         _aIClientFactory = aIClientFactory;
         _aIToolsService = aIToolsService;
         _liquidTemplateManager = liquidTemplateManager;
@@ -166,7 +169,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
                     .UseFunctionInvocation(_loggerFactory, c =>
                     {
                         c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
-                    }).Build();
+                    }).Build(_serviceProvider);
 
                 foreach (var toolName in ToolNames)
                 {

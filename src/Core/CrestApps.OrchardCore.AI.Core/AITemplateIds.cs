@@ -13,9 +13,15 @@ public static class AITemplateIds
 
     public const string PostSessionAnalysis = "post-session-analysis";
 
+    public const string PostSessionAnalysisPrompt = "post-session-analysis-prompt";
+
     public const string ResolutionAnalysis = "resolution-analysis";
 
+    public const string ResolutionAnalysisPrompt = "resolution-analysis-prompt";
+
     public const string ConversionGoalEvaluation = "conversion-goal-evaluation";
+
+    public const string ConversionGoalEvaluationPrompt = "conversion-goal-evaluation-prompt";
 
     public const string DataExtraction = "data-extraction";
 

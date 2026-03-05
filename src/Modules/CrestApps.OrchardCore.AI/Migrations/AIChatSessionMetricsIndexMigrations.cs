@@ -26,6 +26,8 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 .Column<int>("TotalOutputTokens", column => column.WithDefault(0))
                 .Column<double>("AverageResponseLatencyMs", column => column.WithDefault(0))
                 .Column<bool?>("UserRating", column => column.Nullable())
+                .Column<int>("ThumbsUpCount", column => column.WithDefault(0))
+                .Column<int>("ThumbsDownCount", column => column.WithDefault(0))
                 .Column<int?>("ConversionScore", column => column.Nullable())
                 .Column<int?>("ConversionMaxScore", column => column.Nullable())
                 .Column<DateTime>("CreatedUtc"),
@@ -70,7 +72,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
             collection: AIConstants.CollectionName
         );
 
-        return 2;
+        return 3;
     }
 
     public async Task<int> UpdateFrom1Async()
@@ -81,6 +83,17 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
             table.AddColumn<int?>("ConversionMaxScore", column => column.Nullable());
         }, collection: AIConstants.CollectionName);
 
-        return 2;
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
+        {
+            table.AddColumn<int>("ThumbsUpCount", column => column.WithDefault(0));
+            table.AddColumn<int>("ThumbsDownCount", column => column.WithDefault(0));
+        }, collection: AIConstants.CollectionName);
+
+        return 3;
     }
 }

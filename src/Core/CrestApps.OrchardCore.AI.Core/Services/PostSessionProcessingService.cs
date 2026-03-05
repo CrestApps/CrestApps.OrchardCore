@@ -1,6 +1,7 @@
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using J2N.Text;
+using CrestApps.OrchardCore.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,24 +19,30 @@ public sealed class PostSessionProcessingService
     private readonly IAIClientFactory _clientFactory;
     private readonly IAIToolsService _toolsService;
     private readonly IAITemplateService _aiTemplateService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly AIProviderOptions _providerOptions;
-    private readonly ILogger _logger;
+    private readonly DefaultAIOptions _defaultOptions;
+    private readonly ILoggerFactory _loggerFactory;
 
     public PostSessionProcessingService(
         IAIClientFactory clientFactory,
         IAIToolsService toolsService,
         IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
+        IOptions<DefaultAIOptions> defaultOptions,
+        IServiceProvider serviceProvider,
         IClock clock,
-        ILogger<PostSessionProcessingService> logger)
+        ILoggerFactory loggerFactory)
     {
         _clientFactory = clientFactory;
         _toolsService = toolsService;
         _aiTemplateService = aiTemplateService;
+        _serviceProvider = serviceProvider;
         _clock = clock;
         _providerOptions = providerOptions.Value;
-        _logger = logger;
+        _defaultOptions = defaultOptions.Value;
+        _loggerFactory = loggerFactory;
     }
 
     /// <summary>
@@ -53,59 +60,33 @@ public sealed class PostSessionProcessingService
             return false;
         }
 
-        try
+        var chatClient = await GetChatClientAsync(profile);
+
+        if (chatClient == null)
         {
-            var chatClient = await GetChatClientAsync(profile);
-
-            if (chatClient == null)
-            {
-                return false;
-            }
-
-            var transcript = BuildConversationTranscript(prompts);
-
-            if (string.IsNullOrEmpty(transcript))
-            {
-                return false;
-            }
-
-            var messages = new List<ChatMessage>
-            {
-                new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ResolutionAnalysis)),
-                new(ChatRole.User, transcript),
-            };
-
-            var response = await chatClient.GetResponseAsync<ResolutionAnalysisResponse>(messages, new ChatOptions
-            {
-                Temperature = 0f,
-            }, null, cancellationToken);
-
-            return response.Result?.Resolved ?? false;
+            throw new InvalidOperationException(
+                $"Unable to create a chat client for resolution analysis on profile '{profile.ItemId}'.");
         }
-        catch (Exception ex)
+
+        var transcript = await RenderTranscriptAsync(AITemplateIds.ResolutionAnalysisPrompt, prompts);
+
+        if (string.IsNullOrEmpty(transcript))
         {
-            _logger.LogError(ex, "AI resolution analysis failed for profile '{ProfileId}'.", profile.ItemId);
             return false;
         }
-    }
 
-    private static string BuildConversationTranscript(IReadOnlyList<AIChatSessionPrompt> prompts)
-    {
-        var builder = new StringBuffer("Conversation transcript:");
-
-        foreach (var prompt in prompts)
+        var messages = new List<ChatMessage>
         {
-            if (prompt.IsGeneratedPrompt)
-            {
-                continue;
-            }
+            new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ResolutionAnalysis)),
+            new(ChatRole.User, transcript),
+        };
 
-            builder.AppendLine();
-            builder.Append(prompt.Role == ChatRole.User ? "User: " : "Assistant: ");
-            builder.Append(prompt.Content?.Trim());
-        }
+        var response = await chatClient.GetResponseAsync<ResolutionAnalysisResponse>(messages, new ChatOptions
+        {
+            Temperature = 0f,
+        }, null, cancellationToken);
 
-        return builder.ToString();
+        return response.Result?.Resolved ?? false;
     }
 
     /// <summary>
@@ -123,88 +104,74 @@ public sealed class PostSessionProcessingService
             return null;
         }
 
-        try
+        var chatClient = await GetChatClientAsync(profile);
+
+        if (chatClient == null)
         {
-            var chatClient = await GetChatClientAsync(profile);
-
-            if (chatClient == null)
-            {
-                return null;
-            }
-
-            var transcript = BuildConversationTranscript(prompts);
-
-            if (string.IsNullOrEmpty(transcript))
-            {
-                return null;
-            }
-
-            var goalsPrompt = new StringBuffer("Evaluate the following conversation against each goal and assign a score.\n\nGoals:\n");
-
-            foreach (var goal in goals)
-            {
-                goalsPrompt.Append("- ");
-                goalsPrompt.Append(goal.Name);
-                goalsPrompt.Append(": ");
-                goalsPrompt.Append(goal.Description);
-                goalsPrompt.Append(" (score range: ");
-                goalsPrompt.Append(goal.MinScore.ToString());
-                goalsPrompt.Append("-");
-                goalsPrompt.Append(goal.MaxScore.ToString());
-                goalsPrompt.Append(")");
-                goalsPrompt.AppendLine();
-            }
-
-            goalsPrompt.AppendLine();
-            goalsPrompt.Append(transcript);
-
-            var messages = new List<ChatMessage>
-            {
-                new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ConversionGoalEvaluation)),
-                new(ChatRole.User, goalsPrompt.ToString()),
-            };
-
-            var response = await chatClient.GetResponseAsync<ConversionGoalEvaluationResponse>(messages, new ChatOptions
-            {
-                Temperature = 0f,
-            }, null, cancellationToken);
-
-            if (response.Result?.Goals is null || response.Result.Goals.Count == 0)
-            {
-                return null;
-            }
-
-            var results = new List<ConversionGoalResult>();
-
-            foreach (var result in response.Result.Goals)
-            {
-                var goal = goals.FirstOrDefault(g =>
-                    string.Equals(g.Name, result.Name, StringComparison.OrdinalIgnoreCase));
-
-                if (goal == null)
-                {
-                    continue;
-                }
-
-                // Clamp score to valid range.
-                var score = Math.Clamp(result.Score, goal.MinScore, goal.MaxScore);
-
-                results.Add(new ConversionGoalResult
-                {
-                    Name = goal.Name,
-                    Score = score,
-                    MaxScore = goal.MaxScore,
-                    Reasoning = result.Reasoning,
-                });
-            }
-
-            return results;
+            throw new InvalidOperationException(
+                $"Unable to create a chat client for conversion goal evaluation on profile '{profile.ItemId}'.");
         }
-        catch (Exception ex)
+
+        var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
-            _logger.LogError(ex, "Conversion goal evaluation failed for profile '{ProfileId}'.", profile.ItemId);
+            ["goals"] = goals.Select(g => new
+            {
+                g.Name,
+                g.Description,
+                g.MinScore,
+                g.MaxScore,
+            }).ToList(),
+            ["prompts"] = ProjectPrompts(prompts),
+        };
+
+        var userPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.ConversionGoalEvaluationPrompt, arguments);
+
+        if (string.IsNullOrEmpty(userPrompt))
+        {
             return null;
         }
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.System, await _aiTemplateService.RenderAsync(AITemplateIds.ConversionGoalEvaluation)),
+            new(ChatRole.User, userPrompt),
+        };
+
+        var response = await chatClient.GetResponseAsync<ConversionGoalEvaluationResponse>(messages, new ChatOptions
+        {
+            Temperature = 0f,
+        }, null, cancellationToken);
+
+        if (response.Result?.Goals is null || response.Result.Goals.Count == 0)
+        {
+            return null;
+        }
+
+        var results = new List<ConversionGoalResult>();
+
+        foreach (var result in response.Result.Goals)
+        {
+            var goal = goals.FirstOrDefault(g =>
+                string.Equals(g.Name, result.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (goal == null)
+            {
+                continue;
+            }
+
+            // Clamp score to valid range.
+            var score = Math.Clamp(result.Score, goal.MinScore, goal.MaxScore);
+
+            results.Add(new ConversionGoalResult
+            {
+                Name = goal.Name,
+                Score = score,
+                MaxScore = goal.MaxScore,
+                Reasoning = result.Reasoning,
+            });
+        }
+
+        return results;
     }
 
     /// <summary>
@@ -224,49 +191,117 @@ public sealed class PostSessionProcessingService
             return null;
         }
 
-        try
+        var chatClient = await GetChatClientAsync(profile);
+
+        if (chatClient == null)
         {
-            var chatClient = await GetChatClientAsync(profile);
-
-            if (chatClient == null)
-            {
-                _logger.LogWarning("Unable to create a chat client for post-session processing on profile '{ProfileId}'.", profile.ItemId);
-                return null;
-            }
-
-            var prompt = BuildProcessingPrompt(settings.PostSessionTasks, prompts);
-
-            if (string.IsNullOrEmpty(prompt))
-            {
-                return null;
-            }
-
-            var systemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.PostSessionAnalysis);
-
-            var messages = new List<ChatMessage>
-            {
-                new(ChatRole.System, systemPrompt),
-                new(ChatRole.User, prompt),
-            };
-
-            var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(messages, new ChatOptions
-            {
-                Temperature = 0f,
-                Tools = await ResolveToolsAsync(settings.ToolNames),
-            }, null, cancellationToken);
-
-            if (response.Result?.Tasks == null || response.Result.Tasks.Count == 0)
-            {
-                return null;
-            }
-
-            return ApplyResults(settings.PostSessionTasks, response.Result.Tasks);
+            throw new InvalidOperationException(
+                $"Unable to create a chat client for post-session processing on profile '{profile.ItemId}'.");
         }
-        catch (Exception ex)
+
+        var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
-            _logger.LogError(ex, "Post-session processing failed for session '{SessionId}'.", session.SessionId);
+            ["tasks"] = settings.PostSessionTasks.Select(t => new
+            {
+                t.Name,
+                Type = t.Type.ToString(),
+                t.Instructions,
+                t.AllowMultipleValues,
+                Options = t.Options?.Select(o => new { o.Value, o.Description }).ToList(),
+            }).ToList(),
+            ["prompts"] = ProjectPrompts(prompts),
+        };
+
+        var prompt = await _aiTemplateService.RenderAsync(AITemplateIds.PostSessionAnalysisPrompt, arguments);
+
+        if (string.IsNullOrEmpty(prompt))
+        {
             return null;
         }
+
+        var systemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.PostSessionAnalysis);
+
+        var messages = new List<ChatMessage>
+        {
+            new(ChatRole.System, systemPrompt),
+            new(ChatRole.User, prompt),
+        };
+
+        var tools = await ResolveToolsAsync(settings.ToolNames);
+
+        // When tools are configured (e.g., sendEmail), use non-generic GetResponseAsync
+        // to allow tool execution. The generic version uses structured output which
+        // conflicts with tool calls — the model may fail to call tools when forced
+        // to produce structured JSON output.
+        if (tools is not null && tools.Count > 0)
+        {
+            return await ProcessWithToolsAsync(chatClient, messages, tools, settings.PostSessionTasks, cancellationToken);
+        }
+
+        var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(messages, new ChatOptions
+        {
+            Temperature = 0f,
+        }, null, cancellationToken);
+
+        if (response.Result?.Tasks == null || response.Result.Tasks.Count == 0)
+        {
+            return null;
+        }
+
+        return ApplyResults(settings.PostSessionTasks, response.Result.Tasks);
+    }
+
+    private async Task<Dictionary<string, PostSessionResult>> ProcessWithToolsAsync(
+        IChatClient chatClient,
+        List<ChatMessage> messages,
+        IList<AITool> tools,
+        List<PostSessionTask> tasks,
+        CancellationToken cancellationToken)
+    {
+        // Wrap the raw client with FunctionInvokingChatClient so that tool_call
+        // messages returned by the model are actually executed (e.g., sendEmail).
+        var client = chatClient
+            .AsBuilder()
+            .UseFunctionInvocation(_loggerFactory, c =>
+            {
+                c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
+            })
+            .Build(_serviceProvider);
+
+        var response = await client.GetResponseAsync(messages, new ChatOptions
+        {
+            Temperature = 0f,
+            Tools = tools,
+        }, cancellationToken);
+
+        var responseText = response.Messages?.LastOrDefault()?.Text?.Trim();
+
+        if (string.IsNullOrEmpty(responseText))
+        {
+            return null;
+        }
+
+        // Try to parse the response as structured JSON.
+        // When tools are involved, the model may return plain text after tool execution
+        // instead of structured JSON — this is expected behavior.
+        PostSessionProcessingResponse result = null;
+
+        try
+        {
+            result = System.Text.Json.JsonSerializer.Deserialize<PostSessionProcessingResponse>(
+                responseText, JSOptions.CaseInsensitive);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Model returned text after executing tools. Tools have already run.
+        }
+
+        if (result?.Tasks == null || result.Tasks.Count == 0)
+        {
+            return null;
+        }
+
+        return ApplyResults(tasks, result.Tasks);
     }
 
     private Dictionary<string, PostSessionResult> ApplyResults(
@@ -392,76 +427,38 @@ public sealed class PostSessionProcessingService
         return tools.Count > 0 ? tools : null;
     }
 
-    private static string BuildProcessingPrompt(List<PostSessionTask> tasks, IReadOnlyList<AIChatSessionPrompt> prompts)
+    private async Task<string> RenderTranscriptAsync(
+        string templateId,
+        IReadOnlyList<AIChatSessionPrompt> prompts,
+        Dictionary<string, object> extraArguments = null)
     {
-        var builder = new StringBuffer("Analyze the following completed chat conversation and produce results for the requested tasks.");
-
-        builder.AppendLine();
-        builder.Append("Tasks to process:");
-
-        foreach (var task in tasks)
+        var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
-            builder.AppendLine();
-            builder.Append("- ");
-            builder.Append(task.Name);
-            builder.Append(" (type: ");
-            builder.Append(task.Type.ToString());
-            builder.Append(")");
+            ["prompts"] = ProjectPrompts(prompts),
+        };
 
-            if (!string.IsNullOrEmpty(task.Instructions))
+        if (extraArguments is not null)
+        {
+            foreach (var kvp in extraArguments)
             {
-                builder.Append(": ");
-                builder.Append(task.Instructions);
-            }
-
-            if (task.Type == PostSessionTaskType.PredefinedOptions && task.Options.Count > 0)
-            {
-                if (task.AllowMultipleValues)
-                {
-                    builder.Append(" [allowMultiple=true]");
-                }
-
-                builder.Append(" Options: [");
-
-                for (var i = 0; i < task.Options.Count; i++)
-                {
-                    if (i > 0)
-                    {
-                        builder.Append(", ");
-                    }
-
-                    builder.Append(task.Options[i].Value);
-
-                    if (!string.IsNullOrWhiteSpace(task.Options[i].Description))
-                    {
-                        builder.Append(" (");
-                        builder.Append(task.Options[i].Description);
-                        builder.Append(")");
-                    }
-                }
-
-                builder.Append("]");
+                arguments[kvp.Key] = kvp.Value;
             }
         }
 
-        // Build the conversation transcript.
-        builder.AppendLine();
-        builder.AppendLine();
-        builder.Append("Conversation transcript:");
+        return await _aiTemplateService.RenderAsync(templateId, arguments);
+    }
 
-        foreach (var prompt in prompts)
-        {
-            if (prompt.IsGeneratedPrompt)
+    private static List<object> ProjectPrompts(IReadOnlyList<AIChatSessionPrompt> prompts)
+    {
+        return prompts
+            .Where(p => !p.IsGeneratedPrompt)
+            .Select(p => new
             {
-                continue;
-            }
-
-            builder.AppendLine();
-            builder.Append(prompt.Role == ChatRole.User ? "User: " : "Assistant: ");
-            builder.Append(prompt.Content?.Trim());
-        }
-
-        return builder.ToString();
+                Role = p.Role == ChatRole.User ? "User" : "Assistant",
+                Content = p.Content?.Trim(),
+            })
+            .Cast<object>()
+            .ToList();
     }
 }
 

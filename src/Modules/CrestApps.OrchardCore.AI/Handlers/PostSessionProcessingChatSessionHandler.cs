@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
 
@@ -40,32 +41,54 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             return;
         }
 
-        // Skip if post-session results have already been processed.
-        if (context.ChatSession.PostSessionResults.Count > 0)
+        // Skip if post-session tasks have already been processed.
+        if (context.ChatSession.IsPostSessionTasksProcessed)
         {
             return;
         }
 
+        // Skip if post-session processing is not enabled for this profile.
+        var settings = context.Profile.GetSettings<AIProfilePostSessionSettings>();
+
+        if (!settings.EnablePostSessionProcessing || settings.PostSessionTasks.Count == 0)
+        {
+            return;
+        }
+
+        // Mark as pending so the background task can retry if this attempt fails.
+        context.ChatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Pending;
+
         try
         {
+            context.ChatSession.PostSessionProcessingAttempts++;
+            context.ChatSession.PostSessionProcessingLastAttemptUtc = _clock.UtcNow;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Running inline post-session tasks for session '{SessionId}' (attempt {Attempt}).",
+                    context.ChatSession.SessionId,
+                    context.ChatSession.PostSessionProcessingAttempts);
+            }
+
             var results = await _postSessionProcessingService.ProcessAsync(
                 context.Profile,
                 context.ChatSession,
                 context.Prompts);
 
-            if (results is null || results.Count == 0)
+            if (results is not null && results.Count > 0)
             {
-                return;
+                context.ChatSession.PostSessionResults = results;
             }
 
-            context.ChatSession.PostSessionResults = results;
+            context.ChatSession.IsPostSessionTasksProcessed = true;
 
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogDebug(
-                    "Post-session processing completed for session '{SessionId}' with {TaskCount} results.",
+                _logger.LogInformation(
+                    "Inline post-session tasks completed for session '{SessionId}' with {TaskCount} result(s).",
                     context.ChatSession.SessionId,
-                    results.Count);
+                    results?.Count ?? 0);
             }
 
             var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
@@ -77,7 +100,11 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Post-session processing failed for session '{SessionId}'.", context.ChatSession.SessionId);
+            _logger.LogError(
+                ex,
+                "Inline post-session tasks failed for session '{SessionId}' (attempt {Attempt}). Will be retried by background task.",
+                context.ChatSession.SessionId,
+                context.ChatSession.PostSessionProcessingAttempts);
         }
     }
 

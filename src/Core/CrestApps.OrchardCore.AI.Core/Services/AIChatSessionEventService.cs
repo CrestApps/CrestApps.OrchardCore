@@ -151,9 +151,9 @@ public sealed class AIChatSessionEventService
     }
 
     /// <summary>
-    /// Records the user's feedback rating for a session.
+    /// Records the user's feedback rating counts for a session.
     /// </summary>
-    public async Task RecordUserRatingAsync(string sessionId, bool isPositive)
+    public async Task RecordUserRatingAsync(string sessionId, int thumbsUpCount, int thumbsDownCount)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);
 
@@ -162,7 +162,18 @@ public sealed class AIChatSessionEventService
             return;
         }
 
-        evt.UserRating = isPositive;
+        evt.ThumbsUpCount = thumbsUpCount;
+        evt.ThumbsDownCount = thumbsDownCount;
+
+        // Keep legacy UserRating field in sync for backward compatibility.
+        if (thumbsUpCount + thumbsDownCount > 0)
+        {
+            evt.UserRating = thumbsUpCount >= thumbsDownCount;
+        }
+        else
+        {
+            evt.UserRating = null;
+        }
 
         await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
     }

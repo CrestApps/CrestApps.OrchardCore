@@ -79,23 +79,18 @@ public sealed class SendEmailTool : AIFunction
             return "Unable to find a body argument in the function arguments.";
         }
 
-        if (!arguments.IsAuthenticatedOrMcpRequest())
+        string senderEmail = null;
+
+        var principal = httpContextAccessor.HttpContext.User;
+
+        if (principal is not null)
         {
-            return "You must login to be able to send email.";
-        }
+            var user = await userManager.GetUserAsync(principal);
 
-        var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext.User);
-
-        if (user is null)
-        {
-            return "You must login to be able to send email.";
-        }
-
-        var email = await userManager.GetEmailAsync(user);
-
-        if (string.IsNullOrEmpty(email))
-        {
-            return "You do no have an email on associated with the user.";
+            if (user is not null)
+            {
+                senderEmail = await userManager.GetEmailAsync(user);
+            }
         }
 
         var message = new MailMessage
@@ -103,9 +98,9 @@ public sealed class SendEmailTool : AIFunction
             To = to,
             Subject = subject,
             HtmlBody = body,
-            Sender = email,
-            From = email,
-            ReplyTo = email,
+            Sender = senderEmail,
+            From = senderEmail,
+            ReplyTo = senderEmail,
         };
 
         if (arguments.TryGetFirstString("cc", out var cc))

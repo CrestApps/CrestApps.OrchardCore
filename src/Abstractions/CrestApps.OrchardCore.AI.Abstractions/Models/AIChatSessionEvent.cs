@@ -84,6 +84,16 @@ public sealed class AIChatSessionEvent : Entity
     public bool? UserRating { get; set; }
 
     /// <summary>
+    /// Gets or sets the total number of thumbs-up ratings across all messages in this session.
+    /// </summary>
+    public int ThumbsUpCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of thumbs-down ratings across all messages in this session.
+    /// </summary>
+    public int ThumbsDownCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the aggregate conversion score across all goals.
     /// Null if conversion metrics are not enabled.
     /// </summary>

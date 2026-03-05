@@ -28,6 +28,7 @@ internal sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
                     CreatedUtc = session.CreatedUtc,
                     Title = Str.Truncate(session.Title, 255),
                     Status = session.Status,
+                    PostSessionProcessingStatus = session.PostSessionProcessingStatus,
                     LastActivityUtc = session.LastActivityUtc,
                 };
             });

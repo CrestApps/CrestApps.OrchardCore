@@ -212,8 +212,9 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
                 if (ratings.Count > 0)
                 {
-                    var positiveCount = ratings.Count(r => r);
-                    await eventService.RecordUserRatingAsync(sessionId, positiveCount >= ratings.Count - positiveCount);
+                    var thumbsUpCount = ratings.Count(r => r);
+                    var thumbsDownCount = ratings.Count(r => !r);
+                    await eventService.RecordUserRatingAsync(sessionId, thumbsUpCount, thumbsDownCount);
                 }
             }
 
