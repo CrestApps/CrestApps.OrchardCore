@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.Contents;
 using OrchardCore.Modules;
 using Usr = OrchardCore.Users;
 
@@ -195,9 +194,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
-        var user = httpContextAccessor.HttpContext?.User;
-
-        if (metadata.AdminRouteValues is not null && user?.Identity?.IsAuthenticated == true && await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
+        if (metadata.AdminRouteValues is not null)
         {
             response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
         }
