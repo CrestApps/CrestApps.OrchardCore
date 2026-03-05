@@ -1061,13 +1061,31 @@ window.openAIChatManager = function () {
                     }
                     this.messages = [];
                     this.documents = [];
-                    this.showPlaceholder();
+                    if (!config.autoCreateSession) {
+                        this.showPlaceholder();
+                    }
+
+                    if (config.autoCreateSession) {
+                        this.startNewSession();
+                    }
+                },
+                startNewSession() {
+                    const profileId = this.getProfileId();
+                    if (!profileId || !this.connection) {
+                        return;
+                    }
+
+                    this.connection.invoke("StartSession", profileId).catch(err => console.error(err));
                 },
                 initializeApp() {
                     this.inputElement = document.querySelector(config.inputElementSelector);
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+                        this.startNewSession();
+                    }
 
                     // Initialize document bar if enabled.
                     if (config.sessionDocumentsEnabled && config.documentBarSelector) {
@@ -1266,6 +1284,10 @@ window.openAIChatManager = function () {
 
                     // Auto-load the last session so the user always sees previous chat history.
                     this.reloadCurrentSession();
+
+                    if (config.autoCreateSession && !this.getSessionId()) {
+                        this.startNewSession();
+                    }
 
                     if (config.widget.showHistoryButton && this.chatHistorySection) {
 

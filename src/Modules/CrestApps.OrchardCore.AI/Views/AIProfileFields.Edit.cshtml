@@ -32,11 +32,30 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input asp-for="AddInitialPrompt" class="form-check-input" />
+            <label asp-for="AddInitialPrompt" class="form-check-label">@T["Add initial prompt"]</label>
+            <span class="hint">@T["When enabled, each new chat session starts with an assistant message from the initial prompt and the welcome message is ignored."]</span>
+        </div>
+    </div>
+</div>
+
+<div id="welcomeMessageGroup" class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
     <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="WelcomeMessage" class="form-control" />
         <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
         <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
+    </div>
+</div>
+
+<div id="initialPromptGroup" class="@Orchard.GetWrapperClasses("profile-type profile-type-chat") d-none">
+    <label asp-for="InitialPrompt" class="@Orchard.GetLabelClasses()">@T["Initial prompt"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="InitialPrompt" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="InitialPrompt" class="text-danger"></span>
+        <span class="hint">@T["This assistant message is added as the first chat history entry when a new session is created."]</span>
     </div>
 </div>
 
@@ -85,6 +104,19 @@
         }
 
         const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+        const addInitialPrompt = document.getElementById('@Html.IdFor(x => x.AddInitialPrompt)');
+        const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
+        const initialPromptGroup = document.getElementById('initialPromptGroup');
+
+        const toggleInitialPromptFields = () => {
+            if (!addInitialPrompt || !welcomeMessageGroup || !initialPromptGroup) {
+                return;
+            }
+
+            const showInitialPrompt = addInitialPrompt.checked;
+            welcomeMessageGroup.classList.toggle('d-none', showInitialPrompt);
+            initialPromptGroup.classList.toggle('d-none', !showInitialPrompt);
+        };
 
         profileType.addEventListener('change', function (e) {
             let value = e.target.value;
@@ -100,9 +132,16 @@
                     element.classList.add('d-none');
                 }
             }
+
+            toggleInitialPromptFields();
         });
 
+        if (addInitialPrompt) {
+            addInitialPrompt.addEventListener('change', toggleInitialPromptFields);
+        }
+
         profileType.dispatchEvent(new Event('change'));
+        toggleInitialPromptFields();
         initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
     });
 </script>

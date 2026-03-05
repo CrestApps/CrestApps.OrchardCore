@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -112,6 +113,22 @@ internal static class ApiAICompletionEndpoint
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder, aiTemplateService);
+        }
+
+        if (!isNew &&
+            !string.IsNullOrWhiteSpace(userPrompt) &&
+            (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle))
+        {
+            var titleUserPrompt = BuildTitleUserPrompt(profile, userPrompt);
+            if (profile.TitleType == AISessionTitleType.Generated)
+            {
+                chatSession.Title = await GetGeneratedTitleAsync(profile, titleUserPrompt, completionService, completionContextBuilder, aiTemplateService);
+            }
+
+            if (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle)
+            {
+                chatSession.Title = Str.Truncate(titleUserPrompt, 255);
+            }
         }
 
         AIChatSessionPrompt message;
@@ -241,16 +258,17 @@ internal static class ApiAICompletionEndpoint
 
         // At this point, we need to create a new session.
         var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+        var titleUserPrompt = BuildTitleUserPrompt(profile, userPrompt);
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
-            chatSession.Title = await GetGeneratedTitleAsync(profile, userPrompt, completionService, completionContextBuilder, aiTemplateService);
+            chatSession.Title = await GetGeneratedTitleAsync(profile, titleUserPrompt, completionService, completionContextBuilder, aiTemplateService);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
         {
-            chatSession.Title = Str.Truncate(userPrompt, 255);
+            chatSession.Title = Str.Truncate(titleUserPrompt, 255);
         }
 
         return (chatSession, true);
@@ -314,5 +332,21 @@ internal static class ApiAICompletionEndpoint
         result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;
 
         return TypedResults.Ok(result);
+    }
+
+    private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)
+    {
+        var trimmedUserPrompt = userPrompt?.Trim();
+        var profileMetadata = profile.As<AIProfileMetadata>();
+        var initialPrompt = profileMetadata.InitialPrompt?.Trim();
+
+        if (string.IsNullOrWhiteSpace(initialPrompt))
+        {
+            return trimmedUserPrompt;
+        }
+
+        return string.IsNullOrWhiteSpace(trimmedUserPrompt)
+            ? initialPrompt
+            : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 }

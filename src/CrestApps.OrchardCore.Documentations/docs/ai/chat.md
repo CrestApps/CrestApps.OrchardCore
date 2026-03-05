@@ -25,7 +25,9 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 
 ### Welcome Message Behavior
 
-When an AI profile has a **Welcome Message** configured, it is displayed to the user as the first message in the chat. The welcome message is also included in the conversation history sent to the AI model as an assistant message, ensuring the model understands the full context of the conversation — including any questions posed in the welcome message that the user may respond to in their first prompt.
+When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
+
+If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
 
 ### Admin Chat User Interface
 

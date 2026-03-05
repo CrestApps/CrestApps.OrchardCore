@@ -9,7 +9,7 @@
         <i class="fa-solid fa-triangle-exclamation me-2"></i>
         <strong>@T["No Index Profiles Configured"]</strong>
         <p class="mb-0">
-            @T["There are no index profiles configured for user uploaded documents. To enable document embedding, go to Search > Indexing, click Add index and add a 'Chat Interaction Documents' index."]
+            @T["There are no index profiles configured for user uploaded documents. To enable document embedding, go to Search > Indexing, click Add index and add an 'AI Documents' index. If you do not see `AI Documents` options, you'll need to enable one of the 'AI Documents indexing' features."]
         </p>
     </div>
 }
@@ -20,7 +20,7 @@
         <select asp-for="IndexProfileName" asp-items="Model.IndexProfiles" class="form-select">
             <option value="">@T["Select a profile"]</option>
         </select>
-        <span class="hint">@T["The index profile used to index documents for chat interactions."]</span>
+        <span class="hint">@T["The index profile used to index documents for chat interactions. After this is configured in production, avoid changing it to prevent losing access to documents created for existing sessions."]</span>
     </div>
 </div>
 
