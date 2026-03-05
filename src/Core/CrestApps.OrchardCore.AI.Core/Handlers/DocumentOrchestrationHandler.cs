@@ -54,38 +54,46 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
-        var hasSessionDocuments = false;
-        IReadOnlyList<ChatDocumentInfo> sessionDocuments = null;
+        IEnumerable<ChatDocumentInfo> knowledgeBaseDocuments = null;
+        IEnumerable<ChatDocumentInfo> userSuppliedDocuments = null;
 
-        // Check for session documents after configure has run,
-        // since the session is set via the configure callback
-        // which executes between BuildingAsync and BuiltAsync.
-        if (context.OrchestrationContext.Documents is not { Count: > 0 } &&
-            context.Resource is AIProfile &&
-            context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
-            context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
-            sessionObj is AIChatSession session &&
-            session.Documents is { Count: > 0 })
+        if (context.Resource is ChatInteraction interaction && interaction.Documents is { Count: > 0 })
         {
-            context.OrchestrationContext.Documents ??= [];
-            context.OrchestrationContext.Documents.AddRange(session.Documents);
-            hasSessionDocuments = true;
-            sessionDocuments = session.Documents;
+            userSuppliedDocuments = interaction.Documents;
         }
-        else if (context.Resource is AIProfile &&
-            context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
-            context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out sessionObj) &&
-            sessionObj is AIChatSession currentSession &&
-            currentSession.Documents is { Count: > 0 })
+        else if (context.Resource is AIProfile profile)
         {
-            hasSessionDocuments = true;
-            sessionDocuments = currentSession.Documents;
+            var documentsMetadata = profile.As<DocumentsMetadata>();
+            knowledgeBaseDocuments = documentsMetadata.Documents;
+
+            if (context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+                context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                userSuppliedDocuments = session.Documents;
+            }
         }
 
-        if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
-            context.OrchestrationContext.CompletionContext is null)
+        var hasKnowledgeBaseDocuments = knowledgeBaseDocuments?.Any() == true;
+        var hasUserSuppliedDocuments = userSuppliedDocuments?.Any() == true;
+
+        if ((!hasKnowledgeBaseDocuments && !hasUserSuppliedDocuments) || context.OrchestrationContext.CompletionContext is null)
         {
             return;
+        }
+
+        context.OrchestrationContext.Documents ??= [];
+        context.OrchestrationContext.Documents.Clear();
+
+        if (hasKnowledgeBaseDocuments)
+        {
+            context.OrchestrationContext.Documents.AddRange(knowledgeBaseDocuments);
+        }
+
+        if (hasUserSuppliedDocuments)
+        {
+            context.OrchestrationContext.Documents.AddRange(userSuppliedDocuments);
         }
 
         // Signal document availability so system tools (e.g., search_documents)
@@ -102,12 +110,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,
-            ["showUserDocumentAwareness"] = context.Resource is not AIProfile || hasSessionDocuments,
-            ["availableDocuments"] = context.Resource is AIProfile && hasSessionDocuments
-                ? sessionDocuments
-                : context.Resource is AIProfile
-                    ? Array.Empty<ChatDocumentInfo>()
-                    : context.OrchestrationContext.Documents,
+            ["knowledgeBaseDocuments"] = hasKnowledgeBaseDocuments ? knowledgeBaseDocuments : Array.Empty<ChatDocumentInfo>(),
+            ["userSuppliedDocuments"] = hasUserSuppliedDocuments ? userSuppliedDocuments : Array.Empty<ChatDocumentInfo>(),
         };
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);

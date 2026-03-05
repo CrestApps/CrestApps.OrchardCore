@@ -3,15 +3,15 @@ Title: Document Availability Instructions
 Description: Instructs the AI about uploaded documents and available tools.
 Parameters:
 	- tools: array of AIToolDefinitionEntry objects for document processing tools available.
-	- availableDocuments: array of ChatDocumentInfo objects with DocumentId, FileName, ContentType, and FileSize.
-	- showUserDocumentAwareness: boolean flag indicating whether the user should be aware of document uploads/attachments.
+	- knowledgeBaseDocuments: array of profile-level ChatDocumentInfo objects that are hidden background knowledge.
+	- userSuppliedDocuments: array of session/user-level ChatDocumentInfo objects that are user-visible uploads/attachments.
 IsListable: false
 Category: Documents
 ---
 
 [Available Documents, attachments or files]
 
-{% if showUserDocumentAwareness %}
+{% if userSuppliedDocuments.size > 0 %}
 {% if tools.size > 0 %}
 The user has uploaded the following documents as supplementary context.
 Search the uploaded documents first using the document tools before answering.
@@ -27,14 +27,16 @@ Available document tools:
 The user has uploaded the following documents as supplementary context.
 {% endif %}
 
-{% if availableDocuments.size > 0 %}
+{% if userSuppliedDocuments.size > 0 %}
 Available documents:
-{% for doc in availableDocuments %}
+{% for doc in userSuppliedDocuments %}
 - {{ doc.DocumentId }}: "{{ doc.FileName }}" ({{ doc.ContentType | default: "unknown" }}, {{ doc.FileSize }} bytes)
 {% endfor %}
 {% endif %}
-{% else %}
+{% endif %}
+
+{% if knowledgeBaseDocuments.size > 0 %}
 Background knowledge is available for this profile.
 Use the available document tools and background context to answer accurately.
-Do not mention documents, files, uploads, or attachments unless the user explicitly uploaded files in this session.
+Do not mention knowledge-base documents, files, uploads, or attachments unless the user explicitly uploaded files in this session.
 {% endif %}

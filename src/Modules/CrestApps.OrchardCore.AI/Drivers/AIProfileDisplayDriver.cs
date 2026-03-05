@@ -227,7 +227,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
 
         var metadata = profile.As<AIProfileMetadata>();
-        metadata.InitialPrompt = model.InitialPrompt?.Trim();
+        metadata.InitialPrompt = model.AddInitialPrompt ? model.InitialPrompt?.Trim() : null;
 
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
 

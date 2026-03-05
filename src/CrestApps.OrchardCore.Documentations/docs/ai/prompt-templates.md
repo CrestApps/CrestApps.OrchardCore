@@ -86,7 +86,8 @@ Title: Document Availability Instructions
 Description: Instructs the AI about uploaded documents and available tools.
 Parameters:
 	- tools: array of AIToolDefinitionEntry objects for document processing.
-	- availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
+	- knowledgeBaseDocuments: array of profile-level document objects used as hidden background knowledge.
+	- userSuppliedDocuments: array of user/session document objects with DocumentId, FileName, ContentType, and FileSize.
 IsListable: false
 Category: Documents
 ---
