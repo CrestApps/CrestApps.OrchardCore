@@ -42,10 +42,6 @@ public sealed class GetTenantTool: AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
-        {
-            return "The current user does not have permission to manage tenants.";
-        }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {

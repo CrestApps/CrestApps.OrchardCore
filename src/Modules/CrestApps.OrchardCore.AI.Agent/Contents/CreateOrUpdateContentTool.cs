@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,8 +11,8 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.Contents;
 using OrchardCore.Modules;
+using Usr = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -35,6 +36,18 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             "isDraft": {
               "type": "boolean",
               "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
+            },
+            "ownerUsername": {
+              "type": "string",
+              "description": "Optional. The username of the user who should own the content item. Used as a fallback when no user is authenticated."
+            },
+            "ownerUserId": {
+              "type": "string",
+              "description": "Optional. The user ID of the user who should own the content item. Used as a fallback when no user is authenticated."
+            },
+            "ownerEmail": {
+              "type": "string",
+              "description": "Optional. The email of the user who should own the content item. Used as a fallback when no user is authenticated."
             }
           },
           "required": ["contentItem", "isDraft"],
@@ -66,7 +79,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             json = str;
         }
-        else if (arguments.TryGetFirst("contentItem", out object raw) && raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        else if (arguments.TryGetFirst("contentItem", out var raw) && raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
         {
             json = je.GetRawText();
         }
@@ -108,12 +121,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             contentItem = await contentManager.NewAsync(model.ContentType);
 
-            if (!await arguments.IsAuthorizedAsync(CommonPermissions.PublishContent, contentItem))
-            {
-                return "The current user does not have permission to publish the content item";
-            }
-
             contentItem.Merge(model);
+
+            // When no user is authenticated, try to resolve an owner from optional parameters
+            // so that contentItem.Owner is set correctly.
+            await TrySetOwnerAsync(arguments, contentItem);
 
             // TODO, when https://github.com/OrchardCMS/OrchardCore/pull/18939 is meregd,
             // we can similfy this by calling contentManager.ValidateAsync(contentItem);
@@ -139,11 +151,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         }
         else
         {
-            if (!await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
-            {
-                return "The current user does not have permission to edit the content item";
-            }
-
             contentItem.Merge(model, _updateJsonMergeSettings);
 
             await contentManager.UpdateAsync(contentItem);
@@ -187,22 +194,57 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
-        if (await arguments.IsAuthorizedAsync(CommonPermissions.EditContent, contentItem))
+        if (metadata.AdminRouteValues is not null)
         {
-            if (metadata.AdminRouteValues is not null)
-            {
-                response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
-            }
+            response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
         }
 
-        if (await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent, contentItem))
+        if (metadata.DisplayRouteValues is not null)
         {
-            if (metadata.DisplayRouteValues is not null)
-            {
-                response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
-            }
+            response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// Attempts to resolve a content owner from optional tool parameters when no user is authenticated.
+    /// This allows the AI model to specify who should own the content item when invoked from anonymous contexts.
+    /// </summary>
+    private static async Task TrySetOwnerAsync(AIFunctionArguments arguments, ContentItem contentItem)
+    {
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var principal = httpContextAccessor.HttpContext?.User;
+
+        // If a user is already authenticated, the content handlers will set the owner automatically.
+        if (principal?.Identity?.IsAuthenticated == true)
+        {
+            return;
+        }
+
+        var userManager = arguments.Services.GetRequiredService<UserManager<Usr.IUser>>();
+
+        Usr.IUser user = null;
+
+        if (arguments.TryGetFirstString("ownerUserId", out var ownerUserId))
+        {
+            user = await userManager.FindByIdAsync(ownerUserId);
+        }
+
+        if (user is null && arguments.TryGetFirstString("ownerUsername", out var ownerUsername))
+        {
+            user = await userManager.FindByNameAsync(ownerUsername);
+        }
+
+        if (user is null && arguments.TryGetFirstString("ownerEmail", out var ownerEmail))
+        {
+            user = await userManager.FindByEmailAsync(ownerEmail);
+        }
+
+        if (user is not null)
+        {
+            contentItem.Owner = await userManager.GetUserIdAsync(user);
+            contentItem.Author = user.UserName;
+        }
     }
 }

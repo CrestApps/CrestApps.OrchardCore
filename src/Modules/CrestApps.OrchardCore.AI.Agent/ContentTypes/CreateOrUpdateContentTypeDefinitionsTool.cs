@@ -17,11 +17,6 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.EditContentTypes))
-        {
-            return "You do not have permission to edit content types or parts.";
-        }
-
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             return MissingArgument();

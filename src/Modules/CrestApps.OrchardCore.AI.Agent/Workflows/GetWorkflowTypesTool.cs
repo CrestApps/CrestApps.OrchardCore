@@ -46,11 +46,6 @@ public sealed class GetWorkflowTypesTool : AIFunction
         var workflowTypeStore = arguments.Services.GetRequiredService<IWorkflowTypeStore>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
-        {
-            return "The current user does not have permission to manage workflows.";
-        }
-
         if (!arguments.TryGetFirst<string>("workflowTypeId", out var workflowTypeId))
         {
             return "Unable to find a workflowTypeId argument in the function arguments.";

@@ -48,11 +48,6 @@ public sealed class SendSmsTool : AIFunction
         var smsService = arguments.Services.GetRequiredService<ISmsService>();
         var phoneFormatValidator = arguments.Services.GetRequiredService<IPhoneFormatValidator>();
 
-        if (!arguments.IsAuthenticatedOrMcpRequest())
-        {
-            return "You must login to be able to send SMS message.";
-        }
-
         if (!arguments.TryGetFirstString("phone", out var phone))
         {
             return "Unable to find a phone argument in the function arguments.";

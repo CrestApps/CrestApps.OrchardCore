@@ -48,11 +48,6 @@ public sealed class EnableFeatureTool : AIFunction
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
-        {
-            return "The current user does not have permission to manage features.";
-        }
-
         if (!arguments.TryGetFirst<HashSet<string>>("featureIds", out var featureIds))
         {
             return "Unable to find a featureIds argument in the function arguments.";

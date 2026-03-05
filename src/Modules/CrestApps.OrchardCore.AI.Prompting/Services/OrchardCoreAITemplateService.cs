@@ -3,6 +3,7 @@ using CrestApps.AI.Prompting.Providers;
 using CrestApps.AI.Prompting.Rendering;
 using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Services;
@@ -20,16 +21,19 @@ public sealed class OrchardCoreAITemplateService : DefaultAITemplateService
 
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IMemoryCache _memoryCache;
+    private readonly ILogger _logger;
 
     public OrchardCoreAITemplateService(
         IEnumerable<IAITemplateProvider> providers,
         IAITemplateEngine renderer,
         IShellFeaturesManager shellFeaturesManager,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache,
+        ILogger<OrchardCoreAITemplateService> logger)
         : base(providers, renderer)
     {
         _shellFeaturesManager = shellFeaturesManager;
         _memoryCache = memoryCache;
+        _logger = logger;
     }
 
     public override async Task<IReadOnlyList<AITemplate>> ListAsync()
@@ -53,8 +57,15 @@ public sealed class OrchardCoreAITemplateService : DefaultAITemplateService
 
         var allTemplates = await ListAsync();
 
-        return allTemplates.FirstOrDefault(t =>
+        var template = allTemplates.FirstOrDefault(t =>
             string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
+
+        if (template == null)
+        {
+            _logger.LogWarning("AI template with ID '{TemplateId}' was not found. There are {Count} templates available.", id, allTemplates.Count);
+        }
+
+        return template;
     }
 
     private async Task<HashSet<string>> GetEnabledFeatureIdsAsync()

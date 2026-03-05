@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Extensions;
@@ -37,11 +36,6 @@ public sealed class ListFeaturesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
-        {
-            return "The current user does not have permission to manage features.";
-        }
 
         var features = (await shellFeaturesManager.GetAvailableFeaturesAsync())
             .Where(feature => !feature.EnabledByDependencyOnly && !feature.IsTheme());

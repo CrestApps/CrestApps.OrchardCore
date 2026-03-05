@@ -3,11 +3,10 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class UnpublishContentTool : AIFunction
+public sealed class UnpublishContentTool: AIFunction
 {
     public const string TheName = "unpublishContentItem";
 
@@ -43,11 +42,6 @@ public sealed class UnpublishContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.PublishContent))
-        {
-            return "You do not have permission to publish content items.";
-        }
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {

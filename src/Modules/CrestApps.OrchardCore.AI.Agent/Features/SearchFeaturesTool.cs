@@ -44,11 +44,6 @@ public sealed class FeaturesSearchTool : AIFunction
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
-        {
-            return "The current user does not have permission to manage features.";
-        }
-
         if (!arguments.TryGetFirstString("name", out var name))
         {
             return "Unable to find a name argument in the function arguments.";

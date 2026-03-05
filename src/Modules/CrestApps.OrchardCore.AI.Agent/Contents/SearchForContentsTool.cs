@@ -4,7 +4,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 using OrchardCore.Contents.Services;
 using OrchardCore.Contents.ViewModels;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -60,11 +59,6 @@ public sealed class SearchForContentsTool : AIFunction
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
-
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.ListContent))
-        {
-            return "You do not have permission to list content items.";
-        }
 
         if (!arguments.TryGetFirstString("term", out var term))
         {

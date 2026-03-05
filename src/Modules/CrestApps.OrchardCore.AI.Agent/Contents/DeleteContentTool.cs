@@ -3,11 +3,10 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class DeleteContentTool : AIFunction
+public sealed class DeleteContentTool: AIFunction
 {
     public const string TheName = "deleteContentItem";
 
@@ -44,11 +43,6 @@ public sealed class DeleteContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.CloneContent))
-        {
-            return "You do not have permission to delete content items.";
-        }
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {

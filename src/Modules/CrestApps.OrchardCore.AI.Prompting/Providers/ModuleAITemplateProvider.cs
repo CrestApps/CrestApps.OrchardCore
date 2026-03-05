@@ -1,3 +1,4 @@
+using System.Reflection;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Parsing;
 using CrestApps.AI.Prompting.Providers;
@@ -12,6 +13,8 @@ namespace CrestApps.OrchardCore.AI.Prompting.Providers;
 /// Scans each module's <c>AITemplates/Prompts/</c> directory for files
 /// matching registered parser extensions.
 /// Files in subdirectories matching a feature ID are associated with that feature.
+/// When the physical directory is not found (e.g., NuGet/Docker deployment),
+/// falls back to scanning embedded resources in the module's assembly.
 /// </summary>
 public sealed class ModuleAITemplateProvider : IAITemplateProvider
 {
@@ -49,36 +52,81 @@ public sealed class ModuleAITemplateProvider : IAITemplateProvider
             var fileProvider = _hostEnvironment.ContentRootFileProvider;
             var promptsDirectory = fileProvider.GetDirectoryContents(promptsPath);
 
-            if (!promptsDirectory.Exists)
-            {
-                continue;
-            }
-
             var moduleId = extension.Id;
             var defaultFeatureId = extension.Features.FirstOrDefault()?.Id ?? moduleId;
 
-            // Scan root-level prompts (associated with the module's default feature).
-            DiscoverTemplates(promptsDirectory, defaultFeatureId, moduleId, templates);
-
-            // Scan subdirectories for feature-specific prompts.
-            foreach (var entry in promptsDirectory)
+            if (promptsDirectory.Exists)
             {
-                if (!entry.IsDirectory)
-                {
-                    continue;
-                }
+                // Scan root-level prompts (associated with the module's default feature).
+                DiscoverTemplates(promptsDirectory, defaultFeatureId, moduleId, templates);
 
-                var featureId = entry.Name;
-                var featureDir = fileProvider.GetDirectoryContents(Path.Combine(promptsPath, featureId));
-
-                if (featureDir.Exists)
+                // Scan subdirectories for feature-specific prompts.
+                foreach (var entry in promptsDirectory)
                 {
-                    DiscoverTemplates(featureDir, featureId, moduleId, templates);
+                    if (!entry.IsDirectory)
+                    {
+                        continue;
+                    }
+
+                    var featureId = entry.Name;
+                    var featureDir = fileProvider.GetDirectoryContents(Path.Combine(promptsPath, featureId));
+
+                    if (featureDir.Exists)
+                    {
+                        DiscoverTemplates(featureDir, featureId, moduleId, templates);
+                    }
                 }
+            }
+            else
+            {
+                // Fall back to scanning embedded resources for NuGet/Docker deployments
+                // where the physical directory does not exist.
+                DiscoverEmbeddedTemplates(moduleId, defaultFeatureId, templates);
             }
         }
 
         return Task.FromResult<IReadOnlyList<AITemplate>>(templates);
+    }
+
+    private void DiscoverEmbeddedTemplates(
+        string moduleId,
+        string defaultFeatureId,
+        List<AITemplate> templates)
+    {
+        var assembly = FindAssembly(moduleId);
+        if (assembly == null)
+        {
+            return;
+        }
+
+        var provider = new EmbeddedResourceAITemplateProvider(assembly, _parsers, moduleId, defaultFeatureId);
+
+        try
+        {
+            var embeddedTemplates = provider.GetTemplatesAsync().GetAwaiter().GetResult();
+
+            if (embeddedTemplates.Count > 0)
+            {
+                templates.AddRange(embeddedTemplates);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to discover embedded AI templates for module '{ModuleId}'.", moduleId);
+        }
+    }
+
+    private static Assembly FindAssembly(string moduleId)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            if (string.Equals(assembly.GetName().Name, moduleId, StringComparison.OrdinalIgnoreCase))
+            {
+                return assembly;
+            }
+        }
+
+        return null;
     }
 
     private void DiscoverTemplates(

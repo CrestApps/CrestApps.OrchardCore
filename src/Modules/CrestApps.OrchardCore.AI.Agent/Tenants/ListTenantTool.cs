@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
@@ -36,10 +35,6 @@ public sealed class ListTenantTool: AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
-        {
-            return "The current user does not have permission to manage tenants.";
-        }
 
         var shells = shellHost.GetAllSettings();
 
