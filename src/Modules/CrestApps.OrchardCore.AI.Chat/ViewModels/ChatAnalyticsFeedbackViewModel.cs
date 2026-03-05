@@ -2,6 +2,7 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 
 /// <summary>
 /// View model for user feedback (thumbs up/down) analytics.
+/// Counts represent individual message-level ratings across all sessions.
 /// </summary>
 public class ChatAnalyticsFeedbackViewModel
 {
@@ -17,7 +18,7 @@ public class ChatAnalyticsFeedbackViewModel
 
     public double FeedbackRatePercent { get; set; }
 
-    public int TotalSessionsWithFeedback { get; set; }
+    public int TotalRatings { get; set; }
 
     public bool HasData { get; set; }
 }

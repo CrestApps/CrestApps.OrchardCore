@@ -19,5 +19,7 @@ public sealed class AIChatSessionIndex : MapIndex
 
     public ChatSessionStatus Status { get; set; }
 
+    public PostSessionProcessingStatus PostSessionProcessingStatus { get; set; }
+
     public DateTime LastActivityUtc { get; set; }
 }

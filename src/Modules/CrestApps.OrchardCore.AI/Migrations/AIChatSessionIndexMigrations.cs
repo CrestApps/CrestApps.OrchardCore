@@ -15,6 +15,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
                 .Column<string>("UserId", column => column.WithLength(26))
                 .Column<string>("ClientId", column => column.WithLength(64))
                 .Column<string>("Status", column => column.WithDefault("Active"))
+                .Column<string>("PostSessionProcessingStatus", column => column.WithDefault("None"))
                 .Column<DateTime>("LastActivityUtc")
                 .Column<DateTime>("CreatedUtc")
                 .Column<string>("Title", column => column.WithLength(255)),
@@ -63,7 +64,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
             collection: AIConstants.CollectionName
         );
 
-        return 2;
+        return 3;
     }
 
     public async Task<int> UpdateFrom1Async()
@@ -83,6 +84,16 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
             collection: AIConstants.CollectionName
         );
 
-        return 2;
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
+        {
+            table.AddColumn<string>("PostSessionProcessingStatus", column => column.WithDefault("None"));
+        }, collection: AIConstants.CollectionName);
+
+        return 3;
     }
 }

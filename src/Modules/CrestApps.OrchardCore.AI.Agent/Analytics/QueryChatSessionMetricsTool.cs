@@ -89,9 +89,9 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         var completedSessions = metrics.Where(m => m.SessionEndedUtc.HasValue).ToList();
         var resolvedSessions = metrics.Count(m => m.IsResolved);
         var authenticatedSessions = metrics.Count(m => m.IsAuthenticated);
-        var ratingsPositive = metrics.Count(m => m.UserRating == true);
-        var ratingsNegative = metrics.Count(m => m.UserRating == false);
-        var ratingsTotal = metrics.Count(m => m.UserRating.HasValue);
+        var ratingsPositive = metrics.Sum(m => m.ThumbsUpCount);
+        var ratingsNegative = metrics.Sum(m => m.ThumbsDownCount);
+        var ratingsTotal = ratingsPositive + ratingsNegative;
 
         var hourDistribution = metrics
             .GroupBy(m => m.HourOfDay)

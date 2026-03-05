@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
@@ -36,9 +37,20 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
             context.Context.UseCaching = metadata.UseCaching;
         }
 
-        if (profile.TryGet<FunctionInvocationMetadata>(out var functionInvocationMetadata))
+        if (profile.TryGet<FunctionInvocationMetadata>(out var functionInvocationMetadata)
+            && functionInvocationMetadata.Names is { Length: > 0 })
         {
             context.Context.ToolNames = functionInvocationMetadata.Names;
+        }
+        else if (profile.Properties.TryGetPropertyValue("AIProfileFunctionInvocationMetadata", out var legacyNode))
+        {
+            // Backward compatibility: read from the legacy property key used in earlier versions.
+            var legacyMetadata = legacyNode.Deserialize<FunctionInvocationMetadata>();
+
+            if (legacyMetadata?.Names is { Length: > 0 })
+            {
+                context.Context.ToolNames = legacyMetadata.Names;
+            }
         }
     }
 
