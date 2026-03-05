@@ -43,10 +43,6 @@ public sealed class DisableTenantTool: AIFunction
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
-        {
-            return "The current user does not have permission to manage tenants.";
-        }
 
         if (!shellSettings.IsDefaultShell())
         {

@@ -17,11 +17,6 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
-        {
-            return "You do not have permission to manage workflows.";
-        }
-
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             return MissingArgument();

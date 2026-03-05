@@ -63,11 +63,6 @@ public sealed class SendNotificationTool : AIFunction
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
         var notificationService = arguments.Services.GetRequiredService<INotificationService>();
 
-        if (!arguments.IsAuthenticatedOrMcpRequest())
-        {
-            return "You must login to be able to send notification.";
-        }
-
         if (!arguments.TryGetFirstString("userId", out var userId))
         {
             return "Unable to find a userId argument in the function arguments.";

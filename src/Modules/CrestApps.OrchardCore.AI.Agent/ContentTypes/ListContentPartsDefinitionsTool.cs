@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
@@ -36,11 +35,6 @@ public sealed class ListContentPartsDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
-        {
-            return "You do not have permission to view content types.";
-        }
 
         return JsonSerializer.Serialize(await contentDefinitionManager.ListPartDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
     }

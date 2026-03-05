@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Extensions.Features;
@@ -45,11 +44,6 @@ public sealed class ListStartupRecipesTool : AIFunction
         if (!shellSettings.IsDefaultShell())
         {
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
-        }
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
-        {
-            return "You do not have permission to execute a recipe.";
         }
 
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();

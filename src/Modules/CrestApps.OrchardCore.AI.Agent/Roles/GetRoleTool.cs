@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Roles;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.AI.Agent.Roles;
@@ -48,11 +47,6 @@ internal sealed class GetRoleTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var roleManager = arguments.Services.GetRequiredService<RoleManager<IRole>>();
-
-        if (!await arguments.IsAuthorizedAsync(RolesPermissions.ManageRoles))
-        {
-            return "The current user does not have permission to manage roles.";
-        }
 
         var roleId = arguments.GetFirstValueOrDefault<string>("roleId");
         var roleName = arguments.GetFirstValueOrDefault<string>("roleName");

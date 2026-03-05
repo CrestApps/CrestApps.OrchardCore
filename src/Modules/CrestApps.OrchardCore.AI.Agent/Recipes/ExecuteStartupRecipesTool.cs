@@ -59,11 +59,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
             return "Unable to find a recipeName argument in the function arguments.";
         }
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
-        {
-            return "You do not have permission to execute a recipe.";
-        }
-
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(recipeHarvesters, features);
 

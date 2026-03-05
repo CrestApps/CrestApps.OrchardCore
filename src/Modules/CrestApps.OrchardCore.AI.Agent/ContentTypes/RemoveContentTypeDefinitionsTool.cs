@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class RemoveContentTypeDefinitionsTool : AIFunction
+public sealed class RemoveContentTypeDefinitionsTool: AIFunction
 {
     public const string TheName = "removeContentTypeDefinition";
 
@@ -45,11 +45,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.EditContentTypes))
-        {
-            return "You do not have permission to edit content definitions.";
-        }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {

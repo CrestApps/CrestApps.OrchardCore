@@ -53,11 +53,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
-        {
-            return "The current user does not have permission to manage workflows.";
-        }
-
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
         if (page < 1)

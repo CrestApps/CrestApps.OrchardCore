@@ -79,11 +79,6 @@ public sealed class CreateTenantTool : AIFunction
         var shellSettingsManager = arguments.Services.GetRequiredService<IShellSettingsManager>();
         var databaseProviders = arguments.Services.GetRequiredService<IEnumerable<DatabaseProvider>>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
-        {
-            return "The current user does not have permission to manage tenants.";
-        }
-
         if (!shellSettings.IsDefaultShell())
         {
             return "This function is not supported in this tenant. It can only be used in the default tenant.";

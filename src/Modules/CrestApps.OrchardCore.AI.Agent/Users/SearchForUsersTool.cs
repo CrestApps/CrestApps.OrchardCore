@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
-using OrchardCore.Users;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
 using OrchardCore.Users.ViewModels;
@@ -59,11 +58,6 @@ public sealed class SearchForUsersTool : AIFunction
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
-
-        if (!await arguments.IsAuthorizedAsync(UsersPermissions.ListUsers))
-        {
-            return "You do not have permission to list users.";
-        }
 
         if (!arguments.TryGetFirstString("term", out var term))
         {

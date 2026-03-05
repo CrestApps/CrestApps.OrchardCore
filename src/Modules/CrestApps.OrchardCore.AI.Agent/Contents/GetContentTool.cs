@@ -4,7 +4,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
@@ -46,11 +45,6 @@ public sealed class GetContentTool : AIFunction
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
-
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent))
-        {
-            return "You do not have permission to view content items.";
-        }
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {

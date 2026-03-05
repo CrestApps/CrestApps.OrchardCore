@@ -6,7 +6,7 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class GetContentPartDefinitionsTool : AIFunction
+public sealed class GetContentPartDefinitionsTool: AIFunction
 {
     public const string TheName = "getContentPartDefinition";
 
@@ -42,11 +42,6 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
-        {
-            return "You do not have permission to view content types.";
-        }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
-using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
@@ -17,11 +16,6 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
-
-        if (!await arguments.IsAuthorizedAsync(DeploymentPermissions.Import))
-        {
-            return "You do not have permission to import recipes.";
-        }
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {

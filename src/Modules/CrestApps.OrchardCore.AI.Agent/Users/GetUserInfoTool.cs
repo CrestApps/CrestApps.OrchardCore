@@ -53,11 +53,6 @@ internal sealed class GetUserInfoTool : AIFunction
 
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
 
-        if (!await arguments.IsAuthorizedAsync(UsersPermissions.ViewUsers))
-        {
-            return "The current user does not have permission to view users";
-        }
-
         var userId = arguments.GetFirstValueOrDefault<string>("userId");
         var username = arguments.GetFirstValueOrDefault<string>("username");
         var email = arguments.GetFirstValueOrDefault<string>("email");
