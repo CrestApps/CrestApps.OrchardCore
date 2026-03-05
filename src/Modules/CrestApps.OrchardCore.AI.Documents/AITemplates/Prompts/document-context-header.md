@@ -3,12 +3,13 @@ Title: Document Context Header
 Description: Header for uploaded document RAG context injection.
 Parameters:
 	- searchToolName: the name of the search tool for additional lookups (optional).
-	- showUserDocumentAwareness: boolean flag indicating whether the user should be aware of document uploads/attachments.
+	- hasUserSuppliedDocumentContext: boolean flag indicating user-uploaded/session document context is present.
+	- hasKnowledgeBaseDocumentContext: boolean flag indicating profile knowledge-base document context is present.
 IsListable: false
 Category: RAG
 ---
 
-{% if showUserDocumentAwareness %}
+{% if hasUserSuppliedDocumentContext %}
 [Uploaded Document Context]
 The following content was retrieved from the user's uploaded documents via semantic search. Use this information to answer the user's question accurately.
 If the documents do not contain relevant information, use your general knowledge to answer instead.
@@ -16,9 +17,14 @@ When citing information, include the corresponding reference marker (e.g., [doc:
 {% if searchToolName %}
 If you need additional context, use the '{{ searchToolName }}' tool to search for more content in the uploaded documents.
 {% endif %}
-{% else %}
+{% endif %}
+
+{% if hasKnowledgeBaseDocumentContext %}
 [Background Knowledge Context]
 The following content is background knowledge for this profile. Use it naturally to answer the user's question accurately.
 If the context does not contain relevant information, use your general knowledge to answer instead.
-Do not mention documents, files, uploads, or attachments unless the user explicitly uploaded files in this session.
+Do not mention knowledge-base documents, file names, uploads, attachments, or that any background files exist.
+{% if hasUserSuppliedDocumentContext %}
+If both user-uploaded and background knowledge context are present, only user-uploaded documents may be referenced as documents.
+{% endif %}
 {% endif %}

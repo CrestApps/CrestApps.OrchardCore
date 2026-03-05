@@ -78,6 +78,23 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         var hasKnowledgeBaseDocuments = knowledgeBaseDocuments?.Any() == true;
         var hasUserSuppliedDocuments = userSuppliedDocuments?.Any() == true;
 
+        if (!hasKnowledgeBaseDocuments && !hasUserSuppliedDocuments &&
+            context.OrchestrationContext.Documents is { Count: > 0 } existingDocuments)
+        {
+            var clonedDocuments = existingDocuments.ToArray();
+
+            if (context.Resource is AIProfile)
+            {
+                knowledgeBaseDocuments = clonedDocuments;
+                hasKnowledgeBaseDocuments = true;
+            }
+            else
+            {
+                userSuppliedDocuments = clonedDocuments;
+                hasUserSuppliedDocuments = true;
+            }
+        }
+
         if ((!hasKnowledgeBaseDocuments && !hasUserSuppliedDocuments) || context.OrchestrationContext.CompletionContext is null)
         {
             return;
@@ -110,6 +127,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,
+            ["availableDocuments"] = context.OrchestrationContext.Documents,
             ["knowledgeBaseDocuments"] = hasKnowledgeBaseDocuments ? knowledgeBaseDocuments : Array.Empty<ChatDocumentInfo>(),
             ["userSuppliedDocuments"] = hasUserSuppliedDocuments ? userSuppliedDocuments : Array.Empty<ChatDocumentInfo>(),
         };

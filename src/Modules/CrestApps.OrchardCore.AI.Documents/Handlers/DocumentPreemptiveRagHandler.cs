@@ -213,12 +213,17 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         using var sb = ZString.CreateStringBuilder();
 
         var arguments = new Dictionary<string, object>();
+        var hasUserSuppliedDocumentContext = finalResults.Any(x =>
+            x.ReferenceType == AIConstants.DocumentReferenceTypes.ChatInteraction ||
+            x.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
+        var hasKnowledgeBaseDocumentContext = finalResults.Any(x => x.ReferenceType == AIConstants.DocumentReferenceTypes.Profile);
 
         if (!orchestrationContext.DisableTools)
         {
             arguments["searchToolName"] = SystemToolNames.SearchDocuments;
         }
-        arguments["showUserDocumentAwareness"] = showUserDocumentAwareness;
+        arguments["hasUserSuppliedDocumentContext"] = hasUserSuppliedDocumentContext;
+        arguments["hasKnowledgeBaseDocumentContext"] = hasKnowledgeBaseDocumentContext;
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentContextHeader, arguments);
 
