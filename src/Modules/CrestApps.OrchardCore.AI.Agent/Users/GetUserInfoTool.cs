@@ -1,8 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -51,6 +52,12 @@ internal sealed class GetUserInfoTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<GetUserInfoTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
 
         var userId = arguments.GetFirstValueOrDefault<string>("userId");
@@ -63,6 +70,7 @@ internal sealed class GetUserInfoTool : AIFunction
 
         if (!hasUserId && !hasUsername && !hasEmail)
         {
+            logger.LogWarning("AI tool '{ToolName}' invoked without any identifying argument (userId, username, or email).", Name);
             return "You must provide at least one of the following arguments: userId, username, or email.";
         }
 
@@ -83,7 +91,13 @@ internal sealed class GetUserInfoTool : AIFunction
 
         if (user is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find user with the provided arguments.", Name);
             return "Unable to find a user with the provided arguments.";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         if (user is User u)

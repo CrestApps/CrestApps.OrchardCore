@@ -6,6 +6,7 @@ using Cysharp.Text;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
 
@@ -55,8 +56,16 @@ public sealed class ReadTabularDataTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
+        var logger = arguments.Services.GetRequiredService<ILogger<ReadTabularDataTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         if (!arguments.TryGetFirstString("document_id", out var documentId))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'document_id'.", Name);
             return "Unable to find a 'document_id' argument in the arguments parameter.";
         }
 
@@ -95,6 +104,7 @@ public sealed class ReadTabularDataTool : AIFunction
 
         if (string.IsNullOrEmpty(referenceId))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
             return "Document access requires an active chat interaction session or AI profile.";
         }
 
@@ -102,6 +112,7 @@ public sealed class ReadTabularDataTool : AIFunction
 
         if (documentStore is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
             return "Document store is not available.";
         }
 
@@ -111,11 +122,13 @@ public sealed class ReadTabularDataTool : AIFunction
         if (document is null ||
             (validReferenceIds is not null ? !validReferenceIds.Contains(document.ReferenceId) : document.ReferenceId != referenceId))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: document '{DocumentId}' was not found.", Name, documentId);
             return $"Document with ID '{documentId}' was not found.";
         }
 
         if (!IsTabularFile(document.FileName))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: document '{FileName}' is not a recognized tabular format.", Name, document.FileName);
             return $"Document '{document.FileName}' is not a recognized tabular format. Use 'read_document' instead.";
         }
 
@@ -124,6 +137,7 @@ public sealed class ReadTabularDataTool : AIFunction
 
         if (chunkStore is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: chunk store is not available for document '{FileName}'.", Name, document.FileName);
             return $"Document '{document.FileName}' has no extractable text content.";
         }
 
@@ -131,6 +145,7 @@ public sealed class ReadTabularDataTool : AIFunction
 
         if (chunks.Count == 0)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: no chunks found for document '{FileName}'.", Name, document.FileName);
             return $"Document '{document.FileName}' has no extractable text content.";
         }
 
@@ -138,10 +153,16 @@ public sealed class ReadTabularDataTool : AIFunction
 
         if (string.IsNullOrWhiteSpace(text))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: extracted text is empty for document '{FileName}'.", Name, document.FileName);
             return $"Document '{document.FileName}' has no extractable text content.";
         }
 
         var content = LimitTabularRows(text, maxRows);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return $"[Tabular data from: {document.FileName}]\n\n{content}";
     }

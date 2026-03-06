@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
 using OrchardCore.Users;
 
@@ -60,22 +61,32 @@ public sealed class SendEmailTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<SendEmailTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
         var emailService = arguments.Services.GetRequiredService<IEmailService>();
 
         if (!arguments.TryGetFirstString("to", out var to))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "to");
             return "Unable to find a to argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "subject");
             return "Unable to find a subject argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("body", out var body))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
             return "Unable to find a body argument in the function arguments.";
         }
 
@@ -117,9 +128,14 @@ public sealed class SendEmailTool : AIFunction
 
         if (result.Succeeded)
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
             return "The email was sent successfully.";
         }
 
+        logger.LogWarning("AI tool '{ToolName}' failed to send email to '{To}'.", Name, to);
         return $"The email was not sent successfully due to the following: {string.Join(' ', result.Errors)}";
     }
 }

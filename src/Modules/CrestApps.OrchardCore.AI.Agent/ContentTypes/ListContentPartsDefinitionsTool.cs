@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -34,8 +35,21 @@ public sealed class ListContentPartsDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListContentPartsDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
 
-        return JsonSerializer.Serialize(await contentDefinitionManager.ListPartDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+        var result = JsonSerializer.Serialize(await contentDefinitionManager.ListPartDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result;
     }
 }

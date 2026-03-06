@@ -1,8 +1,9 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
 using OrchardCore.Users;
@@ -60,21 +61,30 @@ public sealed class SendNotificationTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<SendNotificationTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
         var notificationService = arguments.Services.GetRequiredService<INotificationService>();
 
         if (!arguments.TryGetFirstString("userId", out var userId))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "userId");
             return "Unable to find a userId argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "subject");
             return "Unable to find a subject argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("summary", out var summary))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "summary");
             return "Unable to find a summary argument in the function arguments.";
         }
 
@@ -94,6 +104,7 @@ public sealed class SendNotificationTool : AIFunction
 
         if (user is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find user with ID '{UserId}'.", Name, userId);
             return "Unable to find a user that matches the given userId: " + userId;
         }
 
@@ -101,9 +112,14 @@ public sealed class SendNotificationTool : AIFunction
 
         if (count > 0)
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
             return "The user was notified successfully.";
         }
 
+        logger.LogWarning("AI tool '{ToolName}' failed to send notification to user '{UserId}'.", Name, userId);
         return "The notification was not sent successfully.";
     }
 }

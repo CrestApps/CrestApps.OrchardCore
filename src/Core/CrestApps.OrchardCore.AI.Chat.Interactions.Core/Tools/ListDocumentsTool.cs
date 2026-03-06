@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Models;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
 
@@ -39,6 +40,13 @@ public sealed class ListDocumentsTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
+        var logger = arguments.Services.GetRequiredService<ILogger<ListDocumentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
         if (executionContext?.Resource is ChatInteraction interaction)
@@ -48,6 +56,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
@@ -55,6 +64,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documents is null || documents.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}': no documents attached to session '{SessionId}'.", Name, chatInteractionId);
                 return "No documents are attached to this session.";
             }
 
@@ -66,6 +76,11 @@ public sealed class ListDocumentsTool : AIFunction
                 FileSize = FormatFileSize(d.FileSize),
             });
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return JsonSerializer.Serialize(result);
         }
 
@@ -75,6 +90,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
@@ -102,6 +118,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (allDocuments.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}': no documents attached.", Name);
                 return "No documents are attached.";
             }
 
@@ -113,8 +130,15 @@ public sealed class ListDocumentsTool : AIFunction
                 FileSize = FormatFileSize(d.FileSize),
             });
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return JsonSerializer.Serialize(result);
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
 
         return "Document access requires an active chat interaction session or AI profile.";
     }

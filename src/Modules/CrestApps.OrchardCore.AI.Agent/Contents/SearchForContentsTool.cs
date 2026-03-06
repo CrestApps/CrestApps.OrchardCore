@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents.Services;
@@ -54,6 +55,13 @@ public sealed class SearchForContentsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<SearchForContentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
@@ -62,6 +70,8 @@ public sealed class SearchForContentsTool : AIFunction
 
         if (!arguments.TryGetFirstString("term", out var term))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a term argument in the function arguments.", TheName);
+
             return "Unable to find a term argument in the function arguments.";
         }
 
@@ -82,6 +92,11 @@ public sealed class SearchForContentsTool : AIFunction
         var contentItems = await query.Skip(startingIndex)
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
 
         return
         $$"""

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,9 +53,15 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var logger = arguments.Services.GetRequiredService<ILogger<ExecuteStartupRecipesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
         {
+            logger.LogWarning("AI tool '{ToolName}': missing 'recipeName' argument.", Name);
+
             return "Unable to find a recipeName argument in the function arguments.";
         }
 
@@ -66,6 +72,8 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
         if (recipe is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': no recipe found matching name '{RecipeName}'.", Name, recipeName);
+
             return "Unable to find a recipe that match the given recipe name.";
         }
 
@@ -79,6 +87,11 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
             await recipeExecutor.ExecuteAsync(executionId, recipe, environment, cancellationToken);
 
             await shellHost.ReleaseShellContextAsync(shellSettings);
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
 
             return $"The recipe '{recipe.DisplayName}' has been run successfully";
         }

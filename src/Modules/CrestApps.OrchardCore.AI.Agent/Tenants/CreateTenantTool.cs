@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
 using OrchardCore.Environment.Shell;
 
@@ -74,6 +75,13 @@ public sealed class CreateTenantTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<CreateTenantTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellSettingsManager = arguments.Services.GetRequiredService<IShellSettingsManager>();
@@ -81,16 +89,22 @@ public sealed class CreateTenantTool : AIFunction
 
         if (!shellSettings.IsDefaultShell())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
+
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipeName' argument.", Name);
+
             return "Unable to find a recipeName argument in the function arguments.";
         }
 
@@ -102,6 +116,8 @@ public sealed class CreateTenantTool : AIFunction
 
         if (shellHost.TryGetSettings(name, out var _))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' already exists.", Name, name);
+
             return "A tenant with the same name already exists.";
         }
 
@@ -126,6 +142,8 @@ public sealed class CreateTenantTool : AIFunction
 
         if (string.IsNullOrEmpty(newShellSettings.RequestUrlPrefix) && string.IsNullOrEmpty(newShellSettings.RequestUrlHost))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: neither 'requestUrlHost' nor 'requestUrlPrefix' was provided for tenant '{TenantName}'.", Name, name);
+
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";
         }
 
@@ -155,6 +173,11 @@ public sealed class CreateTenantTool : AIFunction
         }
 
         await shellHost.UpdateShellSettingsAsync(newShellSettings);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return $"The tenant {name} was created successfully.";
     }

@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -43,11 +44,19 @@ public sealed class RemoveContentTypeDefinitionsTool: AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<RemoveContentTypeDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
@@ -55,6 +64,8 @@ public sealed class RemoveContentTypeDefinitionsTool: AIFunction
 
         if (typeDefinition is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find a type definition matching the name '{ContentType}'.", TheName, name);
+
             return
                 $"""
                 Unable to find a type definition that match the name: {name}.
@@ -79,8 +90,15 @@ public sealed class RemoveContentTypeDefinitionsTool: AIFunction
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+            }
+
             return $"The content type {name} was removed successfully";
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed to remove content type definition '{ContentType}'.", TheName, name);
 
         return "Unable to remove the content type definition.";
     }

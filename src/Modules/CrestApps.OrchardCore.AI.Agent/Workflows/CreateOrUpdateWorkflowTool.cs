@@ -1,6 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
@@ -17,11 +19,23 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateWorkflowTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "recipe");
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(arguments.Services, recipe, cancellationToken);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
+
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
     }
 }

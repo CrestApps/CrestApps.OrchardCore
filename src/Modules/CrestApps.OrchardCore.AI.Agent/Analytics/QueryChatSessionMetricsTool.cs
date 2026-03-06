@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -57,6 +58,12 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<QueryChatSessionMetricsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var session = arguments.Services.GetRequiredService<ISession>();
 
         var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
@@ -82,6 +89,8 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
 
         if (metrics.Count == 0)
         {
+            logger.LogWarning("AI tool '{ToolName}': no session metrics found for the given filters.", Name);
+
             return JsonSerializer.Serialize(new { message = "No session metrics found for the given filters.", totalSessions = 0 });
         }
 
@@ -130,6 +139,11 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
             hourOfDayDistribution = hourDistribution,
             dayOfWeekDistribution = dayDistribution,
         };
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(result);
     }

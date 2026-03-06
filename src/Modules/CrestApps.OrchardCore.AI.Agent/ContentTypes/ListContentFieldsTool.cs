@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
@@ -34,10 +35,23 @@ public sealed class ListContentFieldsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListContentFieldsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentMetadataService = arguments.Services.GetRequiredService<ContentMetadataService>();
 
         var fieldTypes = await contentMetadataService.GetFieldsAsync();
 
-        return JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
+        var result = JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result;
     }
 }

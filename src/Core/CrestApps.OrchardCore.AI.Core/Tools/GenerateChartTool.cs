@@ -48,12 +48,18 @@ public sealed class GenerateChartTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("data_description", out var dataDescription))
+        var logger = arguments.Services.GetRequiredService<ILogger<GenerateChartTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a 'data_description' argument in the arguments parameter.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var logger = arguments.Services.GetService<ILogger<GenerateChartTool>>();
+        if (!arguments.TryGetFirstString("data_description", out var dataDescription))
+        {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'data_description'.", Name);
+            return "Unable to find a 'data_description' argument in the arguments parameter.";
+        }
 
         try
         {
@@ -61,6 +67,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (executionContext is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: execution context is missing.", Name);
                 return $"Chart generation is not available. The {nameof(AIToolExecutionContext)} is missing from the invocation context.";
             }
 
@@ -69,6 +76,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(providerName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: AI provider is not configured.", Name);
                 return "Chart generation is not available. AI provider is not configured.";
             }
 
@@ -76,6 +84,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: AI provider '{ProviderName}' is invalid.", Name, providerName);
                 return "Chart generation is not available. AI provider is invalid.";
             }
 
@@ -86,6 +95,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no valid connection configured for provider '{ProviderName}'.", Name, providerName);
                 return "Chart generation is not available. No connection is configured.";
             }
 
@@ -99,6 +109,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(deploymentName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no chat model deployment configured.", Name);
                 return "Chart generation is not available. No chat model deployment is configured.";
             }
 
@@ -127,6 +138,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (response is null || string.IsNullOrWhiteSpace(response.Text))
             {
+                logger.LogWarning("AI tool '{ToolName}' received an empty response from the chat client.", Name);
                 return "Failed to generate chart configuration.";
             }
 
@@ -134,6 +146,7 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(chartConfig))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed to extract valid JSON from the chat response.", Name);
                 return "Failed to generate valid chart configuration.";
             }
 
@@ -144,20 +157,27 @@ public sealed class GenerateChartTool : AIFunction
 
                 if (!doc.RootElement.TryGetProperty("type", out _) || !doc.RootElement.TryGetProperty("data", out _))
                 {
+                    logger.LogWarning("AI tool '{ToolName}' generated chart config missing 'type' or 'data' properties.", Name);
                     return "Generated chart configuration is missing required properties.";
                 }
             }
             catch (JsonException)
             {
+                logger.LogWarning("AI tool '{ToolName}' generated invalid JSON for chart configuration.", Name);
                 return "Failed to generate valid chart configuration.";
             }
 
-            return $"Chart generated successfully. Include the following marker exactly as-is in your response (do NOT modify, convert to an image, or replace it):\n\n[chart:{chartConfig}]";
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
+            return $"Chart generated successfully.Include the following marker exactly as-is in your response (do NOT modify, convert to an image, or replace it):\n\n[chart:{chartConfig}]";
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error during chart generation.");
-            return $"An error occurred while generating the chart.";
+            logger.LogError(ex, "Error during chart generation.");
+            return "An error occurred while generating the chart.";
         }
     }
 
