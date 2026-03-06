@@ -9,7 +9,7 @@ public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex, ISourceA
     /// Gets or sets the technical name of the profile.
     /// Maps to <see cref="Models.AIProfile.Name"/> to satisfy <see cref="INameAwareIndex"/>.
     /// </summary>
-    public string DisplayText { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
     /// Gets or sets the source provider name for the profile.

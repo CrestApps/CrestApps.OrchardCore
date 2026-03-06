@@ -11,7 +11,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateMapIndexTableAsync<AIProfileIndex>(table => table
                 .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("DisplayText", column => column.WithLength(255))
+                .Column<string>("Name", column => column.WithLength(255))
                 .Column<string>("Source", column => column.WithLength(255))
                 .Column<string>("Type", column => column.WithLength(50))
                 .Column<string>("ConnectionName", column => column.WithLength(255))
@@ -27,7 +27,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
             .CreateIndex("IDX_AIProfileIndex_DocumentId",
                 "DocumentId",
                 "ItemId",
-                "DisplayText",
+                "Name",
                 "Source",
                 "Type"),
             collection: AIConstants.AICollectionName
@@ -38,7 +38,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
                 "DocumentId",
                 "Type",
                 "IsListable",
-                "DisplayText"),
+                "Name"),
             collection: AIConstants.AICollectionName
         );
 

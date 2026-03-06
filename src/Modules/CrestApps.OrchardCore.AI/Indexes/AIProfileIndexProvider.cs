@@ -23,7 +23,7 @@ internal sealed class AIProfileIndexProvider : IndexProvider<AIProfile>
                 return new AIProfileIndex
                 {
                     ItemId = profile.ItemId,
-                    DisplayText = profile.Name,
+                    Name = profile.Name,
                     Source = profile.Source,
                     Type = profile.Type.ToString(),
                     ConnectionName = profile.ConnectionName,
