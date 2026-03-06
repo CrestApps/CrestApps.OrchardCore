@@ -82,6 +82,7 @@ public sealed class Startup : StartupBase
 #pragma warning restore CS0618 // Type or member is obsolete
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
+        services.AddDataMigration<AIProfileIndexMigrations>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
