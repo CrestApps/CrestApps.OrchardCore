@@ -1,36 +1,49 @@
+using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
-using OrchardCore.Documents;
+using CrestApps.OrchardCore.YesSql.Core.Services;
+using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIProfileStore : NamedCatalog<AIProfile>
+public sealed class DefaultAIProfileStore : NamedSourceDocumentCatalog<AIProfile, AIProfileIndex>, IAIProfileStore
 {
-    public DefaultAIProfileStore(IDocumentManager<DictionaryDocument<AIProfile>> documentManager)
-        : base(documentManager)
+    public DefaultAIProfileStore(ISession session)
+        : base(session)
     {
+        CollectionName = AIConstants.AICollectionName;
     }
 
-    protected override void Deleting(AIProfile profile, DictionaryDocument<AIProfile> document)
+    public async ValueTask<IReadOnlyCollection<AIProfile>> GetByTypeAsync(AIProfileType type)
     {
-        var settings = profile.GetSettings<AIProfileSettings>();
+        var typeValue = type.ToString();
+
+        var items = await Session.Query<AIProfile, AIProfileIndex>(
+            x => x.Type == typeValue,
+            collection: CollectionName)
+            .ListAsync();
+
+        return items.ToArray();
+    }
+
+    protected override ValueTask DeletingAsync(AIProfile entry)
+    {
+        var settings = entry.GetSettings<AIProfileSettings>();
 
         if (!settings.IsRemovable)
         {
             throw new InvalidOperationException("The profile cannot be removed.");
         }
+
+        return ValueTask.CompletedTask;
     }
 
-    protected override async ValueTask<IEnumerable<AIProfile>> LocateInstancesAsync(QueryContext context)
+    protected override ValueTask PagingAsync<TQuery>(IQuery<AIProfile> query, TQuery context)
     {
-        var profiles = await base.LocateInstancesAsync(context);
-
-        if (context is AIProfileQueryContext ctx && ctx.IsListableOnly)
+        if (context is AIProfileQueryContext { IsListableOnly: true })
         {
-            return profiles.Where(x => x.GetSettings<AIProfileSettings>().IsListable);
+            query.With<AIProfileIndex>(x => x.IsListable);
         }
 
-        return profiles;
+        return ValueTask.CompletedTask;
     }
 }

@@ -83,6 +83,8 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileIndexMigrations>();
+        services.AddDataMigration<AIProfileDocumentMigrations>();
+        services.AddIndexProvider<AIProfileIndexProvider>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
