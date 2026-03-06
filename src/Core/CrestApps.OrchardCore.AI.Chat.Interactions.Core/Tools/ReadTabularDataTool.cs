@@ -114,17 +114,34 @@ public sealed class ReadTabularDataTool : AIFunction
             return $"Document with ID '{documentId}' was not found.";
         }
 
-        if (string.IsNullOrWhiteSpace(document.Text))
-        {
-            return $"Document '{document.FileName}' has no extractable text content.";
-        }
-
         if (!IsTabularFile(document.FileName))
         {
             return $"Document '{document.FileName}' is not a recognized tabular format. Use 'read_document' instead.";
         }
 
-        var content = LimitTabularRows(document.Text, maxRows);
+        // Reconstruct full text from chunks.
+        var chunkStore = arguments.Services.GetService<IAIDocumentChunkStore>();
+
+        if (chunkStore is null)
+        {
+            return $"Document '{document.FileName}' has no extractable text content.";
+        }
+
+        var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(documentId);
+
+        if (chunks.Count == 0)
+        {
+            return $"Document '{document.FileName}' has no extractable text content.";
+        }
+
+        var text = string.Join(Environment.NewLine, chunks.OrderBy(c => c.Index).Select(c => c.Content));
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return $"Document '{document.FileName}' has no extractable text content.";
+        }
+
+        var content = LimitTabularRows(text, maxRows);
 
         return $"[Tabular data from: {document.FileName}]\n\n{content}";
     }

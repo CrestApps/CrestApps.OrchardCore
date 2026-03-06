@@ -3,6 +3,8 @@ using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
@@ -15,7 +17,8 @@ public sealed class DocumentOrchestrationHandlerTests
 
         return new DocumentOrchestrationHandler(
             Options.Create(toolOptions),
-            new FakeAITemplateService());
+            new FakeAITemplateService(),
+            NullLogger<DocumentOrchestrationHandler>.Instance);
     }
 
     private static AIToolDefinitionOptions CreateToolOptionsWithDocTools()

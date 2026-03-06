@@ -8,6 +8,7 @@
 @using OrchardCore.Environment.Shell.Scope
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Options
+@using System.Text.Json
 
 @inject HubRouteManager HubRouteManager
 @inject ShellSettings ShellSettings
@@ -171,6 +172,7 @@
             sendButtonElementSelector: '#@buttonHtmlId',
             placeholderElementSelector: '#@placeholderHtmlId',
             autoCreateSession: @(addInitialPrompt ? "true" : "false"),
+            initialPrompt: @(addInitialPrompt ? Html.Raw(JsonSerializer.Serialize(profileMetadata.InitialPrompt, JOptions.CamelCase)) : "null"),
             messages: [],
             metricsEnabled: @(metricsEnabled ? "true" : "false"),
             @if (sessionDocumentsEnabled)

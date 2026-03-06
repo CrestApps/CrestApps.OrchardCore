@@ -36,7 +36,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 
             var dialect = store.Configuration.SqlDialect;
 
-            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.CollectionName);
+            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
             var table = $"{store.Configuration.TablePrefix}{documentTableName}";
             var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
 
@@ -130,7 +130,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     CreatedUtc = createdUtc,
                                 };
 
-                                await session.SaveAsync(prompt, collection: AIConstants.CollectionName);
+                                await session.SaveAsync(prompt, collection: AIConstants.AICollectionName);
                             }
 
                             // Remove the Prompts property from the original document.

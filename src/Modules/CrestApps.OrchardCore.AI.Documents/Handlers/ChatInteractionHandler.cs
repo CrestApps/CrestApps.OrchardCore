@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
@@ -85,8 +87,10 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
         }
 
         var documentStore = services.GetRequiredService<IAIDocumentStore>();
+        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<ChatInteractionHandler>>();
+        var aiClientFactory = services.GetRequiredService<IAIClientFactory>();
 
         // Collect AIDocument records to delete from the store after all index profiles are processed.
         var documentsToDelete = new Dictionary<string, AIDocument>();
@@ -104,13 +108,13 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
             {
                 documentsToDelete.TryAdd(doc.ItemId, doc);
 
-                if (doc.Chunks != null)
+                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+                foreach (var chunk in chunks)
                 {
-                    for (var i = 0; i < doc.Chunks.Count; i++)
-                    {
-                        removedChunkIds.Add($"{doc.ItemId}_{i}");
-                    }
+                    removedChunkIds.Add(chunk.ItemId);
                 }
+
+                await chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
             }
         }
 
@@ -125,6 +129,19 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                 continue;
             }
 
+            // Resolve embedding generator from the index profile metadata.
+            var metadata = indexProfile.As<CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models.ChatInteractionIndexProfileMetadata>();
+            Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>> embeddingGenerator = null;
+
+            if (!string.IsNullOrEmpty(metadata?.EmbeddingProviderName) &&
+                !string.IsNullOrEmpty(metadata?.EmbeddingConnectionName))
+            {
+                embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
+                    metadata.EmbeddingProviderName,
+                    metadata.EmbeddingConnectionName,
+                    metadata.EmbeddingDeploymentName);
+            }
+
             // Collect old chunk IDs for deletion before re-indexing.
             var oldChunkIds = new List<string>();
 
@@ -136,12 +153,10 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
 
                 foreach (var doc in existingDocs)
                 {
-                    if (doc.Chunks != null)
+                    var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+                    foreach (var chunk in chunks)
                     {
-                        for (var i = 0; i < doc.Chunks.Count; i++)
-                        {
-                            oldChunkIds.Add($"{doc.ItemId}_{i}");
-                        }
+                        oldChunkIds.Add(chunk.ItemId);
                     }
                 }
             }
@@ -163,29 +178,49 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
 
                 foreach (var aiDocument in aiDocuments)
                 {
-                    if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+                    var docChunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+                    if (docChunks.Count == 0)
                     {
                         continue;
                     }
 
-                    foreach (var chunk in aiDocument.Chunks)
-                    {
-                        var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
-                        var documentIndex = new DocumentIndex(chunkId);
+                    // Generate embeddings for all chunk texts in batch.
+                    var chunkTexts = docChunks.Select(c => c.Content).ToList();
+                    Microsoft.Extensions.AI.GeneratedEmbeddings<Microsoft.Extensions.AI.Embedding<float>> embeddings = null;
 
-                        var aiDocumentChunk = new AIDocumentChunk
+                    if (embeddingGenerator != null && chunkTexts.Count > 0)
+                    {
+                        try
                         {
-                            ChunkId = chunkId,
+                            embeddings = await embeddingGenerator.GenerateAsync(chunkTexts);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to generate embeddings for document {DocumentId}.", aiDocument.ItemId);
+                        }
+                    }
+
+                    var chunkList = docChunks.ToList();
+
+                    for (var i = 0; i < chunkList.Count; i++)
+                    {
+                        var chunk = chunkList[i];
+                        var documentIndex = new DocumentIndex(chunk.ItemId);
+
+                        var aiDocumentChunk = new AIDocumentChunkContext
+                        {
+                            ChunkId = chunk.ItemId,
                             DocumentId = aiDocument.ItemId,
-                            Content = chunk.Text,
+                            Content = chunk.Content,
                             FileName = aiDocument.FileName,
                             ReferenceId = aiDocument.ReferenceId,
                             ReferenceType = aiDocument.ReferenceType,
                             ChunkIndex = chunk.Index,
-                            Embedding = chunk.Embedding,
+                            Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
                         };
 
-                        var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], documentIndexManager.GetContentIndexSettings())
+                        var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
                         {
                             AdditionalProperties = new Dictionary<string, object>
                             {

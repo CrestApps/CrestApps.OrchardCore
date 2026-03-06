@@ -14,7 +14,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
                 .Column<string>("ReferenceId", column => column.WithLength(64))
                 .Column<string>("ReferenceType", column => column.WithLength(32))
                 .Column<string>("Extension", column => column.WithLength(20)),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AIDocsCollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
@@ -24,7 +24,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
                 "ReferenceId",
                 "ReferenceType",
                 "Extension"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AIDocsCollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
@@ -32,7 +32,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
                 "DocumentId",
                 "ReferenceId",
                 "ReferenceType"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AIDocsCollectionName
         );
 
         return 1;

@@ -6,10 +6,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
@@ -35,6 +37,7 @@ internal static class UploadSessionDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         IAIChatSessionManager sessionManager,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<Startup> logger,
@@ -158,8 +161,15 @@ internal static class UploadSessionDocumentEndpoint
                 uploadedDocuments.Add(result.DocumentInfo);
                 session.Documents.Add(result.DocumentInfo);
 
-                processedDocuments.Add(result.Document);
                 await documentStore.CreateAsync(result.Document);
+
+                // Persist each chunk as a separate record.
+                foreach (var chunk in result.Chunks)
+                {
+                    await chunkStore.CreateAsync(chunk);
+                }
+
+                processedDocuments.Add(result.Document);
             }
             catch (Exception ex)
             {
@@ -208,8 +218,10 @@ internal static class UploadSessionDocumentEndpoint
             return;
         }
 
+        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<Startup>>();
+        var aiClientFactory = services.GetRequiredService<IAIClientFactory>();
 
         foreach (var indexProfile in indexProfiles)
         {
@@ -220,33 +232,66 @@ internal static class UploadSessionDocumentEndpoint
                 continue;
             }
 
+            // Resolve embedding generator from the index profile metadata.
+            var metadata = indexProfile.As<CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models.ChatInteractionIndexProfileMetadata>();
+            IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = null;
+
+            if (!string.IsNullOrEmpty(metadata?.EmbeddingProviderName) &&
+                !string.IsNullOrEmpty(metadata?.EmbeddingConnectionName))
+            {
+                embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
+                    metadata.EmbeddingProviderName,
+                    metadata.EmbeddingConnectionName,
+                    metadata.EmbeddingDeploymentName);
+            }
+
             var chunkDocuments = new List<DocumentIndex>();
 
             foreach (var aiDocument in documents)
             {
-                if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+                if (chunks.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var chunk in aiDocument.Chunks)
-                {
-                    var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
-                    var documentIndex = new DocumentIndex(chunkId);
+                // Generate embeddings for all chunk texts in a single batch.
+                var chunkTexts = chunks.Select(c => c.Content).ToList();
+                GeneratedEmbeddings<Embedding<float>> embeddings = null;
 
-                    var aiDocumentChunk = new AIDocumentChunk
+                if (embeddingGenerator != null && chunkTexts.Count > 0)
+                {
+                    try
                     {
-                        ChunkId = chunkId,
+                        embeddings = await embeddingGenerator.GenerateAsync(chunkTexts);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to generate embeddings for document {DocumentId}. Chunks will be indexed without vectors.", aiDocument.ItemId);
+                    }
+                }
+
+                var chunkList = chunks.ToList();
+
+                for (var i = 0; i < chunkList.Count; i++)
+                {
+                    var chunk = chunkList[i];
+                    var documentIndex = new DocumentIndex(chunk.ItemId);
+
+                    var aiDocumentChunk = new AIDocumentChunkContext
+                    {
+                        ChunkId = chunk.ItemId,
                         DocumentId = aiDocument.ItemId,
-                        Content = chunk.Text,
+                        Content = chunk.Content,
                         FileName = aiDocument.FileName,
                         ReferenceId = aiDocument.ReferenceId,
                         ReferenceType = aiDocument.ReferenceType,
                         ChunkIndex = chunk.Index,
-                        Embedding = chunk.Embedding,
+                        Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
                     };
 
-                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], documentIndexManager.GetContentIndexSettings())
+                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
                     {
                         AdditionalProperties = new Dictionary<string, object>
                         {

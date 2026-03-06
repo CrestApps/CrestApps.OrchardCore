@@ -1,5 +1,6 @@
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
@@ -21,13 +22,16 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAITemplateService _templateService;
+    private readonly ILogger _logger;
 
     public DocumentOrchestrationHandler(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAITemplateService templateService)
+        IAITemplateService templateService,
+        ILogger<DocumentOrchestrationHandler> logger)
     {
         _toolDefinitions = toolDefinitions.Value;
         _templateService = templateService;
+        _logger = logger;
     }
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
@@ -35,6 +39,12 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         if (context.Resource is ChatInteraction interaction &&
             interaction.Documents is { Count: > 0 })
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Populating {DocCount} document(s) from ChatInteraction '{ItemId}' into orchestration context.",
+                    interaction.Documents.Count, interaction.ItemId);
+            }
+
             context.Context.Documents ??= [];
             context.Context.Documents.AddRange(interaction.Documents);
         }
@@ -44,8 +54,18 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
             if (documentsMetadata.Documents is { Count: > 0 })
             {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Populating {DocCount} document(s) from AIProfile '{ProfileId}' into orchestration context.",
+                        documentsMetadata.Documents.Count, profile.ItemId);
+                }
+
                 context.Context.Documents ??= [];
                 context.Context.Documents.AddRange(documentsMetadata.Documents);
+            }
+            else if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("AIProfile '{ProfileId}' has no documents attached.", profile.ItemId);
             }
         }
 

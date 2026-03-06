@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
-            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.CollectionName));
+            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AICollectionName));
 
         return services;
     }

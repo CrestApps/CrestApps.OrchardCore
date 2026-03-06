@@ -626,6 +626,13 @@ window.openAIChatManager = function () {
                     _this3.$nextTick(function () {
                       _this3.refreshAllFeedbackIcons();
                     });
+
+                    // When the session is new (no messages) and an initial prompt is configured,
+                    // automatically send it as the first user message to trigger an AI response.
+                    if (_this3.messages.length === 0 && config.initialPrompt) {
+                      _this3.prompt = config.initialPrompt;
+                      _this3.sendMessage();
+                    }
                   });
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);

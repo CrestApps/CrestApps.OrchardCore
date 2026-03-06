@@ -39,10 +39,17 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Register unified document store, index provider, and migration.
-        services.AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
+        services
+            .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AIDocsCollectionName))
+            .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
+            .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
+
         services.AddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
+
         services.AddIndexProvider<AIDocumentIndexProvider>();
+        services.AddIndexProvider<AIDocumentChunkIndexProvider>();
         services.AddDataMigration<AIDocumentIndexMigrations>();
+        services.AddDataMigration<AIDocumentChunkIndexMigrations>();
 
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();

@@ -29,7 +29,8 @@ internal static class RemoveSessionDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IAIChatSessionManager sessionManager,
-        IAIDocumentStore documentStore)
+        IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore)
     {
         var httpContext = httpContextAccessor.HttpContext;
 
@@ -86,21 +87,17 @@ internal static class RemoveSessionDocumentEndpoint
         var document = await documentStore.FindByIdAsync(request.DocumentId);
         if (document != null)
         {
-            // Schedule removal of chunks from the vector index.
-            var chunkIdsToRemove = new List<string>();
-            if (document.Chunks != null)
-            {
-                for (var i = 0; i < document.Chunks.Count; i++)
-                {
-                    chunkIdsToRemove.Add($"{document.ItemId}_{i}");
-                }
-            }
+            // Get chunk IDs from the chunk store and schedule removal from vector index.
+            var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(document.ItemId);
+            var chunkIdsToRemove = chunks.Select(c => c.ItemId).ToList();
 
             if (chunkIdsToRemove.Count > 0)
             {
                 ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
             }
 
+            // Delete chunks and document from store.
+            await chunkStore.DeleteByDocumentIdAsync(document.ItemId);
             await documentStore.DeleteAsync(document);
         }
 

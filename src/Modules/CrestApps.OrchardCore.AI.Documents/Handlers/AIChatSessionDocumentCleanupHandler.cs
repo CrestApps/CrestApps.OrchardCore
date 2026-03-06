@@ -17,14 +17,14 @@ namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBase
 {
     private readonly IAIDocumentStore _documentStore;
-    private readonly ILogger _logger;
+    private readonly IAIDocumentChunkStore _chunkStore;
 
     public AIChatSessionDocumentCleanupHandler(
         IAIDocumentStore documentStore,
-        ILogger<AIChatSessionDocumentCleanupHandler> logger)
+        IAIDocumentChunkStore chunkStore)
     {
         _documentStore = documentStore;
-        _logger = logger;
+        _chunkStore = chunkStore;
     }
 
     public override async Task DeletingAsync(DeletingContext<AIChatSession> context)
@@ -44,14 +44,13 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
 
         foreach (var doc in documents)
         {
-            if (doc.Chunks != null)
+            var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+            foreach (var chunk in chunks)
             {
-                for (var i = 0; i < doc.Chunks.Count; i++)
-                {
-                    chunkIds.Add($"{doc.ItemId}_{i}");
-                }
+                chunkIds.Add(chunk.ItemId);
             }
 
+            await _chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
             await _documentStore.DeleteAsync(doc);
         }
 
