@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
@@ -49,11 +50,20 @@ public sealed class GetContentItemLinkTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemLinkTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
         var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
+
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
@@ -99,7 +109,14 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         if (string.IsNullOrEmpty(link))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to generate a link for content item '{ContentItemId}'.", TheName, contentItemId);
+
             return "Unable to generate a link for the given content item.";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 
         return link;

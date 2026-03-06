@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Models;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
 
@@ -44,8 +45,16 @@ public sealed class ReadDocumentTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
+        var logger = arguments.Services.GetRequiredService<ILogger<ReadDocumentTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         if (!arguments.TryGetFirstString("document_id", out var documentId))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'document_id'.", Name);
             return "Unable to find a 'document_id' argument in the arguments parameter.";
         }
 
@@ -58,6 +67,7 @@ public sealed class ReadDocumentTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
@@ -65,7 +75,13 @@ public sealed class ReadDocumentTool : AIFunction
 
             if (document is null || document.ReferenceId != chatInteractionId)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document '{DocumentId}' was not found in this session.", Name, documentId);
                 return $"Document with ID '{documentId}' was not found in this session.";
+            }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
             return await FormatDocumentTextFromChunksAsync(arguments.Services, document);
@@ -77,6 +93,7 @@ public sealed class ReadDocumentTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
@@ -97,11 +114,19 @@ public sealed class ReadDocumentTool : AIFunction
 
             if (document is null || !validReferenceIds.Contains(document.ReferenceId))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document '{DocumentId}' was not found.", Name, documentId);
                 return $"Document with ID '{documentId}' was not found.";
+            }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
             return await FormatDocumentTextFromChunksAsync(arguments.Services, document);
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
 
         return "Document access requires an active chat interaction session or AI profile.";
     }

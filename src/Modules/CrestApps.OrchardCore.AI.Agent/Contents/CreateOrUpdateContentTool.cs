@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Core.Extensions;
@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using Usr = OrchardCore.Users;
@@ -68,6 +69,13 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         // Accept contentItem as either a JSON string or a JSON object.
         // Models often send an object even when the schema specifies string.
         string json;
@@ -82,6 +90,8 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         }
         else
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItem argument in the function arguments.", TheName);
+
             return "Unable to find a contentItem argument in the function arguments.";
         }
 
@@ -105,6 +115,8 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             if (string.IsNullOrEmpty(model?.ContentType))
             {
+                logger.LogWarning("AI tool '{ToolName}': A Content type is required to create a new content item.", TheName);
+
                 return "A Content type is required";
             }
 
@@ -113,6 +125,8 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (contentDefintions is null)
             {
+                logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, model.ContentType);
+
                 return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
             }
 
@@ -128,6 +142,8 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (!result.Succeeded)
             {
+                logger.LogWarning("AI tool '{ToolName}': Unable to create content item due to validation errors: {Errors}.", TheName, string.Join(", ", result.Errors.Select(x => x.ErrorMessage)));
+
                 return
                    $"""
                     Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
@@ -149,6 +165,8 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (!result.Succeeded)
             {
+                logger.LogWarning("AI tool '{ToolName}': Unable to update content item due to validation errors: {Errors}.", TheName, string.Join("; ", result.Errors.Select(x => x.ErrorMessage)));
+
                 return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
             }
         }
@@ -185,6 +203,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         if (metadata.DisplayRouteValues is not null)
         {
             response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 
         return response;

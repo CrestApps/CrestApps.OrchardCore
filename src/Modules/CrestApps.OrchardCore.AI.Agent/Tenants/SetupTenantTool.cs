@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Cysharp.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Abstractions.Setup;
 using OrchardCore.Email;
@@ -102,6 +103,13 @@ public sealed class SetupTenantTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<SetupTenantTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var setupService = arguments.Services.GetRequiredService<ISetupService>();
@@ -111,46 +119,64 @@ public sealed class SetupTenantTool : AIFunction
 
         if (!shellSettings.IsDefaultShell())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
+
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
+
             return "Invalid tenant name provided.";
         }
 
         if (!arguments.TryGetFirstString("username", out var username))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'username' argument.", Name);
+
             return "Unable to find a username argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("email", out var email))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'email' argument.", Name);
+
             return "Unable to find a email argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("password", out var password))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'password' argument.", Name);
+
             return "Unable to find a password argument in the function arguments.";
         }
 
         if (!tenantSettings.IsUninitialized())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is already setup.", Name, name);
+
             return "The tenant is already setup.";
         }
 
         if (username.Any(c => !identityOptions.User.AllowedUserNameCharacters.Contains(c)))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: username contains invalid characters for tenant '{TenantName}'.", Name, name);
+
             return $"The username contains not allowed characters. Allowed characters are: {string.Join(' ', identityOptions.User.AllowedUserNameCharacters)}";
         }
 
         if (!emailAddressValidator.Validate(email))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: invalid email provided for tenant '{TenantName}'.", Name, name);
+
             return $"The email is invalid.";
         }
 
@@ -158,6 +184,8 @@ public sealed class SetupTenantTool : AIFunction
 
         if (string.IsNullOrEmpty(recipeName))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipeName' argument for tenant '{TenantName}'.", Name, name);
+
             return "The recipeName argument is required.";
         }
 
@@ -165,6 +193,8 @@ public sealed class SetupTenantTool : AIFunction
 
         if (recipe is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: recipe '{RecipeName}' not found for tenant '{TenantName}'.", Name, recipeName, name);
+
             return "The recipe name is invalid.";
         }
 
@@ -172,6 +202,8 @@ public sealed class SetupTenantTool : AIFunction
 
         if (string.IsNullOrEmpty(databaseProvider))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'databaseProvider' argument for tenant '{TenantName}'.", Name, name);
+
             return "The databaseProvider argument is required.";
         }
 
@@ -180,6 +212,8 @@ public sealed class SetupTenantTool : AIFunction
 
         if (string.IsNullOrEmpty(requestUrlPrefix) && string.IsNullOrEmpty(requestUrlHost))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: neither 'requestUrlHost' nor 'requestUrlPrefix' was provided for tenant '{TenantName}'.", Name, name);
+
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";
         }
 
@@ -244,6 +278,8 @@ public sealed class SetupTenantTool : AIFunction
         // Check if any Setup component failed (e.g., database connection validation).
         if (setupContext.Errors.Count > 0)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: setup of tenant '{TenantName}' encountered errors.", Name, name);
+
             using var builder = ZString.CreateStringBuilder();
             builder.Append("Failed to setup the tenant due to the following errors:");
 
@@ -255,6 +291,11 @@ public sealed class SetupTenantTool : AIFunction
             }
 
             return builder.ToString();
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         return $"The tenant {name} was setup successfully.";

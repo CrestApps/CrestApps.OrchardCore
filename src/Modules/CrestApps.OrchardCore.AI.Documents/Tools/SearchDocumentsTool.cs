@@ -57,12 +57,18 @@ public sealed class SearchDocumentsTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("query", out var query))
+        var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a 'query' argument in the arguments parameter.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var logger = arguments.Services.GetService<ILogger<SearchDocumentsTool>>();
+        if (!arguments.TryGetFirstString("query", out var query))
+        {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
+            return "Unable to find a 'query' argument in the arguments parameter.";
+        }
 
         try
         {
@@ -92,6 +98,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (searchScopes.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
                 return "Document search requires an active chat interaction session or AI profile.";
             }
 
@@ -104,6 +111,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (string.IsNullOrEmpty(settings.IndexProfileName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no index profile is configured.", Name);
                 return "Document search is not configured. No index profile is set.";
             }
 
@@ -112,6 +120,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (indexProfile is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: index profile '{IndexProfileName}' was not found.", Name, settings.IndexProfileName);
                 return $"Index profile '{settings.IndexProfileName}' was not found.";
             }
 
@@ -119,6 +128,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (searchService is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no search service available for provider '{ProviderName}'.", Name, indexProfile.ProviderName);
                 return $"No search service is available for provider '{indexProfile.ProviderName}'.";
             }
 
@@ -147,6 +157,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (string.IsNullOrEmpty(deploymentName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no embedding deployment configured.", Name);
                 return "No embedding deployment is configured for document search.";
             }
 
@@ -154,6 +165,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (embeddingGenerator is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not create embedding generator.", Name);
                 return "Failed to create embedding generator for document search.";
             }
 
@@ -161,6 +173,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (embeddings is null || embeddings.Count == 0 || embeddings[0]?.Vector is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not generate embedding for query.", Name);
                 return "Failed to generate embedding for the search query.";
             }
 
@@ -315,11 +328,16 @@ public sealed class SearchDocumentsTool : AIFunction
                 }
             }
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return builder.ToString();
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error during document search.");
+            logger.LogError(ex, "Error during document search.");
             return "An error occurred while searching documents.";
         }
     }

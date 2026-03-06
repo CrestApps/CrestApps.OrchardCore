@@ -1,6 +1,7 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
@@ -35,6 +36,13 @@ public sealed class ListFeaturesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListFeaturesTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         var features = (await shellFeaturesManager.GetAvailableFeaturesAsync())
@@ -43,6 +51,11 @@ public sealed class ListFeaturesTool : AIFunction
         var enabledFeatureIds = (await shellFeaturesManager.GetEnabledFeaturesAsync())
             .Select(x => x.Id)
             .ToHashSet();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(enabledFeatureIds.Contains(feature.Id))));
     }

@@ -53,12 +53,18 @@ public sealed class DataSourceSearchTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("query", out var query))
+        var logger = arguments.Services.GetRequiredService<ILogger<DataSourceSearchTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a 'query' argument in the arguments parameter.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var logger = arguments.Services.GetService<ILogger<DataSourceSearchTool>>();
+        if (!arguments.TryGetFirstString("query", out var query))
+        {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
+            return "Unable to find a 'query' argument in the arguments parameter.";
+        }
 
         try
         {
@@ -67,6 +73,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (executionContext == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no active AI execution context.", Name);
                 return "Data source search requires an active AI execution context.";
             }
 
@@ -75,6 +82,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (string.IsNullOrEmpty(dataSourceId))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no data source configured for this profile.", Name);
                 return "No data source is configured for this profile.";
             }
 
@@ -84,11 +92,13 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (dataSource == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: data source '{DataSourceId}' was not found.", Name, dataSourceId);
                 return $"Data source '{dataSourceId}' was not found.";
             }
 
             if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no knowledge base index configured for data source '{DataSourceId}'.", Name, dataSourceId);
                 return "No knowledge base index is configured for this data source. Please configure a knowledge base index in the data source settings.";
             }
 
@@ -98,6 +108,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (masterIndexProfile == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: knowledge base index '{IndexProfileName}' was not found.", Name, dataSource.AIKnowledgeBaseIndexProfileName);
                 return $"Knowledge base index '{dataSource.AIKnowledgeBaseIndexProfileName}' was not found. Please create the index using the Indexing feature.";
             }
 
@@ -106,6 +117,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (contentManager == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no vector search service for provider '{ProviderName}'.", Name, masterIndexProfile.ProviderName);
                 return $"No vector search service is available for provider '{masterIndexProfile.ProviderName}'.";
             }
 
@@ -118,6 +130,7 @@ public sealed class DataSourceSearchTool : AIFunction
                 string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: embedding configuration is missing for the knowledge base index.", Name);
                 return "Embedding configuration is missing for the knowledge base index.";
             }
 
@@ -128,6 +141,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (embeddingGenerator == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not create embedding generator.", Name);
                 return "Failed to create embedding generator for data source search.";
             }
 
@@ -136,6 +150,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (embeddings == null || embeddings.Count == 0 || embeddings[0]?.Vector == null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not generate embedding for query.", Name);
                 return "Failed to generate embedding for the search query.";
             }
 
@@ -266,11 +281,16 @@ public sealed class DataSourceSearchTool : AIFunction
                 }
             }
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return builder.ToString();
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error during data source search.");
+            logger.LogError(ex, "Error during data source search.");
             return "An error occurred while searching the data source.";
         }
     }

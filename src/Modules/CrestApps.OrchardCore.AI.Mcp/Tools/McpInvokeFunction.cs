@@ -61,6 +61,13 @@ public sealed class McpInvokeFunction : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<McpInvokeFunction>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var clientId = GetRequiredStringArgument(arguments, "clientId");
         var type = GetRequiredStringArgument(arguments, "type");
         var id = GetRequiredStringArgument(arguments, "id");
@@ -72,6 +79,7 @@ public sealed class McpInvokeFunction : AIFunction
 
         if (connection is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: MCP connection '{ClientId}' not found.", Name, clientId);
             return JsonSerializer.Serialize(new { error = $"MCP connection '{clientId}' not found." });
         }
 
@@ -81,6 +89,7 @@ public sealed class McpInvokeFunction : AIFunction
 
         if (client is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: could not connect to MCP server '{ClientId}'.", Name, clientId);
             return JsonSerializer.Serialize(new { error = $"Failed to connect to MCP server '{clientId}'." });
         }
 
@@ -94,12 +103,15 @@ public sealed class McpInvokeFunction : AIFunction
                 _ => JsonSerializer.Serialize(new { error = $"Unknown capability type '{type}'. Use 'tool', 'prompt', or 'resource'." }),
             };
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return content;
         }
         catch (Exception ex)
         {
-            var logger = arguments.Services.GetRequiredService<ILogger<McpInvokeFunction>>();
-
             logger.LogError(ex, "Error invoking MCP capability '{Type}/{Id}' on server '{ClientId}'.", type, id, clientId);
 
             return JsonSerializer.Serialize(new { error = "Error invoking MCP capability." });

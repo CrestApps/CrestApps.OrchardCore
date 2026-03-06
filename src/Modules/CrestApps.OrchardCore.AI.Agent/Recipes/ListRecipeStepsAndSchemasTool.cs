@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
@@ -35,6 +36,12 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<ListRecipeStepsAndSchemasTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
 
         var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
@@ -69,6 +76,11 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
             }
 
             result[stepName] = JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(schema));
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         return JsonSerializer.Serialize(result);

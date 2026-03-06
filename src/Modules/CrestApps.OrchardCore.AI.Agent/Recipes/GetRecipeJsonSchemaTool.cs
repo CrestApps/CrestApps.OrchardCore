@@ -1,10 +1,11 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 
@@ -41,6 +42,12 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        var logger = arguments.Services.GetRequiredService<ILogger<GetRecipeJsonSchemaTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
 
         var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
@@ -97,9 +104,19 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
 
         if (!string.IsNullOrWhiteSpace(requestedStep))
         {
-            return stepSchemas.TryGetValue(requestedStep, out var schema)
-                ? JsonSerializer.Serialize(schema)
-                : $"Unknown recipe step '{requestedStep}'.";
+            if (!stepSchemas.TryGetValue(requestedStep, out var schema))
+            {
+                logger.LogWarning("AI tool '{ToolName}': unknown recipe step '{StepName}'.", Name, requestedStep);
+
+                return $"Unknown recipe step '{requestedStep}'.";
+            }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
+            return JsonSerializer.Serialize(schema);
         }
 
         var stepsBuilder = new JsonSchemaBuilder().OneOf(stepSchemas.Values);
@@ -113,6 +130,11 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
                     .MinItems(1)))
             .Required("steps")
             .Build();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(rootSchema);
     }

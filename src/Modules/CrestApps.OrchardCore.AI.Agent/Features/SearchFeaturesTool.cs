@@ -1,7 +1,8 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
@@ -42,10 +43,19 @@ public sealed class FeaturesSearchTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<FeaturesSearchTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
@@ -55,6 +65,11 @@ public sealed class FeaturesSearchTool : AIFunction
         var enabledFeatureIds = (await shellFeaturesManager.GetEnabledFeaturesAsync())
             .Select(x => x.Id)
             .ToHashSet();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(enabledFeatureIds.Contains(feature.Id))));
     }

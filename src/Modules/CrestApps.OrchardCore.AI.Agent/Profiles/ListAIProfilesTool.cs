@@ -1,9 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
@@ -57,6 +58,12 @@ public sealed class ListAIProfilesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
 
         var profiles = (await profileManager.GetAllAsync()).ToList();
@@ -93,6 +100,11 @@ public sealed class ListAIProfilesTool : AIFunction
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,
         }).ToList();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(new { profiles = result, count = result.Count });
     }
