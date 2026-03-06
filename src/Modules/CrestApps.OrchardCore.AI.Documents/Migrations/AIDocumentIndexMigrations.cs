@@ -9,6 +9,20 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
 {
     public async Task<int> CreateAsync()
     {
+        await CreateAIDocumentIndexTableAsync();
+
+        return 2;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateAIDocumentIndexTableAsync();
+
+        return 2;
+    }
+
+    private async Task CreateAIDocumentIndexTableAsync()
+    {
         await SchemaBuilder.CreateMapIndexTableAsync<AIDocumentIndex>(table => table
                 .Column<string>("ItemId", column => column.WithLength(64))
                 .Column<string>("ReferenceId", column => column.WithLength(64))
@@ -34,7 +48,5 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
                 "ReferenceType"),
             collection: AIConstants.AIDocsCollectionName
         );
-
-        return 1;
     }
 }
