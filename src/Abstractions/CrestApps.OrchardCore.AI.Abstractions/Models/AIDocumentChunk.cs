@@ -32,6 +32,13 @@ public sealed class AIDocumentChunk : CatalogItem
     public string Content { get; set; }
 
     /// <summary>
+    /// Gets or sets the embedding vector for this chunk.
+    /// Stored alongside the content to avoid regenerating embeddings
+    /// when the vector index is rebuilt or re-indexed.
+    /// </summary>
+    public float[] Embedding { get; set; }
+
+    /// <summary>
     /// Gets or sets the chunk index within the parent document.
     /// </summary>
     public int Index { get; set; }

@@ -234,7 +234,6 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<AIProfileDocumentsDisplayDriver>>();
-        var aiClientFactory = services.GetRequiredService<IAIClientFactory>();
 
         foreach (var indexProfile in indexProfiles)
         {
@@ -243,19 +242,6 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             if (documentIndexManager == null)
             {
                 continue;
-            }
-
-            // Resolve embedding generator from the index profile metadata.
-            var metadata = indexProfile.As<CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models.ChatInteractionIndexProfileMetadata>();
-            IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = null;
-
-            if (!string.IsNullOrEmpty(metadata?.EmbeddingProviderName) &&
-                !string.IsNullOrEmpty(metadata?.EmbeddingConnectionName))
-            {
-                embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
-                    metadata.EmbeddingProviderName,
-                    metadata.EmbeddingConnectionName,
-                    metadata.EmbeddingDeploymentName);
             }
 
             var chunkDocuments = new List<DocumentIndex>();
@@ -269,27 +255,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     continue;
                 }
 
-                // Generate embeddings in batch.
-                var chunkTexts = chunks.Select(c => c.Content).ToList();
-                Microsoft.Extensions.AI.GeneratedEmbeddings<Microsoft.Extensions.AI.Embedding<float>> embeddings = null;
-
-                if (embeddingGenerator != null && chunkTexts.Count > 0)
+                foreach (var chunk in chunks)
                 {
-                    try
-                    {
-                        embeddings = await embeddingGenerator.GenerateAsync(chunkTexts);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to generate embeddings for document {DocumentId}.", aiDocument.ItemId);
-                    }
-                }
-
-                var chunkList = chunks.ToList();
-
-                for (var i = 0; i < chunkList.Count; i++)
-                {
-                    var chunk = chunkList[i];
                     var documentIndex = new DocumentIndex(chunk.ItemId);
 
                     var aiDocumentChunk = new AIDocumentChunkContext
@@ -301,7 +268,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                         ReferenceId = aiDocument.ReferenceId,
                         ReferenceType = aiDocument.ReferenceType,
                         ChunkIndex = chunk.Index,
-                        Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
+                        Embedding = chunk.Embedding,
                     };
 
                     var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())

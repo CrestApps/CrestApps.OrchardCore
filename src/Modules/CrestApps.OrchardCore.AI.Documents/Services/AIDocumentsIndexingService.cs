@@ -2,10 +2,8 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
@@ -212,40 +210,8 @@ public sealed class AIDocumentsIndexingService
             return documents;
         }
 
-        // Generate embeddings for all chunk texts in batch.
-        var chunkTexts = chunks.Select(c => c.Content).ToList();
-        GeneratedEmbeddings<Embedding<float>> embeddings = null;
-
-        // Resolve embedding generator from the index profile metadata.
-        var metadata = entry.IndexProfile.As<CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models.ChatInteractionIndexProfileMetadata>();
-
-        if (!string.IsNullOrEmpty(metadata?.EmbeddingProviderName) &&
-            !string.IsNullOrEmpty(metadata?.EmbeddingConnectionName))
+        foreach (var chunk in chunks)
         {
-            var aiClientFactory = _serviceProvider.GetRequiredService<IAIClientFactory>();
-            var embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
-                metadata.EmbeddingProviderName,
-                metadata.EmbeddingConnectionName,
-                metadata.EmbeddingDeploymentName);
-
-            if (embeddingGenerator != null && chunkTexts.Count > 0)
-            {
-                try
-                {
-                    embeddings = await embeddingGenerator.GenerateAsync(chunkTexts);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to generate embeddings for document {DocumentId}.", aiDocument.ItemId);
-                }
-            }
-        }
-
-        var chunkList = chunks.ToList();
-
-        for (var i = 0; i < chunkList.Count; i++)
-        {
-            var chunk = chunkList[i];
             var documentIndex = new DocumentIndex(chunk.ItemId);
 
             var aiDocumentChunk = new AIDocumentChunkContext
@@ -257,7 +223,7 @@ public sealed class AIDocumentsIndexingService
                 ReferenceId = aiDocument.ReferenceId,
                 ReferenceType = aiDocument.ReferenceType,
                 ChunkIndex = chunk.Index,
-                Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
+                Embedding = chunk.Embedding,
             };
 
             var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], entry.DocumentIndexManager.GetContentIndexSettings())

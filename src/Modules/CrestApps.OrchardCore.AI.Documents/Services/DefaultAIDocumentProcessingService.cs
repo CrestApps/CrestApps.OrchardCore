@@ -149,6 +149,21 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
                 _logger.LogDebug("Document processing: generated {ChunkCount} chunk(s) for '{FileName}'.", textChunks.Count, file.FileName);
             }
 
+            // Generate embeddings for all chunks in a single batch.
+            GeneratedEmbeddings<Embedding<float>> embeddings = null;
+
+            if (embeddingGenerator != null && textChunks.Count > 0)
+            {
+                try
+                {
+                    embeddings = await embeddingGenerator.GenerateAsync(textChunks);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to generate embeddings for '{FileName}'. Chunks will be stored without embeddings.", file.FileName);
+                }
+            }
+
             for (var i = 0; i < textChunks.Count; i++)
             {
                 chunks.Add(new AIDocumentChunk
@@ -158,6 +173,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
                     ReferenceId = referenceId,
                     ReferenceType = referenceType,
                     Content = textChunks[i],
+                    Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
                     Index = i,
                 });
             }
