@@ -68,7 +68,7 @@ public sealed class ReadDocumentTool : AIFunction
                 return $"Document with ID '{documentId}' was not found in this session.";
             }
 
-            return FormatDocumentText(document.FileName, document.Text);
+            return await FormatDocumentTextFromChunksAsync(arguments.Services, document);
         }
 
         if (executionContext?.Resource is AIProfile profile)
@@ -100,10 +100,31 @@ public sealed class ReadDocumentTool : AIFunction
                 return $"Document with ID '{documentId}' was not found.";
             }
 
-            return FormatDocumentText(document.FileName, document.Text);
+            return await FormatDocumentTextFromChunksAsync(arguments.Services, document);
         }
 
         return "Document access requires an active chat interaction session or AI profile.";
+    }
+
+    private static async Task<string> FormatDocumentTextFromChunksAsync(IServiceProvider services, AIDocument document)
+    {
+        var chunkStore = services.GetService<IAIDocumentChunkStore>();
+
+        if (chunkStore is null)
+        {
+            return $"Document '{document.FileName}' has no extractable text content.";
+        }
+
+        var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(document.ItemId);
+
+        if (chunks.Count == 0)
+        {
+            return $"Document '{document.FileName}' has no extractable text content.";
+        }
+
+        var text = string.Join(Environment.NewLine, chunks.OrderBy(c => c.Index).Select(c => c.Content));
+
+        return FormatDocumentText(document.FileName, text);
     }
 
     private static string FormatDocumentText(string fileName, string text)

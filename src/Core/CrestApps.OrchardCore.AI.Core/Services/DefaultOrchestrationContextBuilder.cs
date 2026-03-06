@@ -44,6 +44,21 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
             context.CompletionContext.SystemMessage = context.SystemMessageBuilder.ToString();
         }
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            var systemMessage = context.CompletionContext?.SystemMessage;
+
+            if (!string.IsNullOrEmpty(systemMessage))
+            {
+                _logger.LogDebug("Composed system message ({Length} chars) for resource type '{ResourceType}': {SystemMessage}",
+                    systemMessage.Length, resource.GetType().Name, systemMessage);
+            }
+            else
+            {
+                _logger.LogDebug("No system message composed for resource type '{ResourceType}'.", resource.GetType().Name);
+            }
+        }
+
         return context;
     }
 }

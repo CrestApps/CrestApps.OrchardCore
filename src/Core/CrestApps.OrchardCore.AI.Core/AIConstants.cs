@@ -8,7 +8,9 @@ public static class AIConstants
 
     public const string DefaultBlankSessionTitle = "Untitled";
 
-    public const string CollectionName = "AI";
+    public const string AICollectionName = "AI";
+
+    public const string AIDocsCollectionName = "AIDocs";
 
     public const string ConnectionProtectorName = "AIProviderConnection";
 

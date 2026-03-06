@@ -47,7 +47,17 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
     {
         if (context.OrchestrationContext.Documents is { Count: > 0 })
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("DocumentPreemptiveRagHandler can handle: {DocCount} document(s) found in orchestration context.", context.OrchestrationContext.Documents.Count);
+            }
+
             return ValueTask.FromResult(true);
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("DocumentPreemptiveRagHandler skipped: no documents in orchestration context.");
         }
 
         return ValueTask.FromResult(false);
@@ -80,6 +90,11 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         if (indexProfile == null)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document Preemptive RAG: index profile '{IndexProfileName}' not found.", settings.IndexProfileName);
+            }
+
             return;
         }
 
@@ -87,6 +102,11 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         if (searchService == null)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document Preemptive RAG: no IVectorSearchService registered for provider '{ProviderName}'.", indexProfile.ProviderName);
+            }
+
             return;
         }
 
@@ -97,6 +117,15 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             string.IsNullOrEmpty(interactionMetadata.EmbeddingConnectionName) ||
             string.IsNullOrEmpty(interactionMetadata.EmbeddingDeploymentName))
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document Preemptive RAG: embedding configuration incomplete on index profile '{IndexProfileName}'. Provider={Provider}, Connection={Connection}, Deployment={Deployment}.",
+                    settings.IndexProfileName,
+                    interactionMetadata?.EmbeddingProviderName ?? "(null)",
+                    interactionMetadata?.EmbeddingConnectionName ?? "(null)",
+                    interactionMetadata?.EmbeddingDeploymentName ?? "(null)");
+            }
+
             return;
         }
 
@@ -141,6 +170,11 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         if (searchScopes.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document Preemptive RAG: no search scopes resolved for resource type '{ResourceType}'.", context.Resource?.GetType().Name);
+            }
+
             return;
         }
 
@@ -149,6 +183,15 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
 
         var topN = settings.TopN > 0 ? settings.TopN : 3;
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Document Preemptive RAG: searching {ScopeCount} scope(s): [{Scopes}] with {QueryCount} queries, topN={TopN}.",
+                searchScopes.Count,
+                string.Join(", ", searchScopes.Select(s => $"{s.ReferenceType}:{s.ResourceId}")),
+                context.Queries.Count,
+                topN);
+        }
 
         // Perform vector search for each embedding across all scopes and combine results.
         var allResults = new List<(DocumentChunkSearchResult Result, string ReferenceType)>();
@@ -204,7 +247,17 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
         if (finalResults.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document Preemptive RAG: no relevant chunks found after vector search.");
+            }
+
             return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Document Preemptive RAG: injecting {ResultCount} chunk(s) into system message.", finalResults.Count);
         }
 
         var orchestrationContext = context.OrchestrationContext;

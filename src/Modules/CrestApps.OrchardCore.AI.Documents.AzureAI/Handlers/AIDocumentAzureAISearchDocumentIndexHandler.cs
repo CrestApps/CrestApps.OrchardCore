@@ -10,7 +10,7 @@ public sealed class AIDocumentAzureAISearchDocumentIndexHandler : IDocumentIndex
 {
     public Task BuildIndexAsync(BuildDocumentIndexContext context)
     {
-        if (context.Record is not AIDocumentChunk chunk)
+        if (context.Record is not AIDocumentChunkContext chunk)
         {
             return Task.CompletedTask;
         }

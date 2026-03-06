@@ -59,7 +59,7 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
 
         var session = arguments.Services.GetRequiredService<ISession>();
 
-        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.CollectionName);
+        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
         {

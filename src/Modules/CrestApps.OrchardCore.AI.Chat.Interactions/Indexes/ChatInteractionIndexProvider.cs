@@ -10,7 +10,7 @@ internal sealed class ChatInteractionIndexProvider : IndexProvider<ChatInteracti
 {
     public ChatInteractionIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<ChatInteraction> context)

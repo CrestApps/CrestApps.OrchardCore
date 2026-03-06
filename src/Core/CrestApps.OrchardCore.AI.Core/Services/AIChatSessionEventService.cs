@@ -45,7 +45,7 @@ public sealed class AIChatSessionEventService
             CreatedUtc = now,
         };
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public sealed class AIChatSessionEventService
                 CreatedUtc = now,
             };
 
-            await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+            await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
             return;
         }
 
@@ -87,7 +87,7 @@ public sealed class AIChatSessionEventService
         evt.IsResolved = isResolved;
         evt.HandleTimeSeconds = (endTime - evt.SessionStartedUtc).TotalSeconds;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -111,7 +111,7 @@ public sealed class AIChatSessionEventService
         evt.AverageResponseLatencyMs =
             ((evt.AverageResponseLatencyMs * (completionCount - 1)) + responseLatencyMs) / completionCount;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public sealed class AIChatSessionEventService
 
         evt.IsResolved = isResolved;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public sealed class AIChatSessionEventService
         evt.ConversionScore = goalResults.Sum(r => r.Score);
         evt.ConversionMaxScore = goalResults.Sum(r => r.MaxScore);
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -175,14 +175,14 @@ public sealed class AIChatSessionEventService
             evt.UserRating = null;
         }
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     private async Task<AIChatSessionEvent> FindEventBySessionIdAsync(string sessionId)
     {
         return await _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
                 i => i.SessionId == sessionId,
-                collection: AIConstants.CollectionName)
+                collection: AIConstants.AICollectionName)
             .FirstOrDefaultAsync();
     }
 }

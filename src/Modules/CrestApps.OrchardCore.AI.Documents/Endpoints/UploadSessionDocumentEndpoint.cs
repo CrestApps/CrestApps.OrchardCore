@@ -35,6 +35,7 @@ internal static class UploadSessionDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         IAIChatSessionManager sessionManager,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<Startup> logger,
@@ -158,8 +159,15 @@ internal static class UploadSessionDocumentEndpoint
                 uploadedDocuments.Add(result.DocumentInfo);
                 session.Documents.Add(result.DocumentInfo);
 
-                processedDocuments.Add(result.Document);
                 await documentStore.CreateAsync(result.Document);
+
+                // Persist each chunk as a separate record.
+                foreach (var chunk in result.Chunks)
+                {
+                    await chunkStore.CreateAsync(chunk);
+                }
+
+                processedDocuments.Add(result.Document);
             }
             catch (Exception ex)
             {
@@ -208,6 +216,7 @@ internal static class UploadSessionDocumentEndpoint
             return;
         }
 
+        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<Startup>>();
 
@@ -224,21 +233,22 @@ internal static class UploadSessionDocumentEndpoint
 
             foreach (var aiDocument in documents)
             {
-                if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+                if (chunks.Count == 0)
                 {
                     continue;
                 }
 
-                foreach (var chunk in aiDocument.Chunks)
+                foreach (var chunk in chunks)
                 {
-                    var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
-                    var documentIndex = new DocumentIndex(chunkId);
+                    var documentIndex = new DocumentIndex(chunk.ItemId);
 
-                    var aiDocumentChunk = new AIDocumentChunk
+                    var aiDocumentChunk = new AIDocumentChunkContext
                     {
-                        ChunkId = chunkId,
+                        ChunkId = chunk.ItemId,
                         DocumentId = aiDocument.ItemId,
-                        Content = chunk.Text,
+                        Content = chunk.Content,
                         FileName = aiDocument.FileName,
                         ReferenceId = aiDocument.ReferenceId,
                         ReferenceType = aiDocument.ReferenceType,
@@ -246,7 +256,7 @@ internal static class UploadSessionDocumentEndpoint
                         Embedding = chunk.Embedding,
                     };
 
-                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], documentIndexManager.GetContentIndexSettings())
+                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
                     {
                         AdditionalProperties = new Dictionary<string, object>
                         {

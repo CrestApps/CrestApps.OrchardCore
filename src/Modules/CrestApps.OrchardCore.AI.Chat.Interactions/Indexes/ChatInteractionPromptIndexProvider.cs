@@ -9,7 +9,7 @@ internal sealed class ChatInteractionPromptIndexProvider : IndexProvider<ChatInt
 {
     public ChatInteractionPromptIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<ChatInteractionPrompt> context)

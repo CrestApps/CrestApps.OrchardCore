@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,7 @@ public sealed class AIDocumentsIndexingService
     private readonly IIndexingTaskManager _indexingTaskManager;
     private readonly ISourceCatalog<ChatInteraction> _sourceCatalog;
     private readonly IAIDocumentStore _documentStore;
+    private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
 
     private readonly IServiceProvider _serviceProvider;
@@ -31,6 +33,7 @@ public sealed class AIDocumentsIndexingService
         IIndexingTaskManager indexingTaskManager,
         ISourceCatalog<ChatInteraction> sourceCatalog,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
         ILogger<AIDocumentsIndexingService> logger)
@@ -39,6 +42,7 @@ public sealed class AIDocumentsIndexingService
         _indexingTaskManager = indexingTaskManager;
         _sourceCatalog = sourceCatalog;
         _documentStore = documentStore;
+        _chunkStore = chunkStore;
         _documentIndexHandlers = documentIndexHandlers;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -199,21 +203,22 @@ public sealed class AIDocumentsIndexingService
     {
         var documents = new List<DocumentIndex>();
 
-        if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+        var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+        if (chunks.Count == 0)
         {
             return documents;
         }
 
-        foreach (var chunk in aiDocument.Chunks)
+        foreach (var chunk in chunks)
         {
-            var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
-            var documentIndex = new DocumentIndex(chunkId);
+            var documentIndex = new DocumentIndex(chunk.ItemId);
 
-            var aiDocumentChunk = new AIDocumentChunk
+            var aiDocumentChunk = new AIDocumentChunkContext
             {
-                ChunkId = chunkId,
+                ChunkId = chunk.ItemId,
                 DocumentId = aiDocument.ItemId,
-                Content = chunk.Text,
+                Content = chunk.Content,
                 FileName = aiDocument.FileName,
                 ReferenceId = aiDocument.ReferenceId,
                 ReferenceType = aiDocument.ReferenceType,
@@ -221,7 +226,7 @@ public sealed class AIDocumentsIndexingService
                 Embedding = chunk.Embedding,
             };
 
-            var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], entry.DocumentIndexManager.GetContentIndexSettings())
+            var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], entry.DocumentIndexManager.GetContentIndexSettings())
             {
                 AdditionalProperties = new Dictionary<string, object>
                 {

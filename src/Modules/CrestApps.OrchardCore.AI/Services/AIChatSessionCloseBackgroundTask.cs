@@ -82,7 +82,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         // Query active sessions that are past the inactivity timeout.
         var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
                 i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
-                collection: AIConstants.CollectionName)
+                collection: AIConstants.AICollectionName)
             .ListAsync(cancellationToken);
 
         foreach (var chatSession in inactiveSessions)
@@ -109,7 +109,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             // Run all post-close processing (tasks + analytics + conversion goals) as a unified resilient pipeline.
             await RunPostCloseProcessingAsync(serviceProvider, profile, chatSession, prompts, utcNow, logger, cancellationToken);
 
-            await session.SaveAsync(chatSession, false, collection: AIConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
 
             await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, utcNow, logger);
         }
@@ -129,7 +129,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 i => i.ProfileId == profile.ItemId
                     && i.Status == ChatSessionStatus.Closed
                     && i.PostSessionProcessingStatus == PostSessionProcessingStatus.Pending,
-                collection: AIConstants.CollectionName)
+                collection: AIConstants.AICollectionName)
             .ListAsync(cancellationToken);
 
         foreach (var chatSession in pendingSessions)
@@ -143,7 +143,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             if (chatSession.PostSessionProcessingAttempts >= MaxPostCloseAttempts)
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
-                await session.SaveAsync(chatSession, false, collection: AIConstants.CollectionName, cancellationToken);
+                await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
 
                 logger.LogWarning(
                     "Post-close processing for session '{SessionId}' has exceeded maximum attempts ({MaxAttempts}). Marking as failed. "
@@ -189,7 +189,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             await RunPostCloseProcessingAsync(serviceProvider, profile, chatSession, prompts, utcNow, logger, cancellationToken);
 
-            await session.SaveAsync(chatSession, false, collection: AIConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
         }
     }
 

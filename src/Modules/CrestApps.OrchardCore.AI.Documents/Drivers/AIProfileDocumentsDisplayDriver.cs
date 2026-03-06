@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,10 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
@@ -22,6 +26,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly IAIDocumentStore _documentStore;
+    private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly ILogger _logger;
@@ -33,6 +38,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         IIndexProfileStore indexProfileStore,
         IServiceProvider serviceProvider,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<AIProfileDocumentsDisplayDriver> logger,
@@ -42,6 +48,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         _indexProfileStore = indexProfileStore;
         _serviceProvider = serviceProvider;
         _documentStore = documentStore;
+        _chunkStore = chunkStore;
         _documentProcessingService = documentProcessingService;
         _extractorOptions = extractorOptions;
         _logger = logger;
@@ -88,6 +95,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             // Handle document removals.
             if (model.RemovedDocumentIds != null && model.RemovedDocumentIds.Length > 0)
             {
+                var chunkIdsToRemove = new List<string>();
+
                 foreach (var documentId in model.RemovedDocumentIds)
                 {
                     if (string.IsNullOrEmpty(documentId))
@@ -99,6 +108,14 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
                     if (document != null)
                     {
+                        // Collect chunk IDs for vector index removal.
+                        var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(document.ItemId);
+                        foreach (var chunk in chunks)
+                        {
+                            chunkIdsToRemove.Add(chunk.ItemId);
+                        }
+
+                        await _chunkStore.DeleteByDocumentIdAsync(document.ItemId);
                         await _documentStore.DeleteAsync(document);
                     }
 
@@ -109,12 +126,25 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                         documentsMetadata.Documents.Remove(docInfo);
                     }
                 }
+
+                // Schedule removal of chunks from the vector index.
+                if (chunkIdsToRemove.Count > 0)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Scheduling removal of {ChunkCount} chunk(s) from vector index for profile '{ProfileId}'.",
+                            chunkIdsToRemove.Count, profile.ItemId);
+                    }
+
+                    ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
+                }
             }
 
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
                 var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, profile.ConnectionName);
+                var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
                 {
@@ -151,6 +181,14 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
                         documentsMetadata.Documents.Add(result.DocumentInfo);
                         await _documentStore.CreateAsync(result.Document);
+
+                        // Persist each chunk as a separate record.
+                        foreach (var chunk in result.Chunks)
+                        {
+                            await _chunkStore.CreateAsync(chunk);
+                        }
+
+                        processedDocuments.Add(result.Document);
                     }
                     catch (Exception ex)
                     {
@@ -160,11 +198,121 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                             S["Failed to process file '{0}'.", file.FileName]);
                     }
                 }
+
+                // Schedule vector indexing of processed document chunks as a deferred task.
+                if (processedDocuments.Count > 0)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Scheduling vector indexing for {DocCount} document(s) for profile '{ProfileId}'.",
+                            processedDocuments.Count,
+                            profile.ItemId);
+                    }
+
+                    var docs = processedDocuments.ToList();
+                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, docs));
+                }
             }
         }
 
         profile.Put(documentsMetadata);
 
         return Edit(profile, context);
+    }
+
+    private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)
+    {
+        var services = scope.ServiceProvider;
+        var indexStore = services.GetRequiredService<IIndexProfileStore>();
+        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+
+        if (!indexProfiles.Any())
+        {
+            return;
+        }
+
+        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
+        var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
+        var logger = services.GetRequiredService<ILogger<AIProfileDocumentsDisplayDriver>>();
+
+        foreach (var indexProfile in indexProfiles)
+        {
+            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+
+            if (documentIndexManager == null)
+            {
+                continue;
+            }
+
+            var chunkDocuments = new List<DocumentIndex>();
+
+            foreach (var aiDocument in documents)
+            {
+                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+                if (chunks.Count == 0)
+                {
+                    continue;
+                }
+
+                foreach (var chunk in chunks)
+                {
+                    var documentIndex = new DocumentIndex(chunk.ItemId);
+
+                    var aiDocumentChunk = new AIDocumentChunkContext
+                    {
+                        ChunkId = chunk.ItemId,
+                        DocumentId = aiDocument.ItemId,
+                        Content = chunk.Content,
+                        FileName = aiDocument.FileName,
+                        ReferenceId = aiDocument.ReferenceId,
+                        ReferenceType = aiDocument.ReferenceType,
+                        ChunkIndex = chunk.Index,
+                        Embedding = chunk.Embedding,
+                    };
+
+                    var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
+                    {
+                        AdditionalProperties = new Dictionary<string, object>
+                        {
+                            { nameof(IndexProfile), indexProfile },
+                        }
+                    };
+
+                    await documentIndexHandlers.InvokeAsync((handler, ctx) => handler.BuildIndexAsync(ctx), buildContext, logger);
+
+                    chunkDocuments.Add(documentIndex);
+                }
+            }
+
+            if (chunkDocuments.Count > 0)
+            {
+                await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, chunkDocuments);
+            }
+        }
+    }
+
+    private static async Task RemoveDocumentChunksAsync(ShellScope scope, List<string> chunkIds)
+    {
+        var services = scope.ServiceProvider;
+        var indexStore = services.GetRequiredService<IIndexProfileStore>();
+        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+
+        if (!indexProfiles.Any())
+        {
+            return;
+        }
+
+        foreach (var indexProfile in indexProfiles)
+        {
+            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+
+            if (documentIndexManager == null)
+            {
+                continue;
+            }
+
+            await documentIndexManager.DeleteDocumentsAsync(indexProfile, chunkIds);
+        }
     }
 }

@@ -605,6 +605,13 @@ window.openAIChatManager = function () {
                         this.$nextTick(() => {
                             this.refreshAllFeedbackIcons();
                         });
+
+                        // When the session is new (no messages) and an initial prompt is configured,
+                        // automatically send it as the first user message to trigger an AI response.
+                        if (this.messages.length === 0 && config.initialPrompt) {
+                            this.prompt = config.initialPrompt;
+                            this.sendMessage();
+                        }
                     });
 
                     this.connection.on("ReceiveError", (error) => {

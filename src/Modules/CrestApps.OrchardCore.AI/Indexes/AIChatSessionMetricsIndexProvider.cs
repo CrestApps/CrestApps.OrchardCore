@@ -9,7 +9,7 @@ internal sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSe
 {
     public AIChatSessionMetricsIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<AIChatSessionEvent> context)

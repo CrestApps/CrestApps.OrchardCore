@@ -19,7 +19,7 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
         IClock clock)
         : base(session)
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
         _clock = clock;
     }
 

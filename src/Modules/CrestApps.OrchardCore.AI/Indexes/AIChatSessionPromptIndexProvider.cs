@@ -9,7 +9,7 @@ internal sealed class AIChatSessionPromptIndexProvider : IndexProvider<AIChatSes
 {
     public AIChatSessionPromptIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<AIChatSessionPrompt> context)

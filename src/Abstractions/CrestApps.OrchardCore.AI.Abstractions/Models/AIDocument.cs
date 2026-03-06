@@ -29,11 +29,6 @@ public sealed class AIDocument : CatalogItem
     public string ContentType { get; set; }
 
     /// <summary>
-    /// Gets or sets the extracted text content from the document.
-    /// </summary>
-    public string Text { get; set; }
-
-    /// <summary>
     /// Gets or sets the size of the original file in bytes.
     /// </summary>
     public long FileSize { get; set; }
@@ -42,9 +37,4 @@ public sealed class AIDocument : CatalogItem
     /// Gets or sets the UTC date and time when the document was uploaded.
     /// </summary>
     public DateTime UploadedUtc { get; set; }
-
-    /// <summary>
-    /// Gets or sets the extracted text as chunks from the document.
-    /// </summary>
-    public List<ChatInteractionDocumentChunk> Chunks { get; set; }
 }
