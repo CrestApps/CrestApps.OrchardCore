@@ -11,6 +11,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
     {
         await CreateAIDocumentIndexTableAsync();
 
+
         return 2;
     }
 

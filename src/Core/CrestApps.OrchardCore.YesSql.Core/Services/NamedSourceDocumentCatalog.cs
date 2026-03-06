@@ -24,7 +24,7 @@ public class NamedSourceDocumentCatalog<T, TIndex> : SourceDocumentCatalog<T, TI
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        return await Session.Query<T, TIndex>(x => x.DisplayText == name, collection: CollectionName).FirstOrDefaultAsync();
+        return await Session.Query<T, TIndex>(x => x.Name == name, collection: CollectionName).FirstOrDefaultAsync();
     }
 
     public async ValueTask<T> GetAsync(string name, string source)
@@ -32,12 +32,12 @@ public class NamedSourceDocumentCatalog<T, TIndex> : SourceDocumentCatalog<T, TI
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        return await Session.Query<T, TIndex>(x => x.DisplayText == name && x.Source == source, collection: CollectionName).FirstOrDefaultAsync();
+        return await Session.Query<T, TIndex>(x => x.Name == name && x.Source == source, collection: CollectionName).FirstOrDefaultAsync();
     }
 
     protected override async ValueTask SavingAsync(T record)
     {
-        var item = await Session.QueryIndex<TIndex>(x => x.DisplayText == record.Name && x.ItemId != record.ItemId).FirstOrDefaultAsync();
+        var item = await Session.QueryIndex<TIndex>(x => x.Name == record.Name && x.ItemId != record.ItemId, collection: CollectionName).FirstOrDefaultAsync();
 
         if (item is not null)
         {

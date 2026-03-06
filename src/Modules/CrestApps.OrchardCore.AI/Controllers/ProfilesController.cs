@@ -314,15 +314,11 @@ public sealed class ProfilesController : Controller
                     break;
                 case CatalogEntryAction.Remove:
                     var counter = 0;
-                    foreach (var id in itemIds)
+                    var itemIdsSet = itemIds.ToHashSet();
+                    var allProfiles = await _profileManager.GetAllAsync();
+
+                    foreach (var profile in allProfiles.Where(p => itemIdsSet.Contains(p.ItemId)))
                     {
-                        var profile = await _profileManager.FindByIdAsync(id);
-
-                        if (profile == null)
-                        {
-                            continue;
-                        }
-
                         var settings = profile.GetSettings<AIProfileSettings>();
 
                         if (!settings.IsRemovable)

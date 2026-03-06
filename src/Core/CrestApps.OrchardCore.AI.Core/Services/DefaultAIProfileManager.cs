@@ -7,17 +7,20 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 public sealed class DefaultAIProfileManager : NamedSourceCatalogManager<AIProfile>, IAIProfileManager
 {
+    private readonly IAIProfileStore _profileStore;
+
     public DefaultAIProfileManager(
-        INamedSourceCatalog<AIProfile> profileStore,
+        IAIProfileStore profileStore,
         IEnumerable<ICatalogEntryHandler<AIProfile>> handlers,
         ILogger<DefaultAIProfileManager> logger)
         : base(profileStore, handlers, logger)
     {
+        _profileStore = profileStore;
     }
 
     public async ValueTask<IEnumerable<AIProfile>> GetAsync(AIProfileType type)
     {
-        var profiles = await NamedSourceCatalog.GetAsync(type);
+        var profiles = await _profileStore.GetByTypeAsync(type);
 
         foreach (var profile in profiles)
         {
