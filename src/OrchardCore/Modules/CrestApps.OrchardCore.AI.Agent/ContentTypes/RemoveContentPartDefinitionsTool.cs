@@ -1,15 +1,16 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class RemoveContentPartDefinitionsTool : AIFunction
+public sealed class RemoveContentPartDefinitionsTool: AIFunction
 {
     public const string TheName = "removeContentPartDefinition";
 
@@ -44,24 +45,28 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<RemoveContentPartDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.EditContentTypes))
-        {
-            return "You do not have permission to edit content definitions.";
-        }
-
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
+
             return "Unable to find a name argument in the function arguments.";
         }
-
 
         var partDefinition = await contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (partDefinition is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find a part definition matching the name '{ContentPart}'.", TheName, name);
+
             return
                 $"""
                 Unable to find a part definition that match the name: {name}.
@@ -86,8 +91,15 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+            }
+
             return $"The content part {name} was removed successfully";
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed to remove content part definition '{ContentPart}'.", TheName, name);
 
         return "Unable to remove the content part definition.";
     }

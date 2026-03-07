@@ -70,7 +70,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
                 Name = name,
                 Description = definition.Description ?? definition.Title ?? name,
                 Source = ToolRegistryEntrySource.Local,
-                ToolFactory = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
+                CreateAsync = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });
         }
 

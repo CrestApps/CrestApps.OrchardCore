@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -43,12 +44,20 @@ public abstract class ImportRecipeBaseTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ImportRecipeBaseTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'recipe'.", Name);
             return ValueTask.FromResult<object>(MissingArgument());
         }
 
-        return ProcessRecipeAsync(arguments.Services, recipe, cancellationToken);
+        return ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
     }
 
     protected static string MissingArgument(string name = "recipe")
@@ -57,7 +66,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
-    protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, CancellationToken cancellationToken)
+    protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, CancellationToken cancellationToken)
 #pragma warning restore IDE0060 // Remove unused parameter
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
@@ -134,6 +143,8 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         if (!result.IsValid)
         {
+            logger.LogWarning("AI tool recipe import failed: invalid recipe format.");
+
             var schemaStructure = JsonSerializer.Serialize(rootSchema);
 
             return
@@ -146,8 +157,12 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))
         {
+            logger.LogInformation("AI tool recipe import completed successfully.");
+
             return "Recipe was successfully imported";
         }
+
+        logger.LogWarning("AI tool recipe import failed: error occurred during execution.");
 
         return "Error occurred while trying to import the recipe.";
     }

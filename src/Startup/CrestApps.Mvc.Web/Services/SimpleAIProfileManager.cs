@@ -56,7 +56,7 @@ public sealed class SimpleAIProfileManager : IAIProfileManager
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        var all = await _session.Query<AIProfile, AIProfileIndex>(x => x.DisplayText == name).ListAsync();
+        var all = await _session.Query<AIProfile, AIProfileIndex>(x => x.Name == name).ListAsync();
 
         return all.FirstOrDefault();
     }
@@ -66,7 +66,7 @@ public sealed class SimpleAIProfileManager : IAIProfileManager
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(source);
 
-        var items = await _session.Query<AIProfile, AIProfileIndex>(x => x.DisplayText == name && x.Source == source).ListAsync();
+        var items = await _session.Query<AIProfile, AIProfileIndex>(x => x.Name == name && x.Source == source).ListAsync();
 
         return items.FirstOrDefault();
     }

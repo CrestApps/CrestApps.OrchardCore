@@ -3,9 +3,9 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 using OrchardCore.Json;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
@@ -45,16 +45,20 @@ public sealed class GetContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<GetContentTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+        }
+
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.ViewContent))
-        {
-            return "You do not have permission to view content items.";
-        }
-
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
+
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
@@ -62,7 +66,14 @@ public sealed class GetContentTool : AIFunction
 
         if (contentItem is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
+
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 
         return JsonSerializer.Serialize(contentItem, options.SerializerOptions);

@@ -4,5 +4,5 @@ namespace CrestApps.Data.YesSql;
 
 public interface INameAwareIndex : IIndex
 {
-    string DisplayText { get; set; }
+    string Name { get; set; }
 }

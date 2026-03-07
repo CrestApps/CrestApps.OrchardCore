@@ -5,6 +5,8 @@ using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
@@ -57,6 +59,12 @@ public sealed class ListAIProfilesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
 
         var profiles = (await profileManager.GetAllAsync()).ToList();
@@ -69,7 +77,7 @@ public sealed class ListAIProfilesTool : AIFunction
 
         if (arguments.TryGetFirst<bool>("onlyWithMetricsEnabled", out var metricsEnabled) && metricsEnabled)
         {
-            profiles = profiles.Where(p => p.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics).ToList();
+            profiles = profiles.Where(p => p.As<AnalyticsMetadata>().EnableSessionMetrics).ToList();
         }
 
         if (arguments.TryGetFirst<bool>("onlyWithDataExtraction", out var dataExtraction) && dataExtraction)
@@ -89,10 +97,15 @@ public sealed class ListAIProfilesTool : AIFunction
             ["displayText"] = p.DisplayText,
             ["type"] = p.Type.ToString(),
             ["source"] = p.Source,
-            ["metricsEnabled"] = p.As<AIProfileAnalyticsMetadata>().EnableSessionMetrics,
+            ["metricsEnabled"] = p.As<AnalyticsMetadata>().EnableSessionMetrics,
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,
         }).ToList();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(new { profiles = result, count = result.Count });
     }

@@ -54,15 +54,16 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var logger = arguments.Services.GetRequiredService<ILogger<ExecuteStartupRecipesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
         {
-            return "Unable to find a recipeName argument in the function arguments.";
-        }
+            logger.LogWarning("AI tool '{ToolName}': missing 'recipeName' argument.", Name);
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
-        {
-            return "You do not have permission to execute a recipe.";
+            return "Unable to find a recipeName argument in the function arguments.";
         }
 
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
@@ -72,6 +73,8 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
         if (recipe is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': no recipe found matching name '{RecipeName}'.", Name, recipeName);
+
             return "Unable to find a recipe that match the given recipe name.";
         }
 
@@ -85,6 +88,11 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
             await recipeExecutor.ExecuteAsync(executionId, recipe, environment, cancellationToken);
 
             await shellHost.ReleaseShellContextAsync(shellSettings);
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
 
             return $"The recipe '{recipe.DisplayName}' has been run successfully";
         }

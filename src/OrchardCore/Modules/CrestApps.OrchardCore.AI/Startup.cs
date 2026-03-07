@@ -54,7 +54,9 @@ public sealed class Startup : StartupBase
             o.MemberAccessStrategy.Register<PostSessionResult>();
             o.MemberAccessStrategy.Register<AICompletionReference>();
             o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
-            o.MemberAccessStrategy.Register<ChatInteractionDocumentInfo>();
+            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
+            o.MemberAccessStrategy.Register<ExtractedFieldChange>();
+            o.MemberAccessStrategy.Register<ConversionGoalResult>();
         });
 
         services
@@ -79,6 +81,9 @@ public sealed class Startup : StartupBase
 #pragma warning restore CS0618 // Type or member is obsolete
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
+        services.AddDataMigration<AIProfileIndexMigrations>();
+        services.AddDataMigration<AIProfileDocumentMigrations>();
+        services.AddIndexProvider<AIProfileIndexProvider>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
@@ -112,6 +117,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
         services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
+        services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
     }

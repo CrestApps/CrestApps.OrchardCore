@@ -18,7 +18,7 @@
                         </div>
                         <div class="text-muted">
                             @T["Positive Ratings"]
-                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions where users gave a thumbs up, indicating a satisfactory experience."]"></i>
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The total number of thumbs-up ratings given on individual messages across all sessions."]"></i>
                         </div>
                     </div>
                 </div>
@@ -29,7 +29,7 @@
                         </div>
                         <div class="text-muted">
                             @T["Negative Ratings"]
-                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The number of sessions where users gave a thumbs down, indicating a poor experience. Review these sessions to identify improvement areas."]"></i>
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The total number of thumbs-down ratings given on individual messages across all sessions. Review these sessions to identify improvement areas."]"></i>
                         </div>
                     </div>
                 </div>
@@ -38,7 +38,7 @@
                         <div class="fs-2 fw-bold text-success">@Model.ThumbsUpPercent%</div>
                         <div class="text-muted">
                             @T["Satisfaction Rate"]
-                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of positive ratings out of all sessions that received feedback. A higher satisfaction rate indicates the bot is meeting user expectations."]"></i>
+                            <i class="fa-solid fa-circle-info ms-1" data-bs-toggle="tooltip" title="@T["The percentage of positive ratings out of all message-level ratings. A higher satisfaction rate indicates the bot is meeting user expectations."]"></i>
                         </div>
                     </div>
                 </div>
@@ -53,16 +53,18 @@
                 </div>
             </div>
 
-            @if (Model.TotalSessionsWithFeedback > 0)
+            @if (Model.TotalRatings > 0)
             {
                 <div class="row mt-2">
                     <div class="col-12">
-                        <div class="progress" style="height: 30px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: @(Model.ThumbsUpPercent)%">
-                                <i class="fa-solid fa-thumbs-up me-1"></i>@Model.ThumbsUpPercent%
+                        <div class="progress" style="height: 40px;">
+                            <div class="progress-bar bg-success d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsUpPercent)%">
+                                <i class="fa-solid fa-thumbs-up"></i>
+                                <span>@Model.ThumbsUpPercent%</span>
                             </div>
-                            <div class="progress-bar bg-danger" role="progressbar" style="width: @(Model.ThumbsDownPercent)%">
-                                <i class="fa-solid fa-thumbs-down me-1"></i>@Model.ThumbsDownPercent%
+                            <div class="progress-bar bg-danger d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsDownPercent)%">
+                                <i class="fa-solid fa-thumbs-down"></i>
+                                <span>@Model.ThumbsDownPercent%</span>
                             </div>
                         </div>
                     </div>

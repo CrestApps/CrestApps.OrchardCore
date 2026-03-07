@@ -2,6 +2,17 @@
 
 @model EditAIProfileSessionDocumentsViewModel
 
+@if (!Model.HasIndexProfile)
+{
+    <div id="sessionDocumentsIndexWarning" class="alert alert-warning @(Model.AllowSessionDocuments ? string.Empty : "d-none")" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Index Not Configured"]</strong>
+        <p class="mb-0">
+            @T["No document index is configured. Please navigate to Settings > Artificial Intelligence and select an index profile to enable document embedding."]
+        </p>
+    </div>
+}
+
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
@@ -9,3 +20,21 @@
         <span class="hint">@T["When enabled, users can upload and attach documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
     </div>
 </div>
+
+@if (!Model.HasIndexProfile)
+{
+    <script at="Foot">
+        (function () {
+            const toggle = document.getElementById('@Html.IdFor(m => m.AllowSessionDocuments)');
+            const warning = document.getElementById('sessionDocumentsIndexWarning');
+            if (!toggle || !warning) return;
+
+            const syncWarning = function () {
+                warning.classList.toggle('d-none', !toggle.checked);
+            };
+
+            toggle.addEventListener('change', syncWarning);
+            syncWarning();
+        })();
+    </script>
+}

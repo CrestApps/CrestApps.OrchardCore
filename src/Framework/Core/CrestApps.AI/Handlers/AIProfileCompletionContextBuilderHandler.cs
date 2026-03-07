@@ -37,7 +37,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
         context.Context.PastMessagesCount = metadata.PastMessagesCount;
         context.Context.UseCaching = metadata.UseCaching;
 
-        if (profile.TryGetSettings<AIProfileFunctionInvocationMetadata>(out var functionInvocationMetadata))
+        if (profile.TryGetSettings<FunctionInvocationMetadata>(out var functionInvocationMetadata))
         {
             context.Context.ToolNames = functionInvocationMetadata.Names;
         }

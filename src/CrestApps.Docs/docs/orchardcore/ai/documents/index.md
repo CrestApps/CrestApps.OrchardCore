@@ -22,7 +22,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 
 - **Unified Document Store**: A single `IAIDocumentStore` for storing and querying documents across all reference types (chat interactions, profiles)
 - **Text Extraction**: Automatic text extraction from uploaded documents via registered `IngestionDocumentReader` implementations (from `Microsoft.Extensions.DataIngestion`)
-- **Settings UI**: Admin settings page for configuring the default document index (**Settings > Chat Interaction**)
+- **Settings UI**: Admin settings page for configuring the default document index (**Settings > Artificial Intelligence**)
 - **Document Processing Tools**: AI tools for listing, reading, and searching documents
 - **RAG Search Tool**: Semantic vector search across uploaded documents
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
@@ -74,8 +74,8 @@ The orchestrator supports various document-related operations:
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "ChatDocuments").
-3. **Configure settings**: Navigate to **Settings > Chat Interaction** and select your new index.
+2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
 5. Start using the Documents tab in your chat interactions.
 
@@ -91,6 +91,7 @@ Provides document upload and Retrieval-Augmented Generation (RAG) support for AI
 When enabled, a **Documents** tab appears on the AI Profile editor, allowing administrators to attach text-based documents that will be chunked, embedded, and used as context across all chat sessions using that profile.
 
 Unlike chat interaction documents (which are scoped to a single session), profile documents **persist across all sessions** using the profile.
+Profile documents are treated as **background knowledge**. End users should not be told that the profile has attached documents unless they explicitly upload documents in the current session.
 
 ### Key Capabilities
 
@@ -182,8 +183,8 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 ### Getting Started
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
-2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "ChatDocuments").
-3. **Configure settings**: Navigate to **Settings > Chat Interaction** and select your new index.
+2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
 6. Open a chat session — the attach button and drag-and-drop zone are now available.
@@ -230,7 +231,8 @@ This ensures the AI document indexes stay free of orphaned entries when their pa
 
 ### "Index Not Configured" Warning
 
-If you see this warning, navigate to **Settings > Chat Interaction** and select an index profile.
+If you see this warning, navigate to **Settings > Artificial Intelligence** and select an index profile.
+If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
 
 ### "Embedding Search Service Not Available" Warning
 

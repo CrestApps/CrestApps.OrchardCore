@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -57,9 +58,15 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<QueryChatSessionMetricsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var session = arguments.Services.GetRequiredService<ISession>();
 
-        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.CollectionName);
+        var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
         {
@@ -82,6 +89,8 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
 
         if (metrics.Count == 0)
         {
+            logger.LogWarning("AI tool '{ToolName}': no session metrics found for the given filters.", Name);
+
             return JsonSerializer.Serialize(new { message = "No session metrics found for the given filters.", totalSessions = 0 });
         }
 
@@ -89,9 +98,9 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         var completedSessions = metrics.Where(m => m.SessionEndedUtc.HasValue).ToList();
         var resolvedSessions = metrics.Count(m => m.IsResolved);
         var authenticatedSessions = metrics.Count(m => m.IsAuthenticated);
-        var ratingsPositive = metrics.Count(m => m.UserRating == true);
-        var ratingsNegative = metrics.Count(m => m.UserRating == false);
-        var ratingsTotal = metrics.Count(m => m.UserRating.HasValue);
+        var ratingsPositive = metrics.Sum(m => m.ThumbsUpCount);
+        var ratingsNegative = metrics.Sum(m => m.ThumbsDownCount);
+        var ratingsTotal = ratingsPositive + ratingsNegative;
 
         var hourDistribution = metrics
             .GroupBy(m => m.HourOfDay)
@@ -126,10 +135,37 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
                 thumbsDown = ratingsNegative,
                 positiveRate = ratingsTotal > 0 ? Math.Round((double)ratingsPositive / ratingsTotal * 100, 1) : 0,
             },
+            conversion = GetConversionMetrics(metrics),
             hourOfDayDistribution = hourDistribution,
             dayOfWeekDistribution = dayDistribution,
         };
 
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
+
         return JsonSerializer.Serialize(result);
+    }
+
+    private static object GetConversionMetrics(List<AIChatSessionMetricsIndex> metrics)
+    {
+        var sessionsWithConversion = metrics.Where(m => m.ConversionScore.HasValue && m.ConversionMaxScore.HasValue).ToList();
+
+        if (sessionsWithConversion.Count == 0)
+        {
+            return new { evaluated = 0 };
+        }
+
+        var totalScore = sessionsWithConversion.Sum(m => m.ConversionScore.Value);
+        var totalMaxScore = sessionsWithConversion.Sum(m => m.ConversionMaxScore.Value);
+
+        return new
+        {
+            evaluated = sessionsWithConversion.Count,
+            averageConversionRate = totalMaxScore > 0 ? Math.Round((double)totalScore / totalMaxScore * 100, 1) : 0,
+            averageScore = sessionsWithConversion.Count > 0 ? Math.Round(sessionsWithConversion.Average(m => m.ConversionScore.Value), 1) : 0,
+            averageMaxScore = sessionsWithConversion.Count > 0 ? Math.Round(sessionsWithConversion.Average(m => m.ConversionMaxScore.Value), 1) : 0,
+        };
     }
 }

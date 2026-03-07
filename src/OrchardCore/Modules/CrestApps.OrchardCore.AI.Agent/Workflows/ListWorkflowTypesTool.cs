@@ -3,6 +3,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Json;
 using OrchardCore.Navigation;
@@ -50,14 +51,15 @@ public sealed class ListWorkflowTypesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListWorkflowTypesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var workflowTypeStore = arguments.Services.GetRequiredService<IWorkflowTypeStore>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
-        {
-            return "The current user does not have permission to manage workflows.";
-        }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
 
@@ -81,6 +83,11 @@ public sealed class ListWorkflowTypesTool : AIFunction
             .Skip(startingIndex)
             .Take(pagerOptions.PageSize)
             .ToList();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return
         $$"""

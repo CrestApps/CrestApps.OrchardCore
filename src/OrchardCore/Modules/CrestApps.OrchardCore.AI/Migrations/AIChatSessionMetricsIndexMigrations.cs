@@ -26,8 +26,12 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 .Column<int>("TotalOutputTokens", column => column.WithDefault(0))
                 .Column<double>("AverageResponseLatencyMs", column => column.WithDefault(0))
                 .Column<bool?>("UserRating", column => column.Nullable())
+                .Column<int>("ThumbsUpCount", column => column.WithDefault(0))
+                .Column<int>("ThumbsDownCount", column => column.WithDefault(0))
+                .Column<int?>("ConversionScore", column => column.Nullable())
+                .Column<int?>("ConversionMaxScore", column => column.Nullable())
                 .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
@@ -36,7 +40,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 "SessionId",
                 "ProfileId",
                 "CreatedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
@@ -46,7 +50,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 "SessionStartedUtc",
                 "SessionEndedUtc",
                 "IsResolved"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
@@ -55,7 +59,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 "VisitorId",
                 "ProfileId",
                 "SessionStartedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
@@ -65,9 +69,31 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
                 "HourOfDay",
                 "DayOfWeek",
                 "SessionStartedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
-        return 1;
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
+        {
+            table.AddColumn<int?>("ConversionScore", column => column.Nullable());
+            table.AddColumn<int?>("ConversionMaxScore", column => column.Nullable());
+        }, collection: AIConstants.AICollectionName);
+
+        return 3;
+    }
+
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
+        {
+            table.AddColumn<int>("ThumbsUpCount", column => column.WithDefault(0));
+            table.AddColumn<int>("ThumbsDownCount", column => column.WithDefault(0));
+        }, collection: AIConstants.AICollectionName);
+
+        return 3;
     }
 }

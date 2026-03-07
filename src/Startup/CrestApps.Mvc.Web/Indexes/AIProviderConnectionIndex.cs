@@ -7,7 +7,7 @@ namespace CrestApps.Mvc.Web.Indexes;
 
 public sealed class AIProviderConnectionIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
 {
-    public string DisplayText { get; set; }
+    public string Name { get; set; }
     public string Source { get; set; }
 }
 
@@ -19,7 +19,7 @@ public sealed class AIProviderConnectionIndexProvider : IndexProvider<AIProvider
             .Map(connection => new AIProviderConnectionIndex
             {
                 ItemId = connection.ItemId,
-                DisplayText = connection.Name,
+                Name = connection.Name,
                 Source = connection.Source,
             });
     }

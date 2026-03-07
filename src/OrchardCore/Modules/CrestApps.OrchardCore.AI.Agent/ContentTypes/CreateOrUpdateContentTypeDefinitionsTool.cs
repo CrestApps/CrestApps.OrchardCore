@@ -2,6 +2,8 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
@@ -18,16 +20,26 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.EditContentTypes))
+        var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTypeDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to edit content types or parts.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipe' argument.", TheName);
+
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(arguments.Services, recipe, cancellationToken);
+        var result = await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result;
     }
 }

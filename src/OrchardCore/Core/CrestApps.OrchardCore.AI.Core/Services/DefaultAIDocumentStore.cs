@@ -11,7 +11,7 @@ public sealed class DefaultAIDocumentStore : DocumentCatalog<AIDocument, AIDocum
     public DefaultAIDocumentStore(ISession session)
         : base(session)
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AIDocsCollectionName;
     }
 
     public async Task<IReadOnlyCollection<AIDocument>> GetDocumentsAsync(string referenceId, string referenceType)

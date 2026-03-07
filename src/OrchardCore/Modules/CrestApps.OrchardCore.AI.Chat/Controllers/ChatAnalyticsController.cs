@@ -137,7 +137,7 @@ public sealed class ChatAnalyticsController : Controller
 
     private async Task<IReadOnlyList<AIChatSessionEvent>> ExecuteQueryAsync(AIChatAnalyticsFilter filter)
     {
-        var query = _session.Query<AIChatSessionEvent>(collection: AIConstants.CollectionName);
+        var query = _session.Query<AIChatSessionEvent>(collection: AIConstants.AICollectionName);
 
         // Apply all conditions accumulated by display drivers.
         foreach (var condition in filter.Conditions)

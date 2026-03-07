@@ -14,7 +14,7 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
                 .Column<string>("ChatInteractionId", column => column.WithLength(26))
                 .Column<string>("Role", column => column.WithLength(20))
                 .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
@@ -22,7 +22,7 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
                 "DocumentId",
                 "ItemId",
                 "ChatInteractionId"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
@@ -30,7 +30,7 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
                 "DocumentId",
                 "ChatInteractionId",
                 "CreatedUtc"),
-            collection: AIConstants.CollectionName
+            collection: AIConstants.AICollectionName
         );
 
         return 1;

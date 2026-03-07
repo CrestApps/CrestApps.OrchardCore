@@ -5,6 +5,8 @@ using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
@@ -49,6 +51,12 @@ public sealed class ViewAIProfileTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ViewAIProfileTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
 
         AIProfile profile = null;
@@ -64,10 +72,12 @@ public sealed class ViewAIProfileTool : AIFunction
 
         if (profile == null)
         {
+            logger.LogWarning("AI tool '{ToolName}': AI profile not found for profileId '{ProfileId}' or profileName '{ProfileName}'.", Name, arguments.GetFirstValueOrDefault<string>("profileId"), arguments.GetFirstValueOrDefault<string>("profileName"));
+
             return JsonSerializer.Serialize(new { error = "AI profile not found." });
         }
 
-        var analyticsMetadata = profile.As<AIProfileAnalyticsMetadata>();
+        var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
 
@@ -119,6 +129,11 @@ public sealed class ViewAIProfileTool : AIFunction
                     })),
             },
         };
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(result);
     }

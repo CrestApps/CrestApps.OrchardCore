@@ -4,6 +4,7 @@ using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Tools;
 
@@ -39,6 +40,13 @@ public sealed class ListDocumentsTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
+        var logger = arguments.Services.GetRequiredService<ILogger<ListDocumentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
 
         if (executionContext?.Resource is ChatInteraction interaction)
@@ -48,6 +56,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
@@ -55,6 +64,7 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documents is null || documents.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}': no documents attached to session '{SessionId}'.", Name, chatInteractionId);
                 return "No documents are attached to this session.";
             }
 
@@ -66,6 +76,11 @@ public sealed class ListDocumentsTool : AIFunction
                 FileSize = FormatFileSize(d.FileSize),
             });
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return JsonSerializer.Serialize(result);
         }
 
@@ -75,17 +90,39 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (documentStore is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
                 return "Document store is not available.";
             }
 
-            var documents = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
+            // Collect documents from both profile-level and session-level sources.
+            var allDocuments = new List<AIDocument>();
 
-            if (documents is null || documents.Count == 0)
+            var profileDocs = await documentStore.GetDocumentsAsync(profile.ItemId, AIConstants.DocumentReferenceTypes.Profile);
+
+            if (profileDocs is { Count: > 0 })
             {
-                return "No documents are attached to this profile.";
+                allDocuments.AddRange(profileDocs);
             }
 
-            var result = documents.Select(d => new
+            if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                var sessionDocs = await documentStore.GetDocumentsAsync(session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession);
+
+                if (sessionDocs is { Count: > 0 })
+                {
+                    allDocuments.AddRange(sessionDocs);
+                }
+            }
+
+            if (allDocuments.Count == 0)
+            {
+                logger.LogWarning("AI tool '{ToolName}': no documents attached.", Name);
+                return "No documents are attached.";
+            }
+
+            var result = allDocuments.Select(d => new
             {
                 d.ItemId,
                 d.FileName,
@@ -93,8 +130,15 @@ public sealed class ListDocumentsTool : AIFunction
                 FileSize = FormatFileSize(d.FileSize),
             });
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return JsonSerializer.Serialize(result);
         }
+
+        logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
 
         return "Document access requires an active chat interaction session or AI profile.";
     }

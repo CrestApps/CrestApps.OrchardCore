@@ -1,21 +1,30 @@
+using CrestApps.Models;
+
 namespace CrestApps.AI.Models;
 
 /// <summary>
-/// Represents a single chunk of an AI document for indexing purposes.
-/// This model is used as the record in <see cref="the document index context"/>
-/// when indexing document chunks via <see cref="a document index handler"/>.
+/// Represents a single chunk of text extracted from an <see cref="AIDocument"/>.
+/// Stored as a separate record to avoid bloating the parent <see cref="AIDocument"/>
+/// with large embedding arrays.
 /// </summary>
-public sealed class AIDocumentChunk
+public sealed class AIDocumentChunk : CatalogItem
 {
     /// <summary>
-    /// Gets or sets the unique identifier for this chunk (format: "{documentId}_{chunkIndex}").
+    /// Gets or sets the identifier of the parent <see cref="AIDocument"/>.
     /// </summary>
-    public string ChunkId { get; set; }
+    public string AIDocumentId { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the parent document.
+    /// Gets or sets the identifier of the owning resource (e.g., AI Profile ID or Chat Interaction ID).
+    /// Denormalized from the parent document for efficient query access.
     /// </summary>
-    public string DocumentId { get; set; }
+    public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type of the owning resource (e.g., "profile" or "chatinteraction").
+    /// Denormalized from the parent document for efficient query access.
+    /// </summary>
+    public string ReferenceType { get; set; }
 
     /// <summary>
     /// Gets or sets the text content of this chunk.
@@ -23,27 +32,14 @@ public sealed class AIDocumentChunk
     public string Content { get; set; }
 
     /// <summary>
-    /// Gets or sets the original file name of the parent document.
+    /// Gets or sets the embedding vector for this chunk.
+    /// Stored alongside the content to avoid regenerating embeddings
+    /// when the vector index is rebuilt or re-indexed.
     /// </summary>
-    public string FileName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the owning resource (e.g., AI Profile ID or Chat Interaction ID).
-    /// </summary>
-    public string ReferenceId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the type of the owning resource (e.g., "profile" or "chatinteraction").
-    /// </summary>
-    public string ReferenceType { get; set; }
+    public float[] Embedding { get; set; }
 
     /// <summary>
     /// Gets or sets the chunk index within the parent document.
     /// </summary>
-    public int ChunkIndex { get; set; }
-
-    /// <summary>
-    /// Gets or sets the embedding vector for this chunk.
-    /// </summary>
-    public float[] Embedding { get; set; }
+    public int Index { get; set; }
 }

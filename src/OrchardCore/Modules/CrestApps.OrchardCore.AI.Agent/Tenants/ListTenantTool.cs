@@ -1,7 +1,7 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
@@ -35,13 +35,21 @@ public sealed class ListTenantTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var shellHost = arguments.Services.GetRequiredService<IShellHost>();
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
+        var logger = arguments.Services.GetRequiredService<ILogger<ListTenantTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage tenants.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
+        var shellHost = arguments.Services.GetRequiredService<IShellHost>();
+
         var shells = shellHost.GetAllSettings();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(shells.Select(x => x.AsAIObject()));
     }

@@ -17,21 +17,22 @@ public sealed class AIChatAnalyticsFeedbackDisplayDriver : DisplayDriver<AIChatA
         {
             var events = context.Events;
 
-            model.ThumbsUpCount = events.Count(e => e.UserRating == true);
-            model.ThumbsDownCount = events.Count(e => e.UserRating == false);
-            model.NoFeedbackCount = events.Count(e => e.UserRating == null);
-            model.TotalSessionsWithFeedback = model.ThumbsUpCount + model.ThumbsDownCount;
-            model.HasData = model.TotalSessionsWithFeedback > 0;
+            model.ThumbsUpCount = events.Sum(e => e.ThumbsUpCount);
+            model.ThumbsDownCount = events.Sum(e => e.ThumbsDownCount);
+            model.NoFeedbackCount = events.Count(e => e.ThumbsUpCount == 0 && e.ThumbsDownCount == 0);
+            model.TotalRatings = model.ThumbsUpCount + model.ThumbsDownCount;
+            model.HasData = model.TotalRatings > 0;
 
-            if (model.TotalSessionsWithFeedback > 0)
+            if (model.TotalRatings > 0)
             {
-                model.ThumbsUpPercent = Math.Round((double)model.ThumbsUpCount / model.TotalSessionsWithFeedback * 100, 1);
-                model.ThumbsDownPercent = Math.Round((double)model.ThumbsDownCount / model.TotalSessionsWithFeedback * 100, 1);
+                model.ThumbsUpPercent = Math.Round((double)model.ThumbsUpCount / model.TotalRatings * 100, 1);
+                model.ThumbsDownPercent = Math.Round((double)model.ThumbsDownCount / model.TotalRatings * 100, 1);
             }
 
             if (events.Count > 0)
             {
-                model.FeedbackRatePercent = Math.Round((double)model.TotalSessionsWithFeedback / events.Count * 100, 1);
+                var sessionsWithFeedback = events.Count(e => e.ThumbsUpCount > 0 || e.ThumbsDownCount > 0);
+                model.FeedbackRatePercent = Math.Round((double)sessionsWithFeedback / events.Count * 100, 1);
             }
         }).Location("Content:6");
     }

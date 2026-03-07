@@ -12,15 +12,18 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class AIDocumentController : Controller
 {
     private readonly IAIDocumentStore _documentStore;
+    private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIProfileManager _profileManager;
     private readonly FileSystemFileStore _fileStore;
 
     public AIDocumentController(
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IAIProfileManager profileManager,
         FileSystemFileStore fileStore)
     {
         _documentStore = documentStore;
+        _chunkStore = chunkStore;
         _profileManager = profileManager;
         _fileStore = fileStore;
     }
@@ -81,18 +84,30 @@ public sealed class AIDocumentController : Controller
             ReferenceType = "profile",
             FileName = file.FileName,
             ContentType = file.ContentType,
-            Text = text,
             FileSize = file.Length,
             UploadedUtc = DateTime.UtcNow,
         };
 
         await _documentStore.CreateAsync(document);
 
+        if (!string.IsNullOrEmpty(text))
+        {
+            await _chunkStore.CreateAsync(new AIDocumentChunk
+            {
+                ItemId = UniqueId.GenerateId(),
+                AIDocumentId = document.ItemId,
+                ReferenceId = profileId,
+                ReferenceType = "profile",
+                Content = text,
+                Index = 0,
+            });
+        }
+
         // Update the profile's document metadata.
-        profile.AlterSettings<AIProfileDocumentsMetadata>(m =>
+        profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.Documents ??= [];
-            m.Documents.Add(new ChatInteractionDocumentInfo
+            m.Documents.Add(new ChatDocumentInfo
             {
                 DocumentId = document.ItemId,
                 FileName = document.FileName,
@@ -132,7 +147,7 @@ public sealed class AIDocumentController : Controller
         }
 
         // Remove from profile metadata.
-        profile.AlterSettings<AIProfileDocumentsMetadata>(m =>
+        profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.Documents ??= [];
             m.Documents = m.Documents.Where(d => d.DocumentId != documentId).ToList();

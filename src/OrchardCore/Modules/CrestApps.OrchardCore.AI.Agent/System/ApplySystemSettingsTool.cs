@@ -2,7 +2,8 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
-using OrchardCore.Deployment;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Agent.System;
 
@@ -19,16 +20,24 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        if (!await arguments.IsAuthorizedAsync(DeploymentPermissions.Import))
+        var logger = arguments.Services.GetRequiredService<ILogger<ApplySystemSettingsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to import recipes.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
+            logger.LogWarning("AI tool '{ToolName}': missing 'recipe' argument.", Name);
+
             return MissingArgument();
         }
 
-        return await ProcessRecipeAsync(arguments.Services, recipe, cancellationToken);
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
+
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
     }
 }

@@ -80,7 +80,7 @@ public static class ServiceCollectionExtensions
 
         services
             .AddAIPrompting()
-            .AddCrestAppsCoreServices()
+.AddCrestAppsCoreServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>();
 
         services.TryAddScoped<IAICompletionService, DefaultAICompletionService>();

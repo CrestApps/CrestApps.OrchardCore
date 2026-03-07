@@ -7,7 +7,7 @@ namespace CrestApps.Mvc.Web.Indexes;
 
 public sealed class AIDeploymentIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
 {
-    public string DisplayText { get; set; }
+    public string Name { get; set; }
     public string Source { get; set; }
 }
 
@@ -19,7 +19,7 @@ public sealed class AIDeploymentIndexProvider : IndexProvider<AIDeployment>
             .Map(deployment => new AIDeploymentIndex
             {
                 ItemId = deployment.ItemId,
-                DisplayText = deployment.Name,
+                Name = deployment.Name,
                 Source = deployment.Source,
             });
     }

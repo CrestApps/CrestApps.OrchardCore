@@ -65,11 +65,11 @@ public sealed class AIProfileViewModel
     {
         var metadata = profile.GetSettings<AIProfileMetadata>();
         var settings = profile.GetSettings<AIProfileSettings>();
-        var toolMetadata = profile.GetSettings<AIProfileFunctionInvocationMetadata>();
-        var docMetadata = profile.GetSettings<AIProfileDocumentsMetadata>();
+        var toolMetadata = profile.GetSettings<FunctionInvocationMetadata>();
+        var docMetadata = profile.GetSettings<DocumentsMetadata>();
         var sessionDocMetadata = profile.GetSettings<AIProfileSessionDocumentsMetadata>();
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
-        var analyticsMetadata = profile.As<AIProfileAnalyticsMetadata>();
+        var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
 
         return new AIProfileViewModel
@@ -165,12 +165,12 @@ public sealed class AIProfileViewModel
 
         var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
 
-        profile.WithSettings(new AIProfileFunctionInvocationMetadata
+        profile.WithSettings(new FunctionInvocationMetadata
         {
             Names = toolNames?.Length > 0 ? toolNames : null,
         });
 
-        profile.AlterSettings<AIProfileDocumentsMetadata>(m =>
+        profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.DocumentTopN = DocumentTopN;
         });
@@ -187,7 +187,7 @@ public sealed class AIProfileViewModel
             s.SessionInactivityTimeoutInMinutes = SessionInactivityTimeoutInMinutes;
         });
 
-        profile.Put(new AIProfileAnalyticsMetadata
+        profile.Put(new AnalyticsMetadata
         {
             EnableSessionMetrics = EnableSessionMetrics,
         });

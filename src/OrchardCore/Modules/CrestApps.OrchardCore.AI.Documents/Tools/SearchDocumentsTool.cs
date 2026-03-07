@@ -29,7 +29,7 @@ public sealed class SearchDocumentsTool : AIFunction
           "properties": {
             "query": {
               "type": "string",
-              "description": "The search query to find relevant content in uploaded documents."
+              "description": "The search query to find relevant content in available document knowledge."
             },
             "top_n": {
               "type": "integer",
@@ -43,7 +43,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Searches uploaded documents using semantic vector search and returns the most relevant text chunks. This tool ONLY searches uploaded documents. If no relevant content is found, you MUST still answer the user's prompt using your general knowledge.";
+    public override string Description => "Searches available document knowledge using semantic vector search and returns the most relevant text chunks. If no relevant content is found, you MUST still answer the user's prompt using your general knowledge.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -57,12 +57,18 @@ public sealed class SearchDocumentsTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("query", out var query))
+        var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a 'query' argument in the arguments parameter.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var logger = arguments.Services.GetService<ILogger<SearchDocumentsTool>>();
+        if (!arguments.TryGetFirstString("query", out var query))
+        {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
+            return "Unable to find a 'query' argument in the arguments parameter.";
+        }
 
         try
         {
@@ -70,42 +76,42 @@ public sealed class SearchDocumentsTool : AIFunction
             var invocationContext = AIInvocationScope.Current;
             var executionContext = invocationContext?.ToolExecutionContext;
 
-            string resourceId = null;
-            string referenceType = null;
+            // Collect all resource scopes to search across.
+            var searchScopes = new List<(string ResourceId, string ReferenceType)>();
 
             if (executionContext?.Resource is ChatInteraction interaction)
             {
-                resourceId = interaction.ItemId;
-                referenceType = AIConstants.DocumentReferenceTypes.ChatInteraction;
+                searchScopes.Add((interaction.ItemId, AIConstants.DocumentReferenceTypes.ChatInteraction));
             }
             else if (executionContext?.Resource is AIProfile profile)
             {
-                resourceId = profile.ItemId;
-                referenceType = AIConstants.DocumentReferenceTypes.Profile;
-            }
+                searchScopes.Add((profile.ItemId, AIConstants.DocumentReferenceTypes.Profile));
 
-            // When the resource is a profile, check if there's a session with documents.
-            if (referenceType == AIConstants.DocumentReferenceTypes.Profile)
-            {
+                // Also search session documents if a session with documents exists.
                 if (invocationContext?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                     sessionObj is AIChatSession session &&
                     session.Documents is { Count: > 0 })
                 {
-                    resourceId = session.SessionId;
-                    referenceType = AIConstants.DocumentReferenceTypes.ChatSession;
+                    searchScopes.Add((session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession));
                 }
             }
 
-            if (string.IsNullOrEmpty(resourceId) || string.IsNullOrEmpty(referenceType))
+            if (searchScopes.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);
                 return "Document search requires an active chat interaction session or AI profile.";
             }
+
+            var showUserDocumentAwareness =
+                executionContext?.Resource is not AIProfile ||
+                searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
 
             var siteService = arguments.Services.GetRequiredService<ISiteService>();
             var settings = await siteService.GetSettingsAsync<InteractionDocumentSettings>();
 
             if (string.IsNullOrEmpty(settings.IndexProfileName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no index profile is configured.", Name);
                 return "Document search is not configured. No index profile is set.";
             }
 
@@ -114,6 +120,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (indexProfile is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: index profile '{IndexProfileName}' was not found.", Name, settings.IndexProfileName);
                 return $"Index profile '{settings.IndexProfileName}' was not found.";
             }
 
@@ -121,6 +128,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (searchService is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no search service available for provider '{ProviderName}'.", Name, indexProfile.ProviderName);
                 return $"No search service is available for provider '{indexProfile.ProviderName}'.";
             }
 
@@ -149,6 +157,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (string.IsNullOrEmpty(deploymentName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no embedding deployment configured.", Name);
                 return "No embedding deployment is configured for document search.";
             }
 
@@ -156,6 +165,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (embeddingGenerator is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not create embedding generator.", Name);
                 return "Failed to create embedding generator for document search.";
             }
 
@@ -163,6 +173,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (embeddings is null || embeddings.Count == 0 || embeddings[0]?.Vector is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: could not generate embedding for query.", Name);
                 return "Failed to generate embedding for the search query.";
             }
 
@@ -173,92 +184,160 @@ public sealed class SearchDocumentsTool : AIFunction
                 topN = 3;
             }
 
-            var results = await searchService.SearchAsync(
-                indexProfile.ToIndexProfileInfo(),
-                embeddings[0].Vector.ToArray(),
-                resourceId,
-                referenceType,
-                topN,
-                cancellationToken);
+            // Search across all resource scopes and combine results.
+            var allResults = new List<(DocumentChunkSearchResult Result, string ReferenceType)>();
+            var seenChunkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var hasProfileScope = searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.Profile);
+            var hasSessionScope = searchScopes.Any(scope => scope.ReferenceType == AIConstants.DocumentReferenceTypes.ChatSession);
+            var keepProfileDocumentAwareness = !(executionContext?.Resource is AIProfile && hasProfileScope && hasSessionScope);
 
-            if (results is null || !results.Any())
+            foreach (var (scopeResourceId, scopeReferenceType) in searchScopes)
             {
-                return "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead.";
-            }
+                var results = await searchService.SearchAsync(
+                    indexProfile.ToIndexProfileInfo(),
+                    embeddings[0].Vector.ToArray(),
+                    scopeResourceId,
+                    scopeReferenceType,
+                    topN,
+                    cancellationToken);
 
-            var builder = ZString.CreateStringBuilder();
-            builder.AppendLine("Relevant content from uploaded documents:");
-
-            var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var result in results)
-            {
-                if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                if (results is null)
                 {
                     continue;
                 }
 
-                var documentKey = result.DocumentKey;
-
-                if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
+                foreach (var result in results)
                 {
-                    seenDocuments[documentKey] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.FileName));
-                }
-
-                var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
-                    ? entry.Index
-                    : invocationContext.NextReferenceIndex();
-
-                builder.AppendLine("---");
-                builder.Append("[doc:");
-                builder.Append(refIdx);
-                builder.Append("] ");
-                builder.AppendLine(result.Chunk.Text);
-            }
-
-            if (seenDocuments.Count > 0)
-            {
-                builder.AppendLine();
-                builder.AppendLine("References:");
-
-                foreach (var kvp in seenDocuments)
-                {
-                    builder.Append("[doc:");
-                    builder.Append(kvp.Value.Index);
-                    builder.Append("] = {DocumentId: \"");
-                    builder.Append(kvp.Key);
-                    builder.Append('"');
-
-                    if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                    if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
                     {
-                        builder.Append(", FileName: \"");
-                        builder.Append(kvp.Value.FileName);
-                        builder.Append('"');
+                        continue;
                     }
 
-                    builder.AppendLine("}");
+                    var chunkKey = $"{result.DocumentKey}:{result.Chunk.Index}";
+
+                    if (seenChunkKeys.Add(chunkKey))
+                    {
+                        allResults.Add((result, scopeReferenceType));
+                    }
+                }
+            }
+
+            // Sort by score descending and take top N.
+            var finalResults = allResults
+                .OrderByDescending(r => r.Result.Score)
+                .Take(topN)
+                .ToList();
+
+            if (finalResults.Count == 0)
+            {
+                return showUserDocumentAwareness
+                    ? "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead."
+                    : "No relevant background knowledge content was found for this query. Answer using your general knowledge instead.";
+            }
+
+            var builder = ZString.CreateStringBuilder();
+            builder.AppendLine(showUserDocumentAwareness
+                ? "Relevant content from uploaded documents:"
+                : "Relevant background knowledge content:");
+
+            if (showUserDocumentAwareness)
+            {
+                var seenDocuments = new Dictionary<string, (int Index, string FileName)>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var (result, scopeReferenceType) in finalResults)
+                {
+                    if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                    {
+                        continue;
+                    }
+
+                    if (!keepProfileDocumentAwareness && scopeReferenceType == AIConstants.DocumentReferenceTypes.Profile)
+                    {
+                        builder.AppendLine("---");
+                        builder.AppendLine(result.Chunk.Text);
+                        continue;
+                    }
+
+                    var documentKey = result.DocumentKey;
+
+                    if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
+                    {
+                        seenDocuments[documentKey] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.FileName));
+                    }
+
+                    var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
+                        ? entry.Index
+                        : invocationContext.NextReferenceIndex();
+
+                    builder.AppendLine("---");
+                    builder.Append("[doc:");
+                    builder.Append(refIdx);
+                    builder.Append("] ");
+                    builder.AppendLine(result.Chunk.Text);
                 }
 
-                // Store citation metadata on the invocation context for downstream consumers.
-                foreach (var kvp in seenDocuments)
+                if (seenDocuments.Count > 0)
                 {
-                    var template = $"[doc:{kvp.Value.Index}]";
-                    invocationContext.ToolReferences.TryAdd(template, new AICompletionReference
+                    builder.AppendLine();
+                    builder.AppendLine("References:");
+
+                    foreach (var kvp in seenDocuments)
                     {
-                        Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
-                        Title = kvp.Value.FileName,
-                        Index = kvp.Value.Index,
-                        ReferenceId = kvp.Key,
-                        ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
-                    });
+                        builder.Append("[doc:");
+                        builder.Append(kvp.Value.Index);
+                        builder.Append("] = {DocumentId: \"");
+                        builder.Append(kvp.Key);
+                        builder.Append('"');
+
+                        if (!string.IsNullOrWhiteSpace(kvp.Value.FileName))
+                        {
+                            builder.Append(", FileName: \"");
+                            builder.Append(kvp.Value.FileName);
+                            builder.Append('"');
+                        }
+
+                        builder.AppendLine("}");
+                    }
+
+                    // Store citation metadata on the invocation context for downstream consumers.
+                    foreach (var kvp in seenDocuments)
+                    {
+                        var template = $"[doc:{kvp.Value.Index}]";
+                        invocationContext.ToolReferences.TryAdd(template, new AICompletionReference
+                        {
+                            Text = string.IsNullOrWhiteSpace(kvp.Value.FileName) ? template : kvp.Value.FileName,
+                            Title = kvp.Value.FileName,
+                            Index = kvp.Value.Index,
+                            ReferenceId = kvp.Key,
+                            ReferenceType = AIConstants.DataSourceReferenceTypes.Document,
+                        });
+                    }
                 }
+            }
+            else
+            {
+                foreach (var (result, _) in finalResults)
+                {
+                    if (result.Chunk is null || string.IsNullOrWhiteSpace(result.Chunk.Text))
+                    {
+                        continue;
+                    }
+
+                    builder.AppendLine("---");
+                    builder.AppendLine(result.Chunk.Text);
+                }
+            }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
             return builder.ToString();
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error during document search.");
+            logger.LogError(ex, "Error during document search.");
             return "An error occurred while searching documents.";
         }
     }

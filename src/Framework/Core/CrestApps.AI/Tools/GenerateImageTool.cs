@@ -48,12 +48,18 @@ public sealed class GenerateImageTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        if (!arguments.TryGetFirstString("prompt", out var prompt))
+        var logger = arguments.Services.GetRequiredService<ILogger<GenerateImageTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "Unable to find a 'prompt' argument in the arguments parameter.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var logger = arguments.Services.GetService<ILogger<GenerateImageTool>>();
+        if (!arguments.TryGetFirstString("prompt", out var prompt))
+        {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument 'prompt'.", Name);
+            return "Unable to find a 'prompt' argument in the arguments parameter.";
+        }
 
         try
         {
@@ -61,6 +67,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (executionContext is null)
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: execution context is missing.", Name);
                 return $"Image generation is not available. The {nameof(AIToolExecutionContext)} is missing from the invocation context.";
             }
 
@@ -69,6 +76,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (string.IsNullOrEmpty(providerName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: AI provider is not configured.", Name);
                 return "Image generation is not available. AI provider is not configured.";
             }
 
@@ -76,6 +84,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: AI provider '{ProviderName}' is invalid.", Name, providerName);
                 return "Image generation is not available. AI provider is invalid.";
             }
 
@@ -86,6 +95,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no valid connection configured for provider '{ProviderName}'.", Name, providerName);
                 return "Image generation is not available. No connection is configured.";
             }
 
@@ -93,6 +103,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (string.IsNullOrEmpty(deploymentName))
             {
+                logger.LogWarning("AI tool '{ToolName}' failed: no image model deployment configured.", Name);
                 return "Image generation is not available. No image model deployment is configured.";
             }
 
@@ -117,6 +128,7 @@ public sealed class GenerateImageTool : AIFunction
 
             if (result?.Contents is null || result.Contents.Count == 0)
             {
+                logger.LogWarning("AI tool '{ToolName}' returned no images.", Name);
                 return "No images were generated.";
             }
 
@@ -135,19 +147,28 @@ public sealed class GenerateImageTool : AIFunction
                 }
             }
 
-            return builder.Length > 0
-                ? builder.ToString()
-                : "No images were generated.";
+            if (builder.Length == 0)
+            {
+                logger.LogWarning("AI tool '{ToolName}' generated no usable image URIs.", Name);
+                return "No images were generated.";
+            }
+
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
+            return builder.ToString();
         }
         catch (NotSupportedException ex)
         {
-            logger?.LogWarning(ex, "Image generation is not supported by the configured provider.");
+            logger.LogWarning(ex, "Image generation is not supported by the configured provider.");
             return "Image generation is not supported by the configured AI provider.";
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "Error during image generation.");
-            return $"An error occurred while generating the image.";
+            logger.LogError(ex, "Error during image generation.");
+            return "An error occurred while generating the image.";
         }
     }
 

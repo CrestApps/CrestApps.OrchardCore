@@ -1,7 +1,7 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Recipes.Models;
@@ -38,22 +38,30 @@ public sealed class ListStartupRecipesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<ListStartupRecipesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!shellSettings.IsDefaultShell())
         {
-            return "This function is not supported in this tenant. It can only be used in the default tenant.";
-        }
+            logger.LogWarning("AI tool '{ToolName}': not supported in non-default tenant.", Name);
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageRecipes))
-        {
-            return "You do not have permission to execute a recipe.";
+            return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(recipeHarvesters, features);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(recipes.Select(x => x.AsAIObject()));
     }

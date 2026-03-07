@@ -42,5 +42,19 @@ public sealed class AIChatSessionMetricsIndex : MapIndex
 
     public bool? UserRating { get; set; }
 
+    public int ThumbsUpCount { get; set; }
+
+    public int ThumbsDownCount { get; set; }
+
+    /// <summary>
+    /// The aggregate conversion score across all evaluated goals. Null if not evaluated.
+    /// </summary>
+    public int? ConversionScore { get; set; }
+
+    /// <summary>
+    /// The maximum possible conversion score. Null if not evaluated.
+    /// </summary>
+    public int? ConversionMaxScore { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 }

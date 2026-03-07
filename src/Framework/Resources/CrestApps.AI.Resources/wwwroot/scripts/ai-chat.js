@@ -34,6 +34,7 @@ window.openAIChatManager = function () {
     thumbsUpTitle: 'Thumbs up',
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
+    codeCopiedText: 'Copied!',
     messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
   };
@@ -83,8 +84,8 @@ window.openAIChatManager = function () {
     } else {
       highlighted = escapeHtmlEntities(code);
     }
-    var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
-    return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
+    var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -253,7 +254,9 @@ window.openAIChatManager = function () {
       renderer: renderer
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target']
+    });
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -300,6 +303,7 @@ window.openAIChatManager = function () {
           prompt: '',
           documents: config.existingDocuments || [],
           isUploading: false,
+          uploadErrors: [],
           isDragOver: false,
           documentBar: null,
           metricsEnabled: !!config.metricsEnabled,
@@ -356,7 +360,7 @@ window.openAIChatManager = function () {
         uploadFiles: function uploadFiles(files) {
           var _this = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-            var sessionId, profileId, formData, i, response, errorText, result, j, k, _t;
+            var sessionId, profileId, formData, i, response, errorText, result, j, _t;
             return _regenerator().w(function (_context) {
               while (1) switch (_context.p = _context.n) {
                 case 0:
@@ -376,6 +380,8 @@ window.openAIChatManager = function () {
                   return _context.a(2);
                 case 2:
                   _this.isUploading = true;
+                  _this.uploadErrors = [];
+                  _this.renderDocumentBar();
                   _context.p = 3;
                   formData = new FormData();
                   if (sessionId) {
@@ -402,6 +408,10 @@ window.openAIChatManager = function () {
                 case 5:
                   errorText = _context.v;
                   console.error('Upload failed:', errorText);
+                  _this.uploadErrors = [{
+                    fileName: '',
+                    error: 'Upload failed. Please try again.'
+                  }];
                   return _context.a(2);
                 case 6:
                   _context.n = 7;
@@ -418,9 +428,7 @@ window.openAIChatManager = function () {
                     }
                   }
                   if (result.failed && result.failed.length > 0) {
-                    for (k = 0; k < result.failed.length; k++) {
-                      console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
-                    }
+                    _this.uploadErrors = result.failed;
                   }
                   _context.n = 9;
                   break;
@@ -428,9 +436,14 @@ window.openAIChatManager = function () {
                   _context.p = 8;
                   _t = _context.v;
                   console.error('Upload error:', _t);
+                  _this.uploadErrors = [{
+                    fileName: '',
+                    error: 'Upload failed. Please try again.'
+                  }];
                 case 9:
                   _context.p = 9;
                   _this.isUploading = false;
+                  _this.renderDocumentBar();
                   return _context.f(9);
                 case 10:
                   return _context.a(2);
@@ -516,6 +529,17 @@ window.openAIChatManager = function () {
             html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-doc-index="' + i + '" aria-label="Remove"></button>';
             html += '</span>';
           }
+          for (var m = 0; m < this.uploadErrors.length; m++) {
+            var failedItem = this.uploadErrors[m];
+            var failedName = failedItem.fileName || 'File';
+            var errorMsg = failedItem.error || 'Upload failed';
+            if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
+            html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
+            html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+            html += this.escapeHtml(failedName);
+            html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
+            html += '</span>';
+          }
           if (this.isUploading) {
             html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
             html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
@@ -534,7 +558,7 @@ window.openAIChatManager = function () {
 
           // Bind remove handlers
           var self = this;
-          var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+          var closeButtons = this.documentBar.querySelectorAll('[data-doc-index]');
           for (var j = 0; j < closeButtons.length; j++) {
             closeButtons[j].addEventListener('click', function (idx) {
               return function (e) {
@@ -544,6 +568,19 @@ window.openAIChatManager = function () {
                 if (docToRemove) self.removeDocument(docToRemove);
               };
             }(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+          }
+
+          // Bind error dismiss handlers
+          var errorCloseButtons = this.documentBar.querySelectorAll('[data-error-index]');
+          for (var n = 0; n < errorCloseButtons.length; n++) {
+            errorCloseButtons[n].addEventListener('click', function (idx) {
+              return function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.uploadErrors.splice(idx, 1);
+                self.renderDocumentBar();
+              };
+            }(parseInt(errorCloseButtons[n].getAttribute('data-error-index'))));
           }
 
           // Bind add button
@@ -589,6 +626,13 @@ window.openAIChatManager = function () {
                     _this3.$nextTick(function () {
                       _this3.refreshAllFeedbackIcons();
                     });
+
+                    // When the session is new (no messages) and an initial prompt is configured,
+                    // automatically send it as the first user message to trigger an AI response.
+                    if (_this3.messages.length === 0 && config.initialPrompt) {
+                      _this3.prompt = config.initialPrompt;
+                      _this3.sendMessage();
+                    }
                   });
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
@@ -606,6 +650,11 @@ window.openAIChatManager = function () {
                   });
                   _this3.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
+                    if (_this3.isSessionStarted) {
+                      _this3.reloadCurrentSession();
+                    } else if (config.autoCreateSession) {
+                      _this3.startNewSession();
+                    }
                   });
                   _this3.connection.onclose(function (error) {
                     if (_this3.isNavigatingAway) {
@@ -793,6 +842,7 @@ window.openAIChatManager = function () {
           this.autoScroll = true;
           var content = '';
           var references = {};
+          var lastResponseId = null;
 
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
@@ -831,6 +881,14 @@ window.openAIChatManager = function () {
                 }
               }
               if (chunk.content) {
+                // When the responseId changes (e.g., after an internal tool call),
+                // insert a line break to visually separate response segments.
+                if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                  content += '\n\n';
+                }
+                if (chunk.responseId) {
+                  lastResponseId = chunk.responseId;
+                }
                 var processedContent = chunk.content;
                 for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
                   var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
@@ -1081,7 +1139,21 @@ window.openAIChatManager = function () {
           }
           this.messages = [];
           this.documents = [];
-          this.showPlaceholder();
+          if (!config.autoCreateSession) {
+            this.showPlaceholder();
+          }
+          if (config.autoCreateSession) {
+            this.startNewSession();
+          }
+        },
+        startNewSession: function startNewSession() {
+          var profileId = this.getProfileId();
+          if (!profileId || !this.connection) {
+            return;
+          }
+          this.connection.invoke("StartSession", profileId)["catch"](function (err) {
+            return console.error(err);
+          });
         },
         initializeApp: function initializeApp() {
           var _this9 = this;
@@ -1089,6 +1161,9 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+          if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+            this.startNewSession();
+          }
 
           // Initialize document bar if enabled.
           if (config.sessionDocumentsEnabled && config.documentBarSelector) {
@@ -1208,13 +1283,18 @@ window.openAIChatManager = function () {
               if (!btn) {
                 return;
               }
-              var pre = btn.closest('pre');
-              if (!pre) {
+              var block = btn.closest('.ai-code-block') || btn.closest('pre');
+              if (!block) {
                 return;
               }
-              var codeEl = pre.querySelector('code');
+              var codeEl = block.querySelector('code');
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
+                var copiedText = config.codeCopiedText || 'Copied!';
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                setTimeout(function () {
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                }, 2000);
               }
             });
           }
@@ -1268,6 +1348,9 @@ window.openAIChatManager = function () {
 
           // Auto-load the last session so the user always sees previous chat history.
           this.reloadCurrentSession();
+          if (config.autoCreateSession && !this.getSessionId()) {
+            this.startNewSession();
+          }
           if (config.widget.showHistoryButton && this.chatHistorySection) {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {

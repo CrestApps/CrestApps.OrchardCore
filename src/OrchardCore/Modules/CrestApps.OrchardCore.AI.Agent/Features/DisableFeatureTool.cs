@@ -3,6 +3,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
@@ -47,20 +48,26 @@ internal sealed class DisableFeatureTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+        var logger = arguments.Services.GetRequiredService<ILogger<DisableFeatureTool>>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage features.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirst<HashSet<string>>("featureIds", out var featureIds))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureIds' argument.", Name);
+
             return "Unable to find a featureIds argument in the function arguments.";
         }
 
         if (featureIds.Count == 0)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: 'featureIds' argument is empty.", Name);
+
             return "The featureIds argument is required.";
         }
 
@@ -69,10 +76,17 @@ internal sealed class DisableFeatureTool : AIFunction
 
         if (!features.Any())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: no valid features found for the provided IDs.", Name);
+
             return "Invalid feature ids provided";
         }
 
         await shellFeaturesManager.DisableFeaturesAsync(features, true);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return $"The feature(s) were disabled successfully. {JsonSerializer.Serialize(features.Select(feature => feature.AsAIObject(false)))}";
     }

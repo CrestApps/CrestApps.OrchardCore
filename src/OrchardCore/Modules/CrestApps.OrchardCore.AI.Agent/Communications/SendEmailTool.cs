@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
 using OrchardCore.Users;
 
@@ -61,42 +62,58 @@ public sealed class SendEmailTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
-        var emailService = arguments.Services.GetRequiredService<IEmailService>();
+        var logger = arguments.Services.GetRequiredService<ILogger<SendEmailTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
+        var emailService = arguments.Services.GetService<IEmailService>();
+
+        if (emailService is null)
+        {
+            logger.LogWarning("No EmailService is registered. Can't send emails using this tool.");
+
+            return "No EmailService is registered. Can't send emails using this tool.";
+        }
+
 
         if (!arguments.TryGetFirstString("to", out var to))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "to");
+
             return "Unable to find a to argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "subject");
             return "Unable to find a subject argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("body", out var body))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
             return "Unable to find a body argument in the function arguments.";
         }
 
-        if (!arguments.IsAuthenticatedOrMcpRequest())
+        string senderEmail = null;
+
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
+        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+        var principal = httpContextAccessor?.HttpContext?.User;
+
+        if (principal is not null)
         {
-            return "You must login to be able to send email.";
-        }
+            var userManager = arguments.Services.GetService<UserManager<IUser>>();
 
-        var user = await userManager.GetUserAsync(httpContextAccessor.HttpContext.User);
+            var user = await userManager?.GetUserAsync(principal);
 
-        if (user is null)
-        {
-            return "You must login to be able to send email.";
-        }
-
-        var email = await userManager.GetEmailAsync(user);
-
-        if (string.IsNullOrEmpty(email))
-        {
-            return "You do no have an email on associated with the user.";
+            if (user is not null)
+            {
+                senderEmail = await userManager.GetEmailAsync(user);
+            }
         }
 
         var message = new MailMessage
@@ -104,9 +121,9 @@ public sealed class SendEmailTool : AIFunction
             To = to,
             Subject = subject,
             HtmlBody = body,
-            Sender = email,
-            From = email,
-            ReplyTo = email,
+            Sender = senderEmail,
+            From = senderEmail,
+            ReplyTo = senderEmail,
         };
 
         if (arguments.TryGetFirstString("cc", out var cc))
@@ -123,9 +140,14 @@ public sealed class SendEmailTool : AIFunction
 
         if (result.Succeeded)
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
             return "The email was sent successfully.";
         }
 
+        logger.LogWarning("AI tool '{ToolName}' failed to send email to '{To}'.", Name, to);
         return $"The email was not sent successfully due to the following: {string.Join(' ', result.Errors)}";
     }
 }

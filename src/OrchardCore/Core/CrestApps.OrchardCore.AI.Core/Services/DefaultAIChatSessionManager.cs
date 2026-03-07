@@ -2,9 +2,13 @@ using System.Security.Claims;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.OrchardCore.AI.Core.Models;
+
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -70,6 +74,25 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             chatSession.ClientId = clientId;
         }
 
+        if (profile.Type == AIProfileType.Chat)
+        {
+            var profileMetadata = profile.As<AIProfileMetadata>();
+            var initialPrompt = profileMetadata.InitialPrompt;
+
+            if (!string.IsNullOrEmpty(initialPrompt))
+            {
+                await _promptStore.CreateAsync(new AIChatSessionPrompt
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    SessionId = chatSession.SessionId,
+                    Role = ChatRole.Assistant,
+                    Title = profile.PromptSubject,
+                    Content = initialPrompt,
+                    CreatedUtc = _clock.UtcNow,
+                });
+            }
+        }
+
         return chatSession;
     }
 
@@ -90,7 +113,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.QueryIndex<AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
+        var query = _session.QueryIndex<AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.AICollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -131,7 +154,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
 
-        return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.CollectionName)
+        return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
                 .FirstOrDefaultAsync();
     }
 
@@ -145,7 +168,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == userId && i.ProfileId != null, collection: AIConstants.AICollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -158,7 +181,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
 
             // It's important to make sure that the userId is null when querying using clientId.
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == null && i.ClientId == clientId, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id && i.UserId == null && i.ClientId == clientId, collection: AIConstants.AICollectionName)
                 .FirstOrDefaultAsync();
         }
     }
@@ -167,7 +190,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        return _session.SaveAsync(chatSession, collection: AIConstants.CollectionName);
+        return _session.SaveAsync(chatSession, collection: AIConstants.AICollectionName);
     }
 
     public async Task<bool> DeleteAsync(string sessionId)
@@ -185,7 +208,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
-            collection: AIConstants.CollectionName)
+            collection: AIConstants.AICollectionName)
             .FirstOrDefaultAsync();
 
         if (chatSession == null)
@@ -199,7 +222,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         // Delete all prompts associated with this session.
         await _promptStore.DeleteAllPromptsAsync(chatSession.SessionId);
 
-        _session.Delete(chatSession, collection: AIConstants.CollectionName);
+        _session.Delete(chatSession, collection: AIConstants.AICollectionName);
 
         var deletedContext = new CrestApps.Models.DeletedContext<AIChatSession>(chatSession);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
@@ -222,7 +245,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.UserId == userId && i.ProfileId == profileId,
-            collection: AIConstants.CollectionName)
+            collection: AIConstants.AICollectionName)
             .ListAsync();
 
         var totalDeleted = 0;
@@ -235,7 +258,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             // Delete all prompts associated with this session.
             await _promptStore.DeleteAllPromptsAsync(session.SessionId);
 
-            _session.Delete(session, collection: AIConstants.CollectionName);
+            _session.Delete(session, collection: AIConstants.AICollectionName);
 
             var deletedContext = new CrestApps.Models.DeletedContext<AIChatSession>(session);
             await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);

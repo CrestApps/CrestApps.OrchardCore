@@ -1,6 +1,6 @@
 namespace CrestApps.AI.Models;
 
-public sealed class AIProfileFunctionInvocationMetadata
+public sealed class FunctionInvocationMetadata
 {
     public string[] Names { get; set; }
 }

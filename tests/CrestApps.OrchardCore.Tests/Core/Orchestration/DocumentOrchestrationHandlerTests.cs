@@ -3,6 +3,10 @@ using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core.Handlers;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
@@ -15,7 +19,8 @@ public sealed class DocumentOrchestrationHandlerTests
 
         return new DocumentOrchestrationHandler(
             Options.Create(toolOptions),
-            new FakeAITemplateService());
+            new FakeAITemplateService(),
+            NullLogger<DocumentOrchestrationHandler>.Instance);
     }
 
     private static AIToolDefinitionOptions CreateToolOptionsWithDocTools()
@@ -42,7 +47,7 @@ public sealed class DocumentOrchestrationHandlerTests
             ItemId = "interaction1",
             Documents =
             [
-                new ChatInteractionDocumentInfo
+                new ChatDocumentInfo
                 {
                     DocumentId = "doc1",
                     FileName = "report.pdf",
@@ -108,9 +113,9 @@ public sealed class DocumentOrchestrationHandlerTests
         {
             Documents =
             [
-                new ChatInteractionDocumentInfo { DocumentId = "doc1", FileName = "file1.pdf" },
-                new ChatInteractionDocumentInfo { DocumentId = "doc2", FileName = "file2.csv" },
-                new ChatInteractionDocumentInfo { DocumentId = "doc3", FileName = "file3.xlsx" },
+                new ChatDocumentInfo { DocumentId = "doc1", FileName = "file1.pdf" },
+                new ChatDocumentInfo { DocumentId = "doc2", FileName = "file2.csv" },
+                new ChatDocumentInfo { DocumentId = "doc3", FileName = "file3.xlsx" },
             ],
         };
 
@@ -128,7 +133,7 @@ public sealed class DocumentOrchestrationHandlerTests
             CompletionContext = new AICompletionContext(),
             Documents =
             [
-                new ChatInteractionDocumentInfo
+                new ChatDocumentInfo
                 {
                     DocumentId = "doc1",
                     FileName = "report.pdf",
@@ -173,7 +178,7 @@ public sealed class DocumentOrchestrationHandlerTests
             },
             Documents =
             [
-                new ChatInteractionDocumentInfo
+                new ChatDocumentInfo
                 {
                     DocumentId = "doc1",
                     FileName = "data.csv",
@@ -200,7 +205,7 @@ public sealed class DocumentOrchestrationHandlerTests
             CompletionContext = new AICompletionContext(),
             Documents =
             [
-                new ChatInteractionDocumentInfo
+                new ChatDocumentInfo
                 {
                     DocumentId = "doc1",
                     FileName = "report.pdf",

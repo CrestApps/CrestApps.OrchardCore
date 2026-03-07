@@ -46,7 +46,7 @@ public sealed class ToolRegistryEntry
     /// Each provider sets this to its own resolution logic (e.g., DI lookup for local tools,
     /// MCP proxy creation for MCP tools).
     /// </summary>
-    public Func<IServiceProvider, ValueTask<AITool>> ToolFactory { get; set; }
+    public Func<IServiceProvider, ValueTask<AITool>> CreateAsync { get; set; }
 }
 
 /// <summary>

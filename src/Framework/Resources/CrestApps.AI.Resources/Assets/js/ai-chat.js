@@ -14,6 +14,7 @@ window.openAIChatManager = function () {
         thumbsUpTitle: 'Thumbs up',
         thumbsDownTitle: 'Thumbs down',
         copyTitle: 'Click here to copy response to clipboard.',
+        codeCopiedText: 'Copied!',
         messageTemplate: `
         <div class="ai-chat-messages">
             <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
@@ -100,8 +101,8 @@ window.openAIChatManager = function () {
             highlighted = escapeHtmlEntities(code);
         }
 
-        var langLabel = lang ? ` data-lang="${lang}"` : '';
-        return `<pre${langLabel}><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-solid fa-copy"></i></button><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre>`;
+        var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+        return `<div class="ai-code-block"><div class="ai-code-header"><span class="ai-code-lang"><i class="fa-solid fa-code"></i> ${langDisplay}</span><button type="button" class="ai-code-copy-btn" title="Copy code"><i class="fa-regular fa-copy"></i></button></div><pre><code class="hljs${lang ? ' language-' + lang : ''}">${highlighted}</code></pre></div>`;
     };
 
     // Custom image renderer for generated images with thumbnail styling and download button.
@@ -287,7 +288,7 @@ window.openAIChatManager = function () {
         _pendingCharts = [];
         const html = marked.parse(content, { renderer });
         message._pendingCharts = _pendingCharts.length > 0 ? [..._pendingCharts] : [];
-        return DOMPurify.sanitize(html);
+        return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
     }
 
     const initialize = (instanceConfig) => {
@@ -342,6 +343,7 @@ window.openAIChatManager = function () {
                     prompt: '',
                     documents: config.existingDocuments || [],
                     isUploading: false,
+                    uploadErrors: [],
                     isDragOver: false,
                     documentBar: null,
                     metricsEnabled: !!config.metricsEnabled,
@@ -407,6 +409,8 @@ window.openAIChatManager = function () {
                     }
 
                     this.isUploading = true;
+                    this.uploadErrors = [];
+                    this.renderDocumentBar();
                     try {
                         var formData = new FormData();
                         if (sessionId) {
@@ -426,6 +430,7 @@ window.openAIChatManager = function () {
                         if (!response.ok) {
                             var errorText = await response.text();
                             console.error('Upload failed:', errorText);
+                            this.uploadErrors = [{ fileName: '', error: 'Upload failed. Please try again.' }];
                             return;
                         }
 
@@ -442,14 +447,14 @@ window.openAIChatManager = function () {
                             }
                         }
                         if (result.failed && result.failed.length > 0) {
-                            for (var k = 0; k < result.failed.length; k++) {
-                                console.warn('File failed to upload:', result.failed[k].fileName, result.failed[k].error);
-                            }
+                            this.uploadErrors = result.failed;
                         }
                     } catch (err) {
                         console.error('Upload error:', err);
+                        this.uploadErrors = [{ fileName: '', error: 'Upload failed. Please try again.' }];
                     } finally {
                         this.isUploading = false;
+                        this.renderDocumentBar();
                     }
                 },
                 async removeDocument(doc) {
@@ -502,6 +507,18 @@ window.openAIChatManager = function () {
                         html += '</span>';
                     }
 
+                    for (var m = 0; m < this.uploadErrors.length; m++) {
+                        var failedItem = this.uploadErrors[m];
+                        var failedName = failedItem.fileName || 'File';
+                        var errorMsg = failedItem.error || 'Upload failed';
+                        if (failedName.length > 15) failedName = failedName.substring(0, 12) + '...';
+                        html += '<span class="badge bg-danger bg-opacity-25 text-danger d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;" title="' + this.escapeHtml((failedItem.fileName || '') + ': ' + errorMsg) + '">';
+                        html += '<i class="fa-solid fa-circle-exclamation" style="font-size: 0.7rem;"></i> ';
+                        html += this.escapeHtml(failedName);
+                        html += ' <button type="button" class="btn-close btn-close-sm ms-1" style="font-size: 0.5rem;" data-error-index="' + m + '" aria-label="Dismiss"></button>';
+                        html += '</span>';
+                    }
+
                     if (this.isUploading) {
                         html += '<span class="badge bg-info bg-opacity-25 text-dark d-inline-flex align-items-center gap-1 px-2 py-1" style="font-size: 0.8rem;">';
                         html += '<span class="spinner-border spinner-border-sm" style="width: 0.7rem; height: 0.7rem;"></span> Uploading...';
@@ -521,7 +538,7 @@ window.openAIChatManager = function () {
 
                     // Bind remove handlers
                     var self = this;
-                    var closeButtons = this.documentBar.querySelectorAll('.btn-close');
+                    var closeButtons = this.documentBar.querySelectorAll('[data-doc-index]');
                     for (var j = 0; j < closeButtons.length; j++) {
                         closeButtons[j].addEventListener('click', (function (idx) {
                             return function (e) {
@@ -531,6 +548,19 @@ window.openAIChatManager = function () {
                                 if (docToRemove) self.removeDocument(docToRemove);
                             };
                         })(parseInt(closeButtons[j].getAttribute('data-doc-index'))));
+                    }
+
+                    // Bind error dismiss handlers
+                    var errorCloseButtons = this.documentBar.querySelectorAll('[data-error-index]');
+                    for (var n = 0; n < errorCloseButtons.length; n++) {
+                        errorCloseButtons[n].addEventListener('click', (function (idx) {
+                            return function (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                self.uploadErrors.splice(idx, 1);
+                                self.renderDocumentBar();
+                            };
+                        })(parseInt(errorCloseButtons[n].getAttribute('data-error-index'))));
                     }
 
                     // Bind add button
@@ -575,6 +605,13 @@ window.openAIChatManager = function () {
                         this.$nextTick(() => {
                             this.refreshAllFeedbackIcons();
                         });
+
+                        // When the session is new (no messages) and an initial prompt is configured,
+                        // automatically send it as the first user message to trigger an AI response.
+                        if (this.messages.length === 0 && config.initialPrompt) {
+                            this.prompt = config.initialPrompt;
+                            this.sendMessage();
+                        }
                     });
 
                     this.connection.on("ReceiveError", (error) => {
@@ -594,6 +631,12 @@ window.openAIChatManager = function () {
 
                     this.connection.onreconnected(() => {
                         console.info("SignalR: reconnected.");
+
+                        if (this.isSessionStarted) {
+                            this.reloadCurrentSession();
+                        } else if (config.autoCreateSession) {
+                            this.startNewSession();
+                        }
                     });
 
                     this.connection.onclose((error) => {
@@ -741,6 +784,7 @@ window.openAIChatManager = function () {
 
                     var content = '';
                     var references = {};
+                    var lastResponseId = null;
 
                     // Get the index after showing typing indicator.
                     var messageIndex = this.messages.length;
@@ -787,6 +831,16 @@ window.openAIChatManager = function () {
                                 }
 
                                 if (chunk.content) {
+
+                                    // When the responseId changes (e.g., after an internal tool call),
+                                    // insert a line break to visually separate response segments.
+                                    if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                                        content += '\n\n';
+                                    }
+
+                                    if (chunk.responseId) {
+                                        lastResponseId = chunk.responseId;
+                                    }
 
                                     let processedContent = chunk.content;
 
@@ -1020,13 +1074,31 @@ window.openAIChatManager = function () {
                     }
                     this.messages = [];
                     this.documents = [];
-                    this.showPlaceholder();
+                    if (!config.autoCreateSession) {
+                        this.showPlaceholder();
+                    }
+
+                    if (config.autoCreateSession) {
+                        this.startNewSession();
+                    }
+                },
+                startNewSession() {
+                    const profileId = this.getProfileId();
+                    if (!profileId || !this.connection) {
+                        return;
+                    }
+
+                    this.connection.invoke("StartSession", profileId).catch(err => console.error(err));
                 },
                 initializeApp() {
                     this.inputElement = document.querySelector(config.inputElementSelector);
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+                    if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+                        this.startNewSession();
+                    }
 
                     // Initialize document bar if enabled.
                     if (config.sessionDocumentsEnabled && config.documentBarSelector) {
@@ -1158,14 +1230,19 @@ window.openAIChatManager = function () {
                                 return;
                             }
 
-                            var pre = btn.closest('pre');
-                            if (!pre) {
+                            var block = btn.closest('.ai-code-block') || btn.closest('pre');
+                            if (!block) {
                                 return;
                             }
 
-                            var codeEl = pre.querySelector('code');
+                            var codeEl = block.querySelector('code');
                             if (codeEl) {
                                 navigator.clipboard.writeText(codeEl.textContent);
+                                var copiedText = config.codeCopiedText || 'Copied!';
+                                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                                setTimeout(() => {
+                                    btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                                }, 2000);
                             }
                         });
                     }
@@ -1220,6 +1297,10 @@ window.openAIChatManager = function () {
 
                     // Auto-load the last session so the user always sees previous chat history.
                     this.reloadCurrentSession();
+
+                    if (config.autoCreateSession && !this.getSessionId()) {
+                        this.startNewSession();
+                    }
 
                     if (config.widget.showHistoryButton && this.chatHistorySection) {
 

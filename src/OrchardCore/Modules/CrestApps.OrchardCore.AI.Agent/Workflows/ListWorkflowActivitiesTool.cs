@@ -3,6 +3,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Services;
 
@@ -37,15 +38,17 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var activityLibrary = arguments.Services.GetRequiredService<IActivityLibrary>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageWorkflows))
+        var logger = arguments.Services.GetRequiredService<ILogger<ListWorkflowActivitiesTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage workflows.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var activityLibrary = arguments.Services.GetRequiredService<IActivityLibrary>();
 
         if (!arguments.TryGetFirst<string>("workflowTypeId", out var workflowTypeId))
         {
+            logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "workflowTypeId");
             return "Unable to find a workflowTypeId argument in the function arguments.";
         }
 
@@ -53,7 +56,13 @@ public sealed class ListWorkflowActivitiesTool : AIFunction
 
         if (!activities.Any())
         {
+            logger.LogWarning("AI tool '{ToolName}' found no available workflow activities.", Name);
             return "There are no available activities.";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         return JsonSerializer.Serialize(activities.Select(x => new

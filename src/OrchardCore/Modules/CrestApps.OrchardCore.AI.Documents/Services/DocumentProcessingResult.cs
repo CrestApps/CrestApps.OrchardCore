@@ -8,17 +8,20 @@ public sealed class DocumentProcessingResult
 
     public AIDocument Document { get; private set; }
 
-    public ChatInteractionDocumentInfo DocumentInfo { get; private set; }
+    public ChatDocumentInfo DocumentInfo { get; private set; }
+
+    public IReadOnlyList<AIDocumentChunk> Chunks { get; private set; }
 
     public string Error { get; private set; }
 
-    public static DocumentProcessingResult Succeeded(AIDocument document, ChatInteractionDocumentInfo documentInfo)
+    public static DocumentProcessingResult Succeeded(AIDocument document, ChatDocumentInfo documentInfo, IReadOnlyList<AIDocumentChunk> chunks)
     {
         return new DocumentProcessingResult
         {
             Success = true,
             Document = document,
             DocumentInfo = documentInfo,
+            Chunks = chunks ?? [],
         };
     }
 
@@ -28,6 +31,7 @@ public sealed class DocumentProcessingResult
         {
             Success = false,
             Error = error,
+            Chunks = [],
         };
     }
 }

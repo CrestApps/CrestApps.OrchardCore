@@ -38,7 +38,7 @@ public sealed class AIChatSession : ExtensibleEntity
     /// Gets or sets the collection of document references attached to this session.
     /// Documents are uploaded by users and used for RAG (Retrieval-Augmented Generation).
     /// </summary>
-    public IList<ChatInteractionDocumentInfo> Documents { get; set; } = [];
+    public List<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the UTC date and time when the session was first created.
@@ -73,4 +73,37 @@ public sealed class AIChatSession : ExtensibleEntity
     /// Populated after the session is closed.
     /// </summary>
     public Dictionary<string, PostSessionResult> PostSessionResults { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the status of post-session processing for this session.
+    /// </summary>
+    public PostSessionProcessingStatus PostSessionProcessingStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of attempts made to process post-session tasks.
+    /// </summary>
+    public int PostSessionProcessingAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC timestamp of the last post-session processing attempt.
+    /// </summary>
+    public DateTime? PostSessionProcessingLastAttemptUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether post-session tasks (custom AI tasks) have been processed.
+    /// Used to track partial completion so successful steps are not re-run on retry.
+    /// </summary>
+    public bool IsPostSessionTasksProcessed { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether analytics events (resolution detection and session-end metrics)
+    /// have been recorded. Used to track partial completion so successful steps are not re-run on retry.
+    /// </summary>
+    public bool IsAnalyticsRecorded { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether conversion goals have been evaluated.
+    /// Tracked independently from analytics so each step can be retried without re-running the other.
+    /// </summary>
+    public bool IsConversionGoalsEvaluated { get; set; }
 }

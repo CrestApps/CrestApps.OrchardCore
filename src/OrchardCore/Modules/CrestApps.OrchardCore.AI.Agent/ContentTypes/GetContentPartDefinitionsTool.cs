@@ -3,11 +3,12 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class GetContentPartDefinitionsTool : AIFunction
+public sealed class GetContentPartDefinitionsTool: AIFunction
 {
     public const string TheName = "getContentPartDefinition";
 
@@ -42,15 +43,18 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
+        var logger = arguments.Services.GetRequiredService<ILogger<GetContentPartDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to view content types.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
+
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
@@ -58,7 +62,14 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
 
         if (definition is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' could not find a part definition matching the name '{ContentPart}'.", TheName, name);
+
             return $"Unable to find a part definition that match the name: {name}";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 
         return JsonSerializer.Serialize(definition, JsonHelpers.ContentDefinitionSerializerOptions);

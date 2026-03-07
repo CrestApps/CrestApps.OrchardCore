@@ -1,5 +1,6 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 
@@ -21,13 +22,16 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAITemplateService _templateService;
+    private readonly ILogger _logger;
 
     public DocumentOrchestrationHandler(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAITemplateService templateService)
+        IAITemplateService templateService,
+        ILogger<DocumentOrchestrationHandler> logger)
     {
         _toolDefinitions = toolDefinitions.Value;
         _templateService = templateService;
+        _logger = logger;
     }
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
@@ -35,15 +39,33 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         if (context.Resource is ChatInteraction interaction &&
             interaction.Documents is { Count: > 0 })
         {
-            context.Context.Documents = interaction.Documents;
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Populating {DocCount} document(s) from ChatInteraction '{ItemId}' into orchestration context.",
+                    interaction.Documents.Count, interaction.ItemId);
+            }
+
+            context.Context.Documents ??= [];
+            context.Context.Documents.AddRange(interaction.Documents);
         }
         else if (context.Resource is AIProfile profile)
         {
-            var documentsMetadata = profile.As<AIProfileDocumentsMetadata>();
+            var documentsMetadata = profile.As<DocumentsMetadata>();
 
             if (documentsMetadata.Documents is { Count: > 0 })
             {
-                context.Context.Documents = documentsMetadata.Documents;
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("Populating {DocCount} document(s) from AIProfile '{ProfileId}' into orchestration context.",
+                        documentsMetadata.Documents.Count, profile.ItemId);
+                }
+
+                context.Context.Documents ??= [];
+                context.Context.Documents.AddRange(documentsMetadata.Documents);
+            }
+            else if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("AIProfile '{ProfileId}' has no documents attached.", profile.ItemId);
             }
         }
 
@@ -52,23 +74,63 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
-        // Check for session documents after configure has run,
-        // since the session is set via the configure callback
-        // which executes between BuildingAsync and BuiltAsync.
-        if (context.OrchestrationContext.Documents is not { Count: > 0 } &&
-            context.Resource is AIProfile &&
-            context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
-            context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
-            sessionObj is AIChatSession session &&
-            session.Documents is { Count: > 0 })
+        IEnumerable<ChatDocumentInfo> knowledgeBaseDocuments = null;
+        IEnumerable<ChatDocumentInfo> userSuppliedDocuments = null;
+
+        if (context.Resource is ChatInteraction interaction && interaction.Documents is { Count: > 0 })
         {
-            context.OrchestrationContext.Documents = session.Documents;
+            userSuppliedDocuments = interaction.Documents;
+        }
+        else if (context.Resource is AIProfile profile)
+        {
+            var documentsMetadata = profile.As<DocumentsMetadata>();
+            knowledgeBaseDocuments = documentsMetadata.Documents;
+
+            if (context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
+                context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
+                sessionObj is AIChatSession session &&
+                session.Documents is { Count: > 0 })
+            {
+                userSuppliedDocuments = session.Documents;
+            }
         }
 
-        if (context.OrchestrationContext.Documents is not { Count: > 0 } ||
-            context.OrchestrationContext.CompletionContext is null)
+        var hasKnowledgeBaseDocuments = knowledgeBaseDocuments?.Any() == true;
+        var hasUserSuppliedDocuments = userSuppliedDocuments?.Any() == true;
+
+        if (!hasKnowledgeBaseDocuments && !hasUserSuppliedDocuments &&
+            context.OrchestrationContext.Documents is { Count: > 0 } existingDocuments)
+        {
+            var clonedDocuments = existingDocuments.ToArray();
+
+            if (context.Resource is AIProfile)
+            {
+                knowledgeBaseDocuments = clonedDocuments;
+                hasKnowledgeBaseDocuments = true;
+            }
+            else
+            {
+                userSuppliedDocuments = clonedDocuments;
+                hasUserSuppliedDocuments = true;
+            }
+        }
+
+        if ((!hasKnowledgeBaseDocuments && !hasUserSuppliedDocuments) || context.OrchestrationContext.CompletionContext is null)
         {
             return;
+        }
+
+        context.OrchestrationContext.Documents ??= [];
+        context.OrchestrationContext.Documents.Clear();
+
+        if (hasKnowledgeBaseDocuments)
+        {
+            context.OrchestrationContext.Documents.AddRange(knowledgeBaseDocuments);
+        }
+
+        if (hasUserSuppliedDocuments)
+        {
+            context.OrchestrationContext.Documents.AddRange(userSuppliedDocuments);
         }
 
         // Signal document availability so system tools (e.g., search_documents)
@@ -86,6 +148,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         {
             ["tools"] = docTools,
             ["availableDocuments"] = context.OrchestrationContext.Documents,
+            ["knowledgeBaseDocuments"] = hasKnowledgeBaseDocuments ? knowledgeBaseDocuments : Array.Empty<ChatDocumentInfo>(),
+            ["userSuppliedDocuments"] = hasUserSuppliedDocuments ? userSuppliedDocuments : Array.Empty<ChatDocumentInfo>(),
         };
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);

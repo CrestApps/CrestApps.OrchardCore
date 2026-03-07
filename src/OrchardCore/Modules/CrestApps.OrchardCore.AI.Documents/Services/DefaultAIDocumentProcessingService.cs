@@ -1,3 +1,4 @@
+using CrestApps;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
@@ -105,7 +106,17 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
         if (string.IsNullOrWhiteSpace(text))
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document processing: no text content extracted from file '{FileName}'.", file.FileName.SanitizeLogValue());
+            }
+
             return DocumentProcessingResult.Failed("Could not extract text content from the document.");
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Document processing: extracted {TextLength} chars from '{FileName}' (extension: {Extension}).", text.Length, file.FileName.SanitizeLogValue(), extension);
         }
 
         // Normalize the extracted text to strip HTML, Markdown, and extraneous formatting
@@ -122,40 +133,62 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
             FileName = file.FileName,
             ContentType = file.ContentType,
             FileSize = file.Length,
-            Text = text,
             UploadedUtc = now,
-            Chunks = [],
         };
+
+        var chunks = new List<AIDocumentChunk>();
 
         if (ShouldGenerateEmbeddings(extension, text.Length, embeddingGenerator, options))
         {
             var textChunks = await RagTextNormalizer.NormalizeAndChunkAsync(text);
             textChunks = LimitChunksForEmbedding(textChunks);
 
-            if (textChunks.Count > 0)
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document processing: generated {ChunkCount} chunk(s) for '{FileName}'.", textChunks.Count, file.FileName);
+            }
+
+            // Generate embeddings for all chunks in a single batch.
+            GeneratedEmbeddings<Embedding<float>> embeddings = null;
+
+            if (embeddingGenerator != null && textChunks.Count > 0)
             {
                 try
                 {
-                    var embedding = await embeddingGenerator.GenerateAsync(textChunks);
-
-                    for (var i = 0; i < textChunks.Count; i++)
-                    {
-                        document.Chunks.Add(new ChatInteractionDocumentChunk
-                        {
-                            Text = textChunks[i],
-                            Embedding = embedding[i].Vector.ToArray(),
-                            Index = i,
-                        });
-                    }
+                    embeddings = await embeddingGenerator.GenerateAsync(textChunks);
                 }
-                catch (Exception embeddingEx)
+                catch (Exception ex)
                 {
-                    _logger.LogWarning(embeddingEx, "Failed to generate embeddings for file {FileName}. File will be stored without vector search support.", file.FileName.SanitizeLogValue());
+                    _logger.LogWarning(ex, "Failed to generate embeddings for '{FileName}'. Chunks will be stored without embeddings.", file.FileName);
                 }
             }
+
+            for (var i = 0; i < textChunks.Count; i++)
+            {
+                chunks.Add(new AIDocumentChunk
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    AIDocumentId = document.ItemId,
+                    ReferenceId = referenceId,
+                    ReferenceType = referenceType,
+                    Content = textChunks[i],
+                    Embedding = embeddings != null && i < embeddings.Count ? embeddings[i].Vector.ToArray() : null,
+                    Index = i,
+                });
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Document processing: created {ChunkCount} chunk record(s) for '{FileName}'.", chunks.Count, file.FileName);
+            }
+        }
+        else if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Document processing: skipping embedding generation for '{FileName}' (extension={Extension}, textLength={TextLength}, hasGenerator={HasGenerator}).",
+                file.FileName.SanitizeLogValue(), extension, text.Length, embeddingGenerator != null);
         }
 
-        var documentInfo = new ChatInteractionDocumentInfo
+        var documentInfo = new ChatDocumentInfo
         {
             DocumentId = document.ItemId,
             FileName = document.FileName,
@@ -163,7 +196,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
             ContentType = document.ContentType,
         };
 
-        return DocumentProcessingResult.Succeeded(document, documentInfo);
+        return DocumentProcessingResult.Succeeded(document, documentInfo, chunks);
     }
 
     private static bool ShouldGenerateEmbeddings(

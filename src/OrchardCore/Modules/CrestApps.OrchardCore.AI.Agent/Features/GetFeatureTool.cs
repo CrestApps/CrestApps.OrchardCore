@@ -3,6 +3,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Extensions;
 using OrchardCore.Environment.Shell;
 
@@ -43,15 +44,19 @@ public sealed class GetFeatureTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+        var logger = arguments.Services.GetRequiredService<ILogger<GetFeatureTool>>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageFeatures))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage features.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("featureId", out var featureId))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureId' argument.", Name);
+
             return "Unable to find a featureId argument in the function arguments.";
         }
 
@@ -60,10 +65,17 @@ public sealed class GetFeatureTool : AIFunction
 
         if (feature is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: feature '{FeatureId}' not found.", Name, featureId);
+
             return $"Unable to find a feature with the ID: {featureId}.";
         }
 
         var isEnabled = await shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+        }
 
         return JsonSerializer.Serialize(feature.AsAIObject(isEnabled));
     }

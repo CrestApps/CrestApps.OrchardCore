@@ -58,6 +58,9 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 {
                     await TriggerFieldExtractedEventAsync(workflowManager, context, field, now);
                 }
+
+                // Always trigger the aggregate event so workflows can evaluate whether all fields are collected.
+                await TriggerAllFieldsExtractedEventAsync(workflowManager, context, now);
             }
 
             // Close the session if the model detected a natural farewell.
@@ -97,6 +100,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
             {
                 { "SessionId", context.ChatSession.SessionId },
                 { "ProfileId", context.Profile.ItemId },
+                { "Session", context.ChatSession },
+                { "Profile", context.Profile },
                 { "FieldName", field.FieldName },
                 { "Value", field.Value },
                 { "IsMultiple", field.IsMultiple },
@@ -125,6 +130,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
             {
                 { "SessionId", context.ChatSession.SessionId },
                 { "ProfileId", context.Profile.ItemId },
+                { "Session", context.ChatSession },
+                { "Profile", context.Profile },
                 { "ClosedAtUtc", now },
             };
 
@@ -136,6 +143,34 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to trigger AIChatSessionClosedEvent for session '{SessionId}'.", context.ChatSession.SessionId);
+        }
+    }
+
+    private async Task TriggerAllFieldsExtractedEventAsync(
+        IWorkflowManager workflowManager,
+        ChatMessageCompletedContext context,
+        DateTime now)
+    {
+        try
+        {
+            var input = new Dictionary<string, object>
+            {
+                { "SessionId", context.ChatSession.SessionId },
+                { "ProfileId", context.Profile.ItemId },
+                { "Session", context.ChatSession },
+                { "Profile", context.Profile },
+                { "ExtractedData", context.ChatSession.ExtractedData },
+                { "Timestamp", now },
+            };
+
+            await workflowManager.TriggerEventAsync(
+                nameof(AIChatSessionAllFieldsExtractedEvent),
+                input,
+                correlationId: context.ChatSession.SessionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to trigger AIChatSessionAllFieldsExtractedEvent for session '{SessionId}'.", context.ChatSession.SessionId);
         }
     }
 }

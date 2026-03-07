@@ -84,6 +84,33 @@ public sealed class AIChatSessionEvent : ExtensibleEntity
     public bool? UserRating { get; set; }
 
     /// <summary>
+    /// Gets or sets the total number of thumbs-up ratings across all messages in this session.
+    /// </summary>
+    public int ThumbsUpCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the total number of thumbs-down ratings across all messages in this session.
+    /// </summary>
+    public int ThumbsDownCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the aggregate conversion score across all goals.
+    /// Null if conversion metrics are not enabled.
+    /// </summary>
+    public int? ConversionScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum possible conversion score across all goals.
+    /// Null if conversion metrics are not enabled.
+    /// </summary>
+    public int? ConversionMaxScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the individual goal results from AI evaluation.
+    /// </summary>
+    public List<ConversionGoalResult> ConversionGoalResults { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when this event record was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

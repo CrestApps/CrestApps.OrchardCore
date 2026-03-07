@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Roles;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.AI.Agent.Roles;
@@ -48,12 +48,13 @@ internal sealed class GetRoleTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var roleManager = arguments.Services.GetRequiredService<RoleManager<IRole>>();
-
-        if (!await arguments.IsAuthorizedAsync(RolesPermissions.ManageRoles))
+        var logger = arguments.Services.GetRequiredService<ILogger<GetRoleTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "The current user does not have permission to manage roles.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
+
+        var roleManager = arguments.Services.GetRequiredService<RoleManager<IRole>>();
 
         var roleId = arguments.GetFirstValueOrDefault<string>("roleId");
         var roleName = arguments.GetFirstValueOrDefault<string>("roleName");
@@ -63,6 +64,8 @@ internal sealed class GetRoleTool : AIFunction
 
         if (!hasRoleId && !hasRoleName)
         {
+            logger.LogWarning("AI tool '{ToolName}': neither 'roleId' nor 'roleName' argument was provided.", Name);
+
             return "You must provide at least one of the following arguments: roleId, or roleName.";
         }
 
@@ -79,7 +82,14 @@ internal sealed class GetRoleTool : AIFunction
 
         if (role is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': no role found for roleId '{RoleId}' or roleName '{RoleName}'.", Name, roleId, roleName);
+
             return "Unable to find a role with the provided arguments.";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         if (role is Role r)

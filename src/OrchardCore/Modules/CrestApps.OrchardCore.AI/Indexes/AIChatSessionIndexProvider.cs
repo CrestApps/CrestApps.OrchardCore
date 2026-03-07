@@ -10,7 +10,7 @@ internal sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
 {
     public AIChatSessionIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<AIChatSession> context)
@@ -28,6 +28,7 @@ internal sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
                     CreatedUtc = session.CreatedUtc,
                     Title = Str.Truncate(session.Title, 255),
                     Status = session.Status,
+                    PostSessionProcessingStatus = session.PostSessionProcessingStatus,
                     LastActivityUtc = session.LastActivityUtc,
                 };
             });

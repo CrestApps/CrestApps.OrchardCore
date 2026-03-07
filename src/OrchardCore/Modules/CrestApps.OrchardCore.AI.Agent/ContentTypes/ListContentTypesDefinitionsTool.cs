@@ -1,7 +1,7 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
@@ -35,13 +35,21 @@ public sealed class ListContentTypesDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
-
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ViewContentTypes))
+        var logger = arguments.Services.GetRequiredService<ILogger<ListContentTypesDefinitionsTool>>();
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to view content types.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
-        return JsonSerializer.Serialize(await contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+        var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+
+        var result = JsonSerializer.Serialize(await contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
+
+        return result;
     }
 }

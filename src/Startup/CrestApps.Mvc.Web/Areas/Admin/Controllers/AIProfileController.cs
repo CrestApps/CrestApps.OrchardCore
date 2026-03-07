@@ -19,6 +19,7 @@ public sealed class AIProfileController : Controller
     private readonly ICatalog<AIProviderConnection> _connectionCatalog;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly IAIDocumentStore _documentStore;
+    private readonly IAIDocumentChunkStore _chunkStore;
     private readonly FileSystemFileStore _fileStore;
     private readonly AIOptions _aiOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
@@ -29,6 +30,7 @@ public sealed class AIProfileController : Controller
         ICatalog<AIProviderConnection> connectionCatalog,
         ICatalog<AIDeployment> deploymentCatalog,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         FileSystemFileStore fileStore,
         IOptions<AIOptions> aiOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
@@ -38,6 +40,7 @@ public sealed class AIProfileController : Controller
         _connectionCatalog = connectionCatalog;
         _deploymentCatalog = deploymentCatalog;
         _documentStore = documentStore;
+        _chunkStore = chunkStore;
         _fileStore = fileStore;
         _aiOptions = aiOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
@@ -238,17 +241,29 @@ public sealed class AIProfileController : Controller
                 ReferenceType = "profile",
                 FileName = file.FileName,
                 ContentType = file.ContentType,
-                Text = text,
                 FileSize = file.Length,
                 UploadedUtc = DateTime.UtcNow,
             };
 
             await _documentStore.CreateAsync(document);
 
-            profile.AlterSettings<AIProfileDocumentsMetadata>(m =>
+            if (!string.IsNullOrEmpty(text))
+            {
+                await _chunkStore.CreateAsync(new AIDocumentChunk
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    AIDocumentId = document.ItemId,
+                    ReferenceId = profile.ItemId,
+                    ReferenceType = "profile",
+                    Content = text,
+                    Index = 0,
+                });
+            }
+
+            profile.AlterSettings<DocumentsMetadata>(m =>
             {
                 m.Documents ??= [];
-                m.Documents.Add(new ChatInteractionDocumentInfo
+                m.Documents.Add(new ChatDocumentInfo
                 {
                     DocumentId = document.ItemId,
                     FileName = document.FileName,

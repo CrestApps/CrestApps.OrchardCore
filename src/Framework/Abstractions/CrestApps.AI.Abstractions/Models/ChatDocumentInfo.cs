@@ -1,6 +1,6 @@
 namespace CrestApps.AI.Models;
 
-public sealed class ChatInteractionDocumentInfo
+public sealed class ChatDocumentInfo
 {
     /// <summary>
     /// Gets or sets the unique identifier for this document.

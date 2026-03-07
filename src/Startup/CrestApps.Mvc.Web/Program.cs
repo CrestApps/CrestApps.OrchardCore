@@ -98,6 +98,7 @@ builder.Services.AddSingleton(sp =>
     store.RegisterIndexes<AIChatSessionIndexProvider>();
     store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
     store.RegisterIndexes<AIDocumentIndexProvider>();
+    store.RegisterIndexes<AIDocumentChunkIndexProvider>();
 
     return store;
 });
@@ -112,7 +113,8 @@ builder.Services
     .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
     .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
     .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
-    .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>();
+    .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>()
+    .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>();
 
 // Local file store for uploaded documents.
 builder.Services.AddSingleton(new FileSystemFileStore(
@@ -167,7 +169,7 @@ await app.RunAsync();
 // ---------------------------------------------------------------------------
 // YesSql schema helper — creates index tables if they do not already exist.
 // ---------------------------------------------------------------------------
-static async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
+async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
 {
     var store = services.GetRequiredService<IStore>();
     await using var connection = store.Configuration.ConnectionFactory.CreateConnection();
@@ -178,19 +180,19 @@ static async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
     await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIProfileIndex>(t => t
             .Column<string>(nameof(AIProfileIndex.ItemId), c => c.WithLength(26))
-            .Column<string>(nameof(AIProfileIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIProfileIndex.Name), c => c.WithLength(255))
             .Column<string>(nameof(AIProfileIndex.Source), c => c.WithLength(255))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIProviderConnectionIndex>(t => t
             .Column<string>(nameof(AIProviderConnectionIndex.ItemId), c => c.WithLength(26))
-            .Column<string>(nameof(AIProviderConnectionIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIProviderConnectionIndex.Name), c => c.WithLength(255))
             .Column<string>(nameof(AIProviderConnectionIndex.Source), c => c.WithLength(255))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIDeploymentIndex>(t => t
             .Column<string>(nameof(AIDeploymentIndex.ItemId), c => c.WithLength(26))
-            .Column<string>(nameof(AIDeploymentIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIDeploymentIndex.Name), c => c.WithLength(255))
             .Column<string>(nameof(AIDeploymentIndex.Source), c => c.WithLength(255))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
@@ -213,10 +215,18 @@ static async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIDocumentIndex.ReferenceType), c => c.WithLength(50))
             .Column<string>(nameof(AIDocumentIndex.FileName), c => c.WithLength(255))));
 
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIDocumentChunkIndex>(t => t
+            .Column<string>(nameof(AIDocumentChunkIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDocumentChunkIndex.AIDocumentId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDocumentChunkIndex.ReferenceId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDocumentChunkIndex.ReferenceType), c => c.WithLength(50))
+            .Column<int>(nameof(AIDocumentChunkIndex.Index))));
+
     await transaction.CommitAsync();
 }
 
-static async Task TryCreateTableAsync(SchemaBuilder _, Func<Task> createTable)
+async Task TryCreateTableAsync(SchemaBuilder _, Func<Task> createTable)
 {
     try { await createTable(); }
     catch { /* Table already exists. */ }

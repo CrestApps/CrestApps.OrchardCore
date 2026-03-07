@@ -1,6 +1,13 @@
+using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -9,16 +16,28 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
 public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 {
+    private readonly AIToolDefinitionOptions _toolDefinitions;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
     internal readonly IStringLocalizer S;
 
     public AIProfilePostSessionDisplayDriver(
+        IOptions<AIToolDefinitionOptions> toolDefinitions,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfilePostSessionDisplayDriver> stringLocalizer)
     {
+        _toolDefinitions = toolDefinitions.Value;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
+        var accessibleTools = await GetAccessibleToolsAsync();
+
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
             var settings = profile.GetSettings<AIProfilePostSessionSettings>();
@@ -41,6 +60,21 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                 })
                 .ToList();
 
+            if (accessibleTools.Count > 0)
+            {
+                var selectedToolNames = settings.ToolNames ?? [];
+
+                model.PostSessionTools = accessibleTools
+                    .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+                    .OrderBy(group => group.Key)
+                    .ToDictionary(group => group.Key, group => group.Select(entry => new PostSessionToolEntry
+                    {
+                        ItemId = entry.Key,
+                        DisplayText = entry.Value.Title,
+                        Description = entry.Value.Description,
+                        IsSelected = selectedToolNames.Contains(entry.Key),
+                    }).OrderBy(entry => entry.DisplayText).ToArray());
+            }
         }).Location("Content:10#Data Processing & Metrics:10");
     }
 
@@ -103,9 +137,21 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
             }
         }
 
+        // Collect selected tool names from the posted model.
+        var selectedToolKeys = model.PostSessionTools?.Values?.SelectMany(x => x)?.Where(x => x.IsSelected).Select(x => x.ItemId);
+        var toolNames = Array.Empty<string>();
+
+        if (selectedToolKeys is not null && selectedToolKeys.Any())
+        {
+            toolNames = _toolDefinitions.Tools.Keys
+                .Intersect(selectedToolKeys)
+                .ToArray();
+        }
+
         profile.AlterSettings<AIProfilePostSessionSettings>(settings =>
         {
             settings.EnablePostSessionProcessing = model.EnablePostSessionProcessing;
+            settings.ToolNames = toolNames;
             settings.PostSessionTasks = tasks.Select(t => new PostSessionTask
             {
                 Name = t.Name,
@@ -122,7 +168,28 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
             }).ToList();
         });
 
-        return Edit(profile, context);
+        return await EditAsync(profile, context);
+    }
+
+    private async Task<Dictionary<string, AIToolDefinitionEntry>> GetAccessibleToolsAsync()
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        var accessibleTools = new Dictionary<string, AIToolDefinitionEntry>();
+
+        foreach (var tool in _toolDefinitions.Tools)
+        {
+            if (tool.Value.IsSystemTool)
+            {
+                continue;
+            }
+
+            if (user is not null && await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            {
+                accessibleTools[tool.Key] = tool.Value;
+            }
+        }
+
+        return accessibleTools;
     }
 
     private static bool IsValidKey(string name)

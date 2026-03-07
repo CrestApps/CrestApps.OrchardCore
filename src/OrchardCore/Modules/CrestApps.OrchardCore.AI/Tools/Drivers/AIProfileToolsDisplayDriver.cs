@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -64,7 +65,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var metadata = profile.As<AIProfileFunctionInvocationMetadata>();
+            var selectedNames = GetSelectedToolNames(profile);
 
             model.Tools = accessibleTools
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
@@ -74,7 +75,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 ItemId = entry.Key,
                 DisplayText = entry.Value.Title,
                 Description = entry.Value.Description,
-                IsSelected = metadata.Names?.Contains(entry.Key) ?? false,
+                IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
 
         }).Location("Content:8#Capabilities:5");
@@ -93,7 +94,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        var metadata = new AIProfileFunctionInvocationMetadata();
+        var metadata = new FunctionInvocationMetadata();
 
         if (selectedToolKeys is null || !selectedToolKeys.Any())
         {
@@ -108,6 +109,32 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         profile.Put(metadata);
 
+        // Remove the legacy property key if it exists to complete migration.
+        profile.Properties.Remove("AIProfileFunctionInvocationMetadata");
+
         return Edit(profile, context);
+    }
+
+    /// <summary>
+    /// Reads tool names from the current key, falling back to the legacy key for backward compatibility.
+    /// </summary>
+    private static string[] GetSelectedToolNames(AIProfile profile)
+    {
+        var metadata = profile.As<FunctionInvocationMetadata>();
+
+        if (metadata.Names is { Length: > 0 })
+        {
+            return metadata.Names;
+        }
+
+        // Fall back to the legacy property key used in earlier versions.
+        var legacyMetadata = profile.Get<FunctionInvocationMetadata>("AIProfileFunctionInvocationMetadata");
+
+        if (legacyMetadata?.Names is { Length: > 0 })
+        {
+            return legacyMetadata.Names;
+        }
+
+        return null;
     }
 }

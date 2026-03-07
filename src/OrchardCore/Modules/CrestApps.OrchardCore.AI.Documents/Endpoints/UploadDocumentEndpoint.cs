@@ -31,6 +31,7 @@ internal static class UploadDocumentEndpoint
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<Startup> logger,
@@ -125,6 +126,12 @@ internal static class UploadDocumentEndpoint
                 interaction.Documents.Add(result.DocumentInfo);
 
                 await documentStore.CreateAsync(result.Document);
+
+                // Persist each chunk as a separate record.
+                foreach (var chunk in result.Chunks)
+                {
+                    await chunkStore.CreateAsync(chunk);
+                }
             }
             catch (Exception ex)
             {

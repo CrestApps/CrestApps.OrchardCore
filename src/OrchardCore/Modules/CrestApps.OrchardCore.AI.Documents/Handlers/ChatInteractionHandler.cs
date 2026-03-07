@@ -3,6 +3,8 @@ using CrestApps.AI.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -86,6 +88,7 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
         }
 
         var documentStore = services.GetRequiredService<IAIDocumentStore>();
+        var chunkStore = services.GetRequiredService<IAIDocumentChunkStore>();
         var documentIndexHandlers = services.GetRequiredService<IEnumerable<IDocumentIndexHandler>>();
         var logger = services.GetRequiredService<ILogger<ChatInteractionHandler>>();
 
@@ -105,13 +108,13 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
             {
                 documentsToDelete.TryAdd(doc.ItemId, doc);
 
-                if (doc.Chunks != null)
+                var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+                foreach (var chunk in chunks)
                 {
-                    for (var i = 0; i < doc.Chunks.Count; i++)
-                    {
-                        removedChunkIds.Add($"{doc.ItemId}_{i}");
-                    }
+                    removedChunkIds.Add(chunk.ItemId);
                 }
+
+                await chunkStore.DeleteByDocumentIdAsync(doc.ItemId);
             }
         }
 
@@ -126,33 +129,6 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                 continue;
             }
 
-            // Collect old chunk IDs for deletion before re-indexing.
-            var oldChunkIds = new List<string>();
-
-            foreach (var interaction in interactions)
-            {
-                var existingDocs = await documentStore.GetDocumentsAsync(
-                    interaction.ItemId,
-                    AIConstants.DocumentReferenceTypes.ChatInteraction);
-
-                foreach (var doc in existingDocs)
-                {
-                    if (doc.Chunks != null)
-                    {
-                        for (var i = 0; i < doc.Chunks.Count; i++)
-                        {
-                            oldChunkIds.Add($"{doc.ItemId}_{i}");
-                        }
-                    }
-                }
-            }
-
-            // Delete old chunk documents.
-            if (oldChunkIds.Count > 0)
-            {
-                await documentIndexManager.DeleteDocumentsAsync(indexProfile, oldChunkIds);
-            }
-
             // Build new flat chunk documents via handler pipeline.
             var documents = new List<DocumentIndex>();
 
@@ -164,21 +140,22 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
 
                 foreach (var aiDocument in aiDocuments)
                 {
-                    if (aiDocument.Chunks == null || aiDocument.Chunks.Count == 0)
+                    var docChunks = await chunkStore.GetChunksByAIDocumentIdAsync(aiDocument.ItemId);
+
+                    if (docChunks.Count == 0)
                     {
                         continue;
                     }
 
-                    foreach (var chunk in aiDocument.Chunks)
+                    foreach (var chunk in docChunks)
                     {
-                        var chunkId = $"{aiDocument.ItemId}_{chunk.Index}";
-                        var documentIndex = new DocumentIndex(chunkId);
+                        var documentIndex = new DocumentIndex(chunk.ItemId);
 
-                        var aiDocumentChunk = new AIDocumentChunk
+                        var aiDocumentChunk = new AIDocumentChunkContext
                         {
-                            ChunkId = chunkId,
+                            ChunkId = chunk.ItemId,
                             DocumentId = aiDocument.ItemId,
-                            Content = chunk.Text,
+                            Content = chunk.Content,
                             FileName = aiDocument.FileName,
                             ReferenceId = aiDocument.ReferenceId,
                             ReferenceType = aiDocument.ReferenceType,
@@ -186,7 +163,7 @@ public sealed class ChatInteractionHandler : CatalogEntryHandlerBase<ChatInterac
                             Embedding = chunk.Embedding,
                         };
 
-                        var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunkId], documentIndexManager.GetContentIndexSettings())
+                        var buildContext = new BuildDocumentIndexContext(documentIndex, aiDocumentChunk, [chunk.ItemId], documentIndexManager.GetContentIndexSettings())
                         {
                             AdditionalProperties = new Dictionary<string, object>
                             {

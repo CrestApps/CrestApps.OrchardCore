@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Indexing;
 
 namespace CrestApps.OrchardCore.AI.Documents.Endpoints;
 
@@ -27,7 +30,8 @@ internal static class RemoveDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         ISourceCatalogManager<ChatInteraction> interactionManager,
-        IAIDocumentStore documentStore)
+        IAIDocumentStore documentStore,
+        IAIDocumentChunkStore chunkStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {
@@ -66,10 +70,19 @@ internal static class RemoveDocumentEndpoint
 
         interaction.Documents.Remove(documentInfo);
 
-        // Remove the document from the document store
+        // Remove the document, its chunks, and vector index entries.
         var document = await documentStore.FindByIdAsync(request.DocumentId);
         if (document != null)
         {
+            var chunks = await chunkStore.GetChunksByAIDocumentIdAsync(document.ItemId);
+            var chunkIdsToRemove = chunks.Select(c => c.ItemId).ToList();
+
+            if (chunkIdsToRemove.Count > 0)
+            {
+                ShellScope.AddDeferredTask(scope => RemoveDocumentChunksAsync(scope, chunkIdsToRemove));
+            }
+
+            await chunkStore.DeleteByDocumentIdAsync(document.ItemId);
             await documentStore.DeleteAsync(document);
         }
 
@@ -77,5 +90,29 @@ internal static class RemoveDocumentEndpoint
         await interactionManager.UpdateAsync(interaction);
 
         return TypedResults.Ok();
+    }
+
+    private static async Task RemoveDocumentChunksAsync(ShellScope scope, List<string> chunkIds)
+    {
+        var services = scope.ServiceProvider;
+        var indexStore = services.GetRequiredService<IIndexProfileStore>();
+        var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+
+        if (!indexProfiles.Any())
+        {
+            return;
+        }
+
+        foreach (var indexProfile in indexProfiles)
+        {
+            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+
+            if (documentIndexManager == null)
+            {
+                continue;
+            }
+
+            await documentIndexManager.DeleteDocumentsAsync(indexProfile, chunkIds);
+        }
     }
 }

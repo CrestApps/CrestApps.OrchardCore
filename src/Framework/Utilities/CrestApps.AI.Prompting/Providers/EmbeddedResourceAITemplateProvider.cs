@@ -13,6 +13,9 @@ public sealed class EmbeddedResourceAITemplateProvider : IAITemplateProvider
 {
     private const string PromptsResourceSegment = ".AITemplates.Prompts.";
 
+    // OrchardCore Module Targets use '>' as the path separator in embedded resource logical names.
+    private const string OrchardCorePromptsResourceSegment = ".AITemplates>Prompts>";
+
     private readonly Assembly _assembly;
     private readonly IEnumerable<IAITemplateParser> _parsers;
     private readonly string _source;
@@ -38,6 +41,14 @@ public sealed class EmbeddedResourceAITemplateProvider : IAITemplateProvider
         foreach (var resourceName in resourceNames)
         {
             var promptsIndex = resourceName.IndexOf(PromptsResourceSegment, StringComparison.OrdinalIgnoreCase);
+            var segmentLength = PromptsResourceSegment.Length;
+
+            if (promptsIndex < 0)
+            {
+                promptsIndex = resourceName.IndexOf(OrchardCorePromptsResourceSegment, StringComparison.OrdinalIgnoreCase);
+                segmentLength = OrchardCorePromptsResourceSegment.Length;
+            }
+
             if (promptsIndex < 0)
             {
                 continue;
@@ -63,7 +74,7 @@ public sealed class EmbeddedResourceAITemplateProvider : IAITemplateProvider
             var parseResult = parser.Parse(content);
 
             // Extract the filename portion from the resource name.
-            var afterPrompts = resourceName[(promptsIndex + PromptsResourceSegment.Length)..];
+            var afterPrompts = resourceName[(promptsIndex + segmentLength)..];
 
             // Remove the file extension.
             var id = extension != null && afterPrompts.EndsWith(extension, StringComparison.OrdinalIgnoreCase)

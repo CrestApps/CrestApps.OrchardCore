@@ -9,7 +9,7 @@ internal sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSe
 {
     public AIChatSessionMetricsIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AICollectionName;
     }
 
     public override void Describe(DescribeContext<AIChatSessionEvent> context)
@@ -36,6 +36,10 @@ internal sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSe
                     TotalOutputTokens = evt.TotalOutputTokens,
                     AverageResponseLatencyMs = evt.AverageResponseLatencyMs,
                     UserRating = evt.UserRating,
+                    ThumbsUpCount = evt.ThumbsUpCount,
+                    ThumbsDownCount = evt.ThumbsDownCount,
+                    ConversionScore = evt.ConversionScore,
+                    ConversionMaxScore = evt.ConversionMaxScore,
                     CreatedUtc = evt.CreatedUtc,
                 };
             });

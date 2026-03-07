@@ -45,7 +45,7 @@ public sealed class AIChatSessionEventService
             CreatedUtc = now,
         };
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public sealed class AIChatSessionEventService
                 CreatedUtc = now,
             };
 
-            await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+            await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
             return;
         }
 
@@ -87,7 +87,7 @@ public sealed class AIChatSessionEventService
         evt.IsResolved = isResolved;
         evt.HandleTimeSeconds = (endTime - evt.SessionStartedUtc).TotalSeconds;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
@@ -111,13 +111,13 @@ public sealed class AIChatSessionEventService
         evt.AverageResponseLatencyMs =
             ((evt.AverageResponseLatencyMs * (completionCount - 1)) + responseLatencyMs) / completionCount;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     /// <summary>
-    /// Records the user's feedback rating for a session.
+    /// Updates the resolution status for a session based on AI analysis.
     /// </summary>
-    public async Task RecordUserRatingAsync(string sessionId, bool isPositive)
+    public async Task UpdateResolutionStatusAsync(string sessionId, bool isResolved)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);
 
@@ -126,16 +126,63 @@ public sealed class AIChatSessionEventService
             return;
         }
 
-        evt.UserRating = isPositive;
+        evt.IsResolved = isResolved;
 
-        await _session.SaveAsync(evt, collection: AIConstants.CollectionName);
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+    }
+
+    /// <summary>
+    /// Records conversion goal evaluation results for a session.
+    /// </summary>
+    public async Task RecordConversionMetricsAsync(string sessionId, List<ConversionGoalResult> goalResults)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null)
+        {
+            return;
+        }
+
+        evt.ConversionGoalResults = goalResults;
+        evt.ConversionScore = goalResults.Sum(r => r.Score);
+        evt.ConversionMaxScore = goalResults.Sum(r => r.MaxScore);
+
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+    }
+
+    /// <summary>
+    /// Records the user's feedback rating counts for a session.
+    /// </summary>
+    public async Task RecordUserRatingAsync(string sessionId, int thumbsUpCount, int thumbsDownCount)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null)
+        {
+            return;
+        }
+
+        evt.ThumbsUpCount = thumbsUpCount;
+        evt.ThumbsDownCount = thumbsDownCount;
+
+        // Keep legacy UserRating field in sync for backward compatibility.
+        if (thumbsUpCount + thumbsDownCount > 0)
+        {
+            evt.UserRating = thumbsUpCount >= thumbsDownCount;
+        }
+        else
+        {
+            evt.UserRating = null;
+        }
+
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
 
     private async Task<AIChatSessionEvent> FindEventBySessionIdAsync(string sessionId)
     {
         return await _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(
                 i => i.SessionId == sessionId,
-                collection: AIConstants.CollectionName)
+                collection: AIConstants.AICollectionName)
             .FirstOrDefaultAsync();
     }
 }

@@ -53,11 +53,19 @@ internal sealed class McpToolProxyFunction : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<McpToolProxyFunction>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var store = arguments.Services.GetRequiredService<ISourceCatalog<McpConnection>>();
         var connection = await store.FindByIdAsync(_connectionId);
 
         if (connection is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: MCP connection '{ConnectionId}' not found.", Name, _connectionId);
             return JsonSerializer.Serialize(new { error = $"MCP connection '{_connectionId}' not found." });
         }
 
@@ -66,6 +74,7 @@ internal sealed class McpToolProxyFunction : AIFunction
 
         if (client is null)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: could not connect to MCP server '{ConnectionId}'.", Name, _connectionId);
             return JsonSerializer.Serialize(new { error = $"Failed to connect to MCP server '{_connectionId}'." });
         }
 
@@ -87,12 +96,15 @@ internal sealed class McpToolProxyFunction : AIFunction
 
             var result = await client.CallToolAsync(_name, args, cancellationToken: cancellationToken);
 
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+            }
+
             return JsonSerializer.Serialize(result);
         }
         catch (Exception ex)
         {
-            var logger = arguments.Services.GetRequiredService<ILogger<McpToolProxyFunction>>();
-
             logger.LogError(
                 ex,
                 "Error invoking MCP tool '{ToolName}' on server '{ConnectionId}'.",

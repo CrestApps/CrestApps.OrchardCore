@@ -68,12 +68,12 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
                 {
                     if (context.Sorted)
                     {
-                        query = query.With<INameAwareIndex>(x => x.DisplayText.Contains(context.Name))
-                            .OrderBy(x => x.DisplayText);
+                        query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name))
+                            .OrderBy(x => x.Name);
                     }
                     else
                     {
-                        query = query.With<INameAwareIndex>(x => x.DisplayText.Contains(context.Name));
+                        query = query.With<INameAwareIndex>(x => x.Name.Contains(context.Name));
                     }
                 }
                 else if (typeof(TIndex).IsAssignableFrom(typeof(IDisplayTextAwareIndex)))

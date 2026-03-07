@@ -3,12 +3,12 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
-using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class PublishContentTool : AIFunction
+public sealed class PublishContentTool: AIFunction
 {
     public const string TheName = "publishContentItem";
 
@@ -43,15 +43,19 @@ public sealed class PublishContentTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+        var logger = arguments.Services.GetRequiredService<ILogger<PublishContentTool>>();
 
-        if (!await arguments.IsAuthorizedAsync(CommonPermissions.PublishContent))
+        if (logger.IsEnabled(LogLevel.Debug))
         {
-            return "You do not have permission to publish content items.";
+            logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
+
+        var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
+
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
@@ -59,10 +63,17 @@ public sealed class PublishContentTool : AIFunction
 
         if (contentItem is null)
         {
+            logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
+
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
         }
 
         await contentManager.PublishAsync(contentItem);
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+        }
 
         return "Content item was successfully published";
     }

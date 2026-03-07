@@ -19,15 +19,18 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
 
     private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     public FunctionInvocationAICompletionServiceHandler(
         IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
+        IServiceProvider serviceProvider,
         ILogger<FunctionInvocationAICompletionServiceHandler> logger)
     {
         _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -45,7 +48,6 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
         context.ChatOptions.Tools ??= [];
 
         var user = _httpContextAccessor.HttpContext?.User;
-        var services = _httpContextAccessor.HttpContext?.RequestServices;
         var addedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Process entries in priority order: Local/System first, then MCP.
@@ -61,7 +63,7 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
                 continue;
             }
 
-            if (entry.ToolFactory is null)
+            if (entry.CreateAsync is null)
             {
                 _logger.LogWarning("Tool entry '{ToolName}' ({Id}) has no ToolFactory. Skipping.", entry.Name, entry.Id);
                 continue;
@@ -82,7 +84,7 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
 
             try
             {
-                var tool = await entry.ToolFactory(services);
+                var tool = await entry.CreateAsync(_serviceProvider);
 
                 if (tool is not null)
                 {

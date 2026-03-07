@@ -1,37 +1,30 @@
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
 public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IShellFeaturesManager _shellFeaturesManager;
-
     internal readonly IStringLocalizer S;
 
     public AIProfileDataExtractionDisplayDriver(
-        IShellFeaturesManager shellFeaturesManager,
         IStringLocalizer<AIProfileDataExtractionDisplayDriver> stringLocalizer)
     {
-        _shellFeaturesManager = shellFeaturesManager;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", async model =>
+        return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
             var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
 
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
-            model.SessionInactivityTimeoutInMinutes = settings.SessionInactivityTimeoutInMinutes;
             model.Entries = settings.DataExtractionEntries
                 .Select(e => new DataExtractionEntryViewModel
                 {
@@ -41,16 +34,6 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
                     IsUpdatable = e.IsUpdatable,
                 })
                 .ToList();
-
-            var enabledFeatures = await _shellFeaturesManager.GetEnabledFeaturesAsync();
-            model.IsAnalyticsFeatureEnabled = profile.Type == AIProfileType.Chat
-                && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics);
-
-            if (model.IsAnalyticsFeatureEnabled)
-            {
-                var metadata = profile.As<AIProfileAnalyticsMetadata>();
-                model.EnableSessionMetrics = metadata.EnableSessionMetrics;
-            }
         }).Location("Content:10#Data Processing & Metrics:5");
     }
 
@@ -95,16 +78,10 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
             model.ExtractionCheckInterval = 1;
         }
 
-        if (model.SessionInactivityTimeoutInMinutes < 1)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SessionInactivityTimeoutInMinutes), S["Session Inactivity Timeout must be at least 1 minute."]);
-        }
-
         profile.AlterSettings<AIProfileDataExtractionSettings>(settings =>
         {
             settings.EnableDataExtraction = model.EnableDataExtraction;
             settings.ExtractionCheckInterval = model.ExtractionCheckInterval;
-            settings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
             settings.DataExtractionEntries = entries.Select(e => new DataExtractionEntry
             {
                 Name = e.Name,
@@ -113,16 +90,6 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
                 IsUpdatable = e.IsUpdatable,
             }).ToList();
         });
-
-        var enabledFeatures = await _shellFeaturesManager.GetEnabledFeaturesAsync();
-
-        if (profile.Type == AIProfileType.Chat
-            && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics))
-        {
-            var metadata = profile.As<AIProfileAnalyticsMetadata>();
-            metadata.EnableSessionMetrics = model.EnableSessionMetrics;
-            profile.Put(metadata);
-        }
 
         return Edit(profile, context);
     }

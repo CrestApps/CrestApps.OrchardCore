@@ -6,6 +6,8 @@ public class CompletionPartialMessage
 {
     public string MessageId { get; set; }
 
+    public string ResponseId { get; set; }
+
     public string Content { get; set; }
 
     public string SessionId { get; set; }

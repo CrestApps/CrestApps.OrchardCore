@@ -9,7 +9,7 @@ internal sealed class AIDocumentIndexProvider : IndexProvider<AIDocument>
 {
     public AIDocumentIndexProvider()
     {
-        CollectionName = AIConstants.CollectionName;
+        CollectionName = AIConstants.AIDocsCollectionName;
     }
 
     public override void Describe(DescribeContext<AIDocument> context)

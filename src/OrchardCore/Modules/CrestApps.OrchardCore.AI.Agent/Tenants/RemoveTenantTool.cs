@@ -3,6 +3,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Removing;
 
@@ -43,37 +44,49 @@ public sealed class RemoveTenantTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        var logger = arguments.Services.GetRequiredService<ILogger<RemoveTenantTool>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+        }
+
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellRemovalManager = arguments.Services.GetRequiredService<IShellRemovalManager>();
 
-        if (!await arguments.IsAuthorizedAsync(OrchardCorePermissions.ManageTenants))
-        {
-            return "The current user does not have permission to manage tenants.";
-        }
-
         if (!shellSettings.IsDefaultShell())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
+
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
+
             return "Unable to find a name argument in the function arguments.";
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
+
             return "The given tenant does not exists.";
         }
 
         if (tenantSettings.IsDefaultShell())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: cannot remove the default tenant.", Name);
+
             return "You cannot enable the default tenant.";
         }
 
         if (!tenantSettings.IsRemovable())
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not removable.", Name, name);
+
             return "This tenant cannot be removed.";
         }
 
@@ -81,7 +94,14 @@ public sealed class RemoveTenantTool : AIFunction
 
         if (!result.Success)
         {
+            logger.LogWarning("AI tool '{ToolName}' failed: removal of tenant '{TenantName}' failed.", Name, name);
+
             return $"The tenant {name} was not removed. ErrorMessage: {result.ErrorMessage}";
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
         return $"The tenant {name} was removed successfully.";
