@@ -190,19 +190,28 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var session = arguments.Services.GetRequiredService<global::YesSql.ISession>();
         await session.FlushAsync(cancellationToken);
 
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
         var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
+        var httpContext = httpContextAccessor.HttpContext;
 
-        var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
-
-        if (metadata.AdminRouteValues is not null)
+        if (httpContext is not null)
         {
-            response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
+            var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
+            var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+
+            if (metadata.AdminRouteValues is not null)
+            {
+                response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
+            }
+
+            if (metadata.DisplayRouteValues is not null)
+            {
+                response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);
+            }
         }
-
-        if (metadata.DisplayRouteValues is not null)
+        else if (logger.IsEnabled(LogLevel.Debug))
         {
-            response += "\nThe view URI is: " + linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+            logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Skipping URI generation.", TheName);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

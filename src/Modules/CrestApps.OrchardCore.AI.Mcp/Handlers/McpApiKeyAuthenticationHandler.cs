@@ -14,9 +14,9 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
     public McpApiKeyAuthenticationHandler(
         IOptionsMonitor<McpApiKeyAuthenticationOptions> options,
         IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,
-        ILoggerFactory logger,
+        ILoggerFactory loggerFactory,
         UrlEncoder encoder)
-        : base(options, logger, encoder)
+        : base(options, loggerFactory, encoder)
     {
         _mcpServerOptionsMonitor = mcpServerOptionsMonitor;
     }

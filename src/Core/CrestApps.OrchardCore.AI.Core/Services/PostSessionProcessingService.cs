@@ -24,6 +24,7 @@ public sealed class PostSessionProcessingService
     private readonly AIProviderOptions _providerOptions;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
 
     public PostSessionProcessingService(
         IAIClientFactory clientFactory,
@@ -43,6 +44,7 @@ public sealed class PostSessionProcessingService
         _providerOptions = providerOptions.Value;
         _defaultOptions = defaultOptions.Value;
         _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<PostSessionProcessingService>();
     }
 
     /// <summary>
@@ -176,7 +178,9 @@ public sealed class PostSessionProcessingService
 
     /// <summary>
     /// Runs all configured post-session tasks against the closed session.
-    /// Returns the results keyed by task name, or null if processing is not enabled.
+    /// Tasks that have already succeeded (tracked in <see cref="AIChatSession.PostSessionResults"/>)
+    /// are excluded from processing. Returns the results keyed by task name, or null if processing
+    /// is not enabled or all tasks have already succeeded.
     /// </summary>
     public async Task<Dictionary<string, PostSessionResult>> ProcessAsync(
         AIProfile profile,
@@ -188,7 +192,45 @@ public sealed class PostSessionProcessingService
 
         if (!settings.EnablePostSessionProcessing || settings.PostSessionTasks.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session processing skipped for session '{SessionId}': Enabled={Enabled}, TaskCount={TaskCount}.",
+                    session.SessionId,
+                    settings.EnablePostSessionProcessing,
+                    settings.PostSessionTasks.Count);
+            }
+
             return null;
+        }
+
+        // Filter out tasks that have already succeeded from a previous attempt.
+        var tasksToProcess = settings.PostSessionTasks
+            .Where(t => !session.PostSessionResults.TryGetValue(t.Name, out var existing)
+                || existing.Status != PostSessionTaskResultStatus.Succeeded)
+            .ToList();
+
+        if (tasksToProcess.Count == 0)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session processing skipped for session '{SessionId}': all {TaskCount} task(s) have already succeeded.",
+                    session.SessionId,
+                    settings.PostSessionTasks.Count);
+            }
+
+            return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session processing for session '{SessionId}': {PendingCount}/{TotalCount} task(s) to process: [{TaskNames}].",
+                session.SessionId,
+                tasksToProcess.Count,
+                settings.PostSessionTasks.Count,
+                string.Join(", ", tasksToProcess.Select(t => t.Name)));
         }
 
         var chatClient = await GetChatClientAsync(profile);
@@ -201,7 +243,7 @@ public sealed class PostSessionProcessingService
 
         var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
         {
-            ["tasks"] = settings.PostSessionTasks.Select(t => new
+            ["tasks"] = tasksToProcess.Select(t => new
             {
                 t.Name,
                 Type = t.Type.ToString(),
@@ -216,6 +258,11 @@ public sealed class PostSessionProcessingService
 
         if (string.IsNullOrEmpty(prompt))
         {
+            _logger.LogWarning(
+                "Post-session processing aborted for session '{SessionId}': rendered user prompt is empty. Template='{TemplateId}'.",
+                session.SessionId,
+                AITemplateIds.PostSessionAnalysisPrompt);
+
             return null;
         }
 
@@ -227,7 +274,7 @@ public sealed class PostSessionProcessingService
             new(ChatRole.User, prompt),
         };
 
-        var tools = await ResolveToolsAsync(settings.ToolNames);
+        var tools = await ResolveToolsAsync(session.SessionId, settings.ToolNames);
 
         // When tools are configured (e.g., sendEmail), use non-generic GetResponseAsync
         // to allow tool execution. The generic version uses structured output which
@@ -235,7 +282,23 @@ public sealed class PostSessionProcessingService
         // to produce structured JSON output.
         if (tools is not null && tools.Count > 0)
         {
-            return await ProcessWithToolsAsync(chatClient, messages, tools, settings.PostSessionTasks, cancellationToken);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session processing for session '{SessionId}' using tools path with {ToolCount} tool(s): [{ToolNames}].",
+                    session.SessionId,
+                    tools.Count,
+                    string.Join(", ", tools.Select(t => t.Name)));
+            }
+
+            return await ProcessWithToolsAsync(session.SessionId, chatClient, messages, tools, tasksToProcess, cancellationToken);
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session processing for session '{SessionId}' using structured output path (no tools configured or resolved).",
+                session.SessionId);
         }
 
         var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(messages, new ChatOptions
@@ -245,13 +308,21 @@ public sealed class PostSessionProcessingService
 
         if (response.Result?.Tasks == null || response.Result.Tasks.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session structured output for session '{SessionId}' returned no tasks.",
+                    session.SessionId);
+            }
+
             return null;
         }
 
-        return ApplyResults(settings.PostSessionTasks, response.Result.Tasks);
+        return ApplyResults(tasksToProcess, response.Result.Tasks);
     }
 
     private async Task<Dictionary<string, PostSessionResult>> ProcessWithToolsAsync(
+        string sessionId,
         IChatClient chatClient,
         List<ChatMessage> messages,
         IList<AITool> tools,
@@ -274,10 +345,36 @@ public sealed class PostSessionProcessingService
             Tools = tools,
         }, cancellationToken);
 
+        // Log tool invocation details from the response messages.
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            var toolCallCount = response.Messages?
+                .SelectMany(m => m.Contents?.OfType<FunctionCallContent>() ?? [])
+                .Count() ?? 0;
+
+            var toolResultCount = response.Messages?
+                .SelectMany(m => m.Contents?.OfType<FunctionResultContent>() ?? [])
+                .Count() ?? 0;
+
+            _logger.LogDebug(
+                "Post-session tools response for session '{SessionId}': MessageCount={MessageCount}, ToolCalls={ToolCallCount}, ToolResults={ToolResultCount}.",
+                sessionId,
+                response.Messages?.Count ?? 0,
+                toolCallCount,
+                toolResultCount);
+        }
+
         var responseText = response.Messages?.LastOrDefault()?.Text?.Trim();
 
         if (string.IsNullOrEmpty(responseText))
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session tools response for session '{SessionId}' has no final text content. Tools may have executed as side effects.",
+                    sessionId);
+            }
+
             return null;
         }
 
@@ -294,10 +391,24 @@ public sealed class PostSessionProcessingService
         catch (System.Text.Json.JsonException)
         {
             // Model returned text after executing tools. Tools have already run.
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session tools response for session '{SessionId}' is not valid JSON (tools likely executed). Response text: '{ResponseText}'.",
+                    sessionId,
+                    responseText.Length > 500 ? responseText[..500] + "..." : responseText);
+            }
         }
 
         if (result?.Tasks == null || result.Tasks.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session tools response for session '{SessionId}' produced no structured task results.",
+                    sessionId);
+            }
+
             return null;
         }
 
@@ -367,6 +478,7 @@ public sealed class PostSessionProcessingService
             {
                 Name = task.Name,
                 Value = result.Value,
+                Status = PostSessionTaskResultStatus.Succeeded,
                 ProcessedAtUtc = now,
             };
         }
@@ -405,11 +517,27 @@ public sealed class PostSessionProcessingService
         return await _clientFactory.CreateChatClientAsync(profile.Source, connectionName, deploymentName);
     }
 
-    private async Task<IList<AITool>> ResolveToolsAsync(string[] toolNames)
+    private async Task<IList<AITool>> ResolveToolsAsync(string sessionId, string[] toolNames)
     {
         if (toolNames is null || toolNames.Length == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "No tool names configured for post-session processing of session '{SessionId}'.",
+                    sessionId);
+            }
+
             return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Resolving {ToolCount} tool(s) for post-session processing of session '{SessionId}': [{ToolNames}].",
+                toolNames.Length,
+                sessionId,
+                string.Join(", ", toolNames));
         }
 
         var tools = new List<AITool>();
@@ -421,6 +549,13 @@ public sealed class PostSessionProcessingService
             if (tool is not null)
             {
                 tools.Add(tool);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Post-session tool '{ToolName}' could not be resolved for session '{SessionId}'. Ensure the tool is registered and its feature is enabled.",
+                    name,
+                    sessionId);
             }
         }
 

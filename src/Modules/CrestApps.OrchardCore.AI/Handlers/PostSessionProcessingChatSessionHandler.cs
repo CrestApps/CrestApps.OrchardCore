@@ -55,6 +55,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             return;
         }
 
+        var taskNames = settings.PostSessionTasks.Select(t => t.Name).ToList();
+
         // Mark as pending so the background task can retry if this attempt fails.
         context.ChatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Pending;
 
@@ -66,9 +68,23 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Running inline post-session tasks for session '{SessionId}' (attempt {Attempt}).",
+                    "Running inline post-session tasks for session '{SessionId}' (attempt {Attempt}). Tasks: [{TaskNames}].",
                     context.ChatSession.SessionId,
-                    context.ChatSession.PostSessionProcessingAttempts);
+                    context.ChatSession.PostSessionProcessingAttempts,
+                    string.Join(", ", taskNames));
+            }
+
+            // Initialize any tasks not yet tracked as Pending.
+            foreach (var taskName in taskNames)
+            {
+                if (!context.ChatSession.PostSessionResults.ContainsKey(taskName))
+                {
+                    context.ChatSession.PostSessionResults[taskName] = new PostSessionResult
+                    {
+                        Name = taskName,
+                        Status = PostSessionTaskResultStatus.Pending,
+                    };
+                }
             }
 
             var results = await _postSessionProcessingService.ProcessAsync(
@@ -76,24 +92,50 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 context.ChatSession,
                 context.Prompts);
 
+            // Merge new results into the session's PostSessionResults.
             if (results is not null && results.Count > 0)
             {
-                context.ChatSession.PostSessionResults = results;
+                foreach (var (taskName, result) in results)
+                {
+                    context.ChatSession.PostSessionResults[taskName] = result;
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Post-session task '{TaskName}' for session '{SessionId}': Status={Status}, Value='{Value}'.",
+                            taskName,
+                            context.ChatSession.SessionId,
+                            result.Status,
+                            result.Value?.Length > 100 ? result.Value[..100] + "..." : result.Value);
+                    }
+                }
             }
 
-            context.ChatSession.IsPostSessionTasksProcessed = true;
+            // Determine if all tasks are now Succeeded.
+            var allSucceeded = taskNames.All(name =>
+                context.ChatSession.PostSessionResults.TryGetValue(name, out var r)
+                && r.Status == PostSessionTaskResultStatus.Succeeded);
+
+            context.ChatSession.IsPostSessionTasksProcessed = allSucceeded;
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
+                var succeededCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Succeeded);
+                var failedCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Failed);
+                var pendingCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Pending);
+
                 _logger.LogInformation(
-                    "Inline post-session tasks completed for session '{SessionId}' with {TaskCount} result(s).",
+                    "Inline post-session tasks for session '{SessionId}': {Succeeded} succeeded, {Failed} failed, {Pending} pending out of {Total} total.",
                     context.ChatSession.SessionId,
-                    results?.Count ?? 0);
+                    succeededCount,
+                    failedCount,
+                    pendingCount,
+                    taskNames.Count);
             }
 
             var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
 
-            if (workflowManager is not null)
+            if (workflowManager is not null && allSucceeded)
             {
                 await TriggerPostProcessedEventAsync(workflowManager, context);
             }
@@ -102,9 +144,22 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
         {
             _logger.LogError(
                 ex,
-                "Inline post-session tasks failed for session '{SessionId}' (attempt {Attempt}). Will be retried by background task.",
+                "Inline post-session tasks failed for session '{SessionId}' (attempt {Attempt}). Tasks: [{TaskNames}]. Will be retried by background task.",
                 context.ChatSession.SessionId,
-                context.ChatSession.PostSessionProcessingAttempts);
+                context.ChatSession.PostSessionProcessingAttempts,
+                string.Join(", ", taskNames));
+
+            // Mark all non-succeeded tasks as Failed.
+            foreach (var taskName in taskNames)
+            {
+                if (context.ChatSession.PostSessionResults.TryGetValue(taskName, out var result)
+                    && result.Status != PostSessionTaskResultStatus.Succeeded)
+                {
+                    result.Status = PostSessionTaskResultStatus.Failed;
+                    result.ErrorMessage = ex.Message;
+                    result.ProcessedAtUtc = _clock.UtcNow;
+                }
+            }
         }
     }
 

@@ -24,7 +24,6 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
         {
             var metadata = profile.As<AnalyticsMetadata>();
             model.EnableSessionMetrics = metadata.EnableSessionMetrics;
-            model.EnableAIResolutionDetection = metadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = metadata.EnableConversionMetrics;
             model.ConversionGoals = metadata.ConversionGoals
                 .Select(g => new ConversionGoalViewModel
@@ -95,7 +94,6 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 
         var metadata = profile.As<AnalyticsMetadata>();
         metadata.EnableSessionMetrics = model.EnableSessionMetrics;
-        metadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         metadata.EnableConversionMetrics = model.EnableConversionMetrics;
         metadata.ConversionGoals = goals.Select(g => new ConversionGoal
         {

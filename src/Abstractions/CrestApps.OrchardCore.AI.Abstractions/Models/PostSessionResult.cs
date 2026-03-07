@@ -18,6 +18,16 @@ public sealed class PostSessionResult
     public string Value { get; set; }
 
     /// <summary>
+    /// Gets or sets the processing status of this individual task.
+    /// </summary>
+    public PostSessionTaskResultStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message if the task failed.
+    /// </summary>
+    public string ErrorMessage { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when this result was processed.
     /// </summary>
     public DateTime ProcessedAtUtc { get; set; }

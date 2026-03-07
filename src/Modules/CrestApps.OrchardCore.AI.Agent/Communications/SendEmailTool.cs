@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -68,13 +68,20 @@ public sealed class SendEmailTool : AIFunction
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
-        var emailService = arguments.Services.GetRequiredService<IEmailService>();
+        var emailService = arguments.Services.GetService<IEmailService>();
+
+        if (emailService is null)
+        {
+            logger.LogWarning("No EmailService is registered. Can't send emails using this tool.");
+
+            return "No EmailService is registered. Can't send emails using this tool.";
+        }
+
 
         if (!arguments.TryGetFirstString("to", out var to))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "to");
+
             return "Unable to find a to argument in the function arguments.";
         }
 
@@ -92,11 +99,15 @@ public sealed class SendEmailTool : AIFunction
 
         string senderEmail = null;
 
-        var principal = httpContextAccessor.HttpContext.User;
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
+        var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+        var principal = httpContextAccessor?.HttpContext?.User;
 
         if (principal is not null)
         {
-            var user = await userManager.GetUserAsync(principal);
+            var userManager = arguments.Services.GetService<UserManager<IUser>>();
+
+            var user = await userManager?.GetUserAsync(principal);
 
             if (user is not null)
             {

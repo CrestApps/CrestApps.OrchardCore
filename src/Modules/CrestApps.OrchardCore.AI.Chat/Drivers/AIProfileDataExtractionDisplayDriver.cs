@@ -25,7 +25,6 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
 
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
-            model.SessionInactivityTimeoutInMinutes = settings.SessionInactivityTimeoutInMinutes;
             model.Entries = settings.DataExtractionEntries
                 .Select(e => new DataExtractionEntryViewModel
                 {
@@ -79,16 +78,10 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
             model.ExtractionCheckInterval = 1;
         }
 
-        if (model.SessionInactivityTimeoutInMinutes < 1)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SessionInactivityTimeoutInMinutes), S["Session Inactivity Timeout must be at least 1 minute."]);
-        }
-
         profile.AlterSettings<AIProfileDataExtractionSettings>(settings =>
         {
             settings.EnableDataExtraction = model.EnableDataExtraction;
             settings.ExtractionCheckInterval = model.ExtractionCheckInterval;
-            settings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
             settings.DataExtractionEntries = entries.Select(e => new DataExtractionEntry
             {
                 Name = e.Name,

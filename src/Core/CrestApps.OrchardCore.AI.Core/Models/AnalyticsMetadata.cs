@@ -16,7 +16,7 @@ public sealed class AnalyticsMetadata
     /// Gets or sets whether AI-based resolution detection is enabled.
     /// When enabled, the system uses AI to semantically determine whether
     /// a conversation was resolved, instead of relying solely on timeout-based abandonment.
-    /// Defaults to <see langword="true"/> when session metrics are enabled.
+    /// This setting operates independently of <see cref="EnableSessionMetrics"/>.
     /// </summary>
     public bool EnableAIResolutionDetection { get; set; } = true;
 
@@ -24,6 +24,7 @@ public sealed class AnalyticsMetadata
     /// Gets or sets whether conversion metrics are enabled for this profile.
     /// When enabled, the system uses AI to evaluate each session against configured goals
     /// and assigns scores to measure session success.
+    /// This setting operates independently of <see cref="EnableSessionMetrics"/>.
     /// </summary>
     public bool EnableConversionMetrics { get; set; }
 

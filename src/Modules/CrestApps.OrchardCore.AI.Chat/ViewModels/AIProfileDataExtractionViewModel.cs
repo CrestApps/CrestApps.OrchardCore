@@ -6,8 +6,6 @@ public class AIProfileDataExtractionViewModel
 
     public int ExtractionCheckInterval { get; set; } = 1;
 
-    public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
-
     public List<DataExtractionEntryViewModel> Entries { get; set; } = [];
 }
 

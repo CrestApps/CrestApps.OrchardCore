@@ -57,9 +57,6 @@ public sealed class GetContentItemLinkTool : AIFunction
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
-        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
-        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
-
         if (!arguments.TryGetFirstString("contentItemId", out var contentItemId))
         {
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
@@ -67,6 +64,21 @@ public sealed class GetContentItemLinkTool : AIFunction
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
+        // HttpContext may be null when invoked from a background task (e.g., post-session processing).
+        var httpContextAccessor = arguments.Services.GetRequiredService<IHttpContextAccessor>();
+        var httpContext = httpContextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Returning content item ID only.", TheName);
+            }
+
+            return $"Unable to generate a URL because the request context is not available (background execution). The content item ID is '{contentItemId}'.";
+        }
+
+        var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
 
         var type = arguments.GetFirstValueOrDefault("type", "display");
@@ -79,11 +91,11 @@ public sealed class GetContentItemLinkTool : AIFunction
 
             if (type == "edit" && metadata.AdminRouteValues is not null)
             {
-                return linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.AdminRouteValues);
+                return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
             }
             else if (metadata.DisplayRouteValues is not null)
             {
-                return linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, metadata.DisplayRouteValues);
+                return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);
             }
         }
 
@@ -105,7 +117,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             },
         };
 
-        var link = linkGenerator.GetUriByRouteValues(httpContextAccessor.HttpContext, null, routeValues);
+        var link = linkGenerator.GetUriByRouteValues(httpContext, null, routeValues);
 
         if (string.IsNullOrEmpty(link))
         {

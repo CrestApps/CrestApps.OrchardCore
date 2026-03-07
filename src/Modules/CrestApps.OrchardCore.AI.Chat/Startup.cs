@@ -35,6 +35,7 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>();
 
