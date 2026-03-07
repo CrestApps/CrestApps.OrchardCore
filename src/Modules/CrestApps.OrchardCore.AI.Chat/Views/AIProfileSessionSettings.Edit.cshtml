@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+
+@model EditAIProfileSessionSettingsViewModel
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <label class="form-label" asp-for="SessionInactivityTimeoutInMinutes">@T["Session Inactivity Timeout (minutes)"]</label>
+        <input type="number" class="form-control" asp-for="SessionInactivityTimeoutInMinutes" min="1" />
+        <span class="hint">@T["Sessions inactive longer than this duration will be automatically closed. Must be at least 1 minute. Default is 30 minutes."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnableAIResolutionDetection" />
+        <label class="form-check-label" asp-for="EnableAIResolutionDetection">@T["Enable AI Resolution Detection"]</label>
+        <span class="hint dashed">@T["When enabled, AI semantically analyzes conversations to determine if the user's request was resolved, rather than relying only on timeout-based abandonment detection. This enhances session close logic independently of session metrics."]</span>
+    </div>
+</div>

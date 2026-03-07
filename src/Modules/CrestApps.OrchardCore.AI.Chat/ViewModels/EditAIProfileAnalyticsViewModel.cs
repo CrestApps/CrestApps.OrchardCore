@@ -4,8 +4,6 @@ public class EditAIProfileAnalyticsViewModel
 {
     public bool EnableSessionMetrics { get; set; }
 
-    public bool EnableAIResolutionDetection { get; set; }
-
     public bool EnableConversionMetrics { get; set; }
 
     public List<ConversionGoalViewModel> ConversionGoals { get; set; } = [];

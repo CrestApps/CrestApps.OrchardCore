@@ -215,10 +215,9 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             && postSessionSettings.PostSessionTasks.Count > 0;
 
         var needsAnalytics = !chatSession.IsAnalyticsRecorded
-            && analyticsMetadata.EnableSessionMetrics;
+            && (analyticsMetadata.EnableSessionMetrics || analyticsMetadata.EnableAIResolutionDetection);
 
         var needsConversionGoals = !chatSession.IsConversionGoalsEvaluated
-            && analyticsMetadata.EnableSessionMetrics
             && analyticsMetadata.EnableConversionMetrics
             && analyticsMetadata.ConversionGoals.Count > 0;
 
@@ -275,10 +274,9 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             || postSessionSettings.PostSessionTasks.Count == 0;
 
         var analyticsComplete = chatSession.IsAnalyticsRecorded
-            || !analyticsMetadata.EnableSessionMetrics;
+            || (!analyticsMetadata.EnableSessionMetrics && !analyticsMetadata.EnableAIResolutionDetection);
 
         var conversionComplete = chatSession.IsConversionGoalsEvaluated
-            || !analyticsMetadata.EnableSessionMetrics
             || !analyticsMetadata.EnableConversionMetrics
             || analyticsMetadata.ConversionGoals.Count == 0;
 
@@ -315,11 +313,30 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         ILogger logger,
         CancellationToken cancellationToken)
     {
+        var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
+        var taskNames = postSessionSettings.PostSessionTasks.Select(t => t.Name).ToList();
+
         try
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-                logger.LogDebug("Running post-session tasks for session '{SessionId}'.", chatSession.SessionId);
+                logger.LogDebug(
+                    "Running post-session tasks for session '{SessionId}'. Configured tasks: [{TaskNames}].",
+                    chatSession.SessionId,
+                    string.Join(',', taskNames));
+            }
+
+            // Initialize any tasks not yet tracked as Pending.
+            foreach (var taskName in taskNames)
+            {
+                if (!chatSession.PostSessionResults.ContainsKey(taskName))
+                {
+                    chatSession.PostSessionResults[taskName] = new PostSessionResult
+                    {
+                        Name = taskName,
+                        Status = PostSessionTaskResultStatus.Pending,
+                    };
+                }
             }
 
             var postSessionService = serviceProvider.GetService<PostSessionProcessingService>();
@@ -335,24 +352,50 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             var results = await postSessionService.ProcessAsync(profile, chatSession, prompts, cancellationToken);
 
+            // Merge new results into the session's PostSessionResults.
             if (results is not null && results.Count > 0)
             {
-                chatSession.PostSessionResults = results;
+                foreach (var (taskName, result) in results)
+                {
+                    chatSession.PostSessionResults[taskName] = result;
+
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                            "Post-session task '{TaskName}' for session '{SessionId}': Status={Status}, Value='{Value}'.",
+                            taskName,
+                            chatSession.SessionId,
+                            result.Status,
+                            result.Value?.Length > 100 ? result.Value[..100] + "..." : result.Value);
+                    }
+                }
             }
 
-            chatSession.IsPostSessionTasksProcessed = true;
+            // Determine if all tasks are now Succeeded.
+            var allSucceeded = taskNames.All(name =>
+                chatSession.PostSessionResults.TryGetValue(name, out var r)
+                && r.Status == PostSessionTaskResultStatus.Succeeded);
+
+            chatSession.IsPostSessionTasksProcessed = allSucceeded;
 
             if (logger.IsEnabled(LogLevel.Information))
             {
+                var succeededCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Succeeded);
+                var failedCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Failed);
+                var pendingCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Pending);
+
                 logger.LogInformation(
-                    "Post-session tasks completed for session '{SessionId}' with {TaskCount} result(s).",
+                    "Post-session tasks for session '{SessionId}': {Succeeded} succeeded, {Failed} failed, {Pending} pending out of {Total} total.",
                     chatSession.SessionId,
-                    results?.Count ?? 0);
+                    succeededCount,
+                    failedCount,
+                    pendingCount,
+                    taskNames.Count);
             }
 
             var workflowManager = serviceProvider.GetService<IWorkflowManager>();
 
-            if (workflowManager is not null)
+            if (workflowManager is not null && allSucceeded)
             {
                 var input = new Dictionary<string, object>
                 {
@@ -373,9 +416,22 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         {
             logger.LogError(
                 ex,
-                "Post-session tasks failed for session '{SessionId}' (attempt {Attempt}).",
+                "Post-session tasks failed for session '{SessionId}' (attempt {Attempt}). Tasks: [{TaskNames}].",
                 chatSession.SessionId,
-                chatSession.PostSessionProcessingAttempts);
+                chatSession.PostSessionProcessingAttempts,
+                string.Join(", ", taskNames));
+
+            // Mark all non-succeeded tasks as Failed.
+            foreach (var taskName in taskNames)
+            {
+                if (chatSession.PostSessionResults.TryGetValue(taskName, out var result)
+                    && result.Status != PostSessionTaskResultStatus.Succeeded)
+                {
+                    result.Status = PostSessionTaskResultStatus.Failed;
+                    result.ErrorMessage = ex.Message;
+                    result.ProcessedAtUtc = DateTime.UtcNow;
+                }
+            }
         }
     }
 
