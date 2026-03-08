@@ -1,13 +1,12 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Services;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using Moq;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
 
@@ -17,8 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CrestApps.OrchardCore.Cms.Web\CrestApps.OrchardCore.Cms.Web.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Samples.McpClient\CrestApps.OrchardCore.Samples.McpClient.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
+    <ProjectReference Include="../CrestApps.Mvc.Web/CrestApps.Mvc.Web.csproj" />
   </ItemGroup>
 
 </Project>

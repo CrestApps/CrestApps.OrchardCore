@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Samples.McpClient.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
 
 namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 

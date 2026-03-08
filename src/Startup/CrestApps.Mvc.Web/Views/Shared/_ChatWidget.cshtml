@@ -1,0 +1,152 @@
+@using CrestApps.AI
+@using CrestApps.AI.Models
+@inject IAIProfileManager ProfileManager
+
+@{
+    var profiles = (await ProfileManager.GetAsync(AIProfileType.Chat))
+        .Where(p => p.GetSettings<AIProfileSettings>().IsListable)
+        .Select(p => new { id = p.ItemId, name = p.Name, displayText = p.DisplayText ?? p.Name, welcomeMessage = p.WelcomeMessage })
+        .ToArray();
+}
+
+@if (profiles.Length > 0)
+{
+    <link rel="stylesheet" href="~/css/chat-widget.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        .ai-chat-messages { padding: 0.5rem; }
+        .ai-chat-message-item { margin-bottom: 0.75rem; }
+        .ai-chat-msg-role { font-size: 0.7rem; font-weight: 600; margin-bottom: 2px; }
+        .ai-chat-msg-role-user { color: #0d6efd; }
+        .ai-chat-msg-role-assistant { color: #6f42c1; }
+        .ai-chat-msg-role-assistant i.ai-streaming-icon { animation: pulse 1.5s infinite; }
+        .ai-chat-msg-role-assistant i.ai-bot-icon { color: #6f42c1; }
+        .message-buttons-container { display: inline-flex; gap: 4px; margin-top: 4px; }
+        @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    </style>
+
+    <!-- Floating toggle button -->
+    <button id="widget-toggle" class="ai-chat-widget-toggle" title="Open AI Chat">
+        <i class="bi bi-chat-dots-fill"></i>
+    </button>
+
+    <!-- Widget container -->
+    <div id="widget-panel" class="ai-chat-widget-container">
+        <div class="ai-chat-widget-header">
+            <span class="title">AI Chat</span>
+            <div>
+                <button id="widget-new-chat" title="New Chat"><i class="bi bi-plus-lg"></i></button>
+                <button id="widget-close" title="Close"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+
+        @if (profiles.Length > 1)
+        {
+            <div class="ai-chat-widget-profile-select">
+                <select id="widget-profile-select">
+                    @foreach (var p in profiles)
+                    {
+                        <option value="@p.id">@p.displayText</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div id="widget-chat-container" class="ai-chat-widget-messages">
+            <div id="widget-placeholder">
+                <div class="ai-chat-widget-welcome">
+                    <i class="bi bi-robot" style="font-size: 2rem;"></i><br>
+                    Start chatting with AI!
+                </div>
+            </div>
+            <div id="widget-chat-app"></div>
+        </div>
+
+        <div class="ai-chat-widget-input">
+            <textarea id="widget-chat-input"
+                      placeholder="Type a message..."
+                      rows="1"
+                      data-session-id=""
+                      data-profile-id="@profiles[0].id"></textarea>
+            <button type="button" id="widget-send-btn">
+                <i class="bi bi-send"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src="~/js/ai-chat.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var panel = document.getElementById('widget-panel');
+            var toggle = document.getElementById('widget-toggle');
+            var closeBtn = document.getElementById('widget-close');
+            var newChatBtn = document.getElementById('widget-new-chat');
+            var profileSelect = document.getElementById('widget-profile-select');
+            var chatInput = document.getElementById('widget-chat-input');
+            var isOpen = false;
+            var initialized = false;
+
+            function initChat() {
+                var appEl = document.getElementById('widget-chat-app');
+                appEl.innerHTML = '';
+                chatInput.setAttribute('data-session-id', '');
+
+                var placeholder = document.getElementById('widget-placeholder');
+                if (placeholder) {
+                    placeholder.style.display = '';
+                }
+
+                window.openAIChatManager.initialize({
+                    signalRHubUrl: '/hubs/ai-chat',
+                    appElementSelector: '#widget-chat-app',
+                    chatContainerElementSelector: '#widget-chat-container',
+                    inputElementSelector: '#widget-chat-input',
+                    sendButtonElementSelector: '#widget-send-btn',
+                    placeholderElementSelector: '#widget-placeholder',
+                    messages: [],
+                    metricsEnabled: false
+                });
+
+                initialized = true;
+            }
+
+            toggle.addEventListener('click', function () {
+                isOpen = !isOpen;
+                panel.classList.toggle('open', isOpen);
+                toggle.innerHTML = isOpen
+                    ? '<i class="bi bi-x-lg"></i>'
+                    : '<i class="bi bi-chat-dots-fill"></i>';
+
+                if (isOpen && !initialized) {
+                    initChat();
+                }
+            });
+
+            closeBtn.addEventListener('click', function () {
+                isOpen = false;
+                panel.classList.remove('open');
+                toggle.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
+            });
+
+            newChatBtn.addEventListener('click', function () {
+                initialized = false;
+                initChat();
+            });
+
+            if (profileSelect) {
+                profileSelect.addEventListener('change', function () {
+                    chatInput.setAttribute('data-profile-id', this.value);
+                    initialized = false;
+                    initChat();
+                });
+            }
+        });
+    </script>
+}

@@ -1,8 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using OrchardCore.Entities;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Models;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 
@@ -232,7 +231,10 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         foreach (var property in connection.Properties)
         {
-            properties[property.Key] = property.Value.DeepClone();
+            // Convert to JsonNode and deep clone
+            var json = JsonSerializer.Serialize(property.Value);
+            var node = JsonNode.Parse(json);
+            properties[property.Key] = node;
         }
 
         // Apply the same sanitization logic used in McpConnectionDeploymentSource.

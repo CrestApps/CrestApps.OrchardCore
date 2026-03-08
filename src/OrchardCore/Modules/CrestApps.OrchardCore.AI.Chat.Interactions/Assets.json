@@ -1,0 +1,8 @@
+[
+  {
+    "inputs": [
+      "../../../Framework/Resources/CrestApps.AI.Resources/Assets/js/chat-interaction.js"
+    ],
+    "output": "wwwroot/scripts/chat-interaction.js"
+  }
+]

@@ -1,9 +1,7 @@
 
 using System.Reflection;
 
-using CrestApps.OrchardCore.AI.Core.Models;
-
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
 using Microsoft.Extensions.DependencyInjection;
 

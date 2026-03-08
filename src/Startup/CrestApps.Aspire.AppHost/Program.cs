@@ -65,6 +65,9 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientS
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
 
+builder.AddProject<Projects.CrestApps_Mvc_Web>("MvcWeb")
+    .WithHttpsEndpoint(5003, name: "HttpsMvcWeb");
+
 var app = builder.Build();
 
 await app.RunAsync();

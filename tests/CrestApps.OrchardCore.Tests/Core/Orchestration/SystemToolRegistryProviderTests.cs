@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI;
+using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 

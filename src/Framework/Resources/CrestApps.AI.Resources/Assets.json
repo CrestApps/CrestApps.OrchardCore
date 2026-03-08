@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/ai-chat.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/chat-interaction.js"
+    ],
+    "output": "wwwroot/scripts/chat-interaction.js"
+  }
+]

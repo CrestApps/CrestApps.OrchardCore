@@ -1,0 +1,11 @@
+@using CrestApps.AI
+@using CrestApps.AI.Models
+@using Microsoft.AspNetCore.Authorization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ChatInteraction>
+
+<a asp-action="Chat"
+   asp-route-source="@Model.Value.Source"
+   asp-route-itemId="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Chat"]</a>

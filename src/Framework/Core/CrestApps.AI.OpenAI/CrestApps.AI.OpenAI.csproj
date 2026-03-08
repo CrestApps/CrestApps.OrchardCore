@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+<RootNamespace>CrestApps.AI.OpenAI</RootNamespace>
+<Title>CrestApps AI OpenAI Core</Title>
+<Description>
+$(CrestAppsDescription)
+
+OpenAI provider implementation for CrestApps AI services.
+</Description>
+<PackageTags>$(PackageTags) AI OpenAI</PackageTags>
+</PropertyGroup>
+
+<ItemGroup>
+<PackageReference Include="Microsoft.Extensions.AI" />
+<PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+</ItemGroup>
+
+<ItemGroup>
+<ProjectReference Include="../CrestApps.AI/CrestApps.AI.csproj" />
+<ProjectReference Include="../CrestApps.Azure/CrestApps.Azure.csproj" />
+</ItemGroup>
+
+</Project>
