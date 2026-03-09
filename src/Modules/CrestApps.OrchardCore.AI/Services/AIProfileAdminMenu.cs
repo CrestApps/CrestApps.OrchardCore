@@ -19,7 +19,7 @@ public sealed class AIProfileAdminMenu : AdminNavigationProvider
             .Add(S["Artificial Intelligence"], "90", ai => ai
                 .AddClass("artificial-intelligence")
                 .Id("artificialIntelligence")
-                .Add(S["Profiles"], "after.5", profiles => profiles
+                .Add(S["Profiles"], S["Profiles"].PrefixPosition(), profiles => profiles
                     .AddClass("ai-profiles")
                     .Id("aiProfiles")
                     .Action("Index", "Profiles", AIConstants.Feature.Area)

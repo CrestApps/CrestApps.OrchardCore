@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
@@ -86,6 +87,19 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddIndexProvider<AIProfileIndexProvider>();
 
+        // AI Profile Template services.
+        services
+            .AddAIProfileTemplateServices()
+            .AddDataMigration<AIProfileTemplateIndexMigrations>()
+            .AddIndexProvider<AIProfileTemplateIndexProvider>()
+            .AddScoped<IAIProfileTemplateService, DefaultAIProfileTemplateService>()
+            .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
+            .AddNavigationProvider<AIProfileTemplateAdminMenu>()
+            .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
+
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
 
@@ -102,6 +116,7 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIProfileStep>();
+        services.AddRecipeExecutionStep<AIProfileTemplateStep>();
     }
 }
 
@@ -130,6 +145,7 @@ public sealed class OCDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIProfileTemplateDeploymentSource, AIProfileTemplateDeploymentStep, AIProfileTemplateDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
         services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }

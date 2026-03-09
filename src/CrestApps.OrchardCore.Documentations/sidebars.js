@@ -16,6 +16,7 @@ const sidebars = {
         'ai/chat-analytics',
         'ai/chat-interactions',
         'ai/profiles-code',
+        'ai/profile-templates',
         'ai/tools',
         'ai/workflows',
         'ai/consuming-ai-services',

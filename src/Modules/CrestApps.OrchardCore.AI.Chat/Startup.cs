@@ -32,12 +32,16 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMenuDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileSessionSettingsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionSettingsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>();
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {
@@ -92,6 +96,7 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsProfileFilterDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsOverviewDisplayDriver>()

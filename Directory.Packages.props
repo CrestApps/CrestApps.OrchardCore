@@ -45,6 +45,7 @@
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Deployment" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />

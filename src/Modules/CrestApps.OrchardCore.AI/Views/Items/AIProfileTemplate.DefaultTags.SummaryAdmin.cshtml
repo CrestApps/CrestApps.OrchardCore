@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileTemplate>
+
+@if (!string.IsNullOrEmpty(Model.Value.Category))
+{
+    <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Category"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Category
+    </span>
+}
+
+@if (Model.Value.ProfileType.HasValue)
+{
+    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Profile Type"]">
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProfileType.Value
+    </span>
+}
+
+<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Name"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Name
+</span>

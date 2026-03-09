@@ -45,7 +45,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
     {
         string deploymentName = null;
 
-        if (_providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+        if (!string.IsNullOrEmpty(providerName) && _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
         {
             if (string.IsNullOrEmpty(connectionName))
             {

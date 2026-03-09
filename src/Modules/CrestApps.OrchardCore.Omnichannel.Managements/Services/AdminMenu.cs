@@ -16,7 +16,7 @@ internal sealed class AdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Interaction Center"], S["Interaction Center"].PrefixPosition(), interactionCenter => interactionCenter
+            .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
                 .Add(S["Activities"], "1", activities => activities

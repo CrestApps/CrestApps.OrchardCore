@@ -69,6 +69,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddAIProfileTemplateServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<DefaultAIProfileTemplateStore>()
+            .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<INamedCatalogManager<AIProfileTemplate>, DefaultAIProfileTemplateManager>()
+            .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>();
+
+        return services;
+    }
+
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
     {

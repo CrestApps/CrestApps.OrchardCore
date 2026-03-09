@@ -1,4 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -6,12 +9,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -122,7 +128,7 @@ public sealed class ProfilesController : Controller
     }
 
     [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, [FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -143,6 +149,17 @@ public sealed class ProfilesController : Controller
             await _notifier.ErrorAsync(H["Invalid profile source."]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!string.IsNullOrEmpty(templateId))
+        {
+            var templateService = HttpContext.RequestServices.GetService<IAIProfileTemplateService>();
+            var template = templateService != null ? await templateService.FindByIdAsync(templateId) : null;
+
+            if (template != null)
+            {
+                await ApplyTemplateToProfileAsync(profile, template);
+            }
         }
 
         var model = new EditCatalogEntryViewModel
@@ -346,5 +363,204 @@ public sealed class ProfilesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task ApplyTemplateToProfileAsync(AIProfile profile, AIProfileTemplate template)
+    {
+        // Copy all extensibility properties from the template to the profile.
+        // This transfers settings stored by external module drivers (e.g., analytics,
+        // data extraction, post-session, MCP connections, data sources, etc.).
+        // Template drivers store settings in template.Properties (via Entity.As<T>/Put<T>).
+        // Profile drivers may read from either profile.Properties or profile.Settings,
+        // so we copy to both to ensure all drivers can read the applied values.
+        if (template.Properties != null)
+        {
+            foreach (var property in template.Properties)
+            {
+                profile.Properties[property.Key] = property.Value?.DeepClone();
+                profile.Settings[property.Key] = property.Value?.DeepClone();
+            }
+        }
+
+        if (!string.IsNullOrEmpty(template.DisplayText))
+        {
+            profile.DisplayText = template.DisplayText;
+        }
+
+        if (!string.IsNullOrEmpty(template.Name))
+        {
+            profile.Name = template.Name;
+        }
+
+        if (template.ProfileType.HasValue)
+        {
+            profile.Type = template.ProfileType.Value;
+        }
+
+        if (!string.IsNullOrEmpty(template.ConnectionName))
+        {
+            profile.ConnectionName = template.ConnectionName;
+        }
+
+        if (!string.IsNullOrEmpty(template.OrchestratorName))
+        {
+            profile.OrchestratorName = template.OrchestratorName;
+        }
+
+        if (template.TitleType.HasValue)
+        {
+            profile.TitleType = template.TitleType;
+        }
+
+        if (!string.IsNullOrEmpty(template.WelcomeMessage))
+        {
+            profile.WelcomeMessage = template.WelcomeMessage;
+        }
+
+        if (!string.IsNullOrEmpty(template.PromptSubject))
+        {
+            profile.PromptSubject = template.PromptSubject;
+        }
+
+        if (!string.IsNullOrEmpty(template.PromptTemplate))
+        {
+            profile.PromptTemplate = template.PromptTemplate;
+        }
+
+        var metadata = profile.As<AIProfileMetadata>();
+
+        if (!string.IsNullOrEmpty(template.SystemMessage))
+        {
+            metadata.SystemMessage = template.SystemMessage;
+        }
+
+        if (template.Temperature.HasValue)
+        {
+            metadata.Temperature = template.Temperature;
+        }
+
+        if (template.TopP.HasValue)
+        {
+            metadata.TopP = template.TopP;
+        }
+
+        if (template.FrequencyPenalty.HasValue)
+        {
+            metadata.FrequencyPenalty = template.FrequencyPenalty;
+        }
+
+        if (template.PresencePenalty.HasValue)
+        {
+            metadata.PresencePenalty = template.PresencePenalty;
+        }
+
+        if (template.MaxOutputTokens.HasValue)
+        {
+            metadata.MaxTokens = template.MaxOutputTokens;
+        }
+
+        if (template.PastMessagesCount.HasValue)
+        {
+            metadata.PastMessagesCount = template.PastMessagesCount;
+        }
+
+        profile.Put(metadata);
+
+        if (template.ToolNames != null && template.ToolNames.Length > 0)
+        {
+            var toolMetadata = profile.As<FunctionInvocationMetadata>();
+            toolMetadata.Names = [.. template.ToolNames];
+            profile.Put(toolMetadata);
+        }
+
+        // Clone documents from the template to the profile when the Documents feature is enabled.
+        await CloneTemplateDocumentsAsync(profile, template);
+    }
+
+    private async Task CloneTemplateDocumentsAsync(AIProfile profile, AIProfileTemplate template)
+    {
+        var documentsMetadata = template.As<DocumentsMetadata>();
+
+        if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
+        {
+            return;
+        }
+
+        var documentStore = HttpContext.RequestServices.GetService<IAIDocumentStore>();
+        var chunkStore = HttpContext.RequestServices.GetService<IAIDocumentChunkStore>();
+
+        if (documentStore == null || chunkStore == null)
+        {
+            return;
+        }
+
+        var profileDocuments = new DocumentsMetadata
+        {
+            DocumentTopN = documentsMetadata.DocumentTopN,
+            Documents = [],
+        };
+
+        foreach (var docInfo in documentsMetadata.Documents)
+        {
+            var templateDocument = await documentStore.FindByIdAsync(docInfo.DocumentId);
+
+            if (templateDocument == null)
+            {
+                continue;
+            }
+
+            // Clone the document record with a new ID and profile reference.
+            var clonedDocument = new AIDocument
+            {
+                ItemId = IdGenerator.GenerateId(),
+                ReferenceId = profile.ItemId,
+                ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
+                FileName = templateDocument.FileName,
+                ContentType = templateDocument.ContentType,
+                FileSize = templateDocument.FileSize,
+                UploadedUtc = templateDocument.UploadedUtc,
+            };
+
+            await documentStore.CreateAsync(clonedDocument);
+
+            // Clone associated chunks with new IDs and updated references.
+            var templateChunks = await chunkStore.GetChunksByAIDocumentIdAsync(templateDocument.ItemId);
+
+            foreach (var templateChunk in templateChunks)
+            {
+                var clonedChunk = new AIDocumentChunk
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    AIDocumentId = clonedDocument.ItemId,
+                    ReferenceId = profile.ItemId,
+                    ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
+                    Content = templateChunk.Content,
+                    Embedding = templateChunk.Embedding,
+                    Index = templateChunk.Index,
+                };
+
+                await chunkStore.CreateAsync(clonedChunk);
+            }
+
+            profileDocuments.Documents.Add(new ChatDocumentInfo
+            {
+                DocumentId = clonedDocument.ItemId,
+                FileName = clonedDocument.FileName,
+                ContentType = clonedDocument.ContentType,
+                FileSize = clonedDocument.FileSize,
+            });
+        }
+
+        if (profileDocuments.Documents.Count > 0)
+        {
+            profile.Put(profileDocuments);
+
+            // Also update Settings for drivers that read from profile.Settings.
+            var serialized = JsonSerializer.SerializeToNode(profileDocuments);
+            if (serialized is JsonObject jsonObj)
+            {
+                profile.Settings[nameof(DocumentsMetadata)] = jsonObj;
+            }
+        }
     }
 }
