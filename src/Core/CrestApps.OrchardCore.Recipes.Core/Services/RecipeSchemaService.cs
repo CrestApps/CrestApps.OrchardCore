@@ -11,6 +11,8 @@ public sealed class RecipeSchemaService
     private readonly IEnumerable<IRecipeStep> _recipeSteps;
     private readonly IMemoryCache _memoryCache;
 
+    private const string _stepNamesCacheKey = "RecipeStepNames";
+
     private string[] _names = null;
 
     public RecipeSchemaService(
@@ -21,7 +23,7 @@ public sealed class RecipeSchemaService
         _handlers = handlers;
         _recipeSteps = recipeSteps;
         _memoryCache = memoryCache;
-        _names = _memoryCache.TryGetValue("RecipeStepNames", out string[] cachedNames)
+        _names = _memoryCache.TryGetValue(_stepNamesCacheKey, out string[] cachedNames)
             ? cachedNames
             : null;
     }
@@ -76,7 +78,14 @@ public sealed class RecipeSchemaService
             stepSchemas[stepName] = stepSchema;
         }
 
-        var stepsBuilder = new JsonSchemaBuilder().OneOf(stepSchemas.Values);
+        var stepsBuilder = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(stepSchemas.Keys)))
+            .Required("name")
+            .OneOf(stepSchemas.Values);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -121,10 +130,12 @@ public sealed class RecipeSchemaService
                      .GetField("StepName", BindingFlags.Instance | BindingFlags.NonPublic)
                      ?.GetValue(h))
              .Where(name => name != null)
+             .Union(_recipeSteps.Select(s => s.Name).Where(name => !string.IsNullOrEmpty(name)))
              .Distinct()
+             .Order()
              .ToArray() ?? [];
 
-        _memoryCache.Set(_names, _names, TimeSpan.FromHours(1));
+        _memoryCache.Set(_stepNamesCacheKey, _names, TimeSpan.FromHours(1));
 
         return _names;
     }
