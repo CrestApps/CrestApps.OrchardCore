@@ -28,6 +28,11 @@ public sealed class PostSessionResult
     public string ErrorMessage { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of processing attempts made for this task.
+    /// </summary>
+    public int Attempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC timestamp when this result was processed.
     /// </summary>
     public DateTime ProcessedAtUtc { get; set; }
