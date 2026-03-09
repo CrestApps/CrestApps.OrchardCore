@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
         services.AddDisplayDriver<AIProfile, AIProfileDataSourceDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataSourceDisplayDriver>();
         services.AddDisplayDriver<IndexProfile, DataSourceIndexProfileDisplayDriver>();
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()

@@ -49,6 +49,7 @@ public sealed class Startup : StartupBase
         services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
 
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
         services.AddScoped<McpService>();
         services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();

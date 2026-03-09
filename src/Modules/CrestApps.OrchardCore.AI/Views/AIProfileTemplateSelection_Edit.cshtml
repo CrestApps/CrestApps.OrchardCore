@@ -4,11 +4,11 @@
 
 @if (Model.Templates.Count > 0)
 {
-    <div class="mb-3">
-        <label asp-for="TemplateId" class="form-label">@T["Apply Template"]</label>
+    <div class="alert alert-secondary mb-3" role="alert">
+        <label asp-for="TemplateId" class="form-label fw-semibold">@T["Apply Template"]</label>
         <div class="input-group">
             <select asp-for="TemplateId" class="form-control" id="templateSelector">
-                <option value="">@T["-- Select a template --"]</option>
+                <option value="">@T["Select a template"]</option>
                 @{
                     string lastCategory = null;
                 }
@@ -31,7 +31,7 @@
                     @:</optgroup>
                 }
             </select>
-            <button type="button" class="btn btn-outline-secondary" id="applyTemplateBtn">
+            <button type="button" class="btn btn-secondary" id="applyTemplateBtn">
                 <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
             </button>
         </div>

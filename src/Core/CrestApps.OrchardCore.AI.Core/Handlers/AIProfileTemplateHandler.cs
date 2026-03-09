@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
+using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
@@ -150,7 +151,17 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
         if (properties != null)
         {
             template.Properties ??= [];
-            template.Properties.Merge(properties);
+
+            // Snapshot existing properties before merge so named entries can be
+            // merged by name (upsert) instead of being fully replaced.
+            var existingSnapshot = template.Properties.Clone();
+
+            template.Properties.Merge(properties, new JsonMergeSettings
+            {
+                MergeArrayHandling = MergeArrayHandling.Replace,
+            });
+
+            AIPropertiesMergeHelper.MergeNamedEntries(template.Properties, existingSnapshot);
         }
 
         if (string.IsNullOrWhiteSpace(template.DisplayText))

@@ -1,7 +1,10 @@
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -11,14 +14,20 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
+    private readonly AIProviderOptions _providerOptions;
+    private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileTemplateDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
+        IOptions<AIProviderOptions> providerOptions,
+        IOptions<OrchestratorOptions> orchestratorOptions,
         IStringLocalizer<AIProfileTemplateDisplayDriver> stringLocalizer)
     {
         _templatesCatalog = templatesCatalog;
+        _providerOptions = providerOptions.Value;
+        _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
     }
 
@@ -44,20 +53,50 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
             model.IsNew = context.IsNew;
         }).Location("Content:1");
 
+        var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
+        {
+            model.ConnectionName = template.ConnectionName;
+            model.OrchestratorName = template.OrchestratorName;
+
+            model.ConnectionNames = _providerOptions.Providers
+                .SelectMany(p => p.Value.Connections)
+                .Select(c => new SelectListItem(
+                    c.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : c.Key,
+                    c.Key))
+                .DistinctBy(x => x.Value)
+                .OrderBy(x => x.Text)
+                .ToList();
+
+            model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
+                .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                .ToList();
+        }).Location("Content:2");
+
         var profileFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateProfileFields_Edit", model =>
         {
-            model.SystemMessage = template.SystemMessage;
             model.WelcomeMessage = template.WelcomeMessage;
             model.PromptTemplate = template.PromptTemplate;
             model.PromptSubject = template.PromptSubject;
             model.ProfileType = template.ProfileType;
             model.TitleType = template.TitleType;
-            model.ConnectionName = template.ConnectionName;
-            model.OrchestratorName = template.OrchestratorName;
+
+            model.ProfileTypes =
+            [
+                new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
+                new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
+                new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
+            ];
+
+            model.TitleTypes =
+            [
+                new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
+                new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
+            ];
         }).Location("Content:5");
 
         var parametersResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateParameters_Edit", model =>
         {
+            model.SystemMessage = template.SystemMessage;
             model.Temperature = template.Temperature;
             model.TopP = template.TopP;
             model.FrequencyPenalty = template.FrequencyPenalty;
@@ -66,7 +105,7 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
             model.PastMessagesCount = template.PastMessagesCount;
         }).Location("Content:10");
 
-        return Combine(fieldsResult, profileFieldsResult, parametersResult);
+        return Combine(fieldsResult, connectionResult, profileFieldsResult, parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -98,21 +137,30 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
         template.Category = fieldsModel.Category;
         template.IsListable = fieldsModel.IsListable;
 
+        var connectionModel = new AIProfileTemplateConnectionViewModel();
+        await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
+
+        template.ConnectionName = connectionModel.ConnectionName;
+        template.OrchestratorName = connectionModel.OrchestratorName;
+
         var profileFieldsModel = new AIProfileTemplateProfileFieldsViewModel();
         await context.Updater.TryUpdateModelAsync(profileFieldsModel, Prefix);
 
-        template.SystemMessage = profileFieldsModel.SystemMessage;
+        if (!profileFieldsModel.ProfileType.HasValue)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(profileFieldsModel.ProfileType), S["Profile type is required."]);
+        }
+
         template.WelcomeMessage = profileFieldsModel.WelcomeMessage;
         template.PromptTemplate = profileFieldsModel.PromptTemplate;
         template.PromptSubject = profileFieldsModel.PromptSubject;
         template.ProfileType = profileFieldsModel.ProfileType;
         template.TitleType = profileFieldsModel.TitleType;
-        template.ConnectionName = profileFieldsModel.ConnectionName;
-        template.OrchestratorName = profileFieldsModel.OrchestratorName;
 
         var parametersModel = new AIProfileTemplateParametersViewModel();
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
 
+        template.SystemMessage = parametersModel.SystemMessage;
         template.Temperature = parametersModel.Temperature;
         template.TopP = parametersModel.TopP;
         template.FrequencyPenalty = parametersModel.FrequencyPenalty;

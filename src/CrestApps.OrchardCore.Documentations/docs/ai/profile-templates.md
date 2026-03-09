@@ -35,7 +35,9 @@ Both sources are merged by a unified service, with database templates taking pre
 
 When creating a new AI Profile, a **Template** dropdown appears at the top of the create form. Select a template and click **Apply** to pre-fill the profile fields with the template's values. You can then adjust any field before saving.
 
-The Apply action redirects to the create page with the selected template's values pre-populated. All display drivers (including those from tool, data source, and chat modules) automatically render the pre-filled values.
+The Apply action redirects to the create page with the selected template's values pre-populated. All display drivers (including those from tool, data source, chat, MCP, analytics, and documents modules) automatically render the pre-filled values.
+
+When a template includes attached documents (uploaded via the Profile Documents feature), applying the template **clones** all documents — including their extracted text chunks and pre-computed embeddings — to the new profile. This means the new profile immediately has the same RAG (Retrieval Augmented Generation) knowledge base as the template, without needing to re-upload or re-process the files.
 
 :::tip
 Templates only apply to the **create** form. Existing profiles are not affected by template changes.
@@ -57,20 +59,39 @@ Navigate to **Artificial Intelligence → Profile Templates** in the admin dashb
    - **Category** — Optional grouping category for organizing templates.
    - **Is Listable** — Whether this template appears in the selection dropdown (default: true).
 3. Configure the **Profile Settings**:
-   - **Profile Type** — The type of profile to create (`Chat`, `Utility`, or `TemplatePrompt`).
-   - **Connection Name** — The AI provider connection to use.
-   - **System Message** — The system prompt for the AI.
+   - **Profile Type** — The type of profile to create (`Chat`, `Utility`, or `TemplatePrompt`). Required.
+   - **Connection Name** — The AI provider connection to use (dropdown, optional).
+   - **Orchestrator Name** — The orchestrator to use (dropdown, defaults to "default").
    - **Welcome Message** — An initial greeting shown to users.
    - **Title Type** — How the session title is generated.
-   - **Tool Names** — Comma-separated list of AI tool names to associate.
 4. Set **Model Parameters**:
+   - **System Message** — The system prompt for the AI (supports Markdown with EasyMDE editor).
    - **Temperature** — Controls randomness (0.0 = deterministic, 1.0+ = creative).
    - **Top P** — Nucleus sampling threshold.
    - **Frequency Penalty** — Reduces repetition of frequent tokens.
    - **Presence Penalty** — Encourages topic diversity.
    - **Max Output Tokens** — Maximum tokens in the AI response.
    - **Past Messages Count** — Number of conversation history messages to include.
-5. Click **Save** to store the template.
+5. Configure **Capabilities** (when the relevant features are enabled):
+   - **Tools** — Select which AI tools are available to the profile.
+   - **MCP Connections** — Select which MCP connections are available.
+6. Configure **Data Sources**:
+   - **Data Source** — Select a data source for retrieval-augmented generation.
+   - **Strictness**, **Top N Documents**, **Is In Scope**, **Filter** — RAG parameters.
+7. Configure **Documents** (when the Documents feature is enabled):
+   - **Allow Session Documents** — Whether users can upload documents during chat sessions.
+   - **Profile Documents** — Upload documents directly to the template. Documents are processed (text extraction, chunking, and embedding generation) and stored with the template. When the template is applied to a new profile, all attached documents — including their text chunks and embeddings — are cloned to the new profile automatically.
+     - **Top N** — Number of top matching document chunks to include in AI context (default: 3).
+8. Configure **Data Processing & Metrics** (when the Chat and Analytics features are enabled):
+   - **Session Settings** — Session inactivity timeout, AI resolution detection.
+   - **Data Extraction** — Enable data extraction with extraction entries.
+   - **Post-Session Processing** — Configure post-session tasks.
+   - **Analytics** — Enable session/conversion metrics and define conversion goals.
+9. Click **Save** to store the template.
+
+:::note
+The template editor mirrors the AI Profile editor with the same tabbed layout (Capabilities, Documents, Data Processing & Metrics). External module features (tools, MCP connections, data sources, documents, analytics) add their own tabs and sections to the template editor when their features are enabled.
+:::
 
 ### Editing and Deleting Templates
 
@@ -396,15 +417,18 @@ Use the `AIProfileTemplate` step key to define templates in a recipe:
 
 When a template is applied, the following fields are pre-filled on the new AI Profile:
 
+### Core Profile Fields
+
 | Template Field | AI Profile Field | Notes |
 |----------------|-----------------|-------|
 | `ProfileType` | `Type` | The profile type (Chat, Utility, TemplatePrompt) |
 | `ConnectionName` | `ConnectionName` | AI provider connection |
+| `OrchestratorName` | `OrchestratorName` | The orchestrator to use |
 | `SystemMessage` | `AIProfileMetadata.SystemMessage` | Via profile metadata |
-| `WelcomeMessage` | `AIChatProfileSettings.WelcomeMessage` | Only for Chat profiles |
-| `TitleType` | `AIChatProfileSettings.TitleType` | Only for Chat profiles |
-| `PromptTemplate` | `AIPromptProfileSettings.PromptTemplate` | Only for TemplatePrompt profiles |
-| `PromptSubject` | `AIPromptProfileSettings.Subject` | Only for TemplatePrompt profiles |
+| `WelcomeMessage` | `WelcomeMessage` | Only for Chat profiles |
+| `TitleType` | `TitleType` | Only for Chat profiles |
+| `PromptTemplate` | `PromptTemplate` | Only for TemplatePrompt profiles |
+| `PromptSubject` | `PromptSubject` | Only for TemplatePrompt profiles |
 | `Temperature` | `AIProfileMetadata.Temperature` | Model parameter |
 | `TopP` | `AIProfileMetadata.TopP` | Model parameter |
 | `FrequencyPenalty` | `AIProfileMetadata.FrequencyPenalty` | Model parameter |
@@ -412,6 +436,109 @@ When a template is applied, the following fields are pre-filled on the new AI Pr
 | `MaxOutputTokens` | `AIProfileMetadata.MaxTokens` | Model parameter |
 | `PastMessagesCount` | `AIProfileMetadata.PastMessagesCount` | Model parameter |
 
+### External Module Settings
+
+Settings stored in `template.Properties` by external module drivers are automatically copied to the new profile. This includes:
+
+| Module | Settings Applied | Description |
+|--------|-----------------|-------------|
+| **AI (Tools)** | `FunctionInvocationMetadata` | Selected tool names |
+| **AI Chat** | `AIChatProfileSettings` | Admin menu visibility |
+| **AI Chat** | `AIProfileDataExtractionSettings` | Data extraction entries, session timeout |
+| **AI Chat** | `AIProfilePostSessionSettings` | Post-session tasks and tools |
+| **AI Chat (Analytics)** | `AnalyticsMetadata` | Session metrics, conversion goals, AI resolution detection |
+| **AI Documents** | `DocumentsMetadata` | Attached documents with text chunks and embeddings (cloned to new profile) |
+| **AI Documents** | `AIProfileSessionDocumentsMetadata` | Allow session documents toggle |
+| **AI MCP** | `AIProfileMcpMetadata` | MCP connection selections |
+| **AI DataSources** | `DataSourceMetadata`, `AIDataSourceRagMetadata` | Data source, strictness, top N, filters |
+
 :::note
 Template application pre-fills the form — users can modify any value before saving the profile.
 :::
+
+---
+
+## Extending Templates with Custom Display Drivers
+
+If you have a custom module that adds a `DisplayDriver<AIProfile>`, you can add a corresponding `DisplayDriver<AIProfileTemplate>` to support templates for your module's settings. The template driver should:
+
+1. Extend `DisplayDriver<AIProfileTemplate>` instead of `DisplayDriver<AIProfile>`.
+2. Use `template.As<T>()` and `template.Put<T>()` (from `OrchardCore.Entities`) to read/write settings in `template.Properties`.
+3. Reuse the same ViewModel and shape name as the profile driver, so the same Razor view is rendered.
+4. Use the same `.Location()` positioning as the profile driver.
+
+```csharp
+using CrestApps.OrchardCore.AI.Models;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
+
+public sealed class AIProfileTemplateMySettingsDisplayDriver : DisplayDriver<AIProfileTemplate>
+{
+    public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
+    {
+        return Initialize<MySettingsViewModel>("MySettings_Edit", model =>
+        {
+            var settings = template.As<MySettings>();
+            model.MySetting = settings.MySetting;
+        }).Location("Content:5#Capabilities:10");
+    }
+
+    public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
+    {
+        var model = new MySettingsViewModel();
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        var settings = template.As<MySettings>();
+        settings.MySetting = model.MySetting;
+        template.Put(settings);
+
+        return Edit(template, context);
+    }
+}
+```
+
+Register the driver in your module's `Startup.cs`:
+
+```csharp
+services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMySettingsDisplayDriver>();
+```
+
+When a template is applied to a new profile, all `template.Properties` entries are automatically copied to both `profile.Properties` and `profile.Settings`, so your custom settings will be available to both `profile.As<T>()` and `profile.GetSettings<T>()` on the profile side.
+
+---
+
+## Built-in Templates
+
+The AI module ships with a built-in profile template:
+
+### Chat Session Summarizer
+
+A **TemplatePrompt** profile template that summarizes chat sessions. When applied to a new profile, it creates a "tool" that can be invoked during a chat session to produce a concise summary of the conversation.
+
+- **Type**: TemplatePrompt
+- **Category**: Productivity
+- **Prompt Subject**: Summary
+- **Temperature**: 0.3
+
+The template uses a Liquid `PromptTemplate` that iterates over the session messages and sends them to the AI with instructions to produce a structured summary including key topics, decisions, and action items.
+
+To use this template:
+1. Navigate to **AI Services → AI Profiles → Create**.
+2. Select **Chat Session Summarizer** from the template dropdown.
+3. Click **Apply** to pre-fill the profile fields.
+4. Adjust settings if needed and save.
+
+---
+
+## Recipe Step Schemas
+
+When the `CrestApps.OrchardCore.Recipes` feature is enabled, JSON schemas are available for all AI-related recipe steps. These schemas provide validation and documentation for recipe authoring.
+
+| Recipe Step | Schema Name | Description |
+|-------------|-------------|-------------|
+| `AIProfile` | `AIProfileRecipeStep` | Creates or updates AI profiles |
+| `AIProfileTemplate` | `AIProfileTemplateRecipeStep` | Creates or updates AI profile templates |
+| `AIDeployment` | `AIDeploymentRecipeStep` | Creates or updates AI model deployments |
+| `DeleteAIDeployments` | `DeleteAIDeploymentsRecipeStep` | Deletes AI deployments by name or all |
+| `AIProviderConnections` | `AIProviderConnectionsRecipeStep` | Creates or updates AI provider connections |

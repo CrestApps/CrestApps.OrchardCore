@@ -55,6 +55,8 @@ public static class AIConstants
     {
         public const string Profile = "profile";
 
+        public const string ProfileTemplate = "profile-template";
+
         public const string ChatInteraction = "chat-interaction";
 
         public const string ChatSession = "chat-session";

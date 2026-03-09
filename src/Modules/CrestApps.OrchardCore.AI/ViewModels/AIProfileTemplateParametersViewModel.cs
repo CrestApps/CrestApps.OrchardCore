@@ -4,6 +4,8 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class AIProfileTemplateParametersViewModel
 {
+    public string SystemMessage { get; set; }
+
     [Range(0f, 1f)]
     public float? Temperature { get; set; }
 

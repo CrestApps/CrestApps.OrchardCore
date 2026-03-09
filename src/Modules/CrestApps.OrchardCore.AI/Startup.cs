@@ -95,6 +95,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIProfileTemplateService, DefaultAIProfileTemplateService>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AIProfileTemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();

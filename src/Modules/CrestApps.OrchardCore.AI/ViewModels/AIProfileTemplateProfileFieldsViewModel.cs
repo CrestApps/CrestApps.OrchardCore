@@ -1,12 +1,11 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class AIProfileTemplateProfileFieldsViewModel
 {
-    public string SystemMessage { get; set; }
-
     public string WelcomeMessage { get; set; }
 
     public string PromptTemplate { get; set; }
@@ -17,7 +16,9 @@ public class AIProfileTemplateProfileFieldsViewModel
 
     public AISessionTitleType? TitleType { get; set; }
 
-    public string ConnectionName { get; set; }
+    [BindNever]
+    public IList<SelectListItem> ProfileTypes { get; set; }
 
-    public string OrchestratorName { get; set; }
+    [BindNever]
+    public IList<SelectListItem> TitleTypes { get; set; }
 }
