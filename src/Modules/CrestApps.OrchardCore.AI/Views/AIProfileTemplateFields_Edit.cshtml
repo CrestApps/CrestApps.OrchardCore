@@ -1,0 +1,71 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileTemplateFieldsViewModel
+
+<div class="mb-3">
+    <label asp-for="DisplayText" class="form-label">@T["Title"]</label>
+    <input asp-for="DisplayText" class="form-control" />
+    <span asp-validation-for="DisplayText"></span>
+    <span class="hint">@T["The display title for this template."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label">@T["Technical Name"]</label>
+    @if (Model.IsNew)
+    {
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["The technical name of the template. It cannot be changed once created."]</span>
+    }
+    else
+    {
+        <input asp-for="Name" class="form-control" disabled="disabled" />
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+    <span class="hint">@T["A description of what this template provides."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Category" class="form-label">@T["Category"]</label>
+    <input asp-for="Category" class="form-control" />
+    <span class="hint">@T["A category for grouping templates."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="IsListable" class="form-check-input" type="checkbox" />
+        <label asp-for="IsListable" class="form-check-label">@T["Listable"]</label>
+    </div>
+    <span class="hint">@T["Whether this template appears in the template selection list."]</span>
+</div>
+
+@if (Model.IsNew)
+{
+    <script asp-name="jQuery" at="Foot"></script>
+    <script at="Foot" depends-on="jQuery">
+        $(function () {
+            var $title = $('#@Html.IdFor(m => m.DisplayText)');
+            var $name = $('#@Html.IdFor(m => m.Name)');
+
+            $title.on('input', function () {
+                if (!$name.data('manually-edited')) {
+                    var val = $title.val()
+                        .toLowerCase()
+                        .replace(/[^a-z0-9\s-]/g, '')
+                        .replace(/[\s]+/g, '-')
+                        .replace(/-{2,}/g, '-')
+                        .replace(/^-|-$/g, '');
+                    $name.val(val);
+                }
+            });
+
+            $name.on('input', function () {
+                $name.data('manually-edited', true);
+            });
+        });
+    </script>
+}

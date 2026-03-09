@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileTemplate>
+
+<h5>@(Model.Value.DisplayText ?? Model.Value.Name)</h5>
+@if (!string.IsNullOrEmpty(Model.Value.Description))
+{
+    <p class="text-muted mb-0">@Model.Value.Description</p>
+}

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -6,12 +7,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -122,7 +125,7 @@ public sealed class ProfilesController : Controller
     }
 
     [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, [FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -143,6 +146,17 @@ public sealed class ProfilesController : Controller
             await _notifier.ErrorAsync(H["Invalid profile source."]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!string.IsNullOrEmpty(templateId))
+        {
+            var templateService = HttpContext.RequestServices.GetService<IAIProfileTemplateService>();
+            var template = templateService != null ? await templateService.FindByIdAsync(templateId) : null;
+
+            if (template != null)
+            {
+                ApplyTemplateToProfile(profile, template);
+            }
         }
 
         var model = new EditCatalogEntryViewModel
@@ -346,5 +360,94 @@ public sealed class ProfilesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private static void ApplyTemplateToProfile(AIProfile profile, AIProfileTemplate template)
+    {
+        if (!string.IsNullOrEmpty(template.DisplayText))
+        {
+            profile.DisplayText = template.DisplayText;
+        }
+
+        if (template.ProfileType.HasValue)
+        {
+            profile.Type = template.ProfileType.Value;
+        }
+
+        if (!string.IsNullOrEmpty(template.ConnectionName))
+        {
+            profile.ConnectionName = template.ConnectionName;
+        }
+
+        if (!string.IsNullOrEmpty(template.OrchestratorName))
+        {
+            profile.OrchestratorName = template.OrchestratorName;
+        }
+
+        if (template.TitleType.HasValue)
+        {
+            profile.TitleType = template.TitleType;
+        }
+
+        if (!string.IsNullOrEmpty(template.WelcomeMessage))
+        {
+            profile.WelcomeMessage = template.WelcomeMessage;
+        }
+
+        if (!string.IsNullOrEmpty(template.PromptSubject))
+        {
+            profile.PromptSubject = template.PromptSubject;
+        }
+
+        if (!string.IsNullOrEmpty(template.PromptTemplate))
+        {
+            profile.PromptTemplate = template.PromptTemplate;
+        }
+
+        var metadata = profile.As<AIProfileMetadata>();
+
+        if (!string.IsNullOrEmpty(template.SystemMessage))
+        {
+            metadata.SystemMessage = template.SystemMessage;
+        }
+
+        if (template.Temperature.HasValue)
+        {
+            metadata.Temperature = template.Temperature;
+        }
+
+        if (template.TopP.HasValue)
+        {
+            metadata.TopP = template.TopP;
+        }
+
+        if (template.FrequencyPenalty.HasValue)
+        {
+            metadata.FrequencyPenalty = template.FrequencyPenalty;
+        }
+
+        if (template.PresencePenalty.HasValue)
+        {
+            metadata.PresencePenalty = template.PresencePenalty;
+        }
+
+        if (template.MaxOutputTokens.HasValue)
+        {
+            metadata.MaxTokens = template.MaxOutputTokens;
+        }
+
+        if (template.PastMessagesCount.HasValue)
+        {
+            metadata.PastMessagesCount = template.PastMessagesCount;
+        }
+
+        profile.Put(metadata);
+
+        if (template.ToolNames != null && template.ToolNames.Length > 0)
+        {
+            var toolMetadata = profile.As<FunctionInvocationMetadata>();
+            toolMetadata.Names = [.. template.ToolNames];
+            profile.Put(toolMetadata);
+        }
     }
 }

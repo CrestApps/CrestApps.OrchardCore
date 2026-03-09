@@ -1,0 +1,61 @@
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileTemplateProfileFieldsViewModel
+
+<div class="mb-3">
+    <label asp-for="ProfileType" class="form-label">@T["Profile Type"]</label>
+    <select asp-for="ProfileType" class="form-control">
+        <option value="">@T["-- Not set --"]</option>
+        <option value="@nameof(AIProfileType.Chat)">@T["Chat"]</option>
+        <option value="@nameof(AIProfileType.Utility)">@T["Utility"]</option>
+        <option value="@nameof(AIProfileType.TemplatePrompt)">@T["Template generated prompt"]</option>
+    </select>
+    <span class="hint">@T["The type of AI profile this template creates."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ConnectionName" class="form-label">@T["Connection Name"]</label>
+    <input asp-for="ConnectionName" class="form-control" />
+    <span class="hint">@T["The name of the provider connection to pre-fill."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OrchestratorName" class="form-label">@T["Orchestrator Name"]</label>
+    <input asp-for="OrchestratorName" class="form-control" />
+    <span class="hint">@T["The name of the orchestrator to use."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="TitleType" class="form-label">@T["Title Type"]</label>
+    <select asp-for="TitleType" class="form-control">
+        <option value="">@T["-- Not set --"]</option>
+        <option value="@nameof(AISessionTitleType.InitialPrompt)">@T["Set the first prompt as the title"]</option>
+        <option value="@nameof(AISessionTitleType.Generated)">@T["Generate a title based on the first prompt"]</option>
+    </select>
+    <span class="hint">@T["How the session title is determined."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="WelcomeMessage" class="form-label">@T["Welcome Message"]</label>
+    <textarea asp-for="WelcomeMessage" class="form-control" rows="3"></textarea>
+    <span class="hint">@T["The welcome message shown to users when a chat session starts."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PromptSubject" class="form-label">@T["Prompt Subject"]</label>
+    <input asp-for="PromptSubject" class="form-control" />
+    <span class="hint">@T["The subject of the prompt."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PromptTemplate" class="form-label">@T["Prompt Template"]</label>
+    <textarea asp-for="PromptTemplate" class="form-control" rows="3"></textarea>
+    <span class="hint">@T["A Liquid template for the prompt."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SystemMessage" class="form-label">@T["System Message"]</label>
+    <textarea asp-for="SystemMessage" class="form-control" rows="5"></textarea>
+    <span class="hint">@T["The system message that defines the AI assistant's behavior."]</span>
+</div>
