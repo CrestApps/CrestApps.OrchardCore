@@ -439,3 +439,9 @@ A typical disposition task classifies the outcome of a conversation:
 - **Name**: `summary`
 - **Type**: Semantic
 - **Instructions**: "Write a concise 2-3 sentence summary of the conversation."
+
+### Retry Behavior
+
+Each post-session task is attempted up to **3 times** before being permanently marked as failed. If a task produces no result on a given attempt (for example, the AI model returns non-structured output or does not call the expected tools), the task remains pending and is retried on the next background processing cycle. The `Attempts` counter on each task result tracks how many times processing has been attempted.
+
+Tasks are considered fully processed when they are either **Succeeded** or **Failed** (after exhausting all retry attempts). Once every configured task reaches a terminal state, the session's post-session processing is marked as complete and the **AI Chat Session Post-Processed** workflow event is triggered.

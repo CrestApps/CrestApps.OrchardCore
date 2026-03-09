@@ -663,5 +663,298 @@ public sealed class PostSessionProcessingServiceTests
         }
     }
 
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenResponseIsJsonInCodeFence_ShouldParseSuccessfully()
+    {
+        // Arrange: model wraps JSON in markdown code fences despite instructions.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var responseText = "```json\n{\"tasks\":[{\"name\":\"summary\",\"value\":\"Customer asked about pricing.\"}]}\n```";
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: result should be parsed from the code fence.
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("summary"));
+        Assert.Equal("Customer asked about pricing.", result["summary"].Value);
+        Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenResponseIsJsonWithSurroundingText_ShouldParseSuccessfully()
+    {
+        // Arrange: model returns JSON with extra text around it.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var responseText = "Here are the results:\n{\"tasks\":[{\"name\":\"summary\",\"value\":\"Customer asked about pricing.\"}]}\nDone.";
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: result should be parsed from embedded JSON.
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("summary"));
+        Assert.Equal("Customer asked about pricing.", result["summary"].Value);
+        Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenSingleSemanticTaskAndNonJsonResponse_ShouldUseFallbackText()
+    {
+        // Arrange: model returns plain text instead of JSON for a single semantic task.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var responseText = "The customer asked about pricing options and was provided with three tiers.";
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: the response text should be used as the task value.
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("summary"));
+        Assert.Equal(responseText, result["summary"].Value);
+        Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenMultipleTasksAndNonJsonResponse_ShouldReturnNull()
+    {
+        // Arrange: model returns plain text but there are multiple tasks — fallback cannot apply.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+                new PostSessionTask
+                {
+                    Name = "disposition",
+                    Type = PostSessionTaskType.PredefinedOptions,
+                    Instructions = "Determine the disposition.",
+                    Options =
+                    [
+                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+                    ],
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var responseText = "The customer asked about pricing options.";
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: cannot use text fallback for multiple tasks.
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenResponseIsEmpty_ShouldReturnNull()
+    {
+        // Arrange: model returns empty response — tools may have executed as side effects.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "")));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: empty response should return null.
+        Assert.Null(result);
+    }
+
     #endregion
 }
