@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.Core.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
@@ -46,11 +47,17 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Content:5#Capabilities:3");
+        }).Location("Content:5#Capabilities:3")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var connections = await _store.GetAllAsync();
 
         if (connections.Count == 0)

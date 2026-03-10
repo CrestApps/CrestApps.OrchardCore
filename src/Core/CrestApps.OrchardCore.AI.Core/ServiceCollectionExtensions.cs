@@ -75,7 +75,11 @@ public static class ServiceCollectionExtensions
             .AddScoped<DefaultAIProfileTemplateStore>()
             .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
             .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>, DefaultAIProfileTemplateManager>()
+            .AddScoped<INamedSourceCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<DefaultAIProfileTemplateManager>()
+            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>();
 
         return services;
@@ -122,6 +126,16 @@ public static class ServiceCollectionExtensions
         services.Configure<AIOptions>(o =>
         {
             o.AddConnectionSource(providerName, configure);
+        });
+
+        return services;
+    }
+
+    public static IServiceCollection AddAITemplateSource(this IServiceCollection services, string sourceName, Action<AITemplateSourceEntry> configure = null)
+    {
+        services.Configure<AIOptions>(o =>
+        {
+            o.AddTemplateSource(sourceName, configure);
         });
 
         return services;

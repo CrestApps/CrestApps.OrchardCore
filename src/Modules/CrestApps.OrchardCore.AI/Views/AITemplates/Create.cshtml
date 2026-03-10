@@ -1,12 +1,11 @@
 @using CrestApps.OrchardCore.Core.Models
-
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <h1>@RenderTitleSegments(T["Edit Profile Template: '{0}'", Model.DisplayName])</h1>
+    <h1>@RenderTitleSegments(T["New {0} Template", Model.DisplayName])</h1>
 </zone>
 
-<form method="post" asp-route-id="@ViewContext.HttpContext.Request.RouteValues["id"]" enctype="multipart/form-data" class="no-multisubmit">
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
 

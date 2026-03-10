@@ -4,11 +4,11 @@ using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Services;
 
-public sealed class AIProfileTemplateAdminMenu : AdminNavigationProvider
+public sealed class AITemplateAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
 
-    public AIProfileTemplateAdminMenu(IStringLocalizer<AIProfileTemplateAdminMenu> stringLocalizer)
+    public AITemplateAdminMenu(IStringLocalizer<AITemplateAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
     }
@@ -17,10 +17,10 @@ public sealed class AIProfileTemplateAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Profile Templates"], S["Profile Templates"].PrefixPosition(), templates => templates
-                    .AddClass("ai-profile-templates")
-                    .Id("aiProfileTemplates")
-                    .Action("Index", "ProfileTemplates", AIConstants.Feature.Area)
+                .Add(S["Templates"], S["Templates"].PrefixPosition(), templates => templates
+                    .AddClass("ai-templates")
+                    .Id("aiTemplates")
+                    .Action("Index", "AITemplates", AIConstants.Feature.Area)
                     .Permission(AIPermissions.ManageAIProfileTemplates)
                     .LocalNav()
                 ));

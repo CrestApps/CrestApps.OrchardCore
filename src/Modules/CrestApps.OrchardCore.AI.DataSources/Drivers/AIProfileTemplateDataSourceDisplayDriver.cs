@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
@@ -47,11 +48,17 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
             var metadata = template.As<DataSourceMetadata>();
             model.DataSourceId = metadata.DataSourceId;
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Content:2");
+        }).Location("Content:2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new EditProfileDataSourcesViewModel();
 
         var metadata = template.As<DataSourceMetadata>();

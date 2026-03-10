@@ -81,11 +81,17 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Documents:5");
+        }).Location("Content:5#Documents:5")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new EditAIProfileDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -144,9 +150,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
-                var providerName = ResolveProviderName(template.ConnectionName);
+                var profileMetadata = template.As<ProfileTemplateMetadata>();
+                var providerName = ResolveProviderName(profileMetadata.ConnectionName);
 
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(providerName, template.ConnectionName);
+                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(providerName, profileMetadata.ConnectionName);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

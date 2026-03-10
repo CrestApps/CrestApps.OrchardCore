@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -22,10 +23,10 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
     {
         return Initialize<EditAIProfileAnalyticsViewModel>("AIProfileAnalytics_Edit", model =>
         {
-            var metadata = template.As<AnalyticsMetadata>();
-            model.EnableSessionMetrics = metadata.EnableSessionMetrics;
-            model.EnableConversionMetrics = metadata.EnableConversionMetrics;
-            model.ConversionGoals = metadata.ConversionGoals
+            var analyticsMetadata = template.As<AnalyticsMetadata>();
+            model.EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics;
+            model.EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics;
+            model.ConversionGoals = analyticsMetadata.ConversionGoals
                 .Select(g => new ConversionGoalViewModel
                 {
                     Name = g.Name,
@@ -35,14 +36,30 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
                 })
                 .ToList();
         }).Location("Content:10#Data Processing & Metrics:15")
-        .RenderWhen(() => Task.FromResult(template.ProfileType == AIProfileType.Chat));
+        .RenderWhen(() =>
+        {
+            if (template.Source != AITemplateSources.Profile)
+            {
+                return Task.FromResult(false);
+            }
+
+            var profileMetadata = template.As<ProfileTemplateMetadata>();
+            return Task.FromResult(profileMetadata.ProfileType == AIProfileType.Chat);
+        });
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
-        if (template.ProfileType != AIProfileType.Chat)
+        if (template.Source != AITemplateSources.Profile)
         {
-            return Edit(template, context);
+            return null;
+        }
+
+        var profileMetadata = template.As<ProfileTemplateMetadata>();
+
+        if (profileMetadata.ProfileType != AIProfileType.Chat)
+        {
+            return null;
         }
 
         var model = new EditAIProfileAnalyticsViewModel();
@@ -92,10 +109,10 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
             }
         }
 
-        var metadata = template.As<AnalyticsMetadata>();
-        metadata.EnableSessionMetrics = model.EnableSessionMetrics;
-        metadata.EnableConversionMetrics = model.EnableConversionMetrics;
-        metadata.ConversionGoals = goals.Select(g => new ConversionGoal
+        var analyticsMetadata = template.As<AnalyticsMetadata>();
+        analyticsMetadata.EnableSessionMetrics = model.EnableSessionMetrics;
+        analyticsMetadata.EnableConversionMetrics = model.EnableConversionMetrics;
+        analyticsMetadata.ConversionGoals = goals.Select(g => new ConversionGoal
         {
             Name = g.Name,
             Description = g.Description,
@@ -103,7 +120,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
             MaxScore = g.MaxScore,
         }).ToList();
 
-        template.Put(metadata);
+        template.Put(analyticsMetadata);
 
         return Edit(template, context);
     }

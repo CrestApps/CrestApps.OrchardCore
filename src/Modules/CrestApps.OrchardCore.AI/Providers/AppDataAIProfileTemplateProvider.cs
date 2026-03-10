@@ -4,35 +4,33 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Extensions;
-using OrchardCore.Modules;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Providers;
 
 /// <summary>
-/// Discovers AI profile templates from OrchardCore module directories.
-/// Scans <c>AITemplates/Profiles/</c> folders embedded in modules and converts
-/// parsed templates into <see cref="AIProfileTemplate"/> instances.
+/// Discovers AI profile templates from the App_Data directory.
+/// Scans both the global <c>AITemplates/Profiles/</c> folder under App_Data
+/// and the tenant-specific <c>Sites/{tenantName}/AITemplates/Profiles/</c> folder.
 /// </summary>
-internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvider
+internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvider
 {
-    internal const string ProfilesDirectoryPath = "AITemplates/Profiles";
+    private const string _aiTemplatesDirectory = "AITemplates";
+    private const string _profilesSubDirectory = "Profiles";
 
-    private const string _profilesDirectorySubPath = ProfilesDirectoryPath + "/";
-
-    private readonly IExtensionManager _extensionManager;
-    private readonly IApplicationContext _applicationContext;
+    private readonly ShellOptions _shellOptions;
+    private readonly ShellSettings _shellSettings;
     private readonly IEnumerable<IAITemplateParser> _parsers;
     private readonly ILogger _logger;
 
-    public ModuleAIProfileTemplateProvider(
-        IExtensionManager extensionManager,
-        IApplicationContext applicationContext,
+    public AppDataAIProfileTemplateProvider(
+        Microsoft.Extensions.Options.IOptions<ShellOptions> shellOptions,
+        ShellSettings shellSettings,
         IEnumerable<IAITemplateParser> parsers,
-        ILogger<ModuleAIProfileTemplateProvider> logger)
+        ILogger<AppDataAIProfileTemplateProvider> logger)
     {
-        _extensionManager = extensionManager;
-        _applicationContext = applicationContext;
+        _shellOptions = shellOptions.Value;
+        _shellSettings = shellSettings;
         _parsers = parsers;
         _logger = logger;
     }
@@ -40,81 +38,64 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync()
     {
         var templates = new List<AIProfileTemplate>();
-        var application = _applicationContext.Application;
 
-        foreach (var extension in _extensionManager.GetExtensions())
+        // Scan the global App_Data/AITemplates/Profiles/ directory.
+        var globalProfilesDir = Path.Combine(
+            _shellOptions.ShellsApplicationDataPath,
+            _aiTemplatesDirectory,
+            _profilesSubDirectory);
+
+        DiscoverTemplates(globalProfilesDir, templates);
+
+        // Scan the tenant-specific App_Data/Sites/{tenantName}/AITemplates/Profiles/ directory.
+        var tenantProfilesDir = Path.Combine(
+            _shellOptions.ShellsApplicationDataPath,
+            _shellOptions.ShellsContainerName,
+            _shellSettings.Name,
+            _aiTemplatesDirectory,
+            _profilesSubDirectory);
+
+        DiscoverTemplates(tenantProfilesDir, templates);
+
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            var moduleId = extension.Id;
-            var module = application.GetModule(moduleId);
+            _logger.LogDebug("Discovered {Count} AI profile templates from App_Data directories.", templates.Count);
+        }
 
-            if (string.IsNullOrEmpty(module.Name))
+        return Task.FromResult<IReadOnlyList<AIProfileTemplate>>(templates);
+    }
+
+    private void DiscoverTemplates(string directory, List<AIProfileTemplate> templates)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(directory))
+        {
+            var extension = Path.GetExtension(file);
+            var parser = GetParserForExtension(extension);
+
+            if (parser == null)
             {
                 continue;
             }
 
-            var profilesRoot = module.Root + _profilesDirectorySubPath;
-
-            foreach (var assetPath in module.AssetPaths)
+            try
             {
-                if (!assetPath.StartsWith(profilesRoot, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+                var content = File.ReadAllText(file);
+                var parseResult = parser.Parse(content);
+                var id = Path.GetFileNameWithoutExtension(file);
 
-                var relativePath = assetPath[profilesRoot.Length..];
-
-                if (string.IsNullOrEmpty(relativePath))
-                {
-                    continue;
-                }
-
-                var fileName = Path.GetFileName(relativePath);
-                var fileExtension = Path.GetExtension(fileName);
-                var parser = GetParserForExtension(fileExtension);
-
-                if (parser == null)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var fileSubPath = assetPath[module.Root.Length..];
-                    var fileInfo = module.GetFileInfo(fileSubPath);
-
-                    if (!fileInfo.Exists)
-                    {
-                        if (_logger.IsEnabled(LogLevel.Debug))
-                        {
-                            _logger.LogDebug("AI profile template asset '{AssetPath}' exists in module asset paths but the embedded resource was not found.", assetPath);
-                        }
-
-                        continue;
-                    }
-
-                    using var stream = fileInfo.CreateReadStream();
-                    using var reader = new StreamReader(stream);
-                    var content = reader.ReadToEnd();
-
-                    var parseResult = parser.Parse(content);
-                    var id = Path.GetFileNameWithoutExtension(fileName);
-
-                    var template = ConvertToProfileTemplate(id, parseResult);
-                    templates.Add(template);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to parse AI profile template file: {AssetPath}", assetPath);
-                }
+                var template = ConvertToProfileTemplate(id, parseResult);
+                templates.Add(template);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to parse AI profile template file: {FilePath}", file);
             }
         }
-
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Discovered {Count} AI profile templates from modules.", templates.Count);
-        }
-
-        return Task.FromResult<IReadOnlyList<AIProfileTemplate>>(templates);
     }
 
     private static AIProfileTemplate ConvertToProfileTemplate(string id, AITemplateParseResult parseResult)

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
@@ -15,12 +16,19 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
             var metadata = template.As<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
             model.HasIndexProfile = true;
-        }).Location("Content:5#Documents:10");
+        }).Location("Content:5#Documents:10")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new EditAIProfileSessionDocumentsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var metadata = template.As<AIProfileSessionDocumentsMetadata>();

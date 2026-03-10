@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore.DisplayManagement.Views
+@using OrchardCore.Entities
 
 @model ShapeViewModel<AIProfileTemplate>
 
@@ -10,10 +11,14 @@
     </span>
 }
 
-@if (Model.Value.ProfileType.HasValue)
+@{
+    var profileMetadata = Model.Value.As<ProfileTemplateMetadata>();
+}
+
+@if (profileMetadata.ProfileType.HasValue)
 {
     <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Profile Type"]">
-        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProfileType.Value
+        <i class="text-secondary" aria-hidden="true"></i>@profileMetadata.ProfileType.Value
     </span>
 }
 

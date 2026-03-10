@@ -36,66 +36,16 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
             {
                 { "ItemId", template.ItemId },
                 { "Name", template.Name },
+                { "Source", template.Source },
                 { "DisplayText", template.DisplayText },
                 { "Description", template.Description },
                 { "Category", template.Category },
                 { "IsListable", template.IsListable },
-                { "SystemMessage", template.SystemMessage },
-                { "WelcomeMessage", template.WelcomeMessage },
-                { "PromptTemplate", template.PromptTemplate },
-                { "PromptSubject", template.PromptSubject },
-                { "ConnectionName", template.ConnectionName },
-                { "OrchestratorName", template.OrchestratorName },
                 { "CreatedUtc", template.CreatedUtc },
                 { "OwnerId", template.OwnerId },
                 { "Author", template.Author },
                 { "Properties", template.Properties?.DeepClone() },
             };
-
-            if (template.ProfileType.HasValue)
-            {
-                templateInfo.Add("ProfileType", template.ProfileType.Value.ToString());
-            }
-
-            if (template.TitleType.HasValue)
-            {
-                templateInfo.Add("TitleType", template.TitleType.Value.ToString());
-            }
-
-            if (template.Temperature.HasValue)
-            {
-                templateInfo.Add("Temperature", template.Temperature.Value);
-            }
-
-            if (template.TopP.HasValue)
-            {
-                templateInfo.Add("TopP", template.TopP.Value);
-            }
-
-            if (template.FrequencyPenalty.HasValue)
-            {
-                templateInfo.Add("FrequencyPenalty", template.FrequencyPenalty.Value);
-            }
-
-            if (template.PresencePenalty.HasValue)
-            {
-                templateInfo.Add("PresencePenalty", template.PresencePenalty.Value);
-            }
-
-            if (template.MaxOutputTokens.HasValue)
-            {
-                templateInfo.Add("MaxOutputTokens", template.MaxOutputTokens.Value);
-            }
-
-            if (template.PastMessagesCount.HasValue)
-            {
-                templateInfo.Add("PastMessagesCount", template.PastMessagesCount.Value);
-            }
-
-            if (template.ToolNames?.Length > 0)
-            {
-                templateInfo.Add("ToolNames", new JsonArray(template.ToolNames.Select(t => (JsonNode)JsonValue.Create(t)).ToArray()));
-            }
 
             templatesData.Add(templateInfo);
         }

@@ -12,6 +12,8 @@ public sealed class AIOptions
 
     private readonly Dictionary<string, AIProviderConnectionOptionsEntry> _connectionSources = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly Dictionary<string, AITemplateSourceEntry> _templateSources = new(StringComparer.OrdinalIgnoreCase);
+
     public IReadOnlyDictionary<string, Type> Clients
         => _clients;
 
@@ -23,6 +25,9 @@ public sealed class AIOptions
 
     public IReadOnlyDictionary<string, AIProviderConnectionOptionsEntry> ConnectionSources
         => _connectionSources;
+
+    public IReadOnlyDictionary<string, AITemplateSourceEntry> TemplateSources
+        => _templateSources;
 
     internal void AddClient<TClient>(string name)
         where TClient : class, IAICompletionClient
@@ -96,5 +101,27 @@ public sealed class AIOptions
         }
 
         _connectionSources[providerName] = entry;
+    }
+
+    public void AddTemplateSource(string name, Action<AITemplateSourceEntry> configure = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        if (!_templateSources.TryGetValue(name, out var entry))
+        {
+            entry = new AITemplateSourceEntry();
+        }
+
+        if (configure != null)
+        {
+            configure(entry);
+        }
+
+        if (string.IsNullOrEmpty(entry.DisplayName))
+        {
+            entry.DisplayName = new LocalizedString(name, name);
+        }
+
+        _templateSources[name] = entry;
     }
 }
