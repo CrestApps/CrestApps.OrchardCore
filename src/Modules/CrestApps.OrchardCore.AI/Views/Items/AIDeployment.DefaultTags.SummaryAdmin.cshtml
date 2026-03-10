@@ -3,6 +3,17 @@
 
 @model ShapeViewModel<AIDeployment>
 
+<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Type"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Type
+</span>
+
+@if (Model.Value.IsDefault)
+{
+    <span class="badge ta-badge bg-success-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Default"]">
+        <i class="text-secondary" aria-hidden="true"></i>@T["Default"]
+    </span>
+}
+
 <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
 </span>

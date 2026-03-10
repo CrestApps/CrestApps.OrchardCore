@@ -27,6 +27,18 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
 
     public string ConnectionNameAlias { get; set; }
 
+    /// <summary>
+    /// Gets or sets the type of this deployment (Chat, Utility, Embedding, Image, SpeechToText).
+    /// Determines what capability this deployment provides.
+    /// </summary>
+    public AIDeploymentType Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this deployment is the default for its <see cref="Type"/>
+    /// within its connection. Each connection can have at most one default per type.
+    /// </summary>
+    public bool IsDefault { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public string Author { get; set; }
@@ -42,6 +54,8 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
             Source = Source,
             ConnectionName = ConnectionName,
             ConnectionNameAlias = ConnectionNameAlias,
+            Type = Type,
+            IsDefault = IsDefault,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

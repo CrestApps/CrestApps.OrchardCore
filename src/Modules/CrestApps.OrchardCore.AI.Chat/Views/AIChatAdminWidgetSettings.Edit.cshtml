@@ -8,7 +8,7 @@
     <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["AI Profile"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
-            <option value="">@T["-- Select a profile --"]</option>
+            <option value="">@T["No profile (Disabled)"]</option>
         </select>
         <span asp-validation-for="ProfileId" class="text-danger"></span>
         <span class="hint">@T["Select the AI profile to use for the admin widget. Users with the appropriate permission can chat with this profile from any admin page."]</span>

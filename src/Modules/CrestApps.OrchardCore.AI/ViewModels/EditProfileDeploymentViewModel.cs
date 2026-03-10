@@ -3,13 +3,15 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
-public class EditProfileDeploymentViewModel : EditConnectionProfileViewModel
+public class EditProfileDeploymentViewModel
 {
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    public string UtilityDeploymentId { get; set; }
 
     [BindNever]
-    public string ProviderName { get; set; }
+    public IEnumerable<SelectListItem> ChatDeployments { get; set; }
 
     [BindNever]
-    public IEnumerable<SelectListItem> Deployments { get; set; }
+    public IEnumerable<SelectListItem> UtilityDeployments { get; set; }
 }

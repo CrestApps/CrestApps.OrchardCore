@@ -30,19 +30,20 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
-        if (!string.IsNullOrEmpty(context.Model.DeploymentId) && await _deploymentsCatalog.FindByIdAsync(context.Model.DeploymentId) is null)
+        if (!string.IsNullOrEmpty(context.Model.ChatDeploymentId) && await _deploymentsCatalog.FindByIdAsync(context.Model.ChatDeploymentId) is null)
         {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.DeploymentId)]));
+            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.ChatDeploymentId)]));
         }
     }
 
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        var deploymentId = data[nameof(AIProfile.DeploymentId)]?.GetValue<string>()?.Trim();
+        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(deploymentId))
         {
-            profile.DeploymentId = deploymentId;
+            profile.ChatDeploymentId = deploymentId;
         }
 
         var connectionName = data[nameof(AIProfile.ConnectionName)]?.GetValue<string>()?.Trim();

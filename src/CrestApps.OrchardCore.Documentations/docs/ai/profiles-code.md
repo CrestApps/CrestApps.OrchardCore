@@ -139,8 +139,9 @@ You can create or update AI chat profiles via the Recipes module using the follo
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- Connection name for the deployment; leave blank for default. -->",
-          "DeploymentId":"<!-- Deployment ID for the deployment; leave blank for default. -->",
+          "ConnectionName":"<!-- Connection name; leave blank to derive from the selected deployment. -->",
+          "ChatDeploymentId":"<!-- Deployment ID for chat completions; leave blank for default. -->",
+          "UtilityDeploymentId":"<!-- Deployment ID for utility/auxiliary tasks; leave blank for default. -->",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are an AI assistant that helps people find information.",
@@ -172,7 +173,9 @@ You can create or update AI deployments using the following recipe:
         {
           "Name": "<!-- Deployment name as specified by the vendor -->",
           "ProviderName": "<!-- Provider name (e.g., OpenAI, DeepSeek) -->",
-          "ConnectionName": "<!-- Connection name used to configure the provider -->"
+          "ConnectionName": "<!-- Connection name used to configure the provider -->",
+          "Type": "<!-- Deployment type: Chat, Utility, Embedding, Image, or SpeechToText -->",
+          "IsDefault": false
         }
       ]
     }

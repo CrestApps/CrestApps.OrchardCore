@@ -7,6 +7,7 @@ public abstract class AICompletionServiceBase
 {
     protected readonly AIProviderOptions ProviderOptions;
     protected readonly IAITemplateService AITemplateService;
+    protected readonly IAIDeploymentManager DeploymentResolver;
 
     protected AICompletionServiceBase(
         AIProviderOptions providerOptions,
@@ -14,6 +15,15 @@ public abstract class AICompletionServiceBase
     {
         ProviderOptions = providerOptions;
         AITemplateService = aiTemplateService;
+    }
+
+    protected AICompletionServiceBase(
+        AIProviderOptions providerOptions,
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentResolver)
+        : this(providerOptions, aiTemplateService)
+    {
+        DeploymentResolver = deploymentResolver;
     }
 
     protected virtual string GetDefaultConnectionName(AIProvider provider, string connectionName)
@@ -30,7 +40,9 @@ public abstract class AICompletionServiceBase
     {
         if (connectionName is not null && provider.Connections.TryGetValue(connectionName, out var connection))
         {
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
             var deploymentName = connection.GetChatDeploymentOrDefaultName();
+#pragma warning restore CS0618
 
             if (!string.IsNullOrEmpty(deploymentName))
             {
@@ -38,7 +50,40 @@ public abstract class AICompletionServiceBase
             }
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
         return provider.DefaultChatDeploymentName;
+#pragma warning restore CS0618
+    }
+
+    /// <summary>
+    /// Resolves a deployment name and connection name using the <see cref="IAIDeploymentManager"/>
+    /// with fallback to the legacy dictionary-based resolution.
+    /// </summary>
+    protected virtual async ValueTask<(string DeploymentName, string ConnectionName)> ResolveDeploymentAsync(
+        AIDeploymentType type,
+        AIProvider provider,
+        string providerName,
+        string connectionName,
+        string deploymentId = null)
+    {
+        if (DeploymentResolver != null)
+        {
+            var deployment = await DeploymentResolver.ResolveAsync(
+                type,
+                deploymentId: deploymentId,
+                providerName: providerName,
+                connectionName: connectionName);
+
+            if (deployment != null)
+            {
+                return (deployment.Name, deployment.ConnectionName ?? connectionName);
+            }
+        }
+
+        // Fall back to legacy dictionary-based resolution.
+        var legacyName = GetDefaultDeploymentName(provider, connectionName);
+
+        return (legacyName, connectionName);
     }
 
     protected static int GetTotalMessagesToSkip(int totalMessages, int pastMessageCount)

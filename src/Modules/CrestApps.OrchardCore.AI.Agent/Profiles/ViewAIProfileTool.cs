@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Models;
@@ -88,7 +88,7 @@ public sealed class ViewAIProfileTool : AIFunction
             ["type"] = profile.Type.ToString(),
             ["source"] = profile.Source,
             ["connectionName"] = profile.ConnectionName,
-            ["deploymentId"] = profile.DeploymentId,
+            ["chatDeploymentId"] = profile.ChatDeploymentId,
             ["welcomeMessage"] = profile.WelcomeMessage,
             ["promptSubject"] = profile.PromptSubject,
             ["createdUtc"] = profile.CreatedUtc.ToString("o"),

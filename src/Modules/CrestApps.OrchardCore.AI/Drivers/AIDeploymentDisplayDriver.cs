@@ -44,7 +44,13 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         {
             model.Name = deployment.Name;
             model.ConnectionName = deployment.ConnectionName;
+            model.Type = deployment.Type;
+            model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
+
+            model.Types = Enum.GetValues<AIDeploymentType>()
+                .Select(t => new SelectListItem(t.ToString(), t.ToString()))
+                .ToList();
 
             if (_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
             {
@@ -76,6 +82,9 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             deployment.Name = name;
         }
 
+        deployment.Type = model.Type;
+        deployment.IsDefault = model.IsDefault;
+
         if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the provider: {0}.", deployment.ProviderName]);
@@ -103,12 +112,13 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         var anotherExists = (await _deploymentsCatalog.GetAllAsync())
             .Any(d => d.ProviderName == deployment.ProviderName &&
             d.ConnectionName == deployment.ConnectionName &&
+            d.Type == deployment.Type &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
             && d.ItemId != deployment.ItemId);
 
         if (anotherExists)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["The selected connection already has an existing deployment with the specified name."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["The selected connection already has an existing deployment with the specified name and type."]);
         }
 
         return Edit(deployment, context);

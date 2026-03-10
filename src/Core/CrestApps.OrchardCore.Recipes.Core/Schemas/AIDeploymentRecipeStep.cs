@@ -25,7 +25,9 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment name as specified by the vendor.")),
                 ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Provider name (e.g., OpenAI, DeepSeek).")),
-                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")))
+                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name used to configure the provider.")),
+                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText").Description("The deployment type. Defaults to Chat when not specified.")),
+                ("IsDefault", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this deployment is the default for its type and connection.")))
             .Required("Name")
             .AdditionalProperties(true);
 

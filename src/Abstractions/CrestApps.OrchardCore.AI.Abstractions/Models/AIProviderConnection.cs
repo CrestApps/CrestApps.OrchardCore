@@ -12,12 +12,16 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DisplayText { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string ChatDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string EmbeddingDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string ImagesDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string UtilityDeploymentName { get; set; }
 
     public bool IsDefault { get; set; }
@@ -44,10 +48,12 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             Name = Name,
             DisplayText = DisplayText,
             IsDefault = IsDefault,
+#pragma warning disable CS0618 // Type or member is obsolete
             ChatDeploymentName = ChatDeploymentName,
             EmbeddingDeploymentName = EmbeddingDeploymentName,
             ImagesDeploymentName = ImagesDeploymentName,
             UtilityDeploymentName = UtilityDeploymentName,
+#pragma warning restore CS0618
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

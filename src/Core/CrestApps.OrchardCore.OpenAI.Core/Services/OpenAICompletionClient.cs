@@ -25,7 +25,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IOptions<DefaultAIOptions> defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             OpenAIConstants.ImplementationName,
             aIClientFactory,
@@ -36,7 +37,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             defaultOptions.Value,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
@@ -52,7 +54,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             implementationName,
             aIClientFactory,
@@ -63,7 +66,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             defaultOptions,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }

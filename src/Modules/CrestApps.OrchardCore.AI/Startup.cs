@@ -162,7 +162,9 @@ public sealed class DeploymentsStartup : StartupBase
             .AddAIDeploymentServices()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddNavigationProvider<AIDeploymentAdminMenu>();
+            .AddNavigationProvider<AIDeploymentAdminMenu>()
+            .AddDataMigration<AIDeploymentTypeMigrations>()
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

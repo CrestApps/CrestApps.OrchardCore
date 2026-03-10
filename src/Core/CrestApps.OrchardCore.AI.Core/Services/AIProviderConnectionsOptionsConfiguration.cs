@@ -69,10 +69,12 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     continue;
                 }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 mappingContext.Values["ChatDeploymentName"] = connection.ChatDeploymentName;
                 mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
                 mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
                 mappingContext.Values["ImagesDeploymentName"] = connection.ImagesDeploymentName;
+#pragma warning restore CS0618
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 
                 _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
@@ -80,6 +82,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 provider.Connections[connection.ItemId] = new AIProviderConnectionEntry(mappingContext.Values);
             }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
             if (defaultConnection is not null)
             {
                 provider.DefaultConnectionName = defaultConnection.ItemId;
@@ -91,6 +94,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 {
                     provider.DefaultChatDeploymentName = provider.Connections.FirstOrDefault().Value.GetChatDeploymentOrDefaultName();
                 }
+#pragma warning restore CS0618
 
                 if (string.IsNullOrEmpty(provider.DefaultConnectionName))
                 {

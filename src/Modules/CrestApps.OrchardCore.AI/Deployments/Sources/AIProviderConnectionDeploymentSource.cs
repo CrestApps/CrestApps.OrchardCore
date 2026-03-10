@@ -46,10 +46,12 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "ItemId", connection.ItemId },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 { "ChatDeploymentName", connection.ChatDeploymentName },
                 { "EmbeddingDeploymentName", connection.EmbeddingDeploymentName },
                 { "ImagesDeploymentName", connection.ImagesDeploymentName },
                 { "UtilityDeploymentName", connection.UtilityDeploymentName },
+#pragma warning restore CS0618
                 { "IsDefault", connection.IsDefault },
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },

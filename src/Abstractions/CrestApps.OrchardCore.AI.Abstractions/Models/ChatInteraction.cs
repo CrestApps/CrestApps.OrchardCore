@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.AI.Models;
@@ -29,9 +30,30 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment identifier (AI model) to use.
+    /// Gets or sets the chat deployment identifier (AI model) to use.
     /// </summary>
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier for this interaction.
+    /// When not set, falls back to the global default utility deployment.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
+
+    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    public string DeploymentId
+    {
+        get => ChatDeploymentId;
+        set => ChatDeploymentId = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("DeploymentId")]
+    private string _deploymentIdBackingField
+    {
+        set => ChatDeploymentId = value;
+    }
 
     /// <summary>
     /// Gets or sets the connection name for the AI provider.

@@ -474,16 +474,20 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
             foreach (var (connectionName, connection) in provider.Connections)
             {
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
                 var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
+#pragma warning restore CS0618
 
                 if (!string.IsNullOrEmpty(embeddingDeploymentName))
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     return new DataSourceIndexProfileMetadata
                     {
                         EmbeddingProviderName = providerName,
                         EmbeddingConnectionName = connectionName,
                         EmbeddingDeploymentName = embeddingDeploymentName,
                     };
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
             }
         }

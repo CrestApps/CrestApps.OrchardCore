@@ -41,7 +41,7 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
                 { "WelcomeMessage", profile.WelcomeMessage },
                 { "Type", profile.Type.ToString() },
                 { "PromptTemplate", profile.PromptTemplate },
-                { "DeploymentId", profile.DeploymentId },
+                { "ChatDeploymentId", profile.ChatDeploymentId },
                 { "CreatedUtc", profile.CreatedUtc },
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },

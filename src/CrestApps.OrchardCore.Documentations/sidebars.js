@@ -23,6 +23,7 @@ const sidebars = {
         'ai/copilot',
         'ai/agent',
         'ai/prompt-templates',
+        'ai/migration-typed-deployments',
         {
           type: 'category',
           label: 'AI Providers',

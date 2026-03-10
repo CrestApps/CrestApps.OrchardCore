@@ -38,24 +38,39 @@ To configure the Ollama connection, add the following settings to the `appsettin
       "Providers": {
         "Ollama": {
           "DefaultConnectionName": "Default",
-          "DefaultChatDeploymentName": "deepseek-v2:16b",
-          "DefaultUtilityDeploymentName": "deepseek-v2:16b",
-          "DefaultEmbeddingDeploymentName": "",
-          "DefaultImagesDeploymentName": "",
           "Connections": {
             "Default": {
               "Endpoint": "<!-- Ollama host address -->",
-              "ChatDeploymentName": "deepseek-v2:16b",
-              "UtilityDeploymentName": "deepseek-v2:16b",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": ""
+              "Deployments": [
+                { "Name": "deepseek-v2:16b", "Type": "Chat", "IsDefault": true },
+                { "Name": "deepseek-v2:16b", "Type": "Utility", "IsDefault": true }
+              ]
             }
+          }
         }
       }
     }
   }
 }
 ```
+
+:::warning Legacy Format (Deprecated)
+The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
+
+```json
+{
+  "Connections": {
+    "Default": {
+      "Endpoint": "...",
+      "ChatDeploymentName": "deepseek-v2:16b",
+      "UtilityDeploymentName": "deepseek-v2:16b",
+      "EmbeddingDeploymentName": "",
+      "ImagesDeploymentName": ""
+    }
+  }
+}
+```
+:::
 
 ### Aspire
 

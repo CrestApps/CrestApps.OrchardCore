@@ -23,7 +23,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
         }
 
         context.Context.ConnectionName = profile.ConnectionName;
-        context.Context.DeploymentId = profile.DeploymentId;
+        context.Context.ChatDeploymentId = profile.ChatDeploymentId;
 
         if (profile.TryGet<AIProfileMetadata>(out var metadata))
         {
