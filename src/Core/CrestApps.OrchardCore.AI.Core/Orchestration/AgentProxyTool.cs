@@ -31,12 +31,12 @@ internal sealed class AgentProxyTool : AIFunction
         {
             "type": "object",
             "properties": {
-                "task": {
+                "prompt": {
                     "type": "string",
-                    "description": "The task or message to send to the agent for processing."
+                    "description": "The prompt or message to send to the agent for processing."
                 }
             },
-            "required": ["task"]
+            "required": ["prompt"]
         }
         """).RootElement;
 
@@ -54,9 +54,9 @@ internal sealed class AgentProxyTool : AIFunction
 
         var logger = arguments.Services.GetRequiredService<ILogger<AgentProxyTool>>();
 
-        if (!arguments.TryGetFirstString("task", out var task) || string.IsNullOrWhiteSpace(task))
+        if (!arguments.TryGetFirstString("prompt", out var task) || string.IsNullOrWhiteSpace(task))
         {
-            return "No task was provided to the agent.";
+            return "No prompt was provided to the agent.";
         }
 
         try

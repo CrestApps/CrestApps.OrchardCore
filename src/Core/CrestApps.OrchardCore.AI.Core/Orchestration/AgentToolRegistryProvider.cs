@@ -45,15 +45,16 @@ internal sealed class AgentToolRegistryProvider : IToolRegistryProvider
             }
 
             var agentMetadata = agent.As<AgentMetadata>();
-            var isSystemAgent = agentMetadata?.IsSystemAgent == true;
+            var isAlwaysAvailable = agentMetadata?.Availability == AgentAvailability.AlwaysAvailable;
 
-            // Include system agents automatically, or include user-selected agents.
-            if (!isSystemAgent && requestedAgents is not { Length: > 0 })
+            // Always-available agents are automatically included in every request.
+            // On-demand agents are only included if explicitly selected via AgentNames.
+            if (!isAlwaysAvailable && requestedAgents is not { Length: > 0 })
             {
                 continue;
             }
 
-            if (!isSystemAgent && !requestedAgents.Contains(agent.Name, StringComparer.OrdinalIgnoreCase))
+            if (!isAlwaysAvailable && !requestedAgents.Contains(agent.Name, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }

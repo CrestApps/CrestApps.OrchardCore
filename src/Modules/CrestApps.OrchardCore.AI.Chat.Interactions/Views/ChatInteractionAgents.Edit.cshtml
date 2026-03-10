@@ -5,6 +5,8 @@
 
 @if (Model.Agents is null || Model.Agents.Length == 0)
 {
+    <h5 class="border-bottom pb-2">@T["Agents"]</h5>
+    <p class="text-muted">@T["No agents are available. Create an AI Profile with the Agent type to get started."]</p>
     return;
 }
 

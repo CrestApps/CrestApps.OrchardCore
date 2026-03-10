@@ -16,6 +16,8 @@ public class AIProfileTemplateProfileFieldsViewModel
 
     public AIProfileType? ProfileType { get; set; }
 
+    public AgentAvailability? AgentAvailability { get; set; }
+
     public AISessionTitleType? TitleType { get; set; }
 
     [BindNever]
@@ -23,4 +25,7 @@ public class AIProfileTemplateProfileFieldsViewModel
 
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> AvailabilityTypes { get; set; }
 }

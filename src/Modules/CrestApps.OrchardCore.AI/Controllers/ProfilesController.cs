@@ -494,6 +494,13 @@ public sealed class ProfilesController : Controller
             profile.Description = templateMetadata.Description;
         }
 
+        if (templateMetadata.AgentAvailability.HasValue)
+        {
+            var agentMeta = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            agentMeta.Availability = templateMetadata.AgentAvailability.Value;
+            profile.Put(agentMeta);
+        }
+
         // Clone documents from the template to the profile when the Documents feature is enabled.
         await CloneTemplateDocumentsAsync(profile, template);
     }

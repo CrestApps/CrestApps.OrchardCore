@@ -20,11 +20,6 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
     {
         var agents = await GetAvailableAgentsAsync(profile.Name);
 
-        if (agents.Length == 0)
-        {
-            return null;
-        }
-
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
         {
             var selectedNames = GetSelectedAgentNames(profile);
@@ -37,7 +32,7 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
                 IsSelected = selectedNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
 
-        }).Location("Content:8#Capabilities:7");
+        }).Location("Content:8#Capabilities:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -77,11 +72,11 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
             return [];
         }
 
-        // Exclude the current profile (prevent self-referencing) and system agents.
+        // Exclude the current profile (prevent self-referencing) and always-available agents.
         return agents
             .Where(a => !string.Equals(a.Name, excludeProfileName, StringComparison.OrdinalIgnoreCase))
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.IsSystemAgent != true)
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .ToArray();
     }
 

@@ -241,6 +241,12 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
             profileMetadata.Description = profileDescription;
         }
 
+        if (props.TryGetValue(nameof(ProfileTemplateMetadata.AgentAvailability), out var agentAvailabilityStr) &&
+            Enum.TryParse<AgentAvailability>(agentAvailabilityStr, ignoreCase: true, out var agentAvailability))
+        {
+            profileMetadata.AgentAvailability = agentAvailability;
+        }
+
         template.Put(profileMetadata);
 
         return template;

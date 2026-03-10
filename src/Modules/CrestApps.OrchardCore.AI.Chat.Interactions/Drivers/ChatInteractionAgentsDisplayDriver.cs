@@ -20,11 +20,6 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
     {
         var agents = await GetAvailableAgentsAsync();
 
-        if (agents.Length == 0)
-        {
-            return null;
-        }
-
         return Initialize<EditChatInteractionAgentsViewModel>("ChatInteractionAgents_Edit", model =>
         {
             model.Agents = agents.Select(agent => new ToolEntry
@@ -35,7 +30,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
 
-        }).Location("Parameters:5#Capabilities;7");
+        }).Location("Parameters:5#Capabilities;5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -59,7 +54,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 .ToList();
         }
 
-        return Edit(interaction, context);
+        return await EditAsync(interaction, context);
     }
 
     private async Task<AIProfile[]> GetAvailableAgentsAsync()
@@ -71,10 +66,10 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
             return [];
         }
 
-        // Exclude system agents from user selection.
+        // Exclude always-available agents from user selection.
         return agents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.IsSystemAgent != true)
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .ToArray();
     }
 }

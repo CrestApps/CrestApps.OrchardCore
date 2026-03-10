@@ -65,6 +65,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             model.PromptSubject = metadata.PromptSubject;
             model.Description = metadata.Description;
             model.ProfileType = metadata.ProfileType;
+            model.AgentAvailability = metadata.AgentAvailability;
             model.TitleType = metadata.TitleType;
 
             model.ProfileTypes =
@@ -79,6 +80,12 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             [
                 new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
+            ];
+
+            model.AvailabilityTypes =
+            [
+                new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
+                new SelectListItem(S["Always available"], nameof(AgentAvailability.AlwaysAvailable)),
             ];
         }).Location("Content:5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -126,6 +133,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         metadata.PromptSubject = profileFieldsModel.PromptSubject;
         metadata.Description = profileFieldsModel.Description?.Trim();
         metadata.ProfileType = profileFieldsModel.ProfileType;
+        metadata.AgentAvailability = profileFieldsModel.AgentAvailability;
         metadata.TitleType = profileFieldsModel.TitleType;
 
         var parametersModel = new AIProfileTemplateParametersViewModel();

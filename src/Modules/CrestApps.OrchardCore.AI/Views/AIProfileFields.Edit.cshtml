@@ -23,6 +23,19 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="AgentAvailability" class="@Orchard.GetLabelClasses()">@T["Availability"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="AgentAvailability" asp-items="Model.AvailabilityTypes" class="form-select"></select>
+        <span asp-validation-for="AgentAvailability" class="text-danger"></span>
+        <span class="hint">@T["Controls how this agent is included in AI requests. On demand agents are only included when matched by relevance scoring. Always available agents are automatically included in every request."]</span>
+        <div id="agentAvailabilityWarning" class="alert alert-warning mt-2@(Model.AgentAvailability == AgentAvailability.AlwaysAvailable ? string.Empty : " d-none")">
+            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+            @T["Always available agents are included in every AI request, which increases token usage and cost. Use this setting only for agents that must always be accessible to the AI model."]
+        </div>
+    </div>
+</div>
+
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
     <div class="@Orchard.GetEndClasses()">
@@ -116,6 +129,8 @@
         const addInitialPrompt = document.getElementById('@Html.IdFor(x => x.AddInitialPrompt)');
         const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
         const initialPromptGroup = document.getElementById('initialPromptGroup');
+        const agentAvailability = document.getElementById('@Html.IdFor(x => x.AgentAvailability)');
+        const agentAvailabilityWarning = document.getElementById('agentAvailabilityWarning');
 
         const toggleInitialPromptFields = () => {
             if (!addInitialPrompt || !welcomeMessageGroup || !initialPromptGroup) {
@@ -147,6 +162,12 @@
 
         if (addInitialPrompt) {
             addInitialPrompt.addEventListener('change', toggleInitialPromptFields);
+        }
+
+        if (agentAvailability && agentAvailabilityWarning) {
+            agentAvailability.addEventListener('change', function () {
+                agentAvailabilityWarning.classList.toggle('d-none', this.value !== 'AlwaysAvailable');
+            });
         }
 
         profileType.dispatchEvent(new Event('change'));

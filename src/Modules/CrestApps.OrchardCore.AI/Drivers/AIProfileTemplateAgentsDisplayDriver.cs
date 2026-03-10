@@ -21,11 +21,6 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
     {
         var agents = await GetAvailableAgentsAsync();
 
-        if (agents.Length == 0)
-        {
-            return null;
-        }
-
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
         {
             var metadata = template.As<ProfileTemplateMetadata>();
@@ -39,7 +34,7 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = selectedNames.Contains(agent.Name),
             }).OrderBy(entry => entry.DisplayText).ToArray();
 
-        }).Location("Content:8#Capabilities:7")
+        }).Location("Content:8#Capabilities:5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
@@ -85,10 +80,10 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
             return [];
         }
 
-        // Exclude system agents from user selection.
+        // Exclude always-available agents from user selection.
         return agents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.IsSystemAgent != true)
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .ToArray();
     }
 }

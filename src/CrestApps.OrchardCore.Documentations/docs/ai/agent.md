@@ -54,8 +54,17 @@ When you create an Agent profile:
 
 - The system automatically registers it as an AI tool via the `AgentToolRegistryProvider`.
 - Other AI Profiles and Chat Interactions can select which agents to include in their **Agents** section under the **Capabilities** tab.
-- During orchestration, the AI model can invoke any selected agent as a tool, passing it a task description.
-- The agent executes the task using its own configuration (system message, tools, connections, etc.) and returns the result.
+- During orchestration, the AI model decides when to invoke an agent by calling it as a tool, passing it a prompt describing what needs to be done.
+- The agent executes the prompt using its own configuration (system message, tools, connections, etc.) and returns the result.
+
+### Orchestration
+
+The **Default Orchestrator** uses a multi-tier approach for managing tools and agents:
+
+- When the number of available tools is small (≤30), all tools are included directly.
+- When the number of available tools exceeds the **scoping threshold** (default: 30), the orchestrator uses token-based relevance scoring to select the most appropriate tools for the user's request.
+- When MCP connections are present or the tool count exceeds the **planning threshold** (default: 100), the orchestrator uses a full LLM planning phase to determine which tools and agents to invoke.
+- For planning behavior, include the **Planner Agent** template in your profile's agent selection. The built-in planner is also available as a system-level fallback during orchestration.
 
 ### Agent Selection
 
@@ -67,25 +76,43 @@ Agents appear as a **separate checkbox section** in the Capabilities tab of:
 
 Agents are displayed as checkboxes (not in the Tools section), making it clear which agents are available and selected.
 
-### System Agents
+### Agent Availability Modes
 
-An agent can be marked as a **system agent**, which means it is automatically included in every completion request regardless of user selection. System agents are useful for core capabilities like planning that should always be available.
+Each agent profile has an **Availability** setting that controls how it is included in AI requests:
 
-System agents:
+#### On Demand (Default)
 
-- Are always included by the orchestrator
-- Do not appear in the agent selection UI
-- Are configured via the `AgentMetadata.IsSystemAgent` property
+On-demand agents are included **only when matched** by semantic or keyword relevance scoring. Users select on-demand agents from the **Agents** section under the **Capabilities** tab.
+
+- Minimizes token usage by including agents only when relevant
+- Agents appear in the checkbox list for user selection
+- Best for specialized agents that are only needed in specific contexts
+
+#### Always Available
+
+Always-available agents are **automatically included in every completion request**, regardless of user selection.
+
+- Agents are always accessible to the AI model
+- Do **not** appear in the Capabilities tab checkbox lists (they are auto-included)
+- A warning is shown when selecting this mode: *"Always available agents are included in every AI request, which increases token usage and cost."*
+- Best for core capabilities that should always be accessible (e.g., planning, routing)
+
+Configure the availability mode when editing an Agent profile or Agent template under the **Availability** dropdown.
 
 ### Built-in Agent Templates
 
 The following agent templates are provided out of the box to help you get started:
 
-| Template | Description |
-|----------|-------------|
-| **Planner Agent** | Analyzes user requests and creates structured execution plans identifying the required steps and capabilities. |
-| **Research Agent** | Gathers, synthesizes, and summarizes information from available knowledge sources. |
-| **Executor Agent** | Takes a plan or set of instructions and executes each step methodically using available tools. |
+| Template | Category | Description |
+|----------|----------|-------------|
+| **Planner Agent** | Orchestration | Analyzes user requests and creates structured execution plans identifying the required steps and capabilities. |
+| **Research Agent** | Research | Gathers, synthesizes, and summarizes information from available knowledge sources. |
+| **Executor Agent** | Orchestration | Takes a plan or set of instructions and executes each step methodically using available tools. |
+| **Writer Agent** | Content | Drafts, rewrites, and polishes written content such as articles, emails, summaries, and documentation. |
+| **Reviewer Agent** | Quality | Critically reviews content, code, or plans and provides structured feedback with suggestions for improvement. |
+| **Data Analyst Agent** | Analysis | Analyzes structured and unstructured data, identifies patterns and trends, and presents findings with clear explanations. |
+| **Summarizer Agent** | Content | Condenses long-form content into concise, accurate summaries while preserving key information and context. |
+| **Code Assistant Agent** | Development | Assists with software development tasks including writing code, debugging issues, and suggesting improvements. |
 
 To use a template, create a new AI Profile and select the desired template from the template dropdown.
 

@@ -93,4 +93,11 @@ public sealed class ProfileTemplateMetadata
     /// what the agent does.
     /// </summary>
     public string Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the availability mode for agent profiles.
+    /// Controls whether the agent is always included in every request
+    /// or only when matched by relevance scoring.
+    /// </summary>
+    public AgentAvailability? AgentAvailability { get; set; }
 }
