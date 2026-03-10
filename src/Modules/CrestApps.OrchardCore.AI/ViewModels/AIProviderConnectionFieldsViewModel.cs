@@ -10,12 +10,16 @@ public class AIProviderConnectionFieldsViewModel
 
     public bool IsDefault { get; set; }
 
+    [Obsolete("Deployment names are now managed through AIDeployment entities. Retained for backward compatibility.")]
     public string ChatDeploymentName { get; set; }
 
+    [Obsolete("Deployment names are now managed through AIDeployment entities. Retained for backward compatibility.")]
     public string EmbeddingDeploymentName { get; set; }
 
+    [Obsolete("Deployment names are now managed through AIDeployment entities. Retained for backward compatibility.")]
     public string ImagesDeploymentName { get; set; }
 
+    [Obsolete("Deployment names are now managed through AIDeployment entities. Retained for backward compatibility.")]
     public string UtilityDeploymentName { get; set; }
 
     [BindNever]

@@ -383,6 +383,7 @@ public sealed class DataSourceIndexingService
 
         var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
@@ -394,6 +395,7 @@ public sealed class DataSourceIndexingService
             profileMetadata.EmbeddingProviderName,
             profileMetadata.EmbeddingConnectionName,
             profileMetadata.EmbeddingDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         if (embeddingGenerator == null)
         {
@@ -615,6 +617,7 @@ public sealed class DataSourceIndexingService
         // Get the embedding configuration from the master index profile.
         var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
@@ -627,6 +630,7 @@ public sealed class DataSourceIndexingService
             profileMetadata.EmbeddingProviderName,
             profileMetadata.EmbeddingConnectionName,
             profileMetadata.EmbeddingDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         if (embeddingGenerator == null)
         {

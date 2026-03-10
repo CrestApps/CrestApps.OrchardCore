@@ -21,7 +21,8 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IServiceProvider serviceProvider,
         IOptions<DefaultAIOptions> defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             AzureAIInferenceConstants.ImplementationName,
             aIClientFactory,
@@ -32,7 +33,8 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             defaultOptions.Value,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
     }
 

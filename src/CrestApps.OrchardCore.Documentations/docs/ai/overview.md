@@ -74,17 +74,15 @@ Below is an example configuration:
       "Providers": {
         "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
-          "DefaultChatDeploymentName": "<!-- The default deployment name for chat completions -->",
-          "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks like query rewriting and planning -->",
-          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
-          "DefaultImagesDeploymentName": "<!-- The default deployment name for image generation (optional, e.g., 'dall-e-3') -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
-              "ChatDeploymentName": "<!-- The deployment name for this connection -->",
-              "UtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
-              "EmbeddingDeploymentName": "<!-- The embedding deployment name (optional) -->",
-              "ImagesDeploymentName": "<!-- The image generation deployment name (optional, e.g., 'dall-e-3') -->"
-              // Provider-specific settings go here
+              // Provider-specific settings go here (e.g., ApiKey, Endpoint)
+              "Deployments": [
+                { "Name": "<!-- model name -->", "Type": "Chat", "IsDefault": true },
+                { "Name": "<!-- lightweight model name -->", "Type": "Utility", "IsDefault": true },
+                { "Name": "<!-- embedding model name -->", "Type": "Embedding", "IsDefault": true },
+                { "Name": "<!-- image model name -->", "Type": "Image", "IsDefault": true }
+              ]
             }
           }
         }
@@ -93,6 +91,31 @@ Below is an example configuration:
   }
 }
 ```
+
+:::warning Legacy Format (Deprecated)
+The following configuration format using `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName` at both the provider and connection levels is **deprecated**. It is still supported and will be auto-migrated at runtime, but new configurations should use the `Deployments` array format shown above.
+
+```json
+{
+  "Providers": {
+    "OpenAI": {
+      "DefaultChatDeploymentName": "gpt-4o",
+      "DefaultUtilityDeploymentName": "gpt-4o-mini",
+      "DefaultEmbeddingDeploymentName": "text-embedding-3-large",
+      "DefaultImagesDeploymentName": "dall-e-3",
+      "Connections": {
+        "openai-cloud": {
+          "ChatDeploymentName": "gpt-4o",
+          "UtilityDeploymentName": "gpt-4o-mini",
+          "EmbeddingDeploymentName": "text-embedding-3-large",
+          "ImagesDeploymentName": "dall-e-3"
+        }
+      }
+    }
+  }
+}
+```
+:::
 
 #### Default Parameters
 
@@ -108,25 +131,59 @@ Below is an example configuration:
 | `EnableOpenTelemetry` | Enables OpenTelemetry tracing for AI requests. | `false` |
 | `EnableDistributedCaching` | Enables distributed caching for AI responses. | `true` |
 
-#### Deployment Name Settings
+#### Typed AI Deployments
 
-**Provider-level settings** (apply to all connections under a provider):
+Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments are defined in the `Deployments` array on each connection.
 
-| Setting | Description | Required |
-|---------|-------------|----------|
-| `DefaultChatDeploymentName` | The default model for chat completions | Yes |
-| `DefaultUtilityDeploymentName` | The default lightweight model for auxiliary tasks (e.g., query rewriting, planning). Falls back to `DefaultChatDeploymentName` when not set. | No |
-| `DefaultEmbeddingDeploymentName` | The model for generating embeddings (for retrieval-augmented generation (RAG) / vector search) | No |
-| `DefaultImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
+| Property | Description | Required |
+|----------|-------------|----------|
+| `Name` | The model/deployment name (e.g., `gpt-4o`, `text-embedding-3-large`) | Yes |
+| `Type` | The deployment type. Valid values: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText` | Yes |
+| `IsDefault` | Whether this is the default deployment for its type within the connection | No |
 
-**Connection-level settings** (specific to an individual connection):
+**Deployment Types:**
 
-| Setting | Description | Required |
-|---------|-------------|----------|
-| `ChatDeploymentName` | The model for chat completions for this connection | Yes |
-| `UtilityDeploymentName` | A lightweight model for auxiliary tasks such as query rewriting, planning, and chart generation. Falls back to `ChatDeploymentName` when not set. | No |
-| `EmbeddingDeploymentName` | The model for generating embeddings (for retrieval-augmented generation (RAG) / vector search) | No |
-| `ImagesDeploymentName` | The model for image generation (e.g., `dall-e-3`). Required for image generation features. | No |
+| Type | Purpose | Example Models |
+|------|---------|----------------|
+| `Chat` | Primary chat completions | `gpt-4o`, `gemini-pro`, `deepseek-chat` |
+| `Utility` | Lightweight auxiliary tasks (query rewriting, planning, chart generation). Falls back to `Chat` when not set. | `gpt-4o-mini`, `gemini-flash` |
+| `Embedding` | Generating embeddings for RAG / vector search | `text-embedding-3-large`, `text-embedding-3-small` |
+| `Image` | Image generation | `dall-e-3`, `dall-e-2` |
+| `SpeechToText` | Speech-to-text transcription | `whisper-1` |
+
+#### Deployment Resolution
+
+When an AI Profile or service requests a deployment, the system resolves it using the following fallback chain:
+
+1. **Explicit deployment** — The deployment explicitly assigned to the profile/resource
+2. **Connection default for type** — The deployment marked `IsDefault: true` for that type on the connection
+3. **Global default** — The default deployment configured in **Default AI Deployment Settings** (see below)
+4. **null/error** — No deployment found
+
+#### Default AI Deployment Settings
+
+A new settings page is available under **Settings → Artificial Intelligence → Default AI Deployment Settings**. This page allows administrators to configure global default deployments:
+
+| Setting | Description |
+|---------|-------------|
+| `DefaultUtilityDeploymentId` | The global default deployment for utility tasks |
+| `DefaultEmbeddingDeploymentId` | The global default deployment for embedding generation |
+| `DefaultImageDeploymentId` | The global default deployment for image generation |
+
+These global defaults act as the final fallback when no explicit or connection-level default is configured.
+
+:::tip
+Chat deployments do not need a global default because they are always explicitly set on AI Profiles or Chat Interactions.
+:::
+
+:::warning Deprecated Settings
+The following provider-level and connection-level settings are **deprecated** and will be auto-migrated:
+
+- `DefaultChatDeploymentName`, `DefaultUtilityDeploymentName`, `DefaultEmbeddingDeploymentName`, `DefaultImagesDeploymentName` (provider-level)
+- `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, `ImagesDeploymentName` (connection-level)
+
+Use the `Deployments` array on connections and the **Default AI Deployment Settings** page instead.
+:::
 
 ---
 
@@ -159,9 +216,11 @@ Simply inject `IAIClientFactory` into your service and use the `CreateChatClient
 | **Feature Name** | AI Deployments |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Deployments` |
 
-Manages AI model deployments.
+Manages typed AI model deployments.
 
-The **AI Deployments** feature extends the **AI Services** feature by enabling AI model deployment capabilities.
+The **AI Deployments** feature extends the **AI Services** feature by enabling AI model deployment capabilities. Each deployment is a first-class entity with a `Type` property (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an `IsDefault` flag. Deployments are associated with a provider connection and can be managed through the admin UI under **Artificial Intelligence → Deployments**.
+
+UI dropdowns for deployment selection display deployments **grouped by connection**, making it easy to find the correct deployment without navigating a cascading connection → deployment hierarchy.
 
 ### AI Chat Services Feature
 
@@ -194,7 +253,7 @@ The **AI Chat WebAPI** feature extends the **AI Chat Services** feature by enabl
 
 Provides user interface to manage AI connections.
 
-The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections.
+The **AI Connection Management** feature enhances **AI Services** by providing a user interface to manage provider connections. Connections are **pure connection configurations** — they define how to reach a provider (endpoint, API key, authentication). Deployments (models) are managed separately as typed entities associated with each connection.
 
 ---
 
@@ -217,15 +276,15 @@ You need to use a paid plan for all of these even when using models that are fre
 :::
 
 - DeepSeek
-  - **Deployment name** (the model to use): e.g. `deepseek-chat`.
+  - **Model name**: e.g. `deepseek-chat`.
   - **Endpoint**: `https://api.deepseek.com/v1/`.
   - **API Key**: Generate one in [DeepSeek Platform](https://platform.deepseek.com).
 - Google Gemini
-  - **Deployment name**: e.g. `gemini-2.0-flash`.
+  - **Model name**: e.g. `gemini-2.0-flash`.
   - **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/openai/`.
   - **API Key**: Generate one in [Google AI Studio](https://aistudio.google.com).
 - OpenAI
-  - **Deployment name**: e.g. `gpt-4o-mini`.
+  - **Model name**: e.g. `gpt-4o-mini`.
   - **Endpoint**: `https://api.openai.com/v1/`.
   - **API Key**: Generate one in [OpenAI Platform](https://platform.openai.com/account/api-keys).
 
@@ -247,9 +306,10 @@ You can add or update a connection using **recipes**. Below is a recipe for addi
           "Source": "OpenAI",
           "Name": "deepseek",
           "IsDefault": false,
-          "ChatDeploymentName": "deepseek-chat",
-          "UtilityDeploymentName": "deepseek-chat",
           "DisplayText": "DeepSeek",
+          "Deployments": [
+            { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
+          ],
           "Properties": {
             "OpenAIConnectionMetadata": {
               "Endpoint": "https://api.deepseek.com/v1",
@@ -263,7 +323,11 @@ You can add or update a connection using **recipes**. Below is a recipe for addi
 }
 ```  
 
-This recipe ensures that a **DeepSeek** connection is added or updated within the AI provider settings. Replace `<!-- DeepSeek API Key -->` with a valid API key to authenticate the connection.  
+This recipe ensures that a **DeepSeek** connection is added or updated within the AI provider settings, with a typed `Chat` deployment. Replace `<!-- DeepSeek API Key -->` with a valid API key to authenticate the connection.  
+
+:::warning Legacy Recipe Format
+The old recipe format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. on the connection object is still supported but deprecated. Migrate to the `Deployments` array format shown above.
+:::
 
 If a connection with the same `Name` and `Source` already exists, the recipe updates its properties. Otherwise, it creates a new connection.
 

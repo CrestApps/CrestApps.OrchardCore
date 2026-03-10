@@ -32,7 +32,9 @@ public sealed class AIProfileRecipeStep : IRecipeStep
                 ("TitleType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("InitialPrompt", "Generated").Description("How the session title is generated.")),
                 ("PromptTemplate", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Liquid template for TemplatePrompt profiles.")),
                 ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Connection name for the AI provider.")),
-                ("DeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment ID for the AI model.")),
+                ("ChatDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment ID for the AI model.")),
+                ("UtilityDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment ID for the AI model.")),
+                ("DeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deprecated. Use ChatDeploymentId instead.")),
                 ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Extended profile properties including AIProfileMetadata.")),
                 ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Profile settings.")))
             .Required("Name")

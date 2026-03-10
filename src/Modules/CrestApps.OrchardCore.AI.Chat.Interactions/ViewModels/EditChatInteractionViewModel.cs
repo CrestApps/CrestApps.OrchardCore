@@ -6,7 +6,7 @@ public class EditChatInteractionViewModel
 
     public string Title { get; set; }
 
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
 
     public string ConnectionName { get; set; }
 

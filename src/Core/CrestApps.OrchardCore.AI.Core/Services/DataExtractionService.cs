@@ -267,12 +267,14 @@ public sealed class DataExtractionService
             return null;
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
         var deploymentName = connection.GetUtilityDeploymentName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
             deploymentName = connection.GetChatDeploymentName(throwException: false);
         }
+#pragma warning restore CS0618
 
         if (string.IsNullOrEmpty(deploymentName))
         {

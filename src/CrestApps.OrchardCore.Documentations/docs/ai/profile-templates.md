@@ -60,7 +60,8 @@ Navigate to **Artificial Intelligence → Profile Templates** in the admin dashb
    - **Is Listable** — Whether this template appears in the selection dropdown (default: true).
 3. Configure the **Profile Settings**:
    - **Profile Type** — The type of profile to create (`Chat`, `Utility`, or `TemplatePrompt`). Required.
-   - **Connection Name** — The AI provider connection to use (dropdown, optional).
+   - **Chat Deployment** — The AI deployment to use for chat completions (dropdown, grouped by connection, optional).
+   - **Utility Deployment** — The AI deployment to use for auxiliary tasks (dropdown, grouped by connection, optional).
    - **Orchestrator Name** — The orchestrator to use (dropdown, defaults to "default").
    - **Welcome Message** — An initial greeting shown to users.
    - **Title Type** — How the session title is generated.
@@ -126,7 +127,8 @@ Description: Template for customer support chatbots
 Category: Customer Service
 IsListable: true
 ProfileType: Chat
-ConnectionName: openai-main
+ChatDeploymentId: your-chat-deployment-id
+UtilityDeploymentId: your-utility-deployment-id
 WelcomeMessage: Hello! How can I help you today?
 TitleType: Generated
 Temperature: 0.7
@@ -154,7 +156,9 @@ The body after the front matter becomes the **System Message**.
 | `Category` | string | `null` | Category for grouping templates |
 | `IsListable` | bool | `true` | Whether this template appears in selection dropdowns |
 | `ProfileType` | string | `null` | Profile type: `Chat`, `Utility`, or `TemplatePrompt` |
-| `ConnectionName` | string | `null` | AI provider connection name |
+| `ConnectionName` | string | `null` | AI provider connection name (derived from deployment if not set) |
+| `ChatDeploymentId` | string | `null` | Deployment ID for chat completions |
+| `UtilityDeploymentId` | string | `null` | Deployment ID for auxiliary/utility tasks |
 | `WelcomeMessage` | string | `null` | Initial greeting shown to users |
 | `TitleType` | string | `null` | Session title type: `Generated`, `Fixed`, or `None` |
 | `OrchestratorName` | string | `null` | Name of the orchestrator to use |
@@ -362,6 +366,8 @@ Use the `AIProfileTemplate` step key to define templates in a recipe:
           "IsListable": true,
           "ProfileType": "Chat",
           "ConnectionName": "openai-main",
+          "ChatDeploymentId": "your-chat-deployment-id",
+          "UtilityDeploymentId": "your-utility-deployment-id",
           "SystemMessage": "You are a professional customer support agent.",
           "WelcomeMessage": "Hello! How can I help you today?",
           "TitleType": "Generated",
@@ -396,7 +402,9 @@ Use the `AIProfileTemplate` step key to define templates in a recipe:
 | `Category` | string | No | Grouping category |
 | `IsListable` | bool | No | Whether the template appears in dropdowns (default: `true`) |
 | `ProfileType` | string | No | `Chat`, `Utility`, or `TemplatePrompt` |
-| `ConnectionName` | string | No | AI provider connection name |
+| `ConnectionName` | string | No | AI provider connection name (derived from deployment if not set) |
+| `ChatDeploymentId` | string | No | Deployment ID for chat completions |
+| `UtilityDeploymentId` | string | No | Deployment ID for auxiliary/utility tasks |
 | `SystemMessage` | string | No | System prompt text |
 | `WelcomeMessage` | string | No | Initial greeting for chat profiles |
 | `TitleType` | string | No | `Generated`, `Fixed`, or `None` |
@@ -422,7 +430,9 @@ When a template is applied, the following fields are pre-filled on the new AI Pr
 | Template Field | AI Profile Field | Notes |
 |----------------|-----------------|-------|
 | `ProfileType` | `Type` | The profile type (Chat, Utility, TemplatePrompt) |
-| `ConnectionName` | `ConnectionName` | AI provider connection |
+| `ConnectionName` | `ConnectionName` | AI provider connection (derived from deployment if not set) |
+| `ChatDeploymentId` | `ChatDeploymentId` | Deployment for chat completions |
+| `UtilityDeploymentId` | `UtilityDeploymentId` | Deployment for auxiliary tasks |
 | `OrchestratorName` | `OrchestratorName` | The orchestrator to use |
 | `SystemMessage` | `AIProfileMetadata.SystemMessage` | Via profile metadata |
 | `WelcomeMessage` | `WelcomeMessage` | Only for Chat profiles |

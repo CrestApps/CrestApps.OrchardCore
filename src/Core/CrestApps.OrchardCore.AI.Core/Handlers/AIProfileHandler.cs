@@ -134,11 +134,12 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             profile.TitleType = titleType.Value;
         }
 
-        var deploymentId = data[nameof(AIProfile.DeploymentId)]?.GetValue<string>()?.Trim();
+        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(deploymentId))
         {
-            profile.DeploymentId = deploymentId;
+            profile.ChatDeploymentId = deploymentId;
         }
 
         var connectionName = data[nameof(AIProfile.ConnectionName)]?.GetValue<string>()?.Trim();

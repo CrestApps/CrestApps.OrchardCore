@@ -20,6 +20,7 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
     {
         const int defaultDimensions = 1536;
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
             string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
             string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
@@ -33,6 +34,7 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
                 metadata.EmbeddingProviderName,
                 metadata.EmbeddingConnectionName,
                 metadata.EmbeddingDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (embeddingGenerator == null)
             {

@@ -27,19 +27,15 @@ To configure the OpenAI connection, add the following settings to the `appsettin
       "Providers": {
         "AzureAIInference": {
           "DefaultConnectionName": "default",
-          "DefaultChatDeploymentName": "Phi-3-medium-4k-instruct",
-          "DefaultUtilityDeploymentName": "Phi-3-medium-4k-instruct",
-          "DefaultEmbeddingDeploymentName": "",
-          "DefaultImagesDeploymentName": "",
           "Connections": {
             "default": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- Your GitHub Access Token goes here -->",
-              "ChatDeploymentName": "Phi-3-medium-4k-instruct",
-              "UtilityDeploymentName": "Phi-3-medium-4k-instruct",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": ""
+              "Deployments": [
+                { "Name": "Phi-3-medium-4k-instruct", "Type": "Chat", "IsDefault": true },
+                { "Name": "Phi-3-medium-4k-instruct", "Type": "Utility", "IsDefault": true }
+              ]
             }
           }
         }
@@ -48,6 +44,26 @@ To configure the OpenAI connection, add the following settings to the `appsettin
   }
 }
 ```
+
+:::warning Legacy Format (Deprecated)
+The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
+
+```json
+{
+  "Connections": {
+    "default": {
+      "Endpoint": "https://my-resource.services.ai.azure.com/models",
+      "AuthenticationType": "ApiKey",
+      "ApiKey": "...",
+      "ChatDeploymentName": "Phi-3-medium-4k-instruct",
+      "UtilityDeploymentName": "Phi-3-medium-4k-instruct",
+      "EmbeddingDeploymentName": "",
+      "ImagesDeploymentName": ""
+    }
+  }
+}
+```
+:::
 
 Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
 

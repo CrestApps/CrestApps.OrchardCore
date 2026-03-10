@@ -27,6 +27,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITemplateService _aiTemplateService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
@@ -37,6 +38,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         IAICompletionService completionService,
         IAIClientFactory aiClientFactory,
         IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager,
         IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
@@ -46,6 +48,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         _completionService = completionService;
         _aiClientFactory = aiClientFactory;
         _aiTemplateService = aiTemplateService;
+        _deploymentManager = deploymentManager;
         _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
@@ -188,7 +191,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 var planningContext = new AICompletionContext
                 {
                     ConnectionName = context.CompletionContext.ConnectionName,
-                    DeploymentId = context.CompletionContext.DeploymentId,
+                    ChatDeploymentId = context.CompletionContext.ChatDeploymentId,
                     DisableTools = true,
                     SystemMessage = planningSystemPrompt,
                     Temperature = 0.1f,
@@ -411,19 +414,49 @@ public sealed class DefaultOrchestrator : IOrchestrator
             connectionName = provider.DefaultConnectionName;
         }
 
+        // Try the deployment resolver first for a Utility deployment.
+        var utilityDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Utility,
+            deploymentId: context.CompletionContext?.UtilityDeploymentId,
+            providerName: providerName,
+            connectionName: connectionName);
+
+        if (utilityDeployment != null)
+        {
+            var resolvedConnectionName = utilityDeployment.ConnectionName ?? connectionName;
+
+            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, utilityDeployment.Name);
+        }
+
+        // Fall back to chat deployment via the resolver.
+        var chatDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Chat,
+            deploymentId: context.CompletionContext?.ChatDeploymentId,
+            providerName: providerName,
+            connectionName: connectionName);
+
+        if (chatDeployment != null)
+        {
+            var resolvedConnectionName = chatDeployment.ConnectionName ?? connectionName;
+
+            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, chatDeployment.Name);
+        }
+
+        // Fall back to legacy dictionary-based resolution.
         if (string.IsNullOrEmpty(connectionName) ||
             !provider.Connections.TryGetValue(connectionName, out var connection))
         {
             return null;
         }
 
-        // Prefer the utility deployment, fall back to the default deployment.
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
         var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
             deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
         }
+#pragma warning restore CS0618
 
         if (string.IsNullOrEmpty(deploymentName))
         {

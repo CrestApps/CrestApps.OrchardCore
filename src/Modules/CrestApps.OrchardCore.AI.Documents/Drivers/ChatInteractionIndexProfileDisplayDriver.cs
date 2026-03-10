@@ -48,7 +48,9 @@ public sealed class ChatInteractionIndexProfileDisplayDriver : DisplayDriver<Ind
                 foreach (var (connectionName, connection) in provider.Connections)
                 {
                     // Check if this connection has embedding deployments configured
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
                     var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
+#pragma warning restore CS0618
 
                     if (string.IsNullOrEmpty(embeddingDeploymentName))
                     {

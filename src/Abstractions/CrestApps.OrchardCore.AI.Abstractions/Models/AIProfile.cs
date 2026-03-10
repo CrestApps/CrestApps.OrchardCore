@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Services;
 
@@ -27,9 +28,30 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public string ConnectionName { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment identifier associated with the profile.
+    /// Gets or sets the chat deployment identifier for this profile.
     /// </summary>
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier for this profile.
+    /// When not set, falls back to the global default utility deployment.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
+
+    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    public string DeploymentId
+    {
+        get => ChatDeploymentId;
+        set => ChatDeploymentId = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("DeploymentId")]
+    private string _deploymentIdBackingField
+    {
+        set => ChatDeploymentId = value;
+    }
 
     /// <summary>
     /// Gets or sets the type of title used in the session.
@@ -92,7 +114,8 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             Type = Type,
             OrchestratorName = OrchestratorName,
             ConnectionName = ConnectionName,
-            DeploymentId = DeploymentId,
+            ChatDeploymentId = ChatDeploymentId,
+            UtilityDeploymentId = UtilityDeploymentId,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
             PromptSubject = PromptSubject,

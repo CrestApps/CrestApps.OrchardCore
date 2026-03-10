@@ -29,17 +29,15 @@ To configure a connection, add the following settings to the `appsettings.json` 
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "openai-cloud",
-          "DefaultChatDeploymentName": "gpt-4o-mini",
-          "DefaultUtilityDeploymentName": "gpt-4o-mini",
-          "DefaultEmbeddingDeploymentName": "",
-          "DefaultImagesDeploymentName": "",
           "Connections": {
             "openai-cloud": {
               "ApiKey": "<!-- Your API Key Goes Here -->",
-              "ChatDeploymentName": "gpt-4o-mini",
-              "UtilityDeploymentName": "gpt-4o-mini",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": ""
+              "Deployments": [
+                { "Name": "gpt-4o", "Type": "Chat", "IsDefault": true },
+                { "Name": "gpt-4o-mini", "Type": "Utility", "IsDefault": true },
+                { "Name": "text-embedding-3-large", "Type": "Embedding", "IsDefault": true },
+                { "Name": "dall-e-3", "Type": "Image", "IsDefault": true }
+              ]
             }
           }
         }
@@ -49,11 +47,29 @@ To configure a connection, add the following settings to the `appsettings.json` 
 }
 ```
 
+:::warning Legacy Format (Deprecated)
+The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
+
+```json
+{
+  "Connections": {
+    "openai-cloud": {
+      "ApiKey": "...",
+      "ChatDeploymentName": "gpt-4o",
+      "UtilityDeploymentName": "gpt-4o-mini",
+      "EmbeddingDeploymentName": "text-embedding-3-large",
+      "ImagesDeploymentName": "dall-e-3"
+    }
+  }
+}
+```
+:::
+
 ---
 
 ### Using AI Deployments  
 
-If the **AI Deployments** feature is enabled, you can create multiple deployments under the same connection. This allows different AI profiles to utilize different models while sharing the same connection.  
+If the **AI Deployments** feature is enabled, you can create multiple typed deployments under the same connection. Each deployment has a `Type` (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an optional `IsDefault` flag. This allows different AI profiles to utilize different models while sharing the same connection. UI dropdowns display deployments grouped by connection for easy selection.
 
 ### Configuring Other AI Providers  
 
@@ -90,18 +106,13 @@ To configure DeepSeek, add the following settings:
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "deepseek",
-          "DefaultChatDeploymentName": "deepseek-chat",
-          "DefaultUtilityDeploymentName": "",
-          "DefaultEmbeddingDeploymentName": "",
-          "DefaultImagesDeploymentName": "",
           "Connections": {
             "deepseek": {
               "Endpoint": "https://api.deepseek.com/v1",
               "ApiKey": "<!-- Your API Key Goes Here -->",
-              "ChatDeploymentName": "deepseek-chat",
-              "UtilityDeploymentName": "",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": ""
+              "Deployments": [
+                { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
+              ]
             }
           }
         }
@@ -111,7 +122,7 @@ To configure DeepSeek, add the following settings:
 }
 ```
 
-> The `DefaultConnectionName` and `DefaultChatDeploymentName` under the `OpenAI` node are required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
+> The `DefaultConnectionName` under the `OpenAI` node is required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
 
 #### Configuration via AI Connection Management  
 
@@ -127,8 +138,10 @@ If you are using the **AI Connection Management** feature, you can configure Dee
           "Source": "OpenAI",
           "Name": "deepseek",
           "IsDefault": false,
-          "ChatDeploymentName": "deepseek-chat",
           "DisplayText": "DeepSeek",
+          "Deployments": [
+            { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
+          ],
           "Properties": {
             "OpenAIConnectionMetadata": {
               "Endpoint": "https://api.deepseek.com/v1",
@@ -155,18 +168,13 @@ To connect to **Google Gemini**, **Together AI**, **vLLM**, or any other support
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "google-gemini",
-          "DefaultChatDeploymentName": "gemini-pro",
-          "DefaultUtilityDeploymentName": "",
-          "DefaultEmbeddingDeploymentName": "",
-          "DefaultImagesDeploymentName": "",
           "Connections": {
             "google-gemini": {
               "Endpoint": "https://generativelanguage.googleapis.com/v1",
               "ApiKey": "<!-- Your Google Gemini API Key -->",
-              "ChatDeploymentName": "gemini-pro",
-              "UtilityDeploymentName": "",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": ""
+              "Deployments": [
+                { "Name": "gemini-pro", "Type": "Chat", "IsDefault": true }
+              ]
             }
           }
         }
@@ -182,7 +190,7 @@ You can replace `Endpoint` with the appropriate URL for each provider.
 
 #### Configuring Multiple Models
 
-If you need access to multiple DeepSeek models, you can execute the following recipe to add standard deployments:
+If you need access to multiple DeepSeek models, you can execute the following recipe to add typed deployments:
 
 ```json
 {
@@ -192,11 +200,14 @@ If you need access to multiple DeepSeek models, you can execute the following re
       "deployments": [
         {
           "Name": "deepseek-chat",
+          "Type": "Chat",
+          "IsDefault": true,
           "ProviderName": "OpenAI",
           "ConnectionName": "deepseek"
         },
         {
           "Name": "deepseek-reasoner",
+          "Type": "Chat",
           "ProviderName": "OpenAI",
           "ConnectionName": "deepseek"
         }
@@ -206,6 +217,6 @@ If you need access to multiple DeepSeek models, you can execute the following re
 }
 ```
 
-This configuration allows you to access multiple models provided by DeepSeek, such as `deepseek-chat` and `deepseek-reasoner`.
+This configuration allows you to access multiple models provided by DeepSeek, such as `deepseek-chat` (set as the default Chat deployment) and `deepseek-reasoner`.
 
 By following these steps, you can seamlessly integrate DeepSeek into your AI chat feature, either as a default provider or alongside other AI models.

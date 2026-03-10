@@ -259,7 +259,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             var completionContext = new AICompletionContext
             {
                 ConnectionName = sourceContext.ConnectionName,
-                DeploymentId = sourceContext.DeploymentId,
+                ChatDeploymentId = sourceContext.ChatDeploymentId,
                 SystemMessage = await GetBatchSystemMessageAsync(batch, sourceContext.SystemMessage),
                 Temperature = sourceContext.Temperature ?? 0.1f, // Use low temperature for consistent row processing
                 TopP = sourceContext.TopP ?? 1.0f,

@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model DefaultAIDeploymentSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultUtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Utility Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultUtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default lightweight model used for auxiliary tasks like planning and intent detection."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultEmbeddingDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Embedding Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultEmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default model used for embedding generation in document indexing and vector search."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultImageDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Image Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultImageDeploymentId" asp-items="Model.ImageDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default model used for image generation."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultSpeechToTextDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Speech-to-Text Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultSpeechToTextDeploymentId" asp-items="Model.SpeechToTextDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default model used for speech-to-text transcription."]</span>
+    </div>
+</div>

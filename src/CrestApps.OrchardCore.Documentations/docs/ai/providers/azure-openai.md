@@ -27,19 +27,17 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
       "Providers": {
         "Azure": {
           "DefaultConnectionName": "<!-- Default connection name -->",
-          "DefaultChatDeploymentName": "<!-- Default deployment name for chat completions -->",
-          "DefaultUtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
-          "DefaultEmbeddingDeploymentName": "<!-- Optional: the default embedding deployment name -->",
-          "DefaultImagesDeploymentName": "<!-- Optional: the default image generation deployment name -->",
           "Connections": {
             "<!-- Unique connection name, ideally your Azure AccountName -->": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",
               "AuthenticationType": "ApiKey",
               "ApiKey": "<!-- API Key for your Azure AI instance -->",
-              "ChatDeploymentName": "<!-- Deployment name for chat completions -->",
-              "UtilityDeploymentName": "<!-- Optional: a lightweight model for auxiliary tasks -->",
-              "EmbeddingDeploymentName": "<!-- Optional: the embedding deployment name -->",
-              "ImagesDeploymentName": "<!-- Optional: the image generation deployment name -->"
+              "Deployments": [
+                { "Name": "<!-- chat model deployment -->", "Type": "Chat", "IsDefault": true },
+                { "Name": "<!-- utility model deployment -->", "Type": "Utility", "IsDefault": true },
+                { "Name": "<!-- embedding model deployment -->", "Type": "Embedding", "IsDefault": true },
+                { "Name": "<!-- image model deployment -->", "Type": "Image", "IsDefault": true }
+              ]
             }
           }
         }
@@ -48,6 +46,26 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
   }
 }
 ```
+
+:::warning Legacy Format (Deprecated)
+The following format using `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName` at both provider and connection levels is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
+
+```json
+{
+  "Connections": {
+    "my-azure-account": {
+      "Endpoint": "https://my-account.openai.azure.com/",
+      "AuthenticationType": "ApiKey",
+      "ApiKey": "...",
+      "ChatDeploymentName": "gpt-4o",
+      "UtilityDeploymentName": "gpt-4o-mini",
+      "EmbeddingDeploymentName": "text-embedding-ada-002",
+      "ImagesDeploymentName": "dall-e-3"
+    }
+  }
+}
+```
+:::
 
 Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
@@ -84,7 +102,8 @@ Define an AI profile with the following step in your recipe:
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
           "ConnectionName": "<!-- Connection name (optional) -->",
-          "DeploymentId": "<!-- Deployment ID (optional) -->",
+          "ChatDeploymentId": "<!-- Chat Deployment ID (optional) -->",
+          "UtilityDeploymentId": "<!-- Utility Deployment ID (optional) -->",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are an AI assistant that helps people find information.",
@@ -102,6 +121,10 @@ Define an AI profile with the following step in your recipe:
   ]
 }
 ```
+
+:::tip
+AI Profiles now use `ChatDeploymentId` and `UtilityDeploymentId` instead of the previous single `DeploymentId` field. This allows profiles to specify separate deployments for chat completions and auxiliary utility tasks.
+:::
 
 ## RAG / Data Sources
 

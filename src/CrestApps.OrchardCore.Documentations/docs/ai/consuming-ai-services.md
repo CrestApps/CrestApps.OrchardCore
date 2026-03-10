@@ -224,6 +224,21 @@ services.AddScoped<IOrchestrationContextBuilderHandler, MyOrchestrationHandler>(
 | Extend orchestration context building | `IOrchestrationContextBuilderHandler` |
 | Extend completion context building | `IAICompletionContextBuilderHandler` |
 
+## Deployment Resolution
+
+When an AI Profile, Chat Interaction, or other resource requests a deployment, the system resolves it using a typed fallback chain:
+
+1. **Explicit deployment** — The `ChatDeploymentId` or `UtilityDeploymentId` explicitly assigned on the profile/resource
+2. **Connection default for type** — The deployment marked `IsDefault: true` for that type on the associated connection
+3. **Global default** — The default deployment configured in **Settings → Artificial Intelligence → Default AI Deployment Settings** (e.g., `DefaultUtilityDeploymentId`, `DefaultEmbeddingDeploymentId`, `DefaultImageDeploymentId`)
+4. **null/error** — If no deployment is found at any level
+
+Each deployment is a first-class typed entity with a `Type` property (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`). This allows the system to automatically resolve the correct model based on the task being performed.
+
+:::tip
+When using `IAIClientFactory` directly, you still specify the `deploymentName` explicitly. The typed resolution chain applies to higher-level services that work with profiles and interactions.
+:::
+
 ## Implementing a Custom Orchestrator
 
 You can create a custom orchestrator by implementing `IOrchestrator`:

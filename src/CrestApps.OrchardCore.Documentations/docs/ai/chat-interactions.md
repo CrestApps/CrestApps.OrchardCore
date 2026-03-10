@@ -22,7 +22,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Session persistence — all chat messages are saved and can be resumed later
 - Configurable parameters — customize temperature, TopP, max tokens, frequency/presence penalties, and past messages count
 - Tool integration — select from available AI tools and MCP connections
-- Connection/deployment selection — choose specific connections and deployments for each interaction
+- Deployment selection — choose specific chat and utility deployments for each interaction (grouped by connection in the dropdown)
 - Orchestrator selection — choose which orchestrator runtime manages the session (e.g., Default, Copilot)
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
@@ -32,8 +32,12 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 
 1. Enable the `AI Chat Interactions` feature in Orchard Core admin
 2. Navigate to **Artificial Intelligence > Chat Interactions**
-3. Click **+ New Chat** and select an AI provider
+3. Click **+ New Chat** and select your chat and utility deployments
 4. Configure your chat settings and start chatting
+
+:::tip
+Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**).
+:::
 
 ## Orchestration
 
@@ -65,11 +69,12 @@ Image and chart generation are handled by AI tools that the orchestrator can inv
 
 ### Configuration
 
-To enable image generation, configure the `ImagesDeploymentName` in your AI provider connection settings.
+To enable image generation, create an `AIDeployment` record with type `Image` for your image model (e.g., `dall-e-3`). You can set it as the default Image deployment globally, or select it explicitly on each chat interaction.
 
 **Option 1: Admin UI**
 
-Navigate to **Artificial Intelligence > Provider Connections**, edit your connection, and set the **Images deployment name** field (e.g., `dall-e-3`).
+1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment with type **Image** (e.g., name `dall-e-3`, connection `openai-main`).
+2. Optionally, set it as the default Image deployment in **Settings > Artificial Intelligence > Default Deployments**.
 
 **Option 2: Configuration (appsettings.json)**
 
@@ -81,10 +86,23 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
         "OpenAI": {
           "Connections": {
             "default": {
-              "ChatDeploymentName": "gpt-4o",
-              "UtilityDeploymentName": "gpt-4o-mini",
-              "EmbeddingDeploymentName": "",
-              "ImagesDeploymentName": "dall-e-3"
+              "Deployments": [
+                {
+                  "Name": "gpt-4o",
+                  "Type": "Chat",
+                  "IsDefault": true
+                },
+                {
+                  "Name": "gpt-4o-mini",
+                  "Type": "Utility",
+                  "IsDefault": true
+                },
+                {
+                  "Name": "dall-e-3",
+                  "Type": "Image",
+                  "IsDefault": true
+                }
+              ]
             }
           }
         }
@@ -93,3 +111,7 @@ Navigate to **Artificial Intelligence > Provider Connections**, edit your connec
   }
 }
 ```
+
+:::info
+The legacy format with `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName` on the connection is still supported for backward compatibility but is deprecated. See the [migration guide](migration-typed-deployments) for details.
+:::

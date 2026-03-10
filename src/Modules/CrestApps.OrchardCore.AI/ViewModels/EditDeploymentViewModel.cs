@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -9,9 +10,16 @@ public class EditDeploymentViewModel
 
     public string ConnectionName { get; set; }
 
+    public AIDeploymentType Type { get; set; }
+
+    public bool IsDefault { get; set; }
+
     [BindNever]
     public bool IsNew { get; set; }
 
     [BindNever]
     public IList<SelectListItem> Connections { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Types { get; set; }
 }

@@ -39,6 +39,8 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
                 { "ConnectionNameAlias", deployment.ConnectionNameAlias },
+                { "Type", deployment.Type.ToString() },
+                { "IsDefault", deployment.IsDefault },
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },

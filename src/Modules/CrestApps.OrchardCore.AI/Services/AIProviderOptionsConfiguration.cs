@@ -100,6 +100,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                     provider.DefaultConnectionName = connections.FirstOrDefault().Key;
                 }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 var defaultDeploymentName = providerNode["ChatDeploymentName"]?.GetValue<string>()
                     ?? providerNode["DefaultChatDeploymentName"]?.GetValue<string>()
                     ?? providerNode["DefaultDeploymentName"]?.GetValue<string>();
@@ -136,6 +137,7 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 {
                     provider.DefaultUtilityDeploymentName = defaultUtilityDeploymentName;
                 }
+#pragma warning restore CS0618
 
                 options.Providers.Add(providerName, provider);
             }
