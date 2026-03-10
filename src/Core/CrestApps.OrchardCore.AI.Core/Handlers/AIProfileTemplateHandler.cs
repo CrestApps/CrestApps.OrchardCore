@@ -95,6 +95,13 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
             {
                 template.Name = name;
             }
+
+            var source = data[nameof(AIProfileTemplate.Source)]?.GetValue<string>()?.Trim();
+
+            if (!string.IsNullOrEmpty(source))
+            {
+                template.Source = source;
+            }
         }
 
         var displayText = data[nameof(AIProfileTemplate.DisplayText)]?.GetValue<string>()?.Trim();
@@ -118,32 +125,11 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
             template.Category = category;
         }
 
-        var profileType = data[nameof(AIProfileTemplate.ProfileType)]?.GetEnumValue<AIProfileType>();
+        var isListable = data[nameof(AIProfileTemplate.IsListable)];
 
-        if (profileType.HasValue)
+        if (isListable != null)
         {
-            template.ProfileType = profileType.Value;
-        }
-
-        var connectionName = data[nameof(AIProfileTemplate.ConnectionName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(connectionName))
-        {
-            template.ConnectionName = connectionName;
-        }
-
-        var systemMessage = data[nameof(AIProfileTemplate.SystemMessage)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(systemMessage))
-        {
-            template.SystemMessage = systemMessage;
-        }
-
-        var welcomeMessage = data[nameof(AIProfileTemplate.WelcomeMessage)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(welcomeMessage))
-        {
-            template.WelcomeMessage = welcomeMessage;
+            template.IsListable = isListable.GetValue<bool>();
         }
 
         var properties = data[nameof(AIProfileTemplate.Properties)]?.AsObject();

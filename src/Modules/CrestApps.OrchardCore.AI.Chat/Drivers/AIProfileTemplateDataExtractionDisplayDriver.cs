@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -35,11 +36,17 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
                     IsUpdatable = e.IsUpdatable,
                 })
                 .ToList();
-        }).Location("Content:10#Data Processing & Metrics:5");
+        }).Location("Content:10#Data Processing & Metrics:5")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new AIProfileDataExtractionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

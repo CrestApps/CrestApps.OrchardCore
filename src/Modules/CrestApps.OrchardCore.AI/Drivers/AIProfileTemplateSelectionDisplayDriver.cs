@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -7,11 +9,11 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly IAIProfileTemplateService _templateService;
+    private readonly IAIProfileTemplateManager _templateManager;
 
-    public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateService templateService)
+    public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
     {
-        _templateService = templateService;
+        _templateManager = templateManager;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -24,17 +26,31 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
         {
             model.Source = profile.Source;
-            var templates = await _templateService.GetListableAsync();
+            var templates = await _templateManager.GetAsync(AITemplateSources.Profile);
+
+            var groups = new Dictionary<string, SelectListGroup>();
 
             model.Templates = templates
-                .Select(t => new AIProfileTemplateOption
-                {
-                    Id = t.ItemId,
-                    DisplayText = t.DisplayText ?? t.Name,
-                    Category = t.Category,
-                })
+                .Where(t => t.IsListable)
                 .OrderBy(t => t.Category)
-                .ThenBy(t => t.DisplayText)
+                .ThenBy(t => t.DisplayText ?? t.Name)
+                .Select(t =>
+                {
+                    var item = new SelectListItem(t.DisplayText ?? t.Name, t.ItemId);
+
+                    if (!string.IsNullOrEmpty(t.Category))
+                    {
+                        if (!groups.TryGetValue(t.Category, out var group))
+                        {
+                            group = new SelectListGroup { Name = t.Category };
+                            groups.Add(t.Category, group);
+                        }
+
+                        item.Group = group;
+                    }
+
+                    return item;
+                })
                 .ToList();
         }).Location("Content:0");
     }

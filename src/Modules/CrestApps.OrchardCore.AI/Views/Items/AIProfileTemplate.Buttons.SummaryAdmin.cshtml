@@ -3,12 +3,12 @@
 
 @model ShapeViewModel<AIProfileTemplate>
 
-<a asp-controller="ProfileTemplates"
+<a asp-controller="AITemplates"
    asp-action="Edit"
    asp-route-id="@Model.Value.ItemId"
    class="btn btn-primary btn-sm">@T["Edit"]</a>
 
-<a asp-controller="ProfileTemplates"
+<a asp-controller="AITemplates"
    asp-action="Delete"
    asp-route-id="@Model.Value.ItemId"
    class="btn btn-danger btn-sm"

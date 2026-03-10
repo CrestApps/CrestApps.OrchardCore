@@ -62,7 +62,8 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var selectedNames = template.ToolNames ?? [];
+            var metadata = template.As<ProfileTemplateMetadata>();
+            var selectedNames = metadata.ToolNames ?? [];
 
             model.Tools = accessibleTools
             .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
@@ -75,12 +76,13 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
                 IsSelected = selectedNames.Contains(entry.Key),
             }).OrderBy(entry => entry.DisplayText).ToArray());
 
-        }).Location("Content:8#Capabilities:5");
+        }).Location("Content:8#Capabilities:5")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
-        if (_toolDefinitions.Tools.Count == 0)
+        if (template.Source != AITemplateSources.Profile || _toolDefinitions.Tools.Count == 0)
         {
             return null;
         }
@@ -91,16 +93,20 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
+        var metadata = template.As<ProfileTemplateMetadata>();
+
         if (selectedToolKeys is null || !selectedToolKeys.Any())
         {
-            template.ToolNames = [];
+            metadata.ToolNames = [];
         }
         else
         {
-            template.ToolNames = _toolDefinitions.Tools.Keys
+            metadata.ToolNames = _toolDefinitions.Tools.Keys
                 .Intersect(selectedToolKeys)
                 .ToArray();
         }
+
+        template.Put(metadata);
 
         return Edit(template, context);
     }

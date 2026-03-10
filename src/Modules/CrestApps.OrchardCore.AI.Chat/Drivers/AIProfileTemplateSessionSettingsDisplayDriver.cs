@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -27,12 +28,19 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
 
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
-        }).Location("Content:10#Data Processing & Metrics:1");
+        }).Location("Content:10#Data Processing & Metrics:1")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new EditAIProfileSessionSettingsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (model.SessionInactivityTimeoutInMinutes < 1)

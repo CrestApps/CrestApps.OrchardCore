@@ -6,8 +6,13 @@ namespace CrestApps.OrchardCore.AI.Core.Indexes;
 /// <summary>
 /// YesSql index for AI profile templates stored in the database.
 /// </summary>
-public sealed class AIProfileTemplateIndex : CatalogItemIndex, INameAwareIndex
+public sealed class AIProfileTemplateIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
 {
+    /// <summary>
+    /// Gets or sets the source that produced this template.
+    /// </summary>
+    public string Source { get; set; }
+
     /// <summary>
     /// Gets or sets the technical name of the template.
     /// </summary>

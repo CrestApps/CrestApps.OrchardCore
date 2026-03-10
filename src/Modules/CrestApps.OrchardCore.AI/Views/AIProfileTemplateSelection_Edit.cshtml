@@ -4,51 +4,30 @@
 
 @if (Model.Templates.Count > 0)
 {
+    var selectId = Html.IdFor(m => m.TemplateId);
+    var buttonId = $"{selectId}_apply";
+
     <div class="alert alert-secondary mb-3" role="alert">
         <label asp-for="TemplateId" class="form-label fw-semibold">@T["Apply Template"]</label>
         <div class="input-group">
-            <select asp-for="TemplateId" class="form-control" id="templateSelector">
+            <select asp-for="TemplateId" asp-items="Model.Templates" class="form-control">
                 <option value="">@T["Select a template"]</option>
-                @{
-                    string lastCategory = null;
-                }
-                @foreach (var template in Model.Templates)
-                {
-                    if (!string.IsNullOrEmpty(template.Category) && template.Category != lastCategory)
-                    {
-                        if (lastCategory != null)
-                        {
-                            @:</optgroup>
-                        }
-                        lastCategory = template.Category;
-                        @:<optgroup label="@template.Category">
-                    }
-
-                    <option value="@template.Id">@template.DisplayText</option>
-                }
-                @if (lastCategory != null)
-                {
-                    @:</optgroup>
-                }
             </select>
-            <button type="button" class="btn btn-secondary" id="applyTemplateBtn">
+            <button type="button" class="btn btn-secondary" id="@buttonId">
                 <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
             </button>
         </div>
         <span class="hint">@T["Select a profile template to pre-fill the form fields."]</span>
     </div>
 
-    <script asp-name="jQuery" at="Foot"></script>
-    <script at="Foot" depends-on="jQuery">
-        $(function () {
-            $('#applyTemplateBtn').on('click', function () {
-                var templateId = $('#templateSelector').val();
-                if (templateId) {
-                    var currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('templateId', templateId);
-                    window.location.href = currentUrl.toString();
-                }
-            });
+    <script at="Foot">
+        document.getElementById('@buttonId').addEventListener('click', function () {
+            var templateId = document.getElementById('@selectId').value;
+            if (templateId) {
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('templateId', templateId);
+                window.location.href = currentUrl.toString();
+            }
         });
     </script>
 }

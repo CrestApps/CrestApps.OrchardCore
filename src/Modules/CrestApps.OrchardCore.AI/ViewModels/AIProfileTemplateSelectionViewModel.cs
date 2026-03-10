@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Mvc.Rendering;
+
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class AIProfileTemplateSelectionViewModel
@@ -6,14 +8,5 @@ public class AIProfileTemplateSelectionViewModel
 
     public string Source { get; set; }
 
-    public IList<AIProfileTemplateOption> Templates { get; set; } = [];
-}
-
-public sealed class AIProfileTemplateOption
-{
-    public string Id { get; set; }
-
-    public string DisplayText { get; set; }
-
-    public string Category { get; set; }
+    public IList<SelectListItem> Templates { get; set; } = [];
 }

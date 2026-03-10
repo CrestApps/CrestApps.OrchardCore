@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -92,13 +93,28 @@ public sealed class Startup : StartupBase
             .AddAIProfileTemplateServices()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
             .AddIndexProvider<AIProfileTemplateIndexProvider>()
-            .AddScoped<IAIProfileTemplateService, DefaultAIProfileTemplateService>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
+            .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
-            .AddNavigationProvider<AIProfileTemplateAdminMenu>()
+            .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
+
+        // Register template sources.
+        services
+            .AddAITemplateSource(AITemplateSources.Profile, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
+                entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
+            })
+            .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
+                entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
+            });
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }

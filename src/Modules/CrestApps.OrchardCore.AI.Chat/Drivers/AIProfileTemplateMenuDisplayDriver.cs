@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -19,13 +20,20 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
             }
             else
             {
-                model.IsOnAdminMenu = template.ProfileType == AIProfileType.Chat;
+                var profileMetadata = template.As<ProfileTemplateMetadata>();
+                model.IsOnAdminMenu = profileMetadata.ProfileType == AIProfileType.Chat;
             }
-        }).Location("Content:5.2");
+        }).Location("Content:5.2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new AIProfileMenuViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

@@ -3,13 +3,9 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListCatalogEntryViewModel
+@model ListSourceCatalogEntryViewModel<AIProfileTemplate>
 
-<zone Name="Title"><h1>@RenderTitleSegments(T["AI Profile Templates"])</h1></zone>
-
-@{
-    var models = (IList<CatalogEntryViewModel<AIProfileTemplate>>)ViewBag.Models;
-}
+<zone Name="Title"><h1>@RenderTitleSegments(T["AI Templates"])</h1></zone>
 
 @* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" method="post" class="no-multisubmit">
@@ -27,17 +23,17 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a asp-action="Create" class="btn btn-secondary create" role="button">@T["Add Template"]</a>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddTemplate">@T["Add Template"]</button>
                 </div>
             </div>
         </div>
     </div>
 
     <ul class="list-group with-checkbox">
-        @if (models.Count > 0)
+        @if (Model.Models.Count > 0)
         {
             int startIndex = 0;
-            int endIndex = startIndex + models.Count - 1;
+            int endIndex = startIndex + Model.Models.Count - 1;
 
             <li class="list-group-item text-bg-theme ignore-elements">
                 <div class="row gx-3">
@@ -46,9 +42,9 @@
                             <input type="checkbox" class="form-check-input" id="select-all">
                             <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
                             <label id="items" for="select-all">
-                                @T.Plural(models.Count, "1 item", "{0} items")
+                                @T.Plural(Model.Models.Count, "1 item", "{0} items")
                                 <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
-                                    @T.Plural(models.Count, " / {0} item in total", " / {0} items in total")
+                                    @T.Plural(Model.Models.Count, " / {0} item in total", " / {0} items in total")
                                 </span>
                             </label>
                             <label id="selected-items" class="text-muted" for="select-all"></label>
@@ -71,7 +67,7 @@
                     </div>
                 </div>
             </li>
-            @foreach (var entry in models)
+            @foreach (var entry in Model.Models)
             {
                 <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Model.DisplayText?.ToLowerInvariant()">
                     <div class="d-flex flex-row">
@@ -90,7 +86,7 @@
         else
         {
             <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no profile templates at the moment."]
+                @T["<strong>Nothing here!</strong> There are no templates at the moment."]
             </li>
         }
     </ul>
@@ -100,6 +96,39 @@
     </div>
 
 </form>
+
+<!-- Modal -->
+<div class="modal fade" id="modalAddTemplate" tabindex="-1" role="dialog" aria-labelledby="available-template-types-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-template-types-title">@T["Available Sources"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!Model.Sources.Any())
+                {
+                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI template source."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-3 g-2">
+                        @foreach (var source in Model.Sources)
+                        {
+                            IShape shape = await New.AIProfileTemplate_Link(Source: source);
+                            shape.Metadata.Alternates.Add("AIProfileTemplate_Link__" + source);
+
+                            @await DisplayAsync(shape)
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @await DisplayAsync(Model.Pager)
 

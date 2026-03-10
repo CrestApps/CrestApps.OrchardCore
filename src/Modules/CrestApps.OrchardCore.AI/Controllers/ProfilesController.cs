@@ -153,8 +153,8 @@ public sealed class ProfilesController : Controller
 
         if (!string.IsNullOrEmpty(templateId))
         {
-            var templateService = HttpContext.RequestServices.GetService<IAIProfileTemplateService>();
-            var template = templateService != null ? await templateService.FindByIdAsync(templateId) : null;
+            var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
+            var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
 
             if (template != null)
             {
@@ -377,6 +377,13 @@ public sealed class ProfilesController : Controller
         {
             foreach (var property in template.Properties)
             {
+                // Skip source-specific metadata keys; they are handled below.
+                if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
                 profile.Properties[property.Key] = property.Value?.DeepClone();
                 profile.Settings[property.Key] = property.Value?.DeepClone();
             }
@@ -392,84 +399,86 @@ public sealed class ProfilesController : Controller
             profile.Name = template.Name;
         }
 
-        if (template.ProfileType.HasValue)
+        var templateMetadata = template.As<ProfileTemplateMetadata>();
+
+        if (templateMetadata.ProfileType.HasValue)
         {
-            profile.Type = template.ProfileType.Value;
+            profile.Type = templateMetadata.ProfileType.Value;
         }
 
-        if (!string.IsNullOrEmpty(template.ConnectionName))
+        if (!string.IsNullOrEmpty(templateMetadata.ConnectionName))
         {
-            profile.ConnectionName = template.ConnectionName;
+            profile.ConnectionName = templateMetadata.ConnectionName;
         }
 
-        if (!string.IsNullOrEmpty(template.OrchestratorName))
+        if (!string.IsNullOrEmpty(templateMetadata.OrchestratorName))
         {
-            profile.OrchestratorName = template.OrchestratorName;
+            profile.OrchestratorName = templateMetadata.OrchestratorName;
         }
 
-        if (template.TitleType.HasValue)
+        if (templateMetadata.TitleType.HasValue)
         {
-            profile.TitleType = template.TitleType;
+            profile.TitleType = templateMetadata.TitleType;
         }
 
-        if (!string.IsNullOrEmpty(template.WelcomeMessage))
+        if (!string.IsNullOrEmpty(templateMetadata.WelcomeMessage))
         {
-            profile.WelcomeMessage = template.WelcomeMessage;
+            profile.WelcomeMessage = templateMetadata.WelcomeMessage;
         }
 
-        if (!string.IsNullOrEmpty(template.PromptSubject))
+        if (!string.IsNullOrEmpty(templateMetadata.PromptSubject))
         {
-            profile.PromptSubject = template.PromptSubject;
+            profile.PromptSubject = templateMetadata.PromptSubject;
         }
 
-        if (!string.IsNullOrEmpty(template.PromptTemplate))
+        if (!string.IsNullOrEmpty(templateMetadata.PromptTemplate))
         {
-            profile.PromptTemplate = template.PromptTemplate;
+            profile.PromptTemplate = templateMetadata.PromptTemplate;
         }
 
         var metadata = profile.As<AIProfileMetadata>();
 
-        if (!string.IsNullOrEmpty(template.SystemMessage))
+        if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
         {
-            metadata.SystemMessage = template.SystemMessage;
+            metadata.SystemMessage = templateMetadata.SystemMessage;
         }
 
-        if (template.Temperature.HasValue)
+        if (templateMetadata.Temperature.HasValue)
         {
-            metadata.Temperature = template.Temperature;
+            metadata.Temperature = templateMetadata.Temperature;
         }
 
-        if (template.TopP.HasValue)
+        if (templateMetadata.TopP.HasValue)
         {
-            metadata.TopP = template.TopP;
+            metadata.TopP = templateMetadata.TopP;
         }
 
-        if (template.FrequencyPenalty.HasValue)
+        if (templateMetadata.FrequencyPenalty.HasValue)
         {
-            metadata.FrequencyPenalty = template.FrequencyPenalty;
+            metadata.FrequencyPenalty = templateMetadata.FrequencyPenalty;
         }
 
-        if (template.PresencePenalty.HasValue)
+        if (templateMetadata.PresencePenalty.HasValue)
         {
-            metadata.PresencePenalty = template.PresencePenalty;
+            metadata.PresencePenalty = templateMetadata.PresencePenalty;
         }
 
-        if (template.MaxOutputTokens.HasValue)
+        if (templateMetadata.MaxOutputTokens.HasValue)
         {
-            metadata.MaxTokens = template.MaxOutputTokens;
+            metadata.MaxTokens = templateMetadata.MaxOutputTokens;
         }
 
-        if (template.PastMessagesCount.HasValue)
+        if (templateMetadata.PastMessagesCount.HasValue)
         {
-            metadata.PastMessagesCount = template.PastMessagesCount;
+            metadata.PastMessagesCount = templateMetadata.PastMessagesCount;
         }
 
         profile.Put(metadata);
 
-        if (template.ToolNames != null && template.ToolNames.Length > 0)
+        if (templateMetadata.ToolNames != null && templateMetadata.ToolNames.Length > 0)
         {
             var toolMetadata = profile.As<FunctionInvocationMetadata>();
-            toolMetadata.Names = [.. template.ToolNames];
+            toolMetadata.Names = [.. templateMetadata.ToolNames];
             profile.Put(toolMetadata);
         }
 

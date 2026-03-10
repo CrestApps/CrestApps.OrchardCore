@@ -19,38 +19,41 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
-public sealed class ProfileTemplatesController : Controller
+public sealed class AITemplatesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedCatalogManager<AIProfileTemplate> _manager;
+    private readonly IAIProfileTemplateManager _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfileTemplate> _displayDriver;
+    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
-    public ProfileTemplatesController(
-        INamedCatalogManager<AIProfileTemplate> manager,
+    public AITemplatesController(
+        IAIProfileTemplateManager manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfileTemplate> displayDriver,
+        IOptions<AIOptions> aiOptions,
         INotifier notifier,
-        IHtmlLocalizer<ProfileTemplatesController> htmlLocalizer,
-        IStringLocalizer<ProfileTemplatesController> stringLocalizer)
+        IHtmlLocalizer<AITemplatesController> htmlLocalizer,
+        IStringLocalizer<AITemplatesController> stringLocalizer)
     {
         _manager = manager;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayDriver;
+        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
-    [Admin("ai/profile-templates", "AIProfileTemplatesIndex")]
+    [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
         PagerParameters pagerParameters,
@@ -77,24 +80,22 @@ public sealed class ProfileTemplatesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel
+        var viewModel = new ListSourceCatalogEntryViewModel<AIProfileTemplate>
         {
+            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _aiOptions.TemplateSources.Select(x => x.Key).Order(),
         };
-
-        var models = new List<CatalogEntryViewModel<AIProfileTemplate>>();
 
         foreach (var model in result.Entries)
         {
-            models.Add(new CatalogEntryViewModel<AIProfileTemplate>
+            viewModel.Models.Add(new CatalogEntryViewModel<AIProfileTemplate>
             {
                 Model = model,
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
-
-        ViewBag.Models = models;
 
         viewModel.Options.BulkActions =
         [
@@ -107,7 +108,7 @@ public sealed class ProfileTemplatesController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("ai/profile-templates", "AIProfileTemplatesIndex")]
+    [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<ActionResult> IndexFilterPost(ListCatalogEntryViewModel model)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
@@ -121,26 +122,33 @@ public sealed class ProfileTemplatesController : Controller
         });
     }
 
-    [Admin("ai/profile-template/create", "AIProfileTemplatesCreate")]
-    public async Task<ActionResult> Create()
+    [Admin("ai/template/create/{source}", "AITemplatesCreate")]
+    public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
             return Forbid();
         }
 
-        var template = await _manager.NewAsync();
+        if (!_aiOptions.TemplateSources.TryGetValue(source, out var provider))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a template-source that can handle the source '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var template = await _manager.NewAsync(source);
 
         if (template == null)
         {
-            await _notifier.ErrorAsync(H["Unable to create a new profile template."]);
+            await _notifier.ErrorAsync(H["Unable to create a new template."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Profile Template"].Value,
+            DisplayName = provider.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -149,26 +157,33 @@ public sealed class ProfileTemplatesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/profile-template/create", "AIProfileTemplatesCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("ai/template/create/{source}", "AITemplatesCreate")]
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
         {
             return Forbid();
         }
 
-        var template = await _manager.NewAsync();
+        if (!_aiOptions.TemplateSources.TryGetValue(source, out var provider))
+        {
+            await _notifier.ErrorAsync(H["Unable to find a template-source that can handle the source '{0}'.", source]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var template = await _manager.NewAsync(source);
 
         if (template == null)
         {
-            await _notifier.ErrorAsync(H["Unable to create a new profile template."]);
+            await _notifier.ErrorAsync(H["Unable to create a new template."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = template.DisplayText,
+            DisplayName = provider.DisplayName,
             Editor = await _displayDriver.UpdateEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -176,7 +191,7 @@ public sealed class ProfileTemplatesController : Controller
         {
             await _manager.CreateAsync(template);
 
-            await _notifier.SuccessAsync(H["Profile template has been created successfully."]);
+            await _notifier.SuccessAsync(H["Template has been created successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -184,7 +199,7 @@ public sealed class ProfileTemplatesController : Controller
         return View(model);
     }
 
-    [Admin("ai/profile-template/edit/{id}", "AIProfileTemplatesEdit")]
+    [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
@@ -210,7 +225,7 @@ public sealed class ProfileTemplatesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("ai/profile-template/edit/{id}", "AIProfileTemplatesEdit")]
+    [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
     public async Task<ActionResult> EditPost(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
@@ -235,7 +250,7 @@ public sealed class ProfileTemplatesController : Controller
         {
             await _manager.UpdateAsync(template);
 
-            await _notifier.SuccessAsync(H["Profile template has been updated successfully."]);
+            await _notifier.SuccessAsync(H["Template has been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -244,7 +259,7 @@ public sealed class ProfileTemplatesController : Controller
     }
 
     [HttpPost]
-    [Admin("ai/profile-template/delete/{id}", "AIProfileTemplatesDelete")]
+    [Admin("ai/template/delete/{id}", "AITemplatesDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
@@ -261,11 +276,11 @@ public sealed class ProfileTemplatesController : Controller
 
         if (await _manager.DeleteAsync(template))
         {
-            await _notifier.SuccessAsync(H["Profile template has been deleted successfully."]);
+            await _notifier.SuccessAsync(H["Template has been deleted successfully."]);
         }
         else
         {
-            await _notifier.ErrorAsync(H["Unable to remove the profile template."]);
+            await _notifier.ErrorAsync(H["Unable to remove the template."]);
         }
 
         return RedirectToAction(nameof(Index));
@@ -274,7 +289,7 @@ public sealed class ProfileTemplatesController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
-    [Admin("ai/profile-templates", "AIProfileTemplatesIndex")]
+    [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<ActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfileTemplates))
@@ -306,11 +321,11 @@ public sealed class ProfileTemplatesController : Controller
                     }
                     if (counter == 0)
                     {
-                        await _notifier.WarningAsync(H["No profile templates were removed."]);
+                        await _notifier.WarningAsync(H["No templates were removed."]);
                     }
                     else
                     {
-                        await _notifier.SuccessAsync(H.Plural(counter, "1 profile template has been removed successfully.", "{0} profile templates have been removed successfully."));
+                        await _notifier.SuccessAsync(H.Plural(counter, "1 template has been removed successfully.", "{0} templates have been removed successfully."));
                     }
                     break;
                 default:
