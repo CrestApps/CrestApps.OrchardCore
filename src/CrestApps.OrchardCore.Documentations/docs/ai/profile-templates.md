@@ -543,7 +543,7 @@ public sealed class AIProfileTemplateMySettingsDisplayDriver : DisplayDriver<AIP
         {
             var settings = template.As<MySettings>();
             model.MySetting = settings.MySetting;
-        }).Location("Content:5#Capabilities:10")
+        }).Location("Content:10#Capabilities;5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

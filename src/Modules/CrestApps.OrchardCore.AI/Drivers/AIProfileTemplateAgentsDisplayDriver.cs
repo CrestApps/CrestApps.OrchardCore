@@ -19,14 +19,22 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
     {
-        var agents = await GetAvailableAgentsAsync();
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
+        var alwaysAvailableCount = allAgents
+            .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+
+        var onDemandAgents = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
         {
             var metadata = template.As<ProfileTemplateMetadata>();
             var selectedNames = metadata?.AgentNames ?? [];
 
-            model.Agents = agents.Select(agent => new ToolEntry
+            model.AlwaysAvailableAgentCount = alwaysAvailableCount;
+            model.Agents = onDemandAgents.Select(agent => new ToolEntry
             {
                 ItemId = agent.Name,
                 DisplayText = agent.DisplayText ?? agent.Name,
@@ -34,7 +42,7 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = selectedNames.Contains(agent.Name),
             }).OrderBy(entry => entry.DisplayText).ToArray();
 
-        }).Location("Content:8#Capabilities:5")
+        }).Location("Content:5#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
@@ -50,8 +58,14 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var selectedAgentNames = model.Agents?.Where(a => a.IsSelected).Select(a => a.ItemId);
-        var agents = await GetAvailableAgentsAsync();
-        var validAgentNames = agents.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
+        var validAgentNames = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Select(a => a.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var metadata = template.As<ProfileTemplateMetadata>();
 
@@ -69,21 +83,5 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         template.Put(metadata);
 
         return await EditAsync(template, context);
-    }
-
-    private async Task<AIProfile[]> GetAvailableAgentsAsync()
-    {
-        var agents = await _profileManager.GetAsync(AIProfileType.Agent);
-
-        if (agents is null)
-        {
-            return [];
-        }
-
-        // Exclude always-available agents from user selection.
-        return agents
-            .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
-            .ToArray();
     }
 }

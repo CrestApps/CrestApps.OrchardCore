@@ -137,9 +137,10 @@
                 return;
             }
 
+            const isChatType = profileType.value === 'Chat';
             const showInitialPrompt = addInitialPrompt.checked;
-            welcomeMessageGroup.classList.toggle('d-none', showInitialPrompt);
-            initialPromptGroup.classList.toggle('d-none', !showInitialPrompt);
+            welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
+            initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
         };
 
         profileType.addEventListener('change', function (e) {

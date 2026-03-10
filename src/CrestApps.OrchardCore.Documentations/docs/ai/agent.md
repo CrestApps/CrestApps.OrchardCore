@@ -66,6 +66,18 @@ The **Default Orchestrator** uses a multi-tier approach for managing tools and a
 - When MCP connections are present or the tool count exceeds the **planning threshold** (default: 100), the orchestrator uses a full LLM planning phase to determine which tools and agents to invoke.
 - For planning behavior, include the **Planner Agent** template in your profile's agent selection. The built-in planner is also available as a system-level fallback during orchestration.
 
+### Agent Context Injection
+
+When agents are configured for a profile, the `AgentOrchestrationContextBuilderHandler` automatically enriches the system message with descriptions of all available agents. This follows the industry-standard pattern (used by OpenAI, LangChain, CrewAI, and Semantic Kernel) of including capability descriptions in the system prompt so the model can make informed routing decisions.
+
+The handler:
+
+1. Loads all Agent profiles and filters by **availability** (always-available agents are always included; on-demand agents only when explicitly selected).
+2. Renders a lightweight context block listing each agent's name and description (~50 tokens per agent).
+3. Appends the block to the system message, giving the model awareness of available agents.
+
+This approach keeps token usage minimal while enabling the model to autonomously decide when to delegate to an agent. For simple prompts that don't need agents, the model naturally ignores the agent context.
+
 ### Agent Selection
 
 Agents appear as a **separate checkbox section** in the Capabilities tab of:

@@ -18,11 +18,19 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
-        var agents = await GetAvailableAgentsAsync();
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
+        var alwaysAvailableCount = allAgents
+            .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+
+        var onDemandAgents = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditChatInteractionAgentsViewModel>("ChatInteractionAgents_Edit", model =>
         {
-            model.Agents = agents.Select(agent => new ToolEntry
+            model.AlwaysAvailableAgentCount = alwaysAvailableCount;
+            model.Agents = onDemandAgents.Select(agent => new ToolEntry
             {
                 ItemId = agent.Name,
                 DisplayText = agent.DisplayText ?? agent.Name,
@@ -40,8 +48,14 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var selectedAgentNames = model.Agents?.Where(a => a.IsSelected).Select(a => a.ItemId);
-        var agents = await GetAvailableAgentsAsync();
-        var validAgentNames = agents.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
+        var validAgentNames = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Select(a => a.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         if (selectedAgentNames is null || !selectedAgentNames.Any())
         {
@@ -55,21 +69,5 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
         }
 
         return await EditAsync(interaction, context);
-    }
-
-    private async Task<AIProfile[]> GetAvailableAgentsAsync()
-    {
-        var agents = await _profileManager.GetAsync(AIProfileType.Agent);
-
-        if (agents is null)
-        {
-            return [];
-        }
-
-        // Exclude always-available agents from user selection.
-        return agents
-            .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
-            .ToArray();
     }
 }

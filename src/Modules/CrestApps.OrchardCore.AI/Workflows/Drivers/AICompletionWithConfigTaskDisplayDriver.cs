@@ -77,7 +77,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                     Description = entry.Value.Description,
                     IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Content:8#Capabilities:7");
+        }).Location("Content:7#Capabilities;8");
 
         return Combine(contents, tools);
     }

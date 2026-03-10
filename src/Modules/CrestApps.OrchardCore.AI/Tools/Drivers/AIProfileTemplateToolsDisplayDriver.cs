@@ -76,7 +76,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
                 IsSelected = selectedNames.Contains(entry.Key),
             }).OrderBy(entry => entry.DisplayText).ToArray());
 
-        }).Location("Content:8#Capabilities:7")
+        }).Location("Content:7#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
