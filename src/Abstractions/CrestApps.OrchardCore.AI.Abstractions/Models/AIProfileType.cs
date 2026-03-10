@@ -5,4 +5,5 @@ public enum AIProfileType
     Chat,
     Utility,
     TemplatePrompt,
+    Agent,
 }

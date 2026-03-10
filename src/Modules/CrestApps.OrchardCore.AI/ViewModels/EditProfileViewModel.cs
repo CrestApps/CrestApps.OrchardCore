@@ -16,6 +16,8 @@ public class EditProfileViewModel
 
     public string PromptSubject { get; set; }
 
+    public string Description { get; set; }
+
     public AIProfileType ProfileType { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }

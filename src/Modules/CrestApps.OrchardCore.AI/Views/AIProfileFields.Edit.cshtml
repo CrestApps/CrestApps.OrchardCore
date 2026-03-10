@@ -14,6 +14,15 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["A description of what this agent does. This is used by the AI model to determine when to invoke this agent."]</span>
+    </div>
+</div>
+
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
     <div class="@Orchard.GetEndClasses()">

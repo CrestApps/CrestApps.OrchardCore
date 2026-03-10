@@ -63,6 +63,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             model.WelcomeMessage = metadata.WelcomeMessage;
             model.PromptTemplate = metadata.PromptTemplate;
             model.PromptSubject = metadata.PromptSubject;
+            model.Description = metadata.Description;
             model.ProfileType = metadata.ProfileType;
             model.TitleType = metadata.TitleType;
 
@@ -71,6 +72,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
                 new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
                 new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
                 new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
+                new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
             ];
 
             model.TitleTypes =
@@ -122,6 +124,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         metadata.WelcomeMessage = profileFieldsModel.WelcomeMessage;
         metadata.PromptTemplate = profileFieldsModel.PromptTemplate;
         metadata.PromptSubject = profileFieldsModel.PromptSubject;
+        metadata.Description = profileFieldsModel.Description?.Trim();
         metadata.ProfileType = profileFieldsModel.ProfileType;
         metadata.TitleType = profileFieldsModel.TitleType;
 

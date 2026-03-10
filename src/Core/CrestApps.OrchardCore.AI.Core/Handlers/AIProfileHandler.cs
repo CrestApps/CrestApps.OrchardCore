@@ -74,6 +74,14 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
                 context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(AIProfile.PromptTemplate)]));
             }
         }
+
+        if (context.Model.Type == AIProfileType.Agent)
+        {
+            if (string.IsNullOrWhiteSpace(context.Model.Description))
+            {
+                context.Result.Fail(new ValidationResult(S["Description is required for agent profiles."], [nameof(AIProfile.Description)]));
+            }
+        }
     }
 
     public override Task InitializedAsync(InitializedContext<AIProfile> context)
@@ -118,6 +126,13 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         if (!string.IsNullOrEmpty(displayText))
         {
             profile.DisplayText = displayText;
+        }
+
+        var description = data[nameof(AIProfile.Description)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(description))
+        {
+            profile.Description = description;
         }
 
         var type = data[nameof(AIProfile.Type)]?.GetEnumValue<AIProfileType>();

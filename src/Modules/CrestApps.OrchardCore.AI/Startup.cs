@@ -76,6 +76,7 @@ public sealed class Startup : StartupBase
         // Add tools core functionality.
         services
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
@@ -99,6 +100,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();

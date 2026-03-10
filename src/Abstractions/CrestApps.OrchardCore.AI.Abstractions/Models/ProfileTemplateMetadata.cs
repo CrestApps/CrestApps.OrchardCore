@@ -81,4 +81,16 @@ public sealed class ProfileTemplateMetadata
     /// Gets or sets the tool names to associate with the profile.
     /// </summary>
     public string[] ToolNames { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the agent profile names to associate with the profile.
+    /// </summary>
+    public string[] AgentNames { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the description of the profile's capabilities.
+    /// Used for <see cref="AIProfileType.Agent"/> templates to describe
+    /// what the agent does.
+    /// </summary>
+    public string Description { get; set; }
 }

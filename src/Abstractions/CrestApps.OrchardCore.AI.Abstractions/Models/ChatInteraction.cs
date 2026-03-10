@@ -113,6 +113,13 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public IList<string> ToolNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the list of agent profile names to include.
+    /// Agents are AI profiles with <see cref="AIProfileType.Agent"/> type
+    /// that are dynamically exposed as tools for multi-agent orchestration.
+    /// </summary>
+    public IList<string> AgentNames { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the list of MCP connection IDs to use.
     /// </summary>
     public IList<string> McpConnectionIds { get; set; } = [];

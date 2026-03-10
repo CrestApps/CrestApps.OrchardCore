@@ -23,6 +23,13 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public AIProfileType Type { get; set; }
 
     /// <summary>
+    /// Gets or sets a description of the profile's capabilities.
+    /// Required for <see cref="AIProfileType.Agent"/> profiles, where it describes
+    /// what the agent can do so the orchestrator can decide when to invoke it.
+    /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
     /// Gets or sets the connection name to use for this profile.
     /// </summary>
     public string ConnectionName { get; set; }
@@ -112,6 +119,7 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             DisplayText = DisplayText,
             Source = Source,
             Type = Type,
+            Description = Description,
             OrchestratorName = OrchestratorName,
             ConnectionName = ConnectionName,
             ChatDeploymentId = ChatDeploymentId,

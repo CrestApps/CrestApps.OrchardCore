@@ -210,6 +210,18 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
 
+        if (props.TryGetValue(nameof(ProfileTemplateMetadata.AgentNames), out var agentNamesStr) &&
+            !string.IsNullOrWhiteSpace(agentNamesStr))
+        {
+            profileMetadata.AgentNames = agentNamesStr
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+
+        if (props.TryGetValue("ProfileDescription", out var profileDescription))
+        {
+            profileMetadata.Description = profileDescription;
+        }
+
         template.Put(profileMetadata);
 
         return template;

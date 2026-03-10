@@ -1,0 +1,111 @@
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model EditProfileAgentsViewModel
+
+@if (Model.Agents is null || Model.Agents.Length == 0)
+{
+    return;
+}
+
+<h4 class="border-bottom pb-2">@T["Agents"]</h4>
+
+<div class="mb-3">
+    @if (Model.Agents.Length > 5)
+    {
+        <div class="mb-3">
+            <input type="text"
+                   class="form-control form-control-sm agent-search-input"
+                   placeholder="@T["Search agents..."]"
+                   aria-label="@T["Search agents"]" />
+        </div>
+    }
+
+    <div class="form-check mb-2">
+        <input class="form-check-input agent-global-toggle"
+               type="checkbox"
+               id="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))" />
+        <label class="form-check-label fw-semibold"
+               for="selectAllAgents_@(ViewData.TemplateInfo.HtmlFieldPrefix?.Replace('.', '_'))">
+            @T["Select All Agents"]
+        </label>
+    </div>
+
+    <div class="agent-list-container ms-3">
+        @for (var i = 0; i < Model.Agents.Length; i++)
+        {
+            <div class="form-check agent-item"
+                 data-agent-name="@Model.Agents[i].DisplayText"
+                 data-agent-description="@Model.Agents[i].Description">
+                <input type="hidden" asp-for="Agents[i].ItemId" />
+                <input asp-for="Agents[i].IsSelected"
+                       type="checkbox"
+                       class="form-check-input agent-checkbox"
+                       id="agent_@i" />
+                <label class="form-check-label" asp-for="Agents[i].IsSelected">
+                    @Model.Agents[i].DisplayText
+                </label>
+                <span class="hint dashed">@Model.Agents[i].Description</span>
+            </div>
+        }
+    </div>
+
+    <div class="agent-no-results text-muted small d-none">@T["No agents match your search."]</div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.agent-list-container');
+        if (!container) return;
+
+        const searchInput = document.querySelector('.agent-search-input');
+        const globalToggle = document.querySelector('.agent-global-toggle');
+        const noResults = document.querySelector('.agent-no-results');
+
+        function updateGlobalToggle() {
+            const visible = [...container.querySelectorAll('.agent-checkbox')].filter(cb => !cb.closest('.agent-item')?.classList.contains('d-none'));
+            if (globalToggle) {
+                globalToggle.checked = visible.length > 0 && visible.every(cb => cb.checked);
+            }
+        }
+
+        // Global "Select All Agents" toggle.
+        if (globalToggle) {
+            globalToggle.addEventListener('change', function () {
+                const checked = this.checked;
+                container.querySelectorAll('.agent-checkbox').forEach(cb => {
+                    if (!cb.closest('.agent-item')?.classList.contains('d-none')) {
+                        cb.checked = checked;
+                    }
+                });
+            });
+        }
+
+        // Individual checkbox change.
+        container.querySelectorAll('.agent-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateGlobalToggle);
+        });
+
+        // Search filter.
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.trim().toLowerCase();
+                let anyVisible = false;
+
+                container.querySelectorAll('.agent-item').forEach(item => {
+                    const name = (item.dataset.agentName || '').toLowerCase();
+                    const desc = (item.dataset.agentDescription || '').toLowerCase();
+                    const match = !query || name.includes(query) || desc.includes(query);
+                    item.classList.toggle('d-none', !match);
+                    if (match) anyVisible = true;
+                });
+
+                if (noResults) noResults.classList.toggle('d-none', anyVisible);
+                updateGlobalToggle();
+            });
+        }
+
+        // Set initial toggle state.
+        updateGlobalToggle();
+    });
+</script>

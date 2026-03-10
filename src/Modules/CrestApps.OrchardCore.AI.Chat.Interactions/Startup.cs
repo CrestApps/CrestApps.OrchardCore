@@ -56,6 +56,7 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
 
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()

@@ -205,6 +205,7 @@ public static class ServiceCollectionExtensions
         // Register the tool registry and default providers.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, AgentToolRegistryProvider>());
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
 
         // Register the default orchestrator.

@@ -52,6 +52,12 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
                 context.Context.ToolNames = legacyMetadata.Names;
             }
         }
+
+        if (profile.TryGet<AgentInvocationMetadata>(out var agentInvocationMetadata)
+            && agentInvocationMetadata.Names is { Length: > 0 })
+        {
+            context.Context.AgentNames = agentInvocationMetadata.Names;
+        }
     }
 
     public Task BuiltAsync(AICompletionContextBuiltContext context)
