@@ -18,6 +18,15 @@
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
 </span>
 
-<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
-    <i class="text-secondary" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
-</span>
+@if (!string.IsNullOrEmpty(Model.Value.ConnectionName))
+{
+    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
+        <i class="text-secondary" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Contained Connection"]">
+        <i class="text-secondary" aria-hidden="true"></i>@T["Contained Connection"]
+    </span>
+}

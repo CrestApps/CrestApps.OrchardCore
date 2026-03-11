@@ -9,4 +9,6 @@ public interface IChatInteractionHubClient
     Task SettingsSaved(string itemId, string title);
 
     Task HistoryCleared(string itemId);
+
+    Task ReceiveTranscript(string itemId, string text, bool isFinal);
 }

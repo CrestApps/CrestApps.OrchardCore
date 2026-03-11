@@ -29,6 +29,34 @@ When an AI profile has a **Welcome Message** configured, it is displayed as plac
 
 If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
 
+### Speech-to-Text (Voice Input)
+
+AI Chat supports speech-to-text input, allowing users to speak their prompts using a microphone button instead of typing.
+
+#### Prerequisites
+
+- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
+- The AI provider must support the `ISpeechToTextClient` interface (e.g., OpenAI Whisper, Azure OpenAI Whisper).
+
+#### Enabling Speech-to-Text
+
+1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
+2. Check the **Enable speech-to-text** checkbox. This checkbox only appears when a default speech-to-text deployment is configured.
+3. Save the profile.
+
+Once enabled, a microphone button (🎤) appears in all chat UIs associated with that profile:
+- Admin session chat
+- Frontend widget
+- Admin widget
+
+#### How It Works
+
+1. Click the microphone button to start recording.
+2. Speak your prompt — the button shows a pulsing red stop icon while recording.
+3. Click the stop button to finish recording.
+4. The audio is streamed to the server via SignalR, transcribed using the configured speech-to-text model, and the transcribed text appears in the input field.
+5. You can then review or edit the text before sending it as a prompt.
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)

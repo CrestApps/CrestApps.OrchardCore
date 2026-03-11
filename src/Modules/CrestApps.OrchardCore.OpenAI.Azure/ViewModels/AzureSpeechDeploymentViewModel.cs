@@ -2,13 +2,13 @@ using CrestApps.Azure.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.AzureAIInference.ViewModels;
+namespace CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 
-public class AzureAIInferenceConnectionViewModel
+public class AzureSpeechDeploymentViewModel
 {
-    public string Endpoint { get; set; }
-
     public AzureAuthenticationType AuthenticationType { get; set; }
+
+    public string Endpoint { get; set; }
 
     public string ApiKey { get; set; }
 

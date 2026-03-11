@@ -352,6 +352,11 @@ window.openAIChatManager = function () {
                     thumbsUpTitle: config.thumbsUpTitle,
                     thumbsDownTitle: config.thumbsDownTitle,
                     copyTitle: config.copyTitle,
+                    isRecording: false,
+                    mediaRecorder: null,
+                    preRecordingPrompt: '',
+                    micButton: null,
+                    speechToTextEnabled: !!config.speechToTextEnabled,
                 };
             },
             methods: {
@@ -616,12 +621,26 @@ window.openAIChatManager = function () {
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+
+                        if (this.isRecording) {
+                            this.stopRecording();
+                        }
                     });
 
                     this.connection.on("MessageRated", (messageId, userRating) => {
                         var msg = this.messages.find(m => m.id === messageId);
                         if (msg) {
                             msg.userRating = userRating;
+                        }
+                    });
+
+                    this.connection.on("ReceiveTranscript", (sessionId, text, isFinal) => {
+                        if (text) {
+                            this.prompt = this.preRecordingPrompt + text;
+                            if (this.inputElement) {
+                                this.inputElement.value = this.prompt;
+                                this.inputElement.dispatchEvent(new Event('input'));
+                            }
                         }
                     });
 
@@ -771,7 +790,81 @@ window.openAIChatManager = function () {
                     this.inputElement.value = '';
                     this.prompt = '';
                 },
+                startRecording() {
+                    if (this.isRecording || !this.connection) {
+                        return;
+                    }
+
+                    navigator.mediaDevices.getUserMedia({ audio: true })
+                        .then(stream => {
+                            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                                ? 'audio/webm;codecs=opus'
+                                : 'audio/webm';
+
+                            this.mediaRecorder = new MediaRecorder(stream, {
+                                mimeType: mimeType,
+                                audioBitsPerSecond: 16000,
+                            });
+
+                            this.preRecordingPrompt = this.prompt;
+
+                            var subject = new signalR.Subject();
+                            var profileId = this.getProfileId();
+                            var sessionId = this.getSessionId() || '';
+
+                            this.mediaRecorder.addEventListener('dataavailable', async (e) => {
+                                if (e.data && e.data.size > 0) {
+                                    var data = await e.data.arrayBuffer();
+                                    var uint8Array = new Uint8Array(data);
+                                    var binaryString = uint8Array.reduce(function (str, byte) { return str + String.fromCharCode(byte); }, '');
+                                    var base64 = btoa(binaryString);
+                                    subject.next(base64);
+                                }
+                            });
+
+                            this.mediaRecorder.addEventListener('stop', () => {
+                                stream.getTracks().forEach(track => track.stop());
+                                subject.complete();
+                            });
+
                             this.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType);
+                            this.mediaRecorder.start(1000);
+                            this.isRecording = true;
+                            this.updateMicButton();
+                        })
+                        .catch(err => {
+                            console.error('Microphone access denied:', err);
+                        });
+                },
+                stopRecording() {
+                    if (!this.isRecording || !this.mediaRecorder) {
+                        return;
+                    }
+
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    this.updateMicButton();
+                },
+                toggleRecording() {
+                    if (this.isRecording) {
+                        this.stopRecording();
+                    } else {
+                        this.startRecording();
+                    }
+                },
+                updateMicButton() {
+                    if (!this.micButton) {
+                        return;
+                    }
+
+                    if (this.isRecording) {
+                        this.micButton.classList.add('stt-recording');
+                        this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                    } else {
+                        this.micButton.classList.remove('stt-recording');
+                        this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                    }
+                },
                 streamMessage(profileId, trimmedPrompt, sessionProfileId) {
 
                     if (this.stream) {
@@ -1067,6 +1160,7 @@ window.openAIChatManager = function () {
                     this.inputElement.setAttribute('data-session-id', sessionId || '');
                 },
                 resetSession() {
+                    this.stopRecording();
                     this.setSessionId('');
                     this.isSessionStarted = false;
                     this.sessionRating = null;
@@ -1246,6 +1340,17 @@ window.openAIChatManager = function () {
                                 }, 2000);
                             }
                         });
+                    }
+
+                    // Initialize speech-to-text microphone button.
+                    if (this.speechToTextEnabled && config.micButtonElementSelector) {
+                        this.micButton = document.querySelector(config.micButtonElementSelector);
+                        if (this.micButton) {
+                            this.micButton.style.display = '';
+                            this.micButton.addEventListener('click', () => {
+                                this.toggleRecording();
+                            });
+                        }
                     }
                 },
                 loadSession(sessionId) {

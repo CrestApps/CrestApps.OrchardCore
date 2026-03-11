@@ -19,6 +19,7 @@ using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
@@ -537,4 +538,185 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             writer.Complete();
         }
     }
+
+    public async Task SendAudioStream(string itemId, IAsyncEnumerable<string> audioChunks, string audioFormat = null)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+            return;
+        }
+
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var services = scope.ServiceProvider;
+                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var authorizationService = services.GetRequiredService<IAuthorizationService>();
+                var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+                var clientFactory = services.GetRequiredService<IAIClientFactory>();
+                var siteService = services.GetRequiredService<ISiteService>();
+
+                var interaction = await interactionManager.FindByIdAsync(itemId);
+
+                if (interaction is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                    return;
+                }
+
+                var httpContext = Context.GetHttpContext();
+
+                if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+                {
+                    await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+                    return;
+                }
+
+                var site = await siteService.GetSiteSettingsAsync();
+                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                {
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
+                    return;
+                }
+
+                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
+
+                if (deployment is null)
+                {
+                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
+                    return;
+                }
+
+#pragma warning disable MEAI001
+                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
+#pragma warning restore MEAI001
+
+                await StreamTranscriptionAsync(sttClient, itemId, audioChunks, audioFormat);
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                _logger.LogDebug("Audio transcription was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred while transcribing audio.");
+
+            try
+            {
+                await Clients.Caller.ReceiveError(S["An error occurred while transcribing the audio. Please try again."].Value);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write transcription error message.");
+            }
+        }
+    }
+
+#pragma warning disable MEAI001
+    private async Task StreamTranscriptionAsync(
+        ISpeechToTextClient sttClient,
+        string itemId,
+        IAsyncEnumerable<string> audioChunks,
+        string audioFormat)
+    {
+        var pipe = new System.IO.Pipelines.Pipe();
+
+        // Cancellation source to break the audio chunk loop when transcription fails.
+        using var errorCts = new CancellationTokenSource();
+
+        // Start streaming transcription in the background.
+        var transcriptionTask = Task.Run(async () =>
+        {
+            try
+            {
+                await using var readerStream = pipe.Reader.AsStream();
+                var committedText = new System.Text.StringBuilder();
+
+                var sttOptions = new SpeechToTextOptions
+                {
+                    SpeechLanguage = "en-US",
+                };
+
+                if (!string.IsNullOrWhiteSpace(audioFormat))
+                {
+                    sttOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
+                    sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
+                }
+
+                await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions))
+                {
+                    if (string.IsNullOrEmpty(update.Text))
+                    {
+                        continue;
+                    }
+
+                    var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
+
+                    if (isPartial)
+                    {
+                        var display = committedText.ToString() + update.Text;
+                        await Clients.Caller.ReceiveTranscript(itemId, display, false);
+                    }
+                    else
+                    {
+                        if (committedText.Length > 0)
+                        {
+                            committedText.Append(' ');
+                        }
+
+                        committedText.Append(update.Text);
+                        await Clients.Caller.ReceiveTranscript(itemId, committedText.ToString(), false);
+                    }
+                }
+
+                var finalText = committedText.ToString().TrimEnd();
+
+                if (!string.IsNullOrEmpty(finalText))
+                {
+                    await Clients.Caller.ReceiveTranscript(itemId, finalText, true);
+                }
+            }
+            catch (Exception)
+            {
+                // Cancel the audio chunk loop so the error surfaces immediately.
+                await errorCts.CancelAsync();
+                throw;
+            }
+        });
+
+        // Write audio chunks to the pipe as they arrive from SignalR.
+        try
+        {
+            await foreach (var base64Chunk in audioChunks.WithCancellation(errorCts.Token))
+            {
+                try
+                {
+                    var bytes = Convert.FromBase64String(base64Chunk);
+                    await pipe.Writer.WriteAsync(bytes, errorCts.Token);
+                }
+                catch (FormatException)
+                {
+                    continue;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
+        {
+            // Transcription failed; stop consuming audio chunks.
+        }
+
+        // Signal that all audio has been sent.
+        await pipe.Writer.CompleteAsync();
+
+        // Wait for the transcription to finish processing all audio.
+        await transcriptionTask;
+    }
+#pragma warning restore MEAI001
 }

@@ -52,6 +52,10 @@
         && Model.Profile.As<AnalyticsMetadata>().EnableSessionMetrics;
     var profileMetadata = Model.Profile?.As<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata?.InitialPrompt);
+    var speechToTextEnabled = Model.Profile != null
+        && Model.Profile.TryGetSettings<SpeechToTextProfileSettings>(out var sttSettings)
+        && sttSettings.EnableSpeechToText;
+    var micBtnHtmlId = $"{baseId}_MicBtn";
 }
 
 <div class="container-fluid d-flex flex-column h-100">
@@ -107,6 +111,9 @@
                 </div>
 
                 <div>
+                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
                     <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
@@ -138,6 +145,10 @@
 
 <style asp-name="AIChatApp" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
+@if (speechToTextEnabled)
+{
+    <style asp-name="SpeechToText" at="Head"></style>
+}
 <script asp-name="AIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="AIChatApp">
     openAIChatManager.initialize({
@@ -151,6 +162,8 @@
         initialPrompt: @(addInitialPrompt ? Html.Raw(JsonSerializer.Serialize(profileMetadata.InitialPrompt, JOptions.CamelCase)) : "null"),
         messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase)),
         metricsEnabled: @(metricsEnabled ? "true" : "false"),
+        speechToTextEnabled: @(speechToTextEnabled ? "true" : "false"),
+        micButtonElementSelector: '#@micBtnHtmlId',
         @if (sessionDocumentsEnabled)
         {
                                 @:sessionDocumentsEnabled: true,

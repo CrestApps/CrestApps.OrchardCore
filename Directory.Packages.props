@@ -91,6 +91,7 @@
     <!-- Microsoft Packages -->
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.8.0-beta.1" />
     <PackageVersion Include="Azure.Identity" Version="1.18.0" />
+    <PackageVersion Include="Microsoft.CognitiveServices.Speech" Version="1.48.2" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.3" />

@@ -87,5 +87,8 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 
     public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
         => new((ISpeechToTextClient)null);
+
+    public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
+        => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 }

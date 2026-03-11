@@ -27,6 +27,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
+- Speech-to-text — speak your prompts via a microphone button using a configured speech-to-text model
 
 ## Getting Started
 
@@ -50,6 +51,23 @@ Each chat interaction session is bound to an orchestrator that manages the execu
 - **Iterative execution** — managing multi-step tool-call loops
 
 The default orchestrator (`DefaultOrchestrator`) is our state-of-the-art orchestrator responsible for gluing together everything the model needs to do useful work: planning, tool selection and execution, document context, and multi-step reasoning loops. It is effectively the brain behind chat interactions and the overall model behavior, unless you select a different orchestrator (for example, the Copilot orchestrator).
+
+## Speech-to-Text (Voice Input)
+
+Chat Interactions supports speech-to-text input, allowing users to speak their prompts using a microphone button.
+
+### Prerequisites
+
+- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
+- The AI provider must support the `ISpeechToTextClient` interface (e.g., OpenAI Whisper, Azure OpenAI Whisper).
+
+### Enabling Speech-to-Text
+
+1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
+2. Check the **Enable speech-to-text in chat interactions** checkbox. This checkbox only appears when a default speech-to-text deployment is configured.
+3. Save the settings.
+
+Once enabled, a microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording, speak your prompt, then click the stop button. The transcribed text appears in the input field for review before sending.
 
 ## Related Features
 

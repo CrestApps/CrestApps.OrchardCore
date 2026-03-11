@@ -7,4 +7,6 @@ public class AzureConnectionMetadata
     public AzureAuthenticationType AuthenticationType { get; set; }
 
     public string ApiKey { get; set; }
+
+    public string IdentityId { get; set; }
 }

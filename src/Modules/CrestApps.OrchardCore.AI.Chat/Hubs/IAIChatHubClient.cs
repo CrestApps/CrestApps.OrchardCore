@@ -7,4 +7,6 @@ public interface IAIChatHubClient
     Task LoadSession(object data);
 
     Task MessageRated(string messageId, bool? userRating);
+
+    Task ReceiveTranscript(string sessionId, string text, bool isFinal);
 }

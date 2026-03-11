@@ -83,9 +83,11 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
+                SelectListGroup group = null;
+
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;

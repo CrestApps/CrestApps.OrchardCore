@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.AI;
@@ -54,5 +55,17 @@ public interface IAIClientFactory
     /// </returns>
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+    /// <summary>
+    /// Asynchronously creates an <see cref="ISpeechToTextClient"/> instance from a deployment that may use
+    /// either a connection reference or contained connection parameters.
+    /// </summary>
+    /// <param name="deployment">The AI deployment containing provider, connection, and model information.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ISpeechToTextClient"/>.
+    /// </returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 }

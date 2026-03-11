@@ -36,9 +36,27 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DefaultSpeechToTextDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Speech-to-Text Deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultSpeechToTextDeploymentId" asp-items="Model.SpeechToTextDeployments" class="form-select">
+        <select asp-for="DefaultSpeechToTextDeploymentId" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default model used for speech-to-text transcription."]</span>
     </div>
 </div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var sttSelect = document.getElementById('defaultSpeechToTextDeploymentId');
+        if (!sttSelect) return;
+
+        function toggleSttDependents() {
+            var hasValue = !!sttSelect.value;
+            var dependents = document.querySelectorAll('.speech-to-text-model-selector-dependent');
+            for (var i = 0; i < dependents.length; i++) {
+                dependents[i].style.display = hasValue ? '' : 'none';
+            }
+        }
+
+        sttSelect.addEventListener('change', toggleSttDependents);
+        toggleSttDependents();
+    });
+</script>

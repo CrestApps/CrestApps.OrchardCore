@@ -145,3 +145,31 @@ AI Profiles now use `ChatDeploymentId` and `UtilityDeploymentId` instead of the 
 Data sources and RAG are now implemented in the provider-agnostic `CrestApps.OrchardCore.AI.DataSources` module.
 
 See: [AI Data Sources](../data-sources/)
+
+## Azure Speech Deployments (Contained Connection)
+
+The **Azure Speech** deployment provider allows you to register [Azure AI Speech Service](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/) deployments as standalone, self-contained speech-to-text endpoints. Unlike standard Azure OpenAI deployments that reference a shared connection, Azure Speech deployments embed their own connection parameters (endpoint, authentication, credentials) directly within the deployment configuration.
+
+Under the hood, this provider uses the **Azure Speech REST API** (`/speech/recognition/conversation/cognitiveservices/v1`) for short audio recognition, which natively supports browser audio formats (WebM/Opus) without requiring any native SDK dependencies.
+
+This is useful when:
+
+- You want to use **Azure AI Speech Service** for speech-to-text rather than an Azure OpenAI Whisper deployment.
+- Your speech-to-text service is on a **separate Azure resource** from your chat models.
+- You want a **self-contained deployment** without creating a full provider connection.
+
+### How to Create an Azure Speech Deployment
+
+1. Navigate to **AI Services** → **Deployments** in the admin dashboard.
+2. Click **Add Deployment** and select **Azure Speech** as the provider.
+3. Enter a **deployment name** (a friendly identifier for this deployment).
+4. Set the **deployment type** to **SpeechToText**.
+5. Provide the **Endpoint URL** of your Azure Speech Service resource (e.g., `https://{region}.api.cognitive.microsoft.com/` or your custom domain endpoint).
+6. Select the **Authentication type**: `Default`, `Managed Identity`, or `API Key`.
+   - For **API Key**: provide the Speech Service subscription key.
+   - For **Managed Identity**: optionally provide a **user-assigned identity client ID**. If omitted, the system-assigned identity is used.
+7. Save the deployment.
+
+### Setting as Default Speech-to-Text Deployment
+
+After creating the deployment, go to **Configuration** → **Settings** → **AI** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.

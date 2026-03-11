@@ -31,6 +31,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .DefineStyle("AIChatWidget")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/ai-chat-widget.css")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("SpeechToText")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat/css/speech-to-text.min.css", "~/CrestApps.OrchardCore.AI.Chat/css/speech-to-text.css")
+            .SetVersion("1.0.0");
     }
 
     public void Configure(ResourceManagementOptions options)

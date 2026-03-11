@@ -14,7 +14,7 @@ public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
 
     protected override void Saving(AIDeployment deployment, DictionaryDocument<AIDeployment> document)
     {
-        if (document.Records.Values.Any(x => x.ProviderName == deployment.ProviderName && x.Type == deployment.Type && x.ConnectionName == deployment.ConnectionName && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.ItemId != deployment.ItemId))
+        if (document.Records.Values.Any(x => x.ProviderName == deployment.ProviderName && x.Type == deployment.Type && string.Equals(x.ConnectionName ?? string.Empty, deployment.ConnectionName ?? string.Empty, StringComparison.OrdinalIgnoreCase) && x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase) && x.ItemId != deployment.ItemId))
         {
             throw new InvalidOperationException("There is already another deployment with the same name.");
         }
@@ -24,7 +24,7 @@ public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
             var previousDefaults = document.Records.Values
                 .Where(x => x.IsDefault &&
                     x.Type == deployment.Type &&
-                    x.ConnectionName.Equals(deployment.ConnectionName, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.ConnectionName ?? string.Empty, deployment.ConnectionName ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
                     x.ItemId != deployment.ItemId);
 
             foreach (var previous in previousDefaults)

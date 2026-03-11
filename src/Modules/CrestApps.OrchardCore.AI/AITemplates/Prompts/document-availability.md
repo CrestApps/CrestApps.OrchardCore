@@ -19,7 +19,7 @@ If the documents contain relevant information, base your answer on that content.
 If the documents do not contain relevant information, use your general knowledge to answer instead.
 Do not refuse to answer simply because the documents lack the requested information.
 
-Available document tools:
+### Available document tools:
 {% for tool in tools %}
 - {{ tool.Name }}: {{ tool.Description }}
 {% endfor %}
@@ -28,7 +28,7 @@ The user has uploaded the following documents as supplementary context.
 {% endif %}
 
 {% if userSuppliedDocuments.size > 0 %}
-Available documents:
+### Available documents:
 {% for doc in userSuppliedDocuments %}
 - {{ doc.DocumentId }}: "{{ doc.FileName }}" ({{ doc.ContentType | default: "unknown" }}, {{ doc.FileSize }} bytes)
 {% endfor %}

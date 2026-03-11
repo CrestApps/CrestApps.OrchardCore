@@ -300,7 +300,12 @@ window.chatInteractionManager = function () {
           prompt: '',
           initialFieldValues: new Map(),
           settingsDirty: false,
-          saveSettingsTimeout: null
+          saveSettingsTimeout: null,
+          isRecording: false,
+          mediaRecorder: null,
+          preRecordingPrompt: '',
+          micButton: null,
+          speechToTextEnabled: !!config.speechToTextEnabled
         };
       },
       methods: {
@@ -345,6 +350,18 @@ window.chatInteractionManager = function () {
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    if (_this.isRecording) {
+                      _this.stopRecording();
+                    }
+                  });
+                  _this.connection.on("ReceiveTranscript", function (itemId, text, isFinal) {
+                    if (text) {
+                      _this.prompt = _this.preRecordingPrompt + text;
+                      if (_this.inputElement) {
+                        _this.inputElement.value = _this.prompt;
+                        _this.inputElement.dispatchEvent(new Event('input'));
+                      }
+                    }
                   });
                   _this.connection.on("HistoryCleared", function (itemId) {
                     // Clear messages and show placeholder
@@ -999,6 +1016,17 @@ window.chatInteractionManager = function () {
               }
             });
           }
+
+          // Initialize speech-to-text microphone button.
+          if (this.speechToTextEnabled && config.micButtonElementSelector) {
+            this.micButton = document.querySelector(config.micButtonElementSelector);
+            if (this.micButton) {
+              this.micButton.style.display = '';
+              this.micButton.addEventListener('click', function () {
+                _this7.toggleRecording();
+              });
+            }
+          }
         },
         loadInteraction: function loadInteraction(itemId) {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
@@ -1146,22 +1174,108 @@ window.chatInteractionManager = function () {
         },
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
+        },
+        startRecording: function startRecording() {
+          var _this9 = this;
+          if (this.isRecording || !this.connection) {
+            return;
+          }
+          navigator.mediaDevices.getUserMedia({
+            audio: true
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this9.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 16000
+            });
+            _this9.preRecordingPrompt = _this9.prompt;
+            var subject = new signalR.Subject();
+            var itemId = _this9.getItemId();
+            _this9.mediaRecorder.addEventListener('dataavailable', /*#__PURE__*/function () {
+              var _ref11 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(e) {
+                var data, uint8Array, binaryString, base64;
+                return _regenerator().w(function (_context3) {
+                  while (1) switch (_context3.n) {
+                    case 0:
+                      if (!(e.data && e.data.size > 0)) {
+                        _context3.n = 2;
+                        break;
+                      }
+                      _context3.n = 1;
+                      return e.data.arrayBuffer();
+                    case 1:
+                      data = _context3.v;
+                      uint8Array = new Uint8Array(data);
+                      binaryString = uint8Array.reduce(function (str, _byte) {
+                        return str + String.fromCharCode(_byte);
+                      }, '');
+                      base64 = btoa(binaryString);
+                      subject.next(base64);
+                    case 2:
+                      return _context3.a(2);
+                  }
+                }, _callee3);
+              }));
+              return function (_x) {
+                return _ref11.apply(this, arguments);
+              };
+            }());
+            _this9.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              subject.complete();
+            });
+            _this9.connection.send("SendAudioStream", itemId, subject, mimeType);
+            _this9.mediaRecorder.start(1000);
+            _this9.isRecording = true;
+            _this9.updateMicButton();
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+          });
+        },
+        stopRecording: function stopRecording() {
+          if (!this.isRecording || !this.mediaRecorder) {
+            return;
+          }
+          this.mediaRecorder.stop();
+          this.isRecording = false;
+          this.updateMicButton();
+        },
+        toggleRecording: function toggleRecording() {
+          if (this.isRecording) {
+            this.stopRecording();
+          } else {
+            this.startRecording();
+          }
+        },
+        updateMicButton: function updateMicButton() {
+          if (!this.micButton) {
+            return;
+          }
+          if (this.isRecording) {
+            this.micButton.classList.add('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+          } else {
+            this.micButton.classList.remove('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+          }
         }
       },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-          return _regenerator().w(function (_context3) {
-            while (1) switch (_context3.n) {
+        var _this0 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+          return _regenerator().w(function (_context4) {
+            while (1) switch (_context4.n) {
               case 0:
-                _context3.n = 1;
-                return _this9.startConnection();
+                _context4.n = 1;
+                return _this0.startConnection();
               case 1:
-                _this9.initializeApp();
+                _this0.initializeApp();
               case 2:
-                return _context3.a(2);
+                return _context4.a(2);
             }
-          }, _callee3);
+          }, _callee4);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

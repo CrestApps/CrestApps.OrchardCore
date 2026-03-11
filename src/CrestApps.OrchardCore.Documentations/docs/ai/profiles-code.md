@@ -41,6 +41,11 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
             IsOnAdminMenu = true,
         });
 
+        profile.WithSettings(new SpeechToTextProfileSettings
+        {
+            EnableSpeechToText = true,
+        });
+
         profile.Put(new AIProfileMetadata
         {
             SystemMessage = "some system message",

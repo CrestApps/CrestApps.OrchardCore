@@ -3,7 +3,7 @@
 
 @model EditDeploymentViewModel
 
-@if (Model.Connections == null || Model.Connections.Count == 0)
+@if (!Model.HasContainedConnection && (Model.Connections == null || Model.Connections.Count == 0))
 {
     <div class="alert alert-danger" role="alert">
         @T["There are no configured connection."]
@@ -37,14 +37,17 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
-        <span asp-validation-for="ConnectionName" class="text-danger"></span>
-        <span class="hint">@T["Connection name to use for this deployment."]</span>
+@if (!Model.HasContainedConnection)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
+            <span asp-validation-for="ConnectionName" class="text-danger"></span>
+            <span class="hint">@T["Connection name to use for this deployment."]</span>
+        </div>
     </div>
-</div>
+}
 
 <div class="@Orchard.GetWrapperClasses()">
     <div class="@Orchard.GetEndClasses(true)">

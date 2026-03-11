@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
@@ -8,13 +10,16 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
 {
     private readonly AIProviderOptions _options;
     private readonly IEnumerable<IAIClientProvider> _clientProviders;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public DefaultAIClientFactory(
         IEnumerable<IAIClientProvider> clientProviders,
+        IDataProtectionProvider dataProtectionProvider,
         IOptions<AIProviderOptions> options)
     {
         _options = options.Value;
         _clientProviders = clientProviders;
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName = null)
@@ -131,5 +136,57 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         }
 
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{providerName}'.");
+    }
+
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+    {
+        ArgumentNullException.ThrowIfNull(deployment);
+        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
+
+        // When the deployment has a connection reference, use the standard path.
+        if (!string.IsNullOrEmpty(deployment.ConnectionName))
+        {
+            return CreateSpeechToTextClientAsync(deployment.ProviderName, deployment.ConnectionName, deployment.Name);
+        }
+
+        // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
+        var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        if (deployment.Properties != null)
+        {
+            foreach (var property in deployment.Properties)
+            {
+                values[property.Key] = property.Value switch
+                {
+                    JsonValue jsonValue when jsonValue.TryGetValue<string>(out var s) => s,
+                    JsonValue jsonValue when jsonValue.TryGetValue<bool>(out var b) => b,
+                    JsonValue jsonValue when jsonValue.TryGetValue<int>(out var i) => i,
+                    _ => property.Value?.ToString(),
+                };
+            }
+        }
+
+        // Decrypt any protected fields (e.g. ApiKey) that were encrypted when saved.
+        if (values.TryGetValue("ApiKey", out var rawKey) && rawKey is string encryptedKey && !string.IsNullOrWhiteSpace(encryptedKey))
+        {
+            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+            values["ApiKey"] = protector.Unprotect(encryptedKey);
+        }
+
+        var connectionEntry = new AIProviderConnectionEntry(values);
+
+        foreach (var clientProvider in _clientProviders)
+        {
+            if (!clientProvider.CanHandle(deployment.ProviderName))
+            {
+                continue;
+            }
+
+            return clientProvider.GetSpeechToTextClientAsync(connectionEntry, deployment.Name);
+        }
+
+        throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
     }
 }

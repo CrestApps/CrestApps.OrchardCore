@@ -55,6 +55,9 @@
         && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
     var profileMetadata = profile.As<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
+    var speechToTextEnabled = profile.TryGetSettings<SpeechToTextProfileSettings>(out var sttSettings)
+        && sttSettings.EnableSpeechToText;
+    var micBtnHtmlId = $"{baseId}_MicBtn";
 }
 
 <!-- Toggle Button (green circle ring with robot icon) -->
@@ -111,6 +114,13 @@
                       placeholder="@T["Message..."]"
                       rows="1"
                       aria-label="@T["Message"]"></textarea>
+            <button class="stt-mic-btn ai-admin-widget-mic-btn"
+                    type="button"
+                    id="@micBtnHtmlId"
+                    title="@T["Voice input"]"
+                    style="display: none;">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
             <button class="ai-admin-widget-send-btn"
                     id="@buttonHtmlId"
                     disabled
@@ -150,6 +160,10 @@
 <style asp-name="AIChatWidget" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 <style asp-name="AIChatApp" at="Head"></style>
+@if (speechToTextEnabled)
+{
+    <style asp-name="SpeechToText" at="Head"></style>
+}
 <script asp-name="AIChatWidget" at="Foot"></script>
 <script asp-name="AIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="AIChatWidget, AIChatApp">
@@ -175,6 +189,8 @@
             initialPrompt: @(addInitialPrompt ? Html.Raw(JsonSerializer.Serialize(profileMetadata.InitialPrompt, JOptions.CamelCase)) : "null"),
             messages: [],
             metricsEnabled: @(metricsEnabled ? "true" : "false"),
+            speechToTextEnabled: @(speechToTextEnabled ? "true" : "false"),
+            micButtonElementSelector: '#@micBtnHtmlId',
             @if (sessionDocumentsEnabled)
             {
                                                     @:sessionDocumentsEnabled: true,
