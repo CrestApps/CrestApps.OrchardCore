@@ -771,6 +771,7 @@ window.openAIChatManager = function () {
                     this.inputElement.value = '';
                     this.prompt = '';
                 },
+                            this.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType);
                 streamMessage(profileId, trimmedPrompt, sessionProfileId) {
 
                     if (this.stream) {
