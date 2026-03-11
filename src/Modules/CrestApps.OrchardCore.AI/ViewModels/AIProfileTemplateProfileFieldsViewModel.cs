@@ -12,7 +12,11 @@ public class AIProfileTemplateProfileFieldsViewModel
 
     public string PromptSubject { get; set; }
 
+    public string Description { get; set; }
+
     public AIProfileType? ProfileType { get; set; }
+
+    public AgentAvailability? AgentAvailability { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }
 
@@ -21,4 +25,7 @@ public class AIProfileTemplateProfileFieldsViewModel
 
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> AvailabilityTypes { get; set; }
 }

@@ -47,7 +47,7 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Content:5#Capabilities:3")
+        }).Location("Content:3#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

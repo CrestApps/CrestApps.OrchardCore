@@ -24,7 +24,7 @@ This module is built on top of the standalone **CrestApps.AI.Prompting** library
 - **Metadata** — Add title, description, category, and custom properties to each prompt via front matter.
 - **JSON Compaction** — Fenced ` ```json ``` ` blocks are automatically compacted during parsing to reduce token usage while keeping source files readable.
 - **Caching** — Parsed templates are cached in memory and invalidated when the tenant shell is released or the application restarts.
-- **Composition** — Merge multiple prompts together, use the `AITemplateBuilder` for efficient assembly, or include one prompt inside another using the `include_prompt` filter.
+- **Composition** — Merge multiple prompts together, use the `AITemplateBuilder` for efficient assembly, or compose templates with shared scope using the `render_ai_template` tag.
 - **Feature-Aware** — In Orchard Core, prompts are automatically tied to module features and only available when those features are enabled.
 - **Extensible Parsers** — Markdown front matter parsing ships by default; add YAML, JSON, or other formats by implementing `IAITemplateParser`.
 - **Extensible** — Register prompts via code, files, or custom providers.
@@ -194,17 +194,45 @@ You are a planning assistant.
 {% endif %}
 ```
 
-### Including Other Prompts
+### Including Other Templates
 
-Use the `include_prompt` filter to compose prompts:
+Use the `render_ai_template` tag to render another template while sharing the current Liquid scope:
 
 ```liquid
-{{ "use-markdown-syntax" | include_prompt }}
-
-You are a helpful assistant.
+{% render_ai_template "template-id" %}
 ```
 
-This renders the `use-markdown-syntax` prompt template inline.
+The sub-template is rendered in a **child scope** that inherits all variables from the calling template. This makes it ideal for template composition where the included template needs access to parent variables.
+
+**Example — Reusing an agent listing template:**
+
+```liquid
+{% assign agents = tools | where: "Source", "Agent" %}
+{% if agents.size > 0 %}
+{% render_ai_template "agent-availability" %}
+{% endif %}
+```
+
+In this example, the `agent-availability` template can access the `agents` variable defined in the parent template.
+
+**Key features:**
+
+- Variables from the parent scope are inherited by the sub-template.
+- Variables defined in the sub-template do not leak back to the parent.
+- A recursion guard prevents infinite nesting (max depth: 10).
+
+**Dynamic template IDs:**
+
+The template ID can be a variable:
+
+```liquid
+{% assign templateName = "my-custom-template" %}
+{% render_ai_template templateName %}
+```
+
+:::tip
+The `render_ai_template` tag is available in the standalone **CrestApps.AI.Prompting** library and can be used in any .NET project — not just Orchard Core.
+:::
 
 ---
 

@@ -482,6 +482,25 @@ public sealed class ProfilesController : Controller
             profile.Put(toolMetadata);
         }
 
+        if (templateMetadata.AgentNames != null && templateMetadata.AgentNames.Length > 0)
+        {
+            var agentMetadata = profile.As<AgentInvocationMetadata>();
+            agentMetadata.Names = [.. templateMetadata.AgentNames];
+            profile.Put(agentMetadata);
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.Description))
+        {
+            profile.Description = templateMetadata.Description;
+        }
+
+        if (templateMetadata.AgentAvailability.HasValue)
+        {
+            var agentMeta = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            agentMeta.Availability = templateMetadata.AgentAvailability.Value;
+            profile.Put(agentMeta);
+        }
+
         // Clone documents from the template to the profile when the Documents feature is enabled.
         await CloneTemplateDocumentsAsync(profile, template);
     }

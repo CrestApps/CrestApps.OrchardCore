@@ -67,6 +67,16 @@ public static class DictionaryExtensions
         => entry.GetStringValue("UtilityDeploymentName", false)
         ?? entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
+    public static string GetSpeechToTextDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("SpeechToTextDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultSpeechToTextDeploymentName", throwException);
+
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
+    public static string GetSpeechToTextDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("SpeechToTextDeploymentName", false)
+        ?? entry.GetStringValue("DefaultSpeechToTextDeploymentName", throwException);
+
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {
         if (entry.TryGetValue(key, out var value))

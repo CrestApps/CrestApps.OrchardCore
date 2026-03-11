@@ -9,7 +9,7 @@ namespace CrestApps.AI.Prompting.Rendering;
 /// </summary>
 public sealed class FluidAITemplateEngine : IAITemplateEngine
 {
-    private static readonly FluidParser _parser = new();
+    private static readonly FluidParser _parser = CreateParser();
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FluidAITemplateEngine> _logger;
@@ -40,10 +40,10 @@ public sealed class FluidAITemplateEngine : IAITemplateEngine
         {
             MemberAccessStrategy = new UnsafeMemberAccessStrategy()
         };
-        options.Filters.AddFilter(IncludeTemplateFilter.FilterName, IncludeTemplateFilter.IncludePromptAsync);
 
         var context = new TemplateContext(options);
         context.AmbientValues["ServiceProvider"] = _serviceProvider;
+        context.AmbientValues[RenderAITemplateTag.AmbientFluidParserKey] = _parser;
 
         if (arguments != null)
         {
@@ -119,5 +119,16 @@ public sealed class FluidAITemplateEngine : IAITemplateEngine
         }
 
         return string.Join('\n', builder);
+    }
+
+    private static FluidParser CreateParser()
+    {
+        var parser = new FluidParser();
+
+        parser.RegisterExpressionTag(
+            RenderAITemplateTag.TagName,
+            RenderAITemplateTag.WriteToAsync);
+
+        return parser;
     }
 }

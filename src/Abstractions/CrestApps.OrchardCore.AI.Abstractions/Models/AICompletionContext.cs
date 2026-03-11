@@ -28,6 +28,8 @@ public class AICompletionContext
 
     public string[] ToolNames { get; set; }
 
+    public string[] AgentNames { get; set; }
+
     public string[] McpConnectionIds { get; set; }
 
     public string DataSourceId { get; set; }

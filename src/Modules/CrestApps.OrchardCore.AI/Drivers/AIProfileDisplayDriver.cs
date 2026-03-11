@@ -116,13 +116,16 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         var fieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", model =>
         {
             var metadata = profile.As<AIProfileMetadata>();
+            var agentMetadata = profile.As<AgentMetadata>();
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
+            model.Description = profile.Description;
             model.AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt);
             model.InitialPrompt = metadata.InitialPrompt;
             model.TitleType = profile.TitleType;
             model.ProfileType = profile.Type;
+            model.AgentAvailability = agentMetadata?.Availability ?? AgentAvailability.OnDemand;
             model.TitleTypes =
             [
                 new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
@@ -134,6 +137,13 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
                 new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
                 new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
+                new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
+            ];
+
+            model.AvailabilityTypes =
+            [
+                new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
+                new SelectListItem(S["Always available"], nameof(AgentAvailability.AlwaysAvailable)),
             ];
         }).Location("Content:5");
 
@@ -213,10 +223,23 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             }
         }
 
+        if (model.ProfileType == AIProfileType.Agent)
+        {
+            if (string.IsNullOrEmpty(model.Description?.Trim()))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Description), S["Description is required for agent profiles."]);
+            }
+
+            var agentMetadata = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            agentMetadata.Availability = model.AgentAvailability;
+            profile.Put(agentMetadata);
+        }
+
         profile.DisplayText = mainFieldsModel.DisplayText;
         profile.PromptSubject = model.PromptSubject?.Trim();
         profile.PromptTemplate = model.PromptTemplate;
         profile.WelcomeMessage = model.WelcomeMessage;
+        profile.Description = model.Description?.Trim();
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.ConnectionName = connectionModel.ConnectionName;

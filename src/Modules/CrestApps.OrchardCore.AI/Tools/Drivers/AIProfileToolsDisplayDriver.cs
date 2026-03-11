@@ -79,7 +79,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
 
-        }).Location("Content:8#Capabilities:5");
+        }).Location("Content:7#Capabilities;8");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

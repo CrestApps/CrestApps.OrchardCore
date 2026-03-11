@@ -28,7 +28,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
 
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
-        }).Location("Content:10#Data Processing & Metrics:1")
+        }).Location("Content:1#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

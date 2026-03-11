@@ -73,7 +73,7 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
                         IsSelected = selectedToolNames.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
             }
-        }).Location("Content:10#Data Processing & Metrics:10")
+        }).Location("Content:10#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

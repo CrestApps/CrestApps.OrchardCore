@@ -16,7 +16,11 @@ public class EditProfileViewModel
 
     public string PromptSubject { get; set; }
 
+    public string Description { get; set; }
+
     public AIProfileType ProfileType { get; set; }
+
+    public AgentAvailability AgentAvailability { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }
 
@@ -25,4 +29,7 @@ public class EditProfileViewModel
 
     [BindNever]
     public IList<SelectListItem> ProfileTypes { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> AvailabilityTypes { get; set; }
 }

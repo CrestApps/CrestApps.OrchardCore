@@ -19,6 +19,34 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="Description" class="@Orchard.GetLabelClasses()">@T["Description"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+        <span class="hint">@T["A description of what this agent does. This is used by the AI model to determine when to invoke this agent."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-agent")@(Model.ProfileType == AIProfileType.Agent ? string.Empty : " d-none")">
+    <label asp-for="AgentAvailability" class="@Orchard.GetLabelClasses()">@T["Availability"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="AgentAvailability" class="form-select">
+            <option value="">@T["Not set"]</option>
+            @foreach (var item in Model.AvailabilityTypes)
+            {
+                <option value="@item.Value" selected="@(item.Value == Model.AgentAvailability?.ToString())">@item.Text</option>
+            }
+        </select>
+        <span asp-validation-for="AgentAvailability" class="text-danger"></span>
+        <span class="hint">@T["Controls how this agent is included in AI requests. On demand agents are only included when matched by relevance scoring. Always available agents are automatically included in every request."]</span>
+        <div id="templateAgentAvailabilityWarning" class="alert alert-warning mt-2@(Model.AgentAvailability == AgentAvailability.AlwaysAvailable ? string.Empty : " d-none")">
+            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+            @T["Always available agents are included in every AI request, which increases token usage and cost. Use this setting only for agents that must always be accessible to the AI model."]
+        </div>
+    </div>
+</div>
+
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
     <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
     <div class="@Orchard.GetEndClasses()">
@@ -96,6 +124,8 @@
         }
 
         const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+        const templateAgentAvailability = document.getElementById('@Html.IdFor(x => x.AgentAvailability)');
+        const templateAgentAvailabilityWarning = document.getElementById('templateAgentAvailabilityWarning');
 
         profileType.addEventListener('change', function (e) {
             let value = e.target.value;
@@ -112,6 +142,12 @@
                 }
             }
         });
+
+        if (templateAgentAvailability && templateAgentAvailabilityWarning) {
+            templateAgentAvailability.addEventListener('change', function () {
+                templateAgentAvailabilityWarning.classList.toggle('d-none', this.value !== 'AlwaysAvailable');
+            });
+        }
 
         profileType.dispatchEvent(new Event('change'));
         initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));

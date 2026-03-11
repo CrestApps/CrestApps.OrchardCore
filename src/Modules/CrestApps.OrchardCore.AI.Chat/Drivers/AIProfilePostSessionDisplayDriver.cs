@@ -74,7 +74,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                         IsSelected = selectedToolNames.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
             }
-        }).Location("Content:10#Data Processing & Metrics:10");
+        }).Location("Content:10#Data Processing & Metrics;10");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

@@ -24,6 +24,9 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
     [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string UtilityDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
+    public string SpeechToTextDeploymentName { get; set; }
+
     public bool IsDefault { get; set; }
 
     [JsonIgnore]
@@ -53,6 +56,7 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             EmbeddingDeploymentName = EmbeddingDeploymentName,
             ImagesDeploymentName = ImagesDeploymentName,
             UtilityDeploymentName = UtilityDeploymentName,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
 #pragma warning restore CS0618
             CreatedUtc = CreatedUtc,
             Author = Author,

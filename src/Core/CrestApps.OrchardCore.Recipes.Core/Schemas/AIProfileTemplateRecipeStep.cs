@@ -29,7 +29,7 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
                 ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Template description.")),
                 ("Category", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Grouping category.")),
                 ("IsListable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the template appears in the selection dropdown.")),
-                ("ProfileType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt").Description("The profile type.")),
+                ("ProfileType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt", "Agent").Description("The profile type.")),
                 ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("AI provider connection name.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name.")),
                 ("SystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("System prompt for the AI.")),
@@ -44,6 +44,8 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
                 ("MaxOutputTokens", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Maximum tokens in response.")),
                 ("PastMessagesCount", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Number of history messages to include.")),
                 ("ToolNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("AI tool names.")),
+                ("AgentNames", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Agent profile names to include.")),
+                ("ProfileDescription", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Description of the profile's capabilities (used for Agent type).")),
                 ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Extended template properties.")))
             .Required("Name", "DisplayText")
             .AdditionalProperties(true);

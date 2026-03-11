@@ -196,6 +196,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
 
+        // Register the agent context handler that enriches the system message with available agent descriptions.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AgentOrchestrationContextBuilderHandler>());
+
         // Register the preemptive search query provider (shared by DataSource and Document RAG handlers).
         services.AddScoped<PreemptiveSearchQueryProvider>();
 
@@ -205,6 +208,7 @@ public static class ServiceCollectionExtensions
         // Register the tool registry and default providers.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, AgentToolRegistryProvider>());
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
 
         // Register the default orchestrator.

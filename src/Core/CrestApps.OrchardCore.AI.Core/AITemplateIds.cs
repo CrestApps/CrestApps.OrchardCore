@@ -47,5 +47,7 @@ public static class AITemplateIds
 
     public const string DocumentAvailability = "document-availability";
 
+    public const string AgentAvailability = "agent-availability";
+
     public const string TabularBatchProcessing = "tabular-batch-processing";
 }

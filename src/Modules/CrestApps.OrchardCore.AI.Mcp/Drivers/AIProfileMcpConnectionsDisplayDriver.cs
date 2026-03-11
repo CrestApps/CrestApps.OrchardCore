@@ -46,7 +46,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
             }).OrderBy(entry => entry.DisplayText)
             .ToArray();
 
-        }).Location("Content:5#Capabilities:3");
+        }).Location("Content:3#Capabilities;8");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
