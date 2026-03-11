@@ -1191,40 +1191,38 @@ window.chatInteractionManager = function () {
             _this9.preRecordingPrompt = _this9.prompt;
             var subject = new signalR.Subject();
             var itemId = _this9.getItemId();
-            _this9.mediaRecorder.addEventListener('dataavailable', /*#__PURE__*/function () {
-              var _ref11 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3(e) {
-                var data, uint8Array, binaryString, base64;
-                return _regenerator().w(function (_context3) {
-                  while (1) switch (_context3.n) {
-                    case 0:
-                      if (!(e.data && e.data.size > 0)) {
-                        _context3.n = 2;
-                        break;
-                      }
-                      _context3.n = 1;
-                      return e.data.arrayBuffer();
-                    case 1:
-                      data = _context3.v;
-                      uint8Array = new Uint8Array(data);
-                      binaryString = uint8Array.reduce(function (str, _byte) {
-                        return str + String.fromCharCode(_byte);
-                      }, '');
-                      base64 = btoa(binaryString);
-                      subject.next(base64);
-                    case 2:
-                      return _context3.a(2);
-                  }
-                }, _callee3);
-              }));
-              return function (_x) {
-                return _ref11.apply(this, arguments);
-              };
-            }());
+            var pendingChunk = Promise.resolve();
+            _this9.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context3) {
+                    while (1) switch (_context3.n) {
+                      case 0:
+                        _context3.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context3.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte) {
+                          return str + String.fromCharCode(_byte);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        subject.next(base64);
+                      case 2:
+                        return _context3.a(2);
+                    }
+                  }, _callee3);
+                })));
+              }
+            });
             _this9.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
-              subject.complete();
+              pendingChunk.then(function () {
+                return subject.complete();
+              });
             });
             _this9.connection.send("SendAudioStream", itemId, subject, mimeType);
             _this9.mediaRecorder.start(1000);

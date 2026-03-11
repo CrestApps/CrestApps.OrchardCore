@@ -150,7 +150,7 @@ See: [AI Data Sources](../data-sources/)
 
 The **Azure Speech** deployment provider allows you to register [Azure AI Speech Service](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/) deployments as standalone, self-contained speech-to-text endpoints. Unlike standard Azure OpenAI deployments that reference a shared connection, Azure Speech deployments embed their own connection parameters (endpoint, authentication, credentials) directly within the deployment configuration.
 
-Under the hood, this provider uses the **Azure Speech REST API** (`/speech/recognition/conversation/cognitiveservices/v1`) for short audio recognition, which natively supports browser audio formats (WebM/Opus) without requiring any native SDK dependencies.
+Under the hood, this provider uses the [Azure Speech SDK for .NET](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech) (`Microsoft.CognitiveServices.Speech`) with continuous recognition for real-time streaming transcription. The SDK automatically handles audio format detection, WebSocket connections, and supports multiple authentication methods (API Key, Managed Identity, Default Azure credentials).
 
 This is useful when:
 
@@ -164,11 +164,15 @@ This is useful when:
 2. Click **Add Deployment** and select **Azure Speech** as the provider.
 3. Enter a **deployment name** (a friendly identifier for this deployment).
 4. Set the **deployment type** to **SpeechToText**.
-5. Provide the **Endpoint URL** of your Azure Speech Service resource (e.g., `https://{region}.api.cognitive.microsoft.com/` or your custom domain endpoint).
+5. Provide the **Endpoint URL** of your Azure Speech Service resource (e.g., `https://{region}.stt.speech.microsoft.com/`, `https://{region}.api.cognitive.microsoft.com/`, or your custom domain endpoint). The region is automatically extracted from the endpoint to configure the Speech SDK.
 6. Select the **Authentication type**: `Default`, `Managed Identity`, or `API Key`.
    - For **API Key**: provide the Speech Service subscription key.
    - For **Managed Identity**: optionally provide a **user-assigned identity client ID**. If omitted, the system-assigned identity is used.
 7. Save the deployment.
+
+:::tip
+You can find your Speech Service endpoint and API key in the [Azure AI Foundry portal](https://ai.azure.com/) or the Azure Portal under your Speech Service resource's **Keys and Endpoint** section.
+:::
 
 ### Setting as Default Speech-to-Text Deployment
 

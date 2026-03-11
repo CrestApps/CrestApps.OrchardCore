@@ -35,8 +35,8 @@ AI Chat supports speech-to-text input, allowing users to speak their prompts usi
 
 #### Prerequisites
 
-- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
-- The AI provider must support the `ISpeechToTextClient` interface (e.g., OpenAI Whisper, Azure OpenAI Whisper).
+- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**. This can be any deployment that supports the `ISpeechToTextClient` interface, such as an Azure Speech contained-connection deployment or an OpenAI Whisper deployment.
+- The AI provider must support the `ISpeechToTextClient` interface.
 
 #### Enabling Speech-to-Text
 
@@ -53,9 +53,14 @@ Once enabled, a microphone button (🎤) appears in all chat UIs associated with
 
 1. Click the microphone button to start recording.
 2. Speak your prompt — the button shows a pulsing red stop icon while recording.
-3. Click the stop button to finish recording.
-4. The audio is streamed to the server via SignalR, transcribed using the configured speech-to-text model, and the transcribed text appears in the input field.
-5. You can then review or edit the text before sending it as a prompt.
+3. Audio is streamed to the server in real-time via SignalR as the user speaks (chunks are sent approximately every second).
+4. The server transcribes audio using the configured speech-to-text provider and streams transcript text back to the UI as it becomes available — you see words appear while still speaking.
+5. Click the stop button (or the transcription finishes automatically when you stop speaking).
+6. The complete transcribed text appears in the input field for review or editing before sending as a prompt.
+
+:::info
+If the speech-to-text service encounters an error (e.g., authentication failure), the error is reported immediately and the recording stops automatically — the microphone button resets so you can try again.
+:::
 
 ### Admin Chat User Interface
 

@@ -25,14 +25,14 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
         => string.Equals(AzureOpenAIConstants.AzureSpeechProviderName, providerName, StringComparison.OrdinalIgnoreCase);
 
     public ValueTask<IChatClient> GetChatClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
-        => throw new NotSupportedException("Azure Speech deployments only support speech-to-text.");
+        => throw new NotSupportedException("Azure AI Speech deployments only support speech-to-text.");
 
     public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
-        => throw new NotSupportedException("Azure Speech deployments only support speech-to-text.");
+        => throw new NotSupportedException("Azure AI Speech deployments only support speech-to-text.");
 
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
-        => throw new NotSupportedException("Azure Speech deployments only support speech-to-text.");
+        => throw new NotSupportedException("Azure AI Speech deployments only support speech-to-text.");
 
     public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {
@@ -42,14 +42,14 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
         var identityId = connection.GetIdentityId();
         var logger = _loggerFactory.CreateLogger<AzureSpeechServiceSpeechToTextClient>();
 
-        ISpeechToTextClient client = new AzureSpeechServiceSpeechToTextClient(
+        var client = new AzureSpeechServiceSpeechToTextClient(
             endpoint,
             authType,
             apiKey,
             identityId,
             logger);
 
-        return ValueTask.FromResult(client);
+        return ValueTask.FromResult<ISpeechToTextClient>(client);
     }
 #pragma warning restore MEAI001
 }

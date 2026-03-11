@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Threading.Channels;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -687,13 +688,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
             : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 
-    public async Task SendAudioStream(string profileId, string sessionId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, CancellationToken cancellationToken = default)
+    public async Task SendAudioStream(string profileId, string sessionId, IAsyncEnumerable<string> audioChunks, string audioFormat = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
             await Clients.Caller.ReceiveError(S["{0} is required.", nameof(profileId)].Value);
             return;
         }
+
+        var cancellationToken = Context.ConnectionAborted;
 
         try
         {
@@ -748,7 +751,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         }
         catch (Exception ex)
         {
-            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            if (ex is OperationCanceledException)
             {
                 _logger.LogDebug("Audio transcription was cancelled.");
                 return;
@@ -775,70 +778,13 @@ public class AIChatHub : Hub<IAIChatHubClient>
         string audioFormat,
         CancellationToken cancellationToken)
     {
-        var pipe = new System.IO.Pipelines.Pipe();
+        var pipe = new Pipe();
 
-        // Linked cancellation source to break the audio chunk loop when transcription fails.
+        // Cancellation source to break the audio chunk loop when transcription fails.
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Start streaming transcription in the background.
-        var transcriptionTask = Task.Run(async () =>
-        {
-            try
-            {
-                await using var readerStream = pipe.Reader.AsStream();
-                var committedText = new System.Text.StringBuilder();
-
-                var sttOptions = new SpeechToTextOptions
-                {
-                    SpeechLanguage = "en-US",
-                };
-
-                if (!string.IsNullOrWhiteSpace(audioFormat))
-                {
-                    sttOptions.AdditionalProperties ??= new AdditionalPropertiesDictionary();
-                    sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
-                }
-
-                await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, errorCts.Token))
-                {
-                    if (string.IsNullOrEmpty(update.Text))
-                    {
-                        continue;
-                    }
-
-                    var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
-
-                    if (isPartial)
-                    {
-                        var display = committedText.ToString() + update.Text;
-                        await Clients.Caller.ReceiveTranscript(sessionId, display, false);
-                    }
-                    else
-                    {
-                        if (committedText.Length > 0)
-                        {
-                            committedText.Append(' ');
-                        }
-
-                        committedText.Append(update.Text);
-                        await Clients.Caller.ReceiveTranscript(sessionId, committedText.ToString(), false);
-                    }
-                }
-
-                var finalText = committedText.ToString().TrimEnd();
-
-                if (!string.IsNullOrEmpty(finalText))
-                {
-                    await Clients.Caller.ReceiveTranscript(sessionId, finalText, true);
-                }
-            }
-            catch (Exception)
-            {
-                // Cancel the audio chunk loop so the error surfaces immediately.
-                await errorCts.CancelAsync();
-                throw;
-            }
-        }, errorCts.Token);
+        var transcriptionTask = TranscribeAsync(sessionId, pipe, audioFormat, sttClient, errorCts, cancellationToken);
 
         // Write audio chunks to the pipe as they arrive from SignalR.
         try
@@ -859,6 +805,10 @@ public class AIChatHub : Hub<IAIChatHubClient>
         catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
         {
             // Transcription failed; stop consuming audio chunks.
+            if (cancellationToken.IsCancellationRequested)
+            {
+
+            }
         }
 
         // Signal that all audio has been sent.
@@ -866,6 +816,65 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         // Wait for the transcription to finish processing all audio.
         await transcriptionTask;
+    }
+
+    private async Task TranscribeAsync(string sessionId, Pipe pipe, string audioFormat, ISpeechToTextClient sttClient, CancellationTokenSource errorCts, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var readerStream = pipe.Reader.AsStream();
+
+            using var committedText = ZString.CreateStringBuilder();
+            var sttOptions = new SpeechToTextOptions
+            {
+                SpeechLanguage = "en-US",
+            };
+
+            if (!string.IsNullOrWhiteSpace(audioFormat))
+            {
+                sttOptions.AdditionalProperties ??= [];
+                sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
+            }
+
+            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            {
+                if (string.IsNullOrEmpty(update.Text))
+                {
+                    continue;
+                }
+
+                var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
+
+                if (isPartial)
+                {
+                    var display = committedText.ToString() + update.Text;
+                    await Clients.Caller.ReceiveTranscript(sessionId, display, false);
+                }
+                else
+                {
+                    if (committedText.Length > 0)
+                    {
+                        committedText.Append(' ');
+                    }
+
+                    committedText.Append(update.Text);
+                    await Clients.Caller.ReceiveTranscript(sessionId, committedText.ToString(), false);
+                }
+            }
+
+            var finalText = committedText.ToString().TrimEnd();
+
+            if (!string.IsNullOrEmpty(finalText))
+            {
+                await Clients.Caller.ReceiveTranscript(sessionId, finalText, true);
+            }
+        }
+        catch (Exception)
+        {
+            // Cancel the audio chunk loop so the error surfaces immediately.
+            await errorCts.CancelAsync();
+            throw;
+        }
     }
 #pragma warning restore MEAI001
 }

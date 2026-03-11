@@ -811,20 +811,23 @@ window.openAIChatManager = function () {
                             var subject = new signalR.Subject();
                             var profileId = this.getProfileId();
                             var sessionId = this.getSessionId() || '';
+                            var pendingChunk = Promise.resolve();
 
-                            this.mediaRecorder.addEventListener('dataavailable', async (e) => {
+                            this.mediaRecorder.addEventListener('dataavailable', (e) => {
                                 if (e.data && e.data.size > 0) {
-                                    var data = await e.data.arrayBuffer();
-                                    var uint8Array = new Uint8Array(data);
-                                    var binaryString = uint8Array.reduce(function (str, byte) { return str + String.fromCharCode(byte); }, '');
-                                    var base64 = btoa(binaryString);
-                                    subject.next(base64);
+                                    pendingChunk = pendingChunk.then(async () => {
+                                        var data = await e.data.arrayBuffer();
+                                        var uint8Array = new Uint8Array(data);
+                                        var binaryString = uint8Array.reduce(function (str, byte) { return str + String.fromCharCode(byte); }, '');
+                                        var base64 = btoa(binaryString);
+                                        subject.next(base64);
+                                    });
                                 }
                             });
 
                             this.mediaRecorder.addEventListener('stop', () => {
                                 stream.getTracks().forEach(track => track.stop());
-                                subject.complete();
+                                pendingChunk.then(() => subject.complete());
                             });
 
                             this.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType);

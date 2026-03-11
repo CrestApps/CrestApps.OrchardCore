@@ -865,40 +865,38 @@ window.openAIChatManager = function () {
             var subject = new signalR.Subject();
             var profileId = _this7.getProfileId();
             var sessionId = _this7.getSessionId() || '';
-            _this7.mediaRecorder.addEventListener('dataavailable', /*#__PURE__*/function () {
-              var _ref7 = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4(e) {
-                var data, uint8Array, binaryString, base64;
-                return _regenerator().w(function (_context4) {
-                  while (1) switch (_context4.n) {
-                    case 0:
-                      if (!(e.data && e.data.size > 0)) {
-                        _context4.n = 2;
-                        break;
-                      }
-                      _context4.n = 1;
-                      return e.data.arrayBuffer();
-                    case 1:
-                      data = _context4.v;
-                      uint8Array = new Uint8Array(data);
-                      binaryString = uint8Array.reduce(function (str, _byte) {
-                        return str + String.fromCharCode(_byte);
-                      }, '');
-                      base64 = btoa(binaryString);
-                      subject.next(base64);
-                    case 2:
-                      return _context4.a(2);
-                  }
-                }, _callee4);
-              }));
-              return function (_x) {
-                return _ref7.apply(this, arguments);
-              };
-            }());
+            var pendingChunk = Promise.resolve();
+            _this7.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context4) {
+                    while (1) switch (_context4.n) {
+                      case 0:
+                        _context4.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context4.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte) {
+                          return str + String.fromCharCode(_byte);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        subject.next(base64);
+                      case 2:
+                        return _context4.a(2);
+                    }
+                  }, _callee4);
+                })));
+              }
+            });
             _this7.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
-              subject.complete();
+              pendingChunk.then(function () {
+                return subject.complete();
+              });
             });
             _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType);
             _this7.mediaRecorder.start(1000);

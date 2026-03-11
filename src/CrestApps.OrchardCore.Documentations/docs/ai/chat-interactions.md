@@ -58,8 +58,8 @@ Chat Interactions supports speech-to-text input, allowing users to speak their p
 
 ### Prerequisites
 
-- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
-- The AI provider must support the `ISpeechToTextClient` interface (e.g., OpenAI Whisper, Azure OpenAI Whisper).
+- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**. This can be any deployment that supports the `ISpeechToTextClient` interface, such as an Azure Speech contained-connection deployment or an OpenAI Whisper deployment.
+- The AI provider must support the `ISpeechToTextClient` interface.
 
 ### Enabling Speech-to-Text
 
@@ -67,7 +67,11 @@ Chat Interactions supports speech-to-text input, allowing users to speak their p
 2. Check the **Enable speech-to-text in chat interactions** checkbox. This checkbox only appears when a default speech-to-text deployment is configured.
 3. Save the settings.
 
-Once enabled, a microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording, speak your prompt, then click the stop button. The transcribed text appears in the input field for review before sending.
+Once enabled, a microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
+
+:::info
+If the speech-to-text service encounters an error during transcription, the error is reported immediately and the recording stops automatically.
+:::
 
 ## Related Features
 

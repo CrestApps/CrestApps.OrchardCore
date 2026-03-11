@@ -250,40 +250,8 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             _logger.LogDebug("Continuous recognition started. Pushing audio data...");
         }
 
-        // Push audio data from the input stream into the SDK's push stream in the background.
-        var pushTask = Task.Run(async () =>
-        {
-            var totalBytes = 0L;
-
-            try
-            {
-                var buffer = new byte[4096];
-                int bytesRead;
-
-                while ((bytesRead = await audioSpeechStream.ReadAsync(buffer.AsMemory(0, buffer.Length), errorCts.Token)) > 0)
-                {
-                    pushStream.Write(buffer, bytesRead);
-                    totalBytes += bytesRead;
-                }
-
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug("Finished pushing audio data. Total bytes: {TotalBytes}", totalBytes);
-                }
-            }
-            catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
-            {
-                _logger.LogWarning("Audio push was cancelled due to an SDK error after {TotalBytes} bytes.", totalBytes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error while pushing audio data after {TotalBytes} bytes.", totalBytes);
-            }
-            finally
-            {
-                pushStream.Close();
-            }
-        }, errorCts.Token);
+        // Push audio data concurrently while yielding recognition results.
+        var pushTask = PushAudioToStreamAsync(audioSpeechStream, pushStream, errorCts.Token);
 
         await foreach (var update in channel.Reader.ReadAllAsync(cancellationToken))
         {
@@ -308,6 +276,43 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     }
 #pragma warning restore MEAI001
 
+    private async Task PushAudioToStreamAsync(
+        Stream audioSpeechStream,
+        PushAudioInputStream pushStream,
+        CancellationToken cancellationToken)
+    {
+        var totalBytes = 0L;
+
+        try
+        {
+            var buffer = new byte[4096];
+            int bytesRead;
+
+            while ((bytesRead = await audioSpeechStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+            {
+                pushStream.Write(buffer, bytesRead);
+                totalBytes += bytesRead;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Finished pushing audio data. Total bytes: {TotalBytes}", totalBytes);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Audio push was cancelled due to an SDK error after {TotalBytes} bytes.", totalBytes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error while pushing audio data after {TotalBytes} bytes.", totalBytes);
+        }
+        finally
+        {
+            pushStream.Close();
+        }
+    }
+
     public object GetService(Type serviceType, object serviceKey = null)
     {
 #pragma warning disable MEAI001
@@ -328,6 +333,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     private async Task<SpeechConfig> CreateSpeechConfigAsync(string language, CancellationToken cancellationToken)
     {
         var region = TryExtractRegion(_endpoint);
+
         SpeechConfig config;
 
         if (region != null)
@@ -365,8 +371,8 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     {
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            var maskedKey = !string.IsNullOrEmpty(_apiKey) && _apiKey.Length > 4
-                ? _apiKey[..4] + "****"
+            var maskedKey = !string.IsNullOrEmpty(_apiKey)
+                ? "[Redacted]"
                 : "(not set)";
 
             _logger.LogDebug(
