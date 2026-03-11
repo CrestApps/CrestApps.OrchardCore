@@ -971,6 +971,24 @@ window.chatInteractionManager = function () {
             });
           });
 
+          // Add event listeners for agent checkboxes with debouncing (850ms)
+          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
+          agentCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+              _this7.settingsDirty = true;
+              _this7.debouncedSaveSettings();
+            });
+          });
+
+          // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
+          var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
+          if (agentGlobalToggle) {
+            agentGlobalToggle.addEventListener('change', function () {
+              _this7.settingsDirty = true;
+              _this7.debouncedSaveSettings();
+            });
+          }
+
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
           if (clearHistoryBtn) {
@@ -1059,6 +1077,18 @@ window.chatInteractionManager = function () {
           });
           return connectionIds;
         },
+        getSelectedAgentNames: function getSelectedAgentNames() {
+          var agentNames = [];
+          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
+          agentCheckboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              agentNames.push(hiddenInput.value);
+            }
+          });
+          return agentNames;
+        },
         saveSettings: function saveSettings() {
           var itemId = this.getItemId();
           if (!itemId) {
@@ -1069,7 +1099,7 @@ window.chatInteractionManager = function () {
           // Collect all form inputs with the "ChatInteraction." prefix generically.
           // This avoids coupling the JS to specific field names — new fields added by
           // any module are automatically included.
-          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])');
           inputs.forEach(function (input) {
             // Extract field name: "ChatInteraction.Title" → "title"
             var fieldName = input.name.replace('ChatInteraction.', '');
@@ -1083,9 +1113,10 @@ window.chatInteractionManager = function () {
             }
           });
 
-          // Add tool and MCP connection collections (special handling).
+          // Add tool, MCP connection, and agent collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          settings.agentNames = this.getSelectedAgentNames();
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });

@@ -35,7 +35,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
                     MaxScore = g.MaxScore,
                 })
                 .ToList();
-        }).Location("Content:10#Data Processing & Metrics:15")
+        }).Location("Content:15#Data Processing & Metrics;10")
         .RenderWhen(() =>
         {
             if (template.Source != AITemplateSources.Profile)

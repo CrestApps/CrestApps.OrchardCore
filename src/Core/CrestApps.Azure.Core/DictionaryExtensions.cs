@@ -18,6 +18,11 @@ public static class DictionaryExtensions
         return authenticationType;
     }
 
+    public static string GetIdentityId(this IDictionary<string, object> entry)
+    {
+        return entry.GetStringValue("IdentityId", false);
+    }
+
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {
         if (entry.TryGetValue(key, out var value))

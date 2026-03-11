@@ -36,7 +36,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
                     IsUpdatable = e.IsUpdatable,
                 })
                 .ToList();
-        }).Location("Content:10#Data Processing & Metrics:5")
+        }).Location("Content:5#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

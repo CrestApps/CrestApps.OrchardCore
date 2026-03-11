@@ -74,6 +74,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
                 mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
                 mappingContext.Values["ImagesDeploymentName"] = connection.ImagesDeploymentName;
+                mappingContext.Values["SpeechToTextDeploymentName"] = connection.SpeechToTextDeploymentName;
 #pragma warning restore CS0618
                 mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 

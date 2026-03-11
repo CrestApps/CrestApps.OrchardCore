@@ -5,17 +5,6 @@
 
 @if (Model.Agents is null || Model.Agents.Length == 0)
 {
-    <h5 class="border-bottom pb-2">@T["Agents"]</h5>
-
-    @if (Model.AlwaysAvailableAgentCount > 0)
-    {
-        <div class="alert alert-info small">
-            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-            @T["There are {0} always-available agents that will be automatically included in every request.", Model.AlwaysAvailableAgentCount]
-        </div>
-    }
-
-    <p class="text-muted">@T["No on-demand agents are available. Create an AI Profile with the Agent type to get started."]</p>
     return;
 }
 

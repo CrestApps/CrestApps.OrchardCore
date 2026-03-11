@@ -84,5 +84,8 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
         => new((IImageGenerator)null);
+
+    public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
+        => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 }

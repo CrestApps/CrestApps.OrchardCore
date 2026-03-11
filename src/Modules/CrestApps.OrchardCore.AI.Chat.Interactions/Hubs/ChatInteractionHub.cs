@@ -159,6 +159,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             interaction.PastMessagesCount = GetInt(settings, "pastMessagesCount");
             interaction.ToolNames = GetStringArray(settings, "toolNames");
             interaction.McpConnectionIds = GetStringArray(settings, "mcpConnectionIds");
+            interaction.AgentNames = GetStringArray(settings, "agentNames");
 
             var dataSourceId = GetString(settings, "dataSourceId");
 

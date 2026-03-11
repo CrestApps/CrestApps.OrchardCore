@@ -34,7 +34,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
                     MaxScore = g.MaxScore,
                 })
                 .ToList();
-        }).Location("Content:10#Data Processing & Metrics:15")
+        }).Location("Content:15#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(profile.Type == AIProfileType.Chat));
     }
 

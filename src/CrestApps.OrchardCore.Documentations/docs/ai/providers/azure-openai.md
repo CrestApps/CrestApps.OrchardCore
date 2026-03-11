@@ -69,6 +69,20 @@ The following format using `ChatDeploymentName`, `UtilityDeploymentName`, `Embed
 
 Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
+When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.
+
+```json
+{
+  "Connections": {
+    "my-azure-account": {
+      "Endpoint": "https://my-account.openai.azure.com/",
+      "AuthenticationType": "ManagedIdentity",
+      "IdentityId": "<!-- Optional: client ID of a user-assigned managed identity -->"
+    }
+  }
+}
+```
+
 ### How to Retrieve Azure OpenAI Credentials
 
 #### Get the API Key and Endpoint

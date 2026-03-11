@@ -954,6 +954,24 @@ window.chatInteractionManager = function () {
                         });
                     });
 
+                    // Add event listeners for agent checkboxes with debouncing (850ms)
+                    const agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
+                    agentCheckboxes.forEach(checkbox => {
+                        checkbox.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
+                    });
+
+                    // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
+                    const agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
+                    if (agentGlobalToggle) {
+                        agentGlobalToggle.addEventListener('change', () => {
+                            this.settingsDirty = true;
+                            this.debouncedSaveSettings();
+                        });
+                    }
+
                     // Add event listener for clear history button
                     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
                     if (clearHistoryBtn) {
@@ -1045,6 +1063,21 @@ window.chatInteractionManager = function () {
 
                     return connectionIds;
                 },
+                getSelectedAgentNames() {
+                    const agentNames = [];
+                    const agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
+
+                    agentCheckboxes.forEach(checkbox => {
+                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+
+                        if (hiddenInput && hiddenInput.value) {
+                            agentNames.push(hiddenInput.value);
+                        }
+                    });
+
+                    return agentNames;
+                },
                 saveSettings() {
                     const itemId = this.getItemId();
                     if (!itemId) {
@@ -1057,9 +1090,9 @@ window.chatInteractionManager = function () {
                     // This avoids coupling the JS to specific field names — new fields added by
                     // any module are automatically included.
                     const inputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]), ' +
-                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
-                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
+                        'input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])'
                     );
 
                     inputs.forEach(input => {
@@ -1076,9 +1109,10 @@ window.chatInteractionManager = function () {
                         }
                     });
 
-                    // Add tool and MCP connection collections (special handling).
+                    // Add tool, MCP connection, and agent collections (special handling).
                     settings.toolNames = this.getSelectedToolNames();
                     settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+                    settings.agentNames = this.getSelectedAgentNames();
 
                     return this.connection.invoke("SaveSettings", itemId, settings)
                         .catch(err => console.error('Error saving settings:', err));

@@ -67,4 +67,18 @@ The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. i
 
 Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
 
+When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.
+
+```json
+{
+  "Connections": {
+    "default": {
+      "Endpoint": "https://my-resource.services.ai.azure.com/models",
+      "AuthenticationType": "ManagedIdentity",
+      "IdentityId": "<!-- Optional: client ID of a user-assigned managed identity -->"
+    }
+  }
+}
+```
+
 For detailed instructions on creating Azure AI Inference and obtaining the Endpoint, refer to the official [documentation](https://learn.microsoft.com/en-us/azure/ai-foundry/model-inference/how-to/configure-project-connection?pivots=ai-foundry-portal).

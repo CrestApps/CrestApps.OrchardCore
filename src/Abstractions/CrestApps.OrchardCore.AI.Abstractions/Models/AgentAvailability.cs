@@ -9,11 +9,11 @@ public enum AgentAvailability
     /// The agent is included only when matched by semantic or keyword scoring.
     /// This is the default mode and minimizes token usage.
     /// </summary>
-    OnDemand = 0,
+    OnDemand,
 
     /// <summary>
     /// The agent is always included in every completion request automatically.
     /// This mode increases token usage but ensures the agent is always available.
     /// </summary>
-    AlwaysAvailable = 1,
+    AlwaysAvailable,
 }
