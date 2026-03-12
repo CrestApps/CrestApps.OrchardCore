@@ -21,7 +21,7 @@ window.openAIChatManager = function () {
                 <div>
                     <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
                     <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                        <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
+                        <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
                         {{ assistantLabel }}
                     </div>
                     <div class="lh-base">
@@ -49,7 +49,7 @@ window.openAIChatManager = function () {
     `,
         indicatorTemplate: `
         <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
-            <i class="fa fa-robot ai-streaming-icon" style="display: inline-block;"></i>
+            <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
             Assistant
         </div>
     `
@@ -335,7 +335,7 @@ window.openAIChatManager = function () {
                     chatWidgetStateSession: null,
                     chatHistorySection: null,
                     widgetIsInitialized: false,
-                    isSteaming: false,
+                    isStreaming: false,
                     isNavigatingAway: false,
                     autoScroll: true,
                     stream: null,
@@ -360,14 +360,24 @@ window.openAIChatManager = function () {
                     textToSpeechEnabled: config.chatMode === 'Conversation',
                     ttsVoiceName: config.ttsVoiceName || null,
                     audioChunks: [],
+                    audioPlayQueue: [],
                     isPlayingAudio: false,
                     currentAudioElement: null,
                     ttsButton: null,
-                    ttsStopButton: null,
                     conversationModeEnabled: config.chatMode === 'Conversation',
                     conversationButton: null,
                     isConversationMode: false,
                 };
+            },
+            computed: {
+                lastAssistantIndex() {
+                    for (var i = this.messages.length - 1; i >= 0; i--) {
+                        if (this.messages[i].role === 'assistant') {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
             },
             methods: {
                 handleBeforeUnload() {
@@ -674,7 +684,17 @@ window.openAIChatManager = function () {
                     this.connection.on("ReceiveConversationUserMessage", (sessionId, text) => {
                         if (text) {
                             this.stopAudio();
-                            this._conversationAssistantMessage = null;
+
+                            // If there's an interrupted assistant message still streaming,
+                            // mark it as done to stop the spinner animation.
+                            if (this._conversationAssistantMessage) {
+                                var oldMsg = this.messages[this._conversationAssistantMessage.index];
+                                if (oldMsg) {
+                                    oldMsg.isStreaming = false;
+                                }
+                                this._conversationAssistantMessage = null;
+                            }
+
                             this.addMessage({
                                 role: 'user',
                                 content: text
@@ -687,6 +707,14 @@ window.openAIChatManager = function () {
                         if (!this._conversationAssistantMessage) {
                             this.stopAudio();
                             this.hideTypingIndicator();
+
+                            // Ensure no stale streaming indicators remain from prior messages.
+                            for (var j = 0; j < this.messages.length; j++) {
+                                if (this.messages[j].isStreaming) {
+                                    this.messages[j].isStreaming = false;
+                                }
+                            }
+
                             var msgIndex = this.messages.length;
                             var newMessage = {
                                 id: messageId,
@@ -1219,7 +1247,9 @@ window.openAIChatManager = function () {
                 },
                 playCollectedAudio() {
                     if (this.audioChunks.length === 0) {
-                        this.isPlayingAudio = false;
+                        if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
+                            this.isPlayingAudio = false;
+                        }
                         return;
                     }
 
@@ -1233,31 +1263,49 @@ window.openAIChatManager = function () {
                     this.audioChunks = [];
 
                     const blob = new Blob([combined], { type: 'audio/mp3' });
+
+                    // If audio is already playing, queue this blob for sequential playback.
+                    if (this.currentAudioElement) {
+                        this.audioPlayQueue.push(blob);
+                        return;
+                    }
+
+                    this.playAudioBlob(blob);
+                },
+                playAudioBlob(blob) {
                     const url = URL.createObjectURL(blob);
                     const audio = new Audio(url);
 
                     this.currentAudioElement = audio;
+                    this.isPlayingAudio = true;
 
                     audio.addEventListener('ended', () => {
                         URL.revokeObjectURL(url);
-                        this.isPlayingAudio = false;
                         this.currentAudioElement = null;
-                        this.conversationModeOnAudioEnded();
+                        this.playNextInQueue();
                     });
 
                     audio.addEventListener('error', () => {
                         URL.revokeObjectURL(url);
-                        this.isPlayingAudio = false;
                         this.currentAudioElement = null;
-                        this.conversationModeOnAudioEnded();
+                        this.playNextInQueue();
                     });
 
                     audio.play().catch(err => {
                         console.error("Audio playback error:", err);
                         URL.revokeObjectURL(url);
-                        this.isPlayingAudio = false;
                         this.currentAudioElement = null;
+                        this.isPlayingAudio = false;
                     });
+                },
+                playNextInQueue() {
+                    if (this.audioPlayQueue.length > 0) {
+                        var nextBlob = this.audioPlayQueue.shift();
+                        this.playAudioBlob(nextBlob);
+                    } else {
+                        this.isPlayingAudio = false;
+                        this.conversationModeOnAudioEnded();
+                    }
                 },
                 stopAudio() {
                     if (this.currentAudioElement) {
@@ -1266,6 +1314,7 @@ window.openAIChatManager = function () {
                         this.currentAudioElement = null;
                     }
                     this.audioChunks = [];
+                    this.audioPlayQueue = [];
                     this.isPlayingAudio = false;
                 },
                 toggleConversationMode() {
@@ -1298,10 +1347,59 @@ window.openAIChatManager = function () {
 
                             this._conversationSubject = new signalR.Subject();
                             this._conversationStream = stream;
+
+                            // Create an AnalyserNode for volume-based echo gating.
+                            // During TTS playback, only forward audio when the user
+                            // is actually speaking (volume above threshold) to prevent
+                            // the speaker echo from being transcribed while still
+                            // allowing intentional user interrupts.
+                            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+                            if (AudioCtx) {
+                                this._conversationAudioCtx = new AudioCtx();
+                                this._conversationAnalyser = this._conversationAudioCtx.createAnalyser();
+                                this._conversationAnalyser.fftSize = 256;
+                                var micSource = this._conversationAudioCtx.createMediaStreamSource(stream);
+                                micSource.connect(this._conversationAnalyser);
+                            }
+
                             var pendingChunk = Promise.resolve();
+                            var analyser = this._conversationAnalyser;
+                            var echoVolumeThreshold = 30;
 
                             this.mediaRecorder.addEventListener('dataavailable', (e) => {
                                 if (e.data && e.data.size > 0) {
+                                    // During TTS playback, check mic volume to distinguish
+                                    // echo (low volume) from the user speaking (high volume).
+                                    if (this.isPlayingAudio && analyser) {
+                                        var freqData = new Uint8Array(analyser.frequencyBinCount);
+                                        analyser.getByteFrequencyData(freqData);
+                                        var sum = 0;
+                                        for (var k = 0; k < freqData.length; k++) { sum += freqData[k]; }
+                                        var avg = sum / freqData.length;
+
+                                        if (avg < echoVolumeThreshold) {
+                                            // Volume too low — likely speaker echo, skip chunk.
+                                            return;
+                                        }
+
+                                        // Volume above threshold — user is interrupting.
+                                        // Mute the mic briefly to avoid sending the
+                                        // remaining echo, then stop TTS playback.
+                                        this._conversationStream.getAudioTracks().forEach(function (track) {
+                                            track.enabled = false;
+                                        });
+                                        this.stopAudio();
+                                        // Re-enable after a short delay so the echo fades.
+                                        var self = this;
+                                        setTimeout(function () {
+                                            if (self._conversationStream) {
+                                                self._conversationStream.getAudioTracks().forEach(function (track) {
+                                                    track.enabled = true;
+                                                });
+                                            }
+                                        }, 300);
+                                    }
+
                                     pendingChunk = pendingChunk.then(async () => {
                                         var data = await e.data.arrayBuffer();
                                         var uint8Array = new Uint8Array(data);
@@ -1356,7 +1454,29 @@ window.openAIChatManager = function () {
 
                     this.stopAudio();
                     this._conversationPartialTranscript = '';
-                    this._conversationAssistantMessage = null;
+
+                    // Clean up the AudioContext used for volume monitoring.
+                    if (this._conversationAudioCtx) {
+                        this._conversationAudioCtx.close().catch(function () { });
+                        this._conversationAudioCtx = null;
+                        this._conversationAnalyser = null;
+                    }
+
+                    // Mark any in-flight assistant message as done to stop the spinner.
+                    if (this._conversationAssistantMessage) {
+                        var msg = this.messages[this._conversationAssistantMessage.index];
+                        if (msg) {
+                            msg.isStreaming = false;
+                        }
+                        this._conversationAssistantMessage = null;
+                    }
+
+                    // Safety net: clear all lingering streaming indicators.
+                    for (var i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].isStreaming) {
+                            this.messages[i].isStreaming = false;
+                        }
+                    }
                 },
                 updateConversationButton() {
                     if (!this.conversationButton) {
@@ -1365,10 +1485,10 @@ window.openAIChatManager = function () {
 
                     if (this.isConversationMode) {
                         this.conversationButton.classList.add('active', 'btn-primary');
-                        this.conversationButton.classList.remove('btn-outline-secondary');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
                     } else {
                         this.conversationButton.classList.remove('active', 'btn-primary');
-                        this.conversationButton.classList.add('btn-outline-secondary');
+                        this.conversationButton.classList.add('btn-dark');
                     }
                 },
                 conversationModeSendPrompt() {
@@ -1631,16 +1751,6 @@ window.openAIChatManager = function () {
                         }
                     }
 
-                    // Initialize text-to-speech stop button.
-                    if (this.textToSpeechEnabled && config.ttsStopButtonElementSelector) {
-                        this.ttsStopButton = document.querySelector(config.ttsStopButtonElementSelector);
-                        if (this.ttsStopButton) {
-                            this.ttsStopButton.addEventListener('click', () => {
-                                this.stopAudio();
-                            });
-                        }
-                    }
-
                     // Initialize conversation mode button.
                     if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
                         this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
@@ -1851,8 +1961,12 @@ window.openAIChatManager = function () {
                 },
                 isUploading() { this.renderDocumentBar(); },
                 isPlayingAudio(playing) {
-                    if (this.ttsStopButton) {
-                        this.ttsStopButton.style.display = playing ? '' : 'none';
+                    // When TTS audio stops during conversation mode, re-enable the
+                    // mic in case it was disabled by the volume-based echo gate.
+                    if (!playing && this.isConversationMode && this._conversationStream) {
+                        this._conversationStream.getAudioTracks().forEach(function (track) {
+                            track.enabled = true;
+                        });
                     }
                 },
                 isConversationMode(active) {
@@ -1872,11 +1986,6 @@ window.openAIChatManager = function () {
                         if (active) {
                             this.inputElement.placeholder = '';
                         }
-                    }
-
-                    // Hide/show TTS stop button.
-                    if (this.ttsStopButton) {
-                        this.ttsStopButton.style.display = 'none';
                     }
                 }
             },

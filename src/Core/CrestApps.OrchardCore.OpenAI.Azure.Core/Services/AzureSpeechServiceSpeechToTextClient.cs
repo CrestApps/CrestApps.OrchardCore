@@ -263,7 +263,14 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             yield return update;
         }
 
-        await pushTask;
+        try
+        {
+            await pushTask;
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when the connection is closed or recognition is stopped.
+        }
 
         try
         {
@@ -361,6 +368,10 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         }
 
         config.SpeechRecognitionLanguage = language;
+
+        // Reduce silence detection timeouts for faster partial results.
+        config.SetProperty(PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "2000");
+        config.SetProperty(PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "500");
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {

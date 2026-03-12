@@ -63,7 +63,6 @@
     var ttsVoiceName = chatModeSettings?.VoiceName;
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
-    var ttsStopBtnHtmlId = $"{baseId}_TtsStopBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }
 
@@ -128,20 +127,13 @@
                     style="display: none;">
                 <i class="fa-solid fa-microphone"></i>
             </button>
-            <button class="tts-stop-btn ai-admin-widget-mic-btn"
-                    type="button"
-                    id="@ttsStopBtnHtmlId"
-                    title="@T["Stop audio"]"
-                    style="display: none;">
-                <i class="fa-solid fa-volume-xmark"></i>
-            </button>
             @if (conversationModeEnabled)
             {
-                <button class="ai-admin-widget-mic-btn"
+                <button class="ai-admin-widget-send-btn"
                         type="button"
                         id="@conversationBtnHtmlId"
                         title="@T["Conversation mode"]">
-                    <i class="fa-solid fa-headset"></i>
+                    <i class="fa-solid fa-wave-square"></i>
                 </button>
             }
             <button class="ai-admin-widget-send-btn"
@@ -205,7 +197,6 @@
         ["chatMode"] = chatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-        ["ttsStopButtonElementSelector"] = $"#{ttsStopBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
     };
 

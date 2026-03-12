@@ -61,7 +61,6 @@
     var ttsVoiceName = chatModeSettings?.VoiceName;
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
-    var ttsStopBtnHtmlId = $"{baseId}_TtsStopBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }
 
@@ -121,13 +120,10 @@
                     <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
-                    <button class="btn btn-outline-secondary rounded tts-stop-btn" type="button" id="@ttsStopBtnHtmlId" title="@T["Stop audio"]" style="display: none;">
-                        <i class="fa-solid fa-volume-xmark"></i>
-                    </button>
                     @if (conversationModeEnabled)
                     {
-                        <button class="btn btn-outline-secondary rounded" type="button" id="@conversationBtnHtmlId" title="@T["Conversation mode"]">
-                            <i class="fa-solid fa-headset"></i>
+                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Conversation mode"]">
+                            <i class="fa-solid fa-wave-square"></i>
                         </button>
                     }
                     <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
@@ -188,7 +184,6 @@
         ["chatMode"] = chatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-        ["ttsStopButtonElementSelector"] = $"#{ttsStopBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
     };
 

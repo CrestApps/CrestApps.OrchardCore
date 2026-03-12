@@ -177,12 +177,15 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         };
 
         // Start synthesis — this returns once synthesis begins, not when it finishes.
-        _ = synthesizer.StartSpeakingTextAsync(text);
+        var speakTask = synthesizer.StartSpeakingTextAsync(text);
 
         await foreach (var update in channel.Reader.ReadAllAsync(cancellationToken))
         {
             yield return update;
         }
+
+        // Await the task to propagate any startup exceptions.
+        await speakTask;
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {

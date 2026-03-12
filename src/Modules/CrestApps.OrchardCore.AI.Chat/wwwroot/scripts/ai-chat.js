@@ -35,8 +35,8 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
-    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
   };
 
   // Sanitize URLs to prevent javascript: protocol injection.
@@ -295,7 +295,7 @@ window.openAIChatManager = function () {
           chatWidgetStateSession: null,
           chatHistorySection: null,
           widgetIsInitialized: false,
-          isSteaming: false,
+          isStreaming: false,
           isNavigatingAway: false,
           autoScroll: true,
           stream: null,
@@ -320,14 +320,24 @@ window.openAIChatManager = function () {
           textToSpeechEnabled: config.chatMode === 'Conversation',
           ttsVoiceName: config.ttsVoiceName || null,
           audioChunks: [],
+          audioPlayQueue: [],
           isPlayingAudio: false,
           currentAudioElement: null,
           ttsButton: null,
-          ttsStopButton: null,
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false
         };
+      },
+      computed: {
+        lastAssistantIndex: function lastAssistantIndex() {
+          for (var i = this.messages.length - 1; i >= 0; i--) {
+            if (this.messages[i].role === 'assistant') {
+              return i;
+            }
+          }
+          return -1;
+        }
       },
       methods: {
         handleBeforeUnload: function handleBeforeUnload() {
@@ -691,7 +701,16 @@ window.openAIChatManager = function () {
                   _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, text) {
                     if (text) {
                       _this3.stopAudio();
-                      _this3._conversationAssistantMessage = null;
+
+                      // If there's an interrupted assistant message still streaming,
+                      // mark it as done to stop the spinner animation.
+                      if (_this3._conversationAssistantMessage) {
+                        var oldMsg = _this3.messages[_this3._conversationAssistantMessage.index];
+                        if (oldMsg) {
+                          oldMsg.isStreaming = false;
+                        }
+                        _this3._conversationAssistantMessage = null;
+                      }
                       _this3.addMessage({
                         role: 'user',
                         content: text
@@ -703,6 +722,13 @@ window.openAIChatManager = function () {
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
+
+                      // Ensure no stale streaming indicators remain from prior messages.
+                      for (var j = 0; j < _this3.messages.length; j++) {
+                        if (_this3.messages[j].isStreaming) {
+                          _this3.messages[j].isStreaming = false;
+                        }
+                      }
                       var msgIndex = _this3.messages.length;
                       var newMessage = {
                         id: messageId,
@@ -1290,9 +1316,10 @@ window.openAIChatManager = function () {
           });
         },
         playCollectedAudio: function playCollectedAudio() {
-          var _this0 = this;
           if (this.audioChunks.length === 0) {
-            this.isPlayingAudio = false;
+            if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
+              this.isPlayingAudio = false;
+            }
             return;
           }
           var totalLength = this.audioChunks.reduce(function (sum, chunk) {
@@ -1317,27 +1344,45 @@ window.openAIChatManager = function () {
           var blob = new Blob([combined], {
             type: 'audio/mp3'
           });
+
+          // If audio is already playing, queue this blob for sequential playback.
+          if (this.currentAudioElement) {
+            this.audioPlayQueue.push(blob);
+            return;
+          }
+          this.playAudioBlob(blob);
+        },
+        playAudioBlob: function playAudioBlob(blob) {
+          var _this0 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
           this.currentAudioElement = audio;
+          this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
             URL.revokeObjectURL(url);
-            _this0.isPlayingAudio = false;
             _this0.currentAudioElement = null;
-            _this0.conversationModeOnAudioEnded();
+            _this0.playNextInQueue();
           });
           audio.addEventListener('error', function () {
             URL.revokeObjectURL(url);
-            _this0.isPlayingAudio = false;
             _this0.currentAudioElement = null;
-            _this0.conversationModeOnAudioEnded();
+            _this0.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
             URL.revokeObjectURL(url);
-            _this0.isPlayingAudio = false;
             _this0.currentAudioElement = null;
+            _this0.isPlayingAudio = false;
           });
+        },
+        playNextInQueue: function playNextInQueue() {
+          if (this.audioPlayQueue.length > 0) {
+            var nextBlob = this.audioPlayQueue.shift();
+            this.playAudioBlob(nextBlob);
+          } else {
+            this.isPlayingAudio = false;
+            this.conversationModeOnAudioEnded();
+          }
         },
         stopAudio: function stopAudio() {
           if (this.currentAudioElement) {
@@ -1346,6 +1391,7 @@ window.openAIChatManager = function () {
             this.currentAudioElement = null;
           }
           this.audioChunks = [];
+          this.audioPlayQueue = [];
           this.isPlayingAudio = false;
         },
         toggleConversationMode: function toggleConversationMode() {
@@ -1378,9 +1424,57 @@ window.openAIChatManager = function () {
             });
             _this1._conversationSubject = new signalR.Subject();
             _this1._conversationStream = stream;
+
+            // Create an AnalyserNode for volume-based echo gating.
+            // During TTS playback, only forward audio when the user
+            // is actually speaking (volume above threshold) to prevent
+            // the speaker echo from being transcribed while still
+            // allowing intentional user interrupts.
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              _this1._conversationAudioCtx = new AudioCtx();
+              _this1._conversationAnalyser = _this1._conversationAudioCtx.createAnalyser();
+              _this1._conversationAnalyser.fftSize = 256;
+              var micSource = _this1._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this1._conversationAnalyser);
+            }
             var pendingChunk = Promise.resolve();
+            var analyser = _this1._conversationAnalyser;
+            var echoVolumeThreshold = 30;
             _this1.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
+                // During TTS playback, check mic volume to distinguish
+                // echo (low volume) from the user speaking (high volume).
+                if (_this1.isPlayingAudio && analyser) {
+                  var freqData = new Uint8Array(analyser.frequencyBinCount);
+                  analyser.getByteFrequencyData(freqData);
+                  var sum = 0;
+                  for (var k = 0; k < freqData.length; k++) {
+                    sum += freqData[k];
+                  }
+                  var avg = sum / freqData.length;
+                  if (avg < echoVolumeThreshold) {
+                    // Volume too low — likely speaker echo, skip chunk.
+                    return;
+                  }
+
+                  // Volume above threshold — user is interrupting.
+                  // Mute the mic briefly to avoid sending the
+                  // remaining echo, then stop TTS playback.
+                  _this1._conversationStream.getAudioTracks().forEach(function (track) {
+                    track.enabled = false;
+                  });
+                  _this1.stopAudio();
+                  // Re-enable after a short delay so the echo fades.
+                  var self = _this1;
+                  setTimeout(function () {
+                    if (self._conversationStream) {
+                      self._conversationStream.getAudioTracks().forEach(function (track) {
+                        track.enabled = true;
+                      });
+                    }
+                  }, 300);
+                }
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
                   var data, uint8Array, binaryString, base64;
                   return _regenerator().w(function (_context5) {
@@ -1443,7 +1537,29 @@ window.openAIChatManager = function () {
           }
           this.stopAudio();
           this._conversationPartialTranscript = '';
-          this._conversationAssistantMessage = null;
+
+          // Clean up the AudioContext used for volume monitoring.
+          if (this._conversationAudioCtx) {
+            this._conversationAudioCtx.close()["catch"](function () {});
+            this._conversationAudioCtx = null;
+            this._conversationAnalyser = null;
+          }
+
+          // Mark any in-flight assistant message as done to stop the spinner.
+          if (this._conversationAssistantMessage) {
+            var msg = this.messages[this._conversationAssistantMessage.index];
+            if (msg) {
+              msg.isStreaming = false;
+            }
+            this._conversationAssistantMessage = null;
+          }
+
+          // Safety net: clear all lingering streaming indicators.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
         },
         updateConversationButton: function updateConversationButton() {
           if (!this.conversationButton) {
@@ -1451,10 +1567,10 @@ window.openAIChatManager = function () {
           }
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
-            this.conversationButton.classList.remove('btn-outline-secondary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
-            this.conversationButton.classList.add('btn-outline-secondary');
+            this.conversationButton.classList.add('btn-dark');
           }
         },
         conversationModeSendPrompt: function conversationModeSendPrompt() {
@@ -1700,16 +1816,6 @@ window.openAIChatManager = function () {
             }
           }
 
-          // Initialize text-to-speech stop button.
-          if (this.textToSpeechEnabled && config.ttsStopButtonElementSelector) {
-            this.ttsStopButton = document.querySelector(config.ttsStopButtonElementSelector);
-            if (this.ttsStopButton) {
-              this.ttsStopButton.addEventListener('click', function () {
-                _this11.stopAudio();
-              });
-            }
-          }
-
           // Initialize conversation mode button.
           if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
@@ -1905,8 +2011,12 @@ window.openAIChatManager = function () {
           this.renderDocumentBar();
         },
         isPlayingAudio: function isPlayingAudio(playing) {
-          if (this.ttsStopButton) {
-            this.ttsStopButton.style.display = playing ? '' : 'none';
+          // When TTS audio stops during conversation mode, re-enable the
+          // mic in case it was disabled by the volume-based echo gate.
+          if (!playing && this.isConversationMode && this._conversationStream) {
+            this._conversationStream.getAudioTracks().forEach(function (track) {
+              track.enabled = true;
+            });
           }
         },
         isConversationMode: function isConversationMode(active) {
@@ -1926,11 +2036,6 @@ window.openAIChatManager = function () {
             if (active) {
               this.inputElement.placeholder = '';
             }
-          }
-
-          // Hide/show TTS stop button.
-          if (this.ttsStopButton) {
-            this.ttsStopButton.style.display = 'none';
           }
         }
       },

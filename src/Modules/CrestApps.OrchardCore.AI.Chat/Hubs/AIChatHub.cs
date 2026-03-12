@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -26,7 +27,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
-public class AIChatHub : Hub<IAIChatHubClient>
+public partial class AIChatHub : Hub<IAIChatHubClient>
 {
     private readonly ILogger<AIChatHub> _logger;
 
@@ -44,9 +45,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        // Avoid awaiting HandlePromptAsync to prevent blocking until all items are written,  
-        // ensuring the channel is returned to the client immediately.
-        _ = HandlePromptAsync(channel.Writer, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
+        // Create a child scope for proper ISession/IDocumentStore lifecycle.
+        _ = ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await HandlePromptAsync(channel.Writer, scope.ServiceProvider, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
+        });
 
         return channel.Reader;
     }
@@ -226,115 +229,105 @@ public class AIChatHub : Hub<IAIChatHubClient>
         });
     }
 
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
         try
         {
-            // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
-            // This ensures each invocation has a fresh YesSql ISession with auto-commit on disposal,
-            // preventing cross-invocation state leakage in long-lived SignalR connections.
-            await ShellScope.UsingChildScopeAsync(async scope =>
+            using var invocationScope = AIInvocationScope.Begin();
+
+            if (string.IsNullOrWhiteSpace(profileId))
             {
-                using var invocationScope = AIInvocationScope.Begin();
-                var services = scope.ServiceProvider;
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
 
-                try
+                return;
+            }
+
+            var profileManager = services.GetRequiredService<IAIProfileManager>();
+            var profile = await profileManager.FindByIdAsync(profileId);
+
+            if (profile is null)
+            {
+                await Clients.Caller.ReceiveError(S["Profile not found."].Value);
+
+                return;
+            }
+
+            var httpContext = Context.GetHttpContext();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
+
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
+
+                return;
+            }
+
+            if (profile.Type == AIProfileType.Utility)
+            {
+                if (string.IsNullOrWhiteSpace(prompt))
                 {
-                    if (string.IsNullOrWhiteSpace(profileId))
-                    {
-                        await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionId)].Value);
-
-                        return;
-                    }
-
-                    var profileManager = services.GetRequiredService<IAIProfileManager>();
-                    var profile = await profileManager.FindByIdAsync(profileId);
-
-                    if (profile is null)
-                    {
-                        await Clients.Caller.ReceiveError(S["Profile not found."].Value);
-
-                        return;
-                    }
-
-                    var httpContext = Context.GetHttpContext();
-                    var authorizationService = services.GetRequiredService<IAuthorizationService>();
-
-                    if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-                    {
-                        await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
-
-                        return;
-                    }
-
-                    if (profile.Type == AIProfileType.Utility)
-                    {
-                        if (string.IsNullOrWhiteSpace(prompt))
-                        {
-                            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
-                            return;
-                        }
-
-                        await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
-
-                        // We don't need to save the session for utility profiles.
-                        return;
-                    }
-
-                    if (profile.Type == AIProfileType.TemplatePrompt)
-                    {
-                        if (string.IsNullOrWhiteSpace(sessionProfileId))
-                        {
-                            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionProfileId)].Value);
-
-                            return;
-                        }
-
-                        var parentProfile = await profileManager.FindByIdAsync(sessionProfileId);
-
-                        if (parentProfile is null)
-                        {
-                            await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
-
-                            return;
-                        }
-
-                        await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
-                    }
-                    else
-                    {
-                        // At this point, we are dealing with a chat profile.
-                        await ProcessChatPromptAsync(writer, services, profile, sessionId, prompt?.Trim(), cancellationToken);
-                    }
+                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+                    return;
                 }
-                catch (Exception ex)
+
+                await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
+
+                // We don't need to save the session for utility profiles.
+                return;
+            }
+
+            if (profile.Type == AIProfileType.TemplatePrompt)
+            {
+                if (string.IsNullOrWhiteSpace(sessionProfileId))
                 {
-                    // Don't write error messages if the operation was cancelled (e.g., user navigated away).
-                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
-                    {
-                        _logger.LogDebug("Chat prompt processing was cancelled.");
-                        return;
-                    }
+                    await Clients.Caller.ReceiveError(S["{0} is required.", nameof(sessionProfileId)].Value);
 
-                    _logger.LogError(ex, "An error occurred while processing the chat prompt.");
-
-                    try
-                    {
-                        var errorMessage = new CompletionPartialMessage
-                        {
-                            SessionId = sessionId,
-                            MessageId = IdGenerator.GenerateId(),
-                            Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-                        };
-
-                        await writer.WriteAsync(errorMessage, CancellationToken.None);
-                    }
-                    catch (Exception writeEx)
-                    {
-                        _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-                    }
+                    return;
                 }
-            });
+
+                var parentProfile = await profileManager.FindByIdAsync(sessionProfileId);
+
+                if (parentProfile is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Invalid value given to {0}.", nameof(sessionProfileId)].Value);
+
+                    return;
+                }
+
+                await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
+            }
+            else
+            {
+                // At this point, we are dealing with a chat profile.
+                await ProcessChatPromptAsync(writer, services, profile, sessionId, prompt?.Trim(), cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't write error messages if the operation was cancelled (e.g., user navigated away).
+            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            {
+                _logger.LogDebug("Chat prompt processing was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred while processing the chat prompt.");
+
+            try
+            {
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = sessionId,
+                    MessageId = IdGenerator.GenerateId(),
+                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                };
+
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
         finally
         {
@@ -778,7 +771,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 {
                     await RunConversationLoopAsync(
                         profile, sessionId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, cancellationToken);
+                        sttClient, ttsClient, effectiveVoiceName, services, cancellationToken);
                 }
             });
         }
@@ -813,6 +806,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ISpeechToTextClient sttClient,
         ITextToSpeechClient ttsClient,
         string voiceName,
+        IServiceProvider services,
         CancellationToken cancellationToken)
     {
         var pipe = new Pipe();
@@ -820,12 +814,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
         // CTS to break the audio chunk loop on transcription failure.
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        // Task that continuously transcribes audio and processes complete utterances.
-        var transcriptionTask = Task.Run(
-            () => TranscribeConversationAsync(
-                pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
-                sttClient, ttsClient, voiceName, errorCts, cancellationToken),
-            cancellationToken);
+        // Start the transcription pipeline. No Task.Run needed because TranscribeConversationAsync
+        // is async and returns at its first await, allowing the caller to proceed to the audio loop.
+        var transcriptionTask = TranscribeConversationAsync(
+            pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
+            sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
 
         // Write audio chunks to the pipe as they arrive.
         try
@@ -861,6 +854,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
         ISpeechToTextClient sttClient,
         ITextToSpeechClient ttsClient,
         string voiceName,
+        IServiceProvider services,
         CancellationTokenSource errorCts,
         CancellationToken cancellationToken)
     {
@@ -885,6 +879,11 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
             var effectiveSessionId = sessionId ?? string.Empty;
 
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("TranscribeConversationAsync: Starting STT stream. Language={Language}, Format={Format}.", speechLanguage, audioFormat);
+            }
+
             await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
             {
                 if (string.IsNullOrEmpty(update.Text))
@@ -905,6 +904,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     // so we can process the new prompt.
                     if (currentResponseCts != null)
                     {
+                        _logger.LogDebug("TranscribeConversationAsync: New utterance received, cancelling previous AI response.");
                         await currentResponseCts.CancelAsync();
 
                         if (currentResponseTask != null)
@@ -941,14 +941,21 @@ public class AIChatHub : Hub<IAIChatHubClient>
                     // Reset committed text for the next utterance.
                     committedText.Clear();
 
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("TranscribeConversationAsync: Final utterance received: '{Text}'. Dispatching AI response.", fullText);
+                    }
+
                     // Start the AI response as a non-blocking task so the STT loop continues
                     // reading and the user can interrupt the AI by speaking again.
                     currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     currentResponseTask = ProcessConversationTurnAsync(
                         profile, effectiveSessionId, fullText,
-                        ttsClient, voiceName, currentResponseCts.Token);
+                        ttsClient, voiceName, services, currentResponseCts.Token);
                 }
             }
+
+            _logger.LogDebug("TranscribeConversationAsync: STT stream ended.");
 
             // Wait for any pending AI response after the audio stream ends.
             if (currentResponseTask != null)
@@ -978,7 +985,7 @@ public class AIChatHub : Hub<IAIChatHubClient>
                 {
                     await ProcessConversationTurnAsync(
                         profile, effectiveSessionId, remainingText,
-                        ttsClient, voiceName, cancellationToken);
+                        ttsClient, voiceName, services, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -999,48 +1006,114 @@ public class AIChatHub : Hub<IAIChatHubClient>
         string prompt,
         ITextToSpeechClient ttsClient,
         string voiceName,
+        IServiceProvider services,
         CancellationToken cancellationToken)
     {
-        // Send the prompt through the normal AI pipeline.
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("ProcessConversationTurnAsync: Starting for prompt length={PromptLength}.", prompt.Length);
+        }
+
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        var handleTask = HandlePromptAsync(channel.Writer, profile.ItemId, prompt, sessionId, null, cancellationToken);
+        var handleTask = HandlePromptAsync(channel.Writer, services, profile.ItemId, prompt, sessionId, null, cancellationToken);
 
-        var responseBuilder = ZString.CreateStringBuilder();
+        var sentenceChannel = Channel.CreateUnbounded<string>();
         var effectiveSessionId = sessionId;
         string messageId = null;
+        string responseId = null;
 
-        // Read tokens from the AI response and forward them to the client as conversation assistant tokens.
-        await foreach (var chunk in channel.Reader.ReadAllAsync(cancellationToken))
+        // Start TTS consumer that sends audio per sentence (text is sent immediately below).
+        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, () => effectiveSessionId, sentenceChannel.Reader, voiceName, cancellationToken);
+
+        var sentenceBuffer = ZString.CreateStringBuilder();
+
+        try
         {
-            if (!string.IsNullOrEmpty(chunk.SessionId) && string.IsNullOrEmpty(effectiveSessionId))
+            // Stream text tokens to the client IMMEDIATELY as they arrive from the AI model,
+            // and also accumulate into sentences for parallel TTS synthesis.
+            await foreach (var chunk in channel.Reader.ReadAllAsync(cancellationToken))
             {
-                effectiveSessionId = chunk.SessionId;
+                if (!string.IsNullOrEmpty(chunk.SessionId) && string.IsNullOrEmpty(effectiveSessionId))
+                {
+                    effectiveSessionId = chunk.SessionId;
+                }
+
+                messageId ??= chunk.MessageId;
+                responseId ??= chunk.ResponseId;
+
+                if (!string.IsNullOrEmpty(chunk.Content))
+                {
+                    // Send text token to the client immediately so the user sees it right away.
+                    await Clients.Caller.ReceiveConversationAssistantToken(
+                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+
+                    sentenceBuffer.Append(chunk.Content);
+
+                    // Queue completed sentences for TTS synthesis.
+                    if (EndsWithSentenceBoundary(chunk.Content))
+                    {
+                        var sentence = sentenceBuffer.ToString().Trim();
+
+                        if (!string.IsNullOrEmpty(sentence))
+                        {
+                            if (_logger.IsEnabled(LogLevel.Debug))
+                            {
+                                _logger.LogDebug("ProcessConversationTurnAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
+                            }
+
+                            await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
+                            sentenceBuffer.Dispose();
+                            sentenceBuffer = ZString.CreateStringBuilder();
+                        }
+                    }
+                }
             }
 
-            messageId ??= chunk.MessageId;
+            await handleTask;
 
-            if (!string.IsNullOrEmpty(chunk.Content))
+            // Flush any remaining text as the final sentence.
+            var remaining = sentenceBuffer.ToString().Trim();
+            sentenceBuffer.Dispose();
+
+            if (!string.IsNullOrEmpty(remaining))
             {
-                responseBuilder.Append(chunk.Content);
-                await Clients.Caller.ReceiveConversationAssistantToken(
-                    effectiveSessionId, chunk.MessageId ?? string.Empty, chunk.Content, chunk.ResponseId ?? string.Empty);
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("ProcessConversationTurnAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
+                }
+
+                await sentenceChannel.Writer.WriteAsync(remaining, cancellationToken);
+            }
+
+            sentenceChannel.Writer.Complete();
+
+            // Wait for all TTS sentences to finish streaming audio.
+            await ttsTask;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ProcessConversationTurnAsync: Completed. SessionId={SessionId}.", effectiveSessionId);
             }
         }
-
-        await handleTask;
-
-        var fullResponse = responseBuilder.ToString();
-
-        if (!string.IsNullOrEmpty(messageId))
+        finally
         {
-            await Clients.Caller.ReceiveConversationAssistantComplete(effectiveSessionId, messageId);
-        }
+            sentenceChannel.Writer.TryComplete();
+            sentenceBuffer.Dispose();
 
-        // Speak the response via TTS.
-        if (!string.IsNullOrEmpty(fullResponse))
-        {
-            await StreamSpeechAsync(ttsClient, effectiveSessionId, fullResponse, voiceName, cancellationToken);
+            // Always notify the client that the assistant response finished (or was
+            // interrupted/cancelled) so the spinner stops even on error or cancellation.
+            if (!string.IsNullOrEmpty(messageId))
+            {
+                try
+                {
+                    await Clients.Caller.ReceiveConversationAssistantComplete(effectiveSessionId, messageId);
+                }
+                catch
+                {
+                    // Best-effort — the client may have disconnected.
+                }
+            }
         }
 
         return effectiveSessionId;
@@ -1356,7 +1429,15 @@ public class AIChatHub : Hub<IAIChatHubClient>
             options.VoiceName = voiceName;
         }
 
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(text, options, cancellationToken))
+        var speechText = SanitizeForSpeech(text);
+
+        if (string.IsNullOrWhiteSpace(speechText))
+        {
+            await Clients.Caller.ReceiveAudioComplete(sessionId);
+            return;
+        }
+
+        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
         {
             if (update.AudioData == null || update.AudioData.Length == 0)
             {
@@ -1369,4 +1450,154 @@ public class AIChatHub : Hub<IAIChatHubClient>
 
         await Clients.Caller.ReceiveAudioComplete(sessionId);
     }
+
+    private async Task StreamSentencesAsSpeechAsync(
+        ITextToSpeechClient ttsClient,
+        Func<string> getIdentifier,
+        ChannelReader<string> sentenceReader,
+        string voiceName,
+        CancellationToken cancellationToken)
+    {
+        var options = new TextToSpeechOptions();
+
+        if (!string.IsNullOrWhiteSpace(voiceName))
+        {
+            options.VoiceName = voiceName;
+        }
+
+        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
+        {
+            var identifier = getIdentifier();
+            var speechText = SanitizeForSpeech(sentence);
+
+            if (string.IsNullOrWhiteSpace(speechText))
+            {
+                continue;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
+            }
+
+            // Only stream audio — text tokens were already sent immediately in ProcessConversationTurnAsync.
+            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            {
+                if (update.AudioData == null || update.AudioData.Length == 0)
+                {
+                    continue;
+                }
+
+                var base64Audio = Convert.ToBase64String(update.AudioData);
+                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, update.ContentType ?? "audio/mp3");
+            }
+
+            // Signal that this sentence's audio is ready for playback immediately,
+            // so the client can start playing each sentence as it's synthesized
+            // rather than waiting for all sentences to finish.
+            await Clients.Caller.ReceiveAudioComplete(identifier);
+        }
+    }
+
+    private static bool EndsWithSentenceBoundary(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.AsSpan().TrimEnd();
+
+        if (trimmed.IsEmpty)
+        {
+            return false;
+        }
+
+        var lastChar = trimmed[^1];
+
+        return lastChar is '.' or '!' or '?' or '\n';
+    }
+
+    private static string SanitizeForSpeech(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        // Remove fenced code blocks (```...```).
+        text = FencedCodeBlockPattern().Replace(text, " ");
+
+        // Remove inline code (`code`).
+        text = InlineCodePattern().Replace(text, " ");
+
+        // Remove markdown images ![alt](url).
+        text = MarkdownImagePattern().Replace(text, " ");
+
+        // Convert markdown links [text](url) to just text.
+        text = MarkdownLinkPattern().Replace(text, "$1");
+
+        // Remove bold/italic markers (**, *, ___, __, _).
+        text = BoldItalicMarkerPattern().Replace(text, string.Empty);
+
+        // Remove heading markers (# through ######).
+        text = HeadingMarkerPattern().Replace(text, string.Empty);
+
+        // Remove horizontal rules (---, ***, ___).
+        text = HorizontalRulePattern().Replace(text, string.Empty);
+
+        // Remove list markers (- item, * item, + item).
+        text = UnorderedListMarkerPattern().Replace(text, string.Empty);
+
+        // Remove numbered list markers (1. item, 2. item).
+        text = OrderedListMarkerPattern().Replace(text, string.Empty);
+
+        // Remove emoji surrogate pairs (supplementary plane: 😀🎉🚀 etc.).
+        text = EmojiSurrogatePairPattern().Replace(text, string.Empty);
+
+        // Remove common BMP emoji/symbol characters.
+        text = BmpEmojiSymbolPattern().Replace(text, string.Empty);
+
+        // Collapse multiple whitespace into a single space.
+        text = MultipleWhitespacePattern().Replace(text, " ");
+
+        return text.Trim();
+    }
+
+    [GeneratedRegex(@"```[\s\S]*?```")]
+    private static partial Regex FencedCodeBlockPattern();
+
+    [GeneratedRegex(@"`[^`]+`")]
+    private static partial Regex InlineCodePattern();
+
+    [GeneratedRegex(@"!\[[^\]]*\]\([^\)]*\)")]
+    private static partial Regex MarkdownImagePattern();
+
+    [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
+    private static partial Regex MarkdownLinkPattern();
+
+    [GeneratedRegex(@"\*{1,3}|_{1,3}")]
+    private static partial Regex BoldItalicMarkerPattern();
+
+    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
+    private static partial Regex HeadingMarkerPattern();
+
+    [GeneratedRegex(@"^[-*_]{3,}\s*$", RegexOptions.Multiline)]
+    private static partial Regex HorizontalRulePattern();
+
+    [GeneratedRegex(@"^\s*[-*+]\s+", RegexOptions.Multiline)]
+    private static partial Regex UnorderedListMarkerPattern();
+
+    [GeneratedRegex(@"^\s*\d+\.\s+", RegexOptions.Multiline)]
+    private static partial Regex OrderedListMarkerPattern();
+
+    [GeneratedRegex(@"[\uD800-\uDBFF][\uDC00-\uDFFF]")]
+    private static partial Regex EmojiSurrogatePairPattern();
+
+    [GeneratedRegex(@"[\u2600-\u27BF\uFE00-\uFE0F\u200D]")]
+    private static partial Regex BmpEmojiSymbolPattern();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex MultipleWhitespacePattern();
+
 }
