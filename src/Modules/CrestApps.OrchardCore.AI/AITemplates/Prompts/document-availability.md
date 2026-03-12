@@ -2,9 +2,9 @@
 Title: Document Availability Instructions
 Description: Instructs the AI about uploaded documents and available tools.
 Parameters:
-	- tools: array of AIToolDefinitionEntry objects for document processing tools available.
-	- knowledgeBaseDocuments: array of profile-level ChatDocumentInfo objects that are hidden background knowledge.
-	- userSuppliedDocuments: array of session/user-level ChatDocumentInfo objects that are user-visible uploads/attachments.
+  - tools: array of AIToolDefinitionEntry objects for document processing tools available.
+  - knowledgeBaseDocuments: array of profile-level ChatDocumentInfo objects that are hidden background knowledge.
+  - userSuppliedDocuments: array of session/user-level ChatDocumentInfo objects that are user-visible uploads/attachments.
 IsListable: false
 Category: Documents
 ---

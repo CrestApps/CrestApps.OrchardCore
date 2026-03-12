@@ -793,4 +793,58 @@ public sealed class DefaultMarkdownAITemplateParserTests
         Assert.Equal("toolName", result.Metadata.Parameters[0].Name);
         Assert.Equal("the tool to use.", result.Metadata.Parameters[0].Description);
     }
+
+    [Fact]
+    public void Parse_BlockScalarIndicator_StripsIndicatorFromValue()
+    {
+        var content = "---\nTitle: Test\nPromptTemplate: |\n  {% for item in items %}\n  {{ item.Name }}\n  {% endfor %}\n---\nBody.";
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("Test", result.Metadata.Title);
+
+        var template = result.Metadata.AdditionalProperties["PromptTemplate"];
+        Assert.DoesNotContain("|", template.Split('\n')[0]);
+        Assert.Contains("{% for item in items %}", template);
+        Assert.Contains("{{ item.Name }}", template);
+        Assert.Contains("{% endfor %}", template);
+    }
+
+    [Fact]
+    public void Parse_BlockScalarIndicator_MultiLineCustomProperty_JoinsCorrectly()
+    {
+        var content = """
+            ---
+            Title: Test
+            Notes: |
+              Line one
+              Line two
+              Line three
+            Category: General
+            ---
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        var notes = result.Metadata.AdditionalProperties["Notes"];
+        Assert.Equal("Line one\nLine two\nLine three", notes);
+        Assert.Equal("General", result.Metadata.Category);
+    }
+
+    [Fact]
+    public void Parse_PipeInValue_DoesNotTriggerBlockScalar()
+    {
+        var content = """
+            ---
+            Title: Test
+            Description: Use A | B syntax
+            ---
+            Body.
+            """;
+
+        var result = _parser.Parse(content);
+
+        Assert.Equal("Use A | B syntax", result.Metadata.Description);
+    }
 }
