@@ -66,6 +66,15 @@ const sidebars = {
             'ai/mcp/sftp',
           ],
         },
+        {
+          type: 'category',
+          label: 'Agent-to-Agent Protocol (A2A)',
+          items: [
+            'ai/a2a/index',
+            'ai/a2a/client',
+            'ai/a2a/host',
+          ],
+        },
       ],
     },
     {
@@ -97,6 +106,7 @@ const sidebars = {
       items: [
         'samples/index',
         'samples/mcp-client',
+        'samples/a2a-client',
       ],
     },
     {

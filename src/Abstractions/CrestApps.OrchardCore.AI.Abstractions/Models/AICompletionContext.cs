@@ -32,6 +32,8 @@ public class AICompletionContext
 
     public string[] McpConnectionIds { get; set; }
 
+    public string[] A2AConnectionIds { get; set; }
+
     public string DataSourceId { get; set; }
 
     public string ChatDeploymentId { get; set; }

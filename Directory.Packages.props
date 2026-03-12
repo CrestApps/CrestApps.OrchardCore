@@ -24,6 +24,8 @@
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
+    <PackageVersion Include="A2A" Version="0.3.4-preview" />
+    <PackageVersion Include="A2A.AspNetCore" Version="0.3.4-preview" />
     <PackageVersion Include="ModelContextProtocol" Version="1.0.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.0.0" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.0.0" />
