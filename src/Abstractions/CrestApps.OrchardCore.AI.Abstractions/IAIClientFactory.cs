@@ -68,4 +68,25 @@ public interface IAIClientFactory
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+    /// <summary>
+    /// Asynchronously creates an <see cref="ITextToSpeechClient"/> instance for the given provider, connection, and deployment.
+    /// </summary>
+    /// <param name="providerName">The name of the AI provider (e.g., "AzureSpeech").</param>
+    /// <param name="connectionName">The name of the connection configuration to use.</param>
+    /// <param name="deploymentName">The name of the deployment or model to use. If not provided, the default text-to-speech deployment from the connection will be used.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ITextToSpeechClient"/>.
+    /// </returns>
+    ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null);
+
+    /// <summary>
+    /// Asynchronously creates an <see cref="ITextToSpeechClient"/> instance from a deployment that may use
+    /// either a connection reference or contained connection parameters.
+    /// </summary>
+    /// <param name="deployment">The AI deployment containing provider, connection, and model information.</param>
+    /// <returns>
+    /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ITextToSpeechClient"/>.
+    /// </returns>
+    ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment);
 }

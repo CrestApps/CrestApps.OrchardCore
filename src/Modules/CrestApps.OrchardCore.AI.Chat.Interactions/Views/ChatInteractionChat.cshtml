@@ -4,6 +4,7 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.SignalR.Core.Services
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
@@ -24,12 +25,18 @@
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var micBtnHtmlId = $"{baseId}_MicBtn";
+    var ttsStopBtnHtmlId = $"{baseId}_TtsStopBtn";
 
     var site = await SiteService.GetSiteSettingsAsync();
     var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-    var interactionSttSettings = site.As<ChatInteractionSpeechToTextSettings>();
-    var speechToTextEnabled = interactionSttSettings.EnableSpeechToText
+    var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+    var chatMode = chatModeSettings.ChatMode;
+    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation
+        && !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
+    var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
+    var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }
 
 <div class="d-flex flex-column h-100">
@@ -56,7 +63,16 @@
                     <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
-                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-outline-secondary rounded tts-stop-btn" type="button" id="@ttsStopBtnHtmlId" title="@T["Stop audio"]" style="display: none;">
+                        <i class="fa-solid fa-volume-xmark"></i>
+                    </button>
+                    @if (conversationModeEnabled)
+                    {
+                        <button class="btn btn-outline-secondary rounded" type="button" id="@conversationBtnHtmlId" title="@T["Conversation mode"]">
+                            <i class="fa-solid fa-headset"></i>
+                        </button>
+                    }
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId"disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>
@@ -104,21 +120,31 @@
 <script asp-name="ChatInteractionApp" at="Foot"></script>
 <script depends-on="ChatInteractionApp" at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        chatInteractionManager.initialize({
-            signalRHubUrl: '@(HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext))',
-            appElementSelector: '#@chatAppHtmlId',
-            chatContainerElementSelector: '#@chatContainerHtmlId',
-            inputElementSelector: '#@userPromptHtmlId',
-            sendButtonElementSelector: '#@buttonHtmlId',
-            placeholderElementSelector: '#@placeholderHtmlId',
-            messages: @Html.Raw(JsonSerializer.Serialize(prompts ?? [], JOptions.CamelCase)),
-            untitledText: '@T["Untitled"]',
-            clearHistoryTitle: '@T["Clear History"]',
-            clearHistoryMessage: '@T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."]',
-            clearHistoryOkText: '@T["Yes"]',
-            clearHistoryCancelText: '@T["Cancel"]',
-            speechToTextEnabled: @(speechToTextEnabled ? "true" : "false"),
-            micButtonElementSelector: '#@micBtnHtmlId'
-        });
+        var configEl = document.getElementById('@($"{baseId}_Config")');
+        if (configEl) {
+            chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+        }
     });
 </script>
+@{
+    var chatInteractionConfig = new Dictionary<string, object>
+    {
+        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext),
+        ["appElementSelector"] = $"#{chatAppHtmlId}",
+        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
+        ["inputElementSelector"] = $"#{userPromptHtmlId}",
+        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
+        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
+        ["messages"] = prompts,
+        ["untitledText"] = T["Untitled"].Value,
+        ["clearHistoryTitle"] = T["Clear History"].Value,
+        ["clearHistoryMessage"] = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,
+        ["clearHistoryOkText"] = T["Yes"].Value,
+        ["clearHistoryCancelText"] = T["Cancel"].Value,
+        ["chatMode"] = chatMode.ToString(),
+        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
+        ["ttsStopButtonElementSelector"] = $"#{ttsStopBtnHtmlId}",
+        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+    };
+}
+<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

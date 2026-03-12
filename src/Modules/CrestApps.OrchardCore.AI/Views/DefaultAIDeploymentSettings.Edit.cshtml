@@ -43,20 +43,106 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultTextToSpeechDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Text-to-Speech Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultTextToSpeechDeploymentId" asp-items="Model.TextToSpeechDeployments" class="form-select" id="defaultTextToSpeechDeploymentId">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default model used for text-to-speech synthesis."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses() text-to-speech-model-selector-dependent">
+    <label asp-for="DefaultTextToSpeechVoiceId" class="@Orchard.GetLabelClasses()">@T["Default Text-to-Speech Voice"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select" id="defaultTextToSpeechVoiceSelect">
+            <option value="">@T["Default voice"]</option>
+        </select>
+        <span class="hint">@T["The default voice for text-to-speech synthesis. When a profile does not specify a voice, this value is used. Leave as default to use the provider's default voice."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-        var sttSelect = document.getElementById('defaultSpeechToTextDeploymentId');
-        if (!sttSelect) return;
+        function setupDependentToggle(selectId, dependentClass) {
+            var select = document.getElementById(selectId);
+            if (!select) return;
 
-        function toggleSttDependents() {
-            var hasValue = !!sttSelect.value;
-            var dependents = document.querySelectorAll('.speech-to-text-model-selector-dependent');
-            for (var i = 0; i < dependents.length; i++) {
-                dependents[i].style.display = hasValue ? '' : 'none';
+            function toggle() {
+                var hasValue = !!select.value;
+                var dependents = document.querySelectorAll('.' + dependentClass);
+                for (var i = 0; i < dependents.length; i++) {
+                    dependents[i].style.display = hasValue ? '' : 'none';
+                }
             }
+
+            select.addEventListener('change', toggle);
+            toggle();
         }
 
-        sttSelect.addEventListener('change', toggleSttDependents);
-        toggleSttDependents();
+        setupDependentToggle('defaultSpeechToTextDeploymentId', 'speech-to-text-model-selector-dependent');
+        setupDependentToggle('defaultTextToSpeechDeploymentId', 'text-to-speech-model-selector-dependent');
+
+        var ttsDeploymentSelect = document.getElementById('defaultTextToSpeechDeploymentId');
+        var voiceSelect = document.getElementById('defaultTextToSpeechVoiceSelect');
+        var currentVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? "")';
+
+        if (ttsDeploymentSelect && voiceSelect) {
+            function loadVoices() {
+                var deploymentId = ttsDeploymentSelect.value;
+
+                if (!deploymentId) {
+                    voiceSelect.innerHTML = '<option value="">@T["Default voice"]</option>';
+                    return;
+                }
+
+                fetch('@Url.Action("Voices", "Api", new { area = "CrestApps.OrchardCore.AI" })' + '?deploymentId=' + encodeURIComponent(deploymentId))
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        voiceSelect.innerHTML = '<option value="">@T["Default voice"]</option>';
+
+                        if (data && data.voices) {
+                            var groups = {};
+                            data.voices.forEach(function (voice) {
+                                var lang = voice.language || '@T["Unknown"]';
+                                if (!groups[lang]) {
+                                    groups[lang] = [];
+                                }
+                                groups[lang].push(voice);
+                            });
+
+                            Object.keys(groups).sort().forEach(function (lang) {
+                                var optgroup = document.createElement('optgroup');
+                                optgroup.label = lang;
+                                groups[lang].forEach(function (voice) {
+                                    var option = document.createElement('option');
+                                    option.value = voice.id;
+                                    option.textContent = voice.name;
+                                    if (voice.id === currentVoiceId) {
+                                        option.selected = true;
+                                    }
+                                    optgroup.appendChild(option);
+                                });
+                                voiceSelect.appendChild(optgroup);
+                            });
+                        }
+
+                        currentVoiceId = '';
+                    })
+                    .catch(function () {
+                        voiceSelect.innerHTML = '<option value="">@T["Default voice"]</option>';
+                    });
+            }
+
+            ttsDeploymentSelect.addEventListener('change', function () {
+                currentVoiceId = '';
+                loadVoices();
+            });
+
+            if (ttsDeploymentSelect.value) {
+                loadVoices();
+            }
+        }
     });
 </script>

@@ -27,7 +27,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
-- Speech-to-text — speak your prompts via a microphone button using a configured speech-to-text model
+- Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 
 ## Getting Started
 
@@ -52,25 +52,43 @@ Each chat interaction session is bound to an orchestrator that manages the execu
 
 The default orchestrator (`DefaultOrchestrator`) is our state-of-the-art orchestrator responsible for gluing together everything the model needs to do useful work: planning, tool selection and execution, document context, and multi-step reasoning loops. It is effectively the brain behind chat interactions and the overall model behavior, unless you select a different orchestrator (for example, the Copilot orchestrator).
 
-## Speech-to-Text (Voice Input)
+## Chat Mode
 
-Chat Interactions supports speech-to-text input, allowing users to speak their prompts using a microphone button.
+Chat Interactions supports configurable chat modes that control how users interact with the AI. This is a site-level setting that applies globally to all chat interaction sessions.
+
+### Chat Mode Options
+
+| Mode | Description | UI Element |
+| --- | --- | --- |
+| **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
+| **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
+| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
 
 ### Prerequisites
 
-- A **Default Speech-to-Text Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**. This can be any deployment that supports the `ISpeechToTextClient` interface, such as an Azure Speech contained-connection deployment or an OpenAI Whisper deployment.
-- The AI provider must support the `ISpeechToTextClient` interface.
+- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**.
 
-### Enabling Speech-to-Text
+### Configuring Chat Mode
 
 1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
-2. Check the **Enable speech-to-text in chat interactions** checkbox. This checkbox only appears when a default speech-to-text deployment is configured.
+2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required default deployments are configured.
 3. Save the settings.
 
-Once enabled, a microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
+The selected chat mode applies to all Chat Interaction UIs. Unlike AI Profiles, there is no per-session voice selection — Conversation mode uses the default voice configured in site settings (or the provider's default).
+
+Once configured:
+
+- **Audio Input**: A microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
+- **Conversation**: A headset button appears in the Chat Interaction editor. Click it to start a persistent two-way voice conversation — the mic, send button, and text input are hidden. Speak naturally and your transcribed prompt appears as a user message and is automatically sent. The AI responds with streamed text **and** spoken audio simultaneously. If you speak while the AI is responding, the current response is interrupted to process your new prompt. Click the headset button again to end the conversation and restore the text interface.
 
 :::info
 If the speech-to-text service encounters an error during transcription, the error is reported immediately and the recording stops automatically.
+:::
+
+:::info
+Text-to-speech synthesis occurs after the full response text has been received — it does not interrupt or delay the text streaming experience.
 :::
 
 ## Related Features

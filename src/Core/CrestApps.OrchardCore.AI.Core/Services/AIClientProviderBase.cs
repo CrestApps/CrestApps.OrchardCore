@@ -108,4 +108,10 @@ public abstract class AIClientProviderBase : IAIClientProvider
 
     protected abstract ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+    public virtual ValueTask<ITextToSpeechClient> GetTextToSpeechClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+        => throw new NotSupportedException($"The provider '{GetProviderName()}' does not support text-to-speech.");
+
+    public virtual Task<SpeechVoice[]> GetSpeechVoicesAsync(AIProviderConnectionEntry connection, string deploymentName = null)
+        => Task.FromResult(Array.Empty<SpeechVoice>());
 }

@@ -52,10 +52,17 @@
         && Model.Profile.As<AnalyticsMetadata>().EnableSessionMetrics;
     var profileMetadata = Model.Profile?.As<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata?.InitialPrompt);
-    var speechToTextEnabled = Model.Profile != null
-        && Model.Profile.TryGetSettings<SpeechToTextProfileSettings>(out var sttSettings)
-        && sttSettings.EnableSpeechToText;
+    ChatModeProfileSettings chatModeSettings = null;
+    var chatMode = Model.Profile != null && Model.Profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings)
+        ? chatModeSettings.ChatMode
+        : ChatMode.TextOnly;
+    var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation;
+    var ttsVoiceName = chatModeSettings?.VoiceName;
+    var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
+    var ttsStopBtnHtmlId = $"{baseId}_TtsStopBtn";
+    var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }
 
 <div class="container-fluid d-flex flex-column h-100">
@@ -114,6 +121,15 @@
                     <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
+                    <button class="btn btn-outline-secondary rounded tts-stop-btn" type="button" id="@ttsStopBtnHtmlId" title="@T["Stop audio"]" style="display: none;">
+                        <i class="fa-solid fa-volume-xmark"></i>
+                    </button>
+                    @if (conversationModeEnabled)
+                    {
+                        <button class="btn btn-outline-secondary rounded" type="button" id="@conversationBtnHtmlId" title="@T["Conversation mode"]">
+                            <i class="fa-solid fa-headset"></i>
+                        </button>
+                    }
                     <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
@@ -151,30 +167,42 @@
 }
 <script asp-name="AIChatApp" at="Foot"></script>
 <script at="Foot" depends-on="AIChatApp">
-    openAIChatManager.initialize({
-        signalRHubUrl: '@(HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext))',
-        appElementSelector: '#@chatAppHtmlId',
-        chatContainerElementSelector: '#@chatContainerHtmlId',
-        inputElementSelector: '#@userPromptHtmlId',
-        sendButtonElementSelector: '#@buttonHtmlId',
-        placeholderElementSelector: '#@placeholderHtmlId',
-        autoCreateSession: @(addInitialPrompt ? "true" : "false"),
-        initialPrompt: @(addInitialPrompt ? Html.Raw(JsonSerializer.Serialize(profileMetadata.InitialPrompt, JOptions.CamelCase)) : "null"),
-        messages: @Html.Raw(JsonSerializer.Serialize(prompts, JOptions.CamelCase)),
-        metricsEnabled: @(metricsEnabled ? "true" : "false"),
-        speechToTextEnabled: @(speechToTextEnabled ? "true" : "false"),
-        micButtonElementSelector: '#@micBtnHtmlId',
-        @if (sessionDocumentsEnabled)
-        {
-                                @:sessionDocumentsEnabled: true,
-                                @:documentBarSelector: '#@documentBarHtmlId',
-                                @:uploadDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument)',
-                                @:removeDocumentUrl: '@Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument)',
-                                @:allowedExtensions: '@allowedExtensions',
-                                @:existingDocuments: @Html.Raw(JsonSerializer.Serialize(Model.Session.Documents ?? new List<ChatDocumentInfo>(), JOptions.CamelCase)),
-        }
-    });
+    var configEl = document.getElementById('@($"{baseId}_Config")');
+    if (configEl) {
+        openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+    }
 </script>
+@{
+    var chatConfig = new Dictionary<string, object>
+    {
+        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext),
+        ["appElementSelector"] = $"#{chatAppHtmlId}",
+        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
+        ["inputElementSelector"] = $"#{userPromptHtmlId}",
+        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
+        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
+        ["autoCreateSession"] = addInitialPrompt,
+        ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+        ["messages"] = prompts,
+        ["metricsEnabled"] = metricsEnabled,
+        ["chatMode"] = chatMode.ToString(),
+        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
+        ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
+        ["ttsStopButtonElementSelector"] = $"#{ttsStopBtnHtmlId}",
+        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+    };
+
+    if (sessionDocumentsEnabled)
+    {
+        chatConfig["sessionDocumentsEnabled"] = true;
+        chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
+        chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
+        chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
+        chatConfig["allowedExtensions"] = allowedExtensions;
+        chatConfig["existingDocuments"] = Model.Session.Documents ?? new List<ChatDocumentInfo>();
+    }
+}
+<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
 <style at="Head">
     .chat-user-prompt-input:focus {

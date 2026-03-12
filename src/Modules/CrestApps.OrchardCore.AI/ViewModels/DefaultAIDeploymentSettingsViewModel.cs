@@ -13,6 +13,10 @@ public class DefaultAIDeploymentSettingsViewModel
 
     public string DefaultSpeechToTextDeploymentId { get; set; }
 
+    public string DefaultTextToSpeechDeploymentId { get; set; }
+
+    public string DefaultTextToSpeechVoiceId { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> UtilityDeployments { get; set; }
 
@@ -24,4 +28,7 @@ public class DefaultAIDeploymentSettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> SpeechToTextDeployments { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; }
 }

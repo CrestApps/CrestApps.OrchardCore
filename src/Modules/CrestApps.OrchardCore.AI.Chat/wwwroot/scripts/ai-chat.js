@@ -316,7 +316,17 @@ window.openAIChatManager = function () {
           mediaRecorder: null,
           preRecordingPrompt: '',
           micButton: null,
-          speechToTextEnabled: !!config.speechToTextEnabled
+          speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation',
+          ttsVoiceName: config.ttsVoiceName || null,
+          audioChunks: [],
+          isPlayingAudio: false,
+          currentAudioElement: null,
+          ttsButton: null,
+          ttsStopButton: null,
+          conversationModeEnabled: config.chatMode === 'Conversation',
+          conversationButton: null,
+          isConversationMode: false
         };
       },
       methods: {
@@ -644,6 +654,14 @@ window.openAIChatManager = function () {
                     if (_this3.isRecording) {
                       _this3.stopRecording();
                     }
+
+                    // If this is a widget with a stale cached session (e.g., profile was deleted),
+                    // clear the cached session and start fresh with the current profile.
+                    if (_this3.widgetIsInitialized && !_this3.isSessionStarted && !_this3._attemptedSessionRecovery) {
+                      _this3._attemptedSessionRecovery = true;
+                      localStorage.removeItem(_this3.chatWidgetStateSession);
+                      _this3.startNewSession();
+                    }
                   });
                   _this3.connection.on("MessageRated", function (messageId, userRating) {
                     var msg = _this3.messages.find(function (m) {
@@ -654,6 +672,14 @@ window.openAIChatManager = function () {
                     }
                   });
                   _this3.connection.on("ReceiveTranscript", function (sessionId, text, isFinal) {
+                    if (_this3.isConversationMode) {
+                      // In conversation mode, show partial transcript as a live indicator
+                      // but don't put it in the textarea.
+                      if (!isFinal) {
+                        _this3._conversationPartialTranscript = text;
+                      }
+                      return;
+                    }
                     if (text) {
                       _this3.prompt = _this3.preRecordingPrompt + text;
                       if (_this3.inputElement) {
@@ -661,6 +687,69 @@ window.openAIChatManager = function () {
                         _this3.inputElement.dispatchEvent(new Event('input'));
                       }
                     }
+                  });
+                  _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, text) {
+                    if (text) {
+                      _this3.stopAudio();
+                      _this3._conversationAssistantMessage = null;
+                      _this3.addMessage({
+                        role: 'user',
+                        content: text
+                      });
+                      _this3.scrollToBottom();
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId) {
+                    if (!_this3._conversationAssistantMessage) {
+                      _this3.stopAudio();
+                      _this3.hideTypingIndicator();
+                      var msgIndex = _this3.messages.length;
+                      var newMessage = {
+                        id: messageId,
+                        role: "assistant",
+                        content: "",
+                        htmlContent: "",
+                        isStreaming: true,
+                        userRating: null
+                      };
+                      _this3.messages.push(newMessage);
+                      _this3._conversationAssistantMessage = {
+                        index: msgIndex,
+                        content: ''
+                      };
+                    }
+                    _this3._conversationAssistantMessage.content += token;
+                    var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                    if (msg) {
+                      msg.content = _this3._conversationAssistantMessage.content;
+                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      _this3.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                        _this3.scrollToBottom();
+                      });
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId) {
+                    if (_this3._conversationAssistantMessage) {
+                      var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                      if (msg) {
+                        msg.isStreaming = false;
+                      }
+                      _this3._conversationAssistantMessage = null;
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioChunk", function (sessionId, base64Audio, contentType) {
+                    if (base64Audio) {
+                      var binaryString = atob(base64Audio);
+                      var bytes = new Uint8Array(binaryString.length);
+                      for (var i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      _this3.audioChunks.push(bytes);
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioComplete", function (sessionId) {
+                    _this3.playCollectedAudio();
                   });
                   _this3.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
@@ -854,7 +943,11 @@ window.openAIChatManager = function () {
             return;
           }
           navigator.mediaDevices.getUserMedia({
-            audio: true
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
             _this7.mediaRecorder = new MediaRecorder(stream, {
@@ -898,7 +991,8 @@ window.openAIChatManager = function () {
                 return subject.complete();
               });
             });
-            _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType);
+            var language = document.documentElement.lang || 'en-US';
+            _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
             _this7.mediaRecorder.start(1000);
             _this7.isRecording = true;
             _this7.updateMicButton();
@@ -1024,6 +1118,11 @@ window.openAIChatManager = function () {
               if (!msg || !msg.content) {
                 // No content received at all.
                 _this8.hideTypingIndicator();
+              }
+
+              // Trigger text-to-speech if enabled and content was received.
+              if (_this8.textToSpeechEnabled && msg && msg.content) {
+                _this8.synthesizeSpeech(msg.content);
               }
               (_this8$stream = _this8.stream) === null || _this8$stream === void 0 || _this8$stream.dispose();
               _this8.stream = null;
@@ -1178,6 +1277,194 @@ window.openAIChatManager = function () {
             }
           }
         },
+        synthesizeSpeech: function synthesizeSpeech(text) {
+          var _this9 = this;
+          if (!this.textToSpeechEnabled || !text || !this.connection) {
+            return;
+          }
+          this.audioChunks = [];
+          this.isPlayingAudio = true;
+          this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
+            console.error("TTS synthesis error:", err);
+            _this9.isPlayingAudio = false;
+          });
+        },
+        playCollectedAudio: function playCollectedAudio() {
+          var _this0 = this;
+          if (this.audioChunks.length === 0) {
+            this.isPlayingAudio = false;
+            return;
+          }
+          var totalLength = this.audioChunks.reduce(function (sum, chunk) {
+            return sum + chunk.length;
+          }, 0);
+          var combined = new Uint8Array(totalLength);
+          var offset = 0;
+          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
+            _step8;
+          try {
+            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+              var chunk = _step8.value;
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } catch (err) {
+            _iterator8.e(err);
+          } finally {
+            _iterator8.f();
+          }
+          this.audioChunks = [];
+          var blob = new Blob([combined], {
+            type: 'audio/mp3'
+          });
+          var url = URL.createObjectURL(blob);
+          var audio = new Audio(url);
+          this.currentAudioElement = audio;
+          audio.addEventListener('ended', function () {
+            URL.revokeObjectURL(url);
+            _this0.isPlayingAudio = false;
+            _this0.currentAudioElement = null;
+            _this0.conversationModeOnAudioEnded();
+          });
+          audio.addEventListener('error', function () {
+            URL.revokeObjectURL(url);
+            _this0.isPlayingAudio = false;
+            _this0.currentAudioElement = null;
+            _this0.conversationModeOnAudioEnded();
+          });
+          audio.play()["catch"](function (err) {
+            console.error("Audio playback error:", err);
+            URL.revokeObjectURL(url);
+            _this0.isPlayingAudio = false;
+            _this0.currentAudioElement = null;
+          });
+        },
+        stopAudio: function stopAudio() {
+          if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement.currentTime = 0;
+            this.currentAudioElement = null;
+          }
+          this.audioChunks = [];
+          this.isPlayingAudio = false;
+        },
+        toggleConversationMode: function toggleConversationMode() {
+          if (this.isConversationMode) {
+            this.stopConversationMode();
+          } else {
+            this.startConversationMode();
+          }
+        },
+        startConversationMode: function startConversationMode() {
+          var _this1 = this;
+          if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
+            return;
+          }
+          this.isConversationMode = true;
+          this.updateConversationButton();
+          this._conversationPartialTranscript = '';
+          this._conversationAssistantMessage = null;
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this1.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 16000
+            });
+            _this1._conversationSubject = new signalR.Subject();
+            _this1._conversationStream = stream;
+            var pendingChunk = Promise.resolve();
+            _this1.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context5) {
+                    while (1) switch (_context5.n) {
+                      case 0:
+                        _context5.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context5.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte2) {
+                          return str + String.fromCharCode(_byte2);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        try {
+                          _this1._conversationSubject.next(base64);
+                        } catch (err) {
+                          // Subject may have been completed already.
+                        }
+                      case 2:
+                        return _context5.a(2);
+                    }
+                  }, _callee5);
+                })));
+              }
+            });
+            _this1.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                try {
+                  _this1._conversationSubject.complete();
+                } catch (err) {
+                  // Already completed.
+                }
+              });
+            });
+            var profileId = _this1.getProfileId();
+            var sessionId = _this1.getSessionId() || '';
+            var language = document.documentElement.lang || 'en-US';
+            _this1.connection.send("StartConversation", profileId, sessionId, _this1._conversationSubject, mimeType, language);
+            _this1.mediaRecorder.start(1000);
+            _this1.isRecording = true;
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+            _this1.isConversationMode = false;
+            _this1.updateConversationButton();
+          });
+        },
+        stopConversationMode: function stopConversationMode() {
+          if (!this.isConversationMode) {
+            return;
+          }
+          this.isConversationMode = false;
+          this.updateConversationButton();
+          if (this.isRecording && this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+          }
+          this.stopAudio();
+          this._conversationPartialTranscript = '';
+          this._conversationAssistantMessage = null;
+        },
+        updateConversationButton: function updateConversationButton() {
+          if (!this.conversationButton) {
+            return;
+          }
+          if (this.isConversationMode) {
+            this.conversationButton.classList.add('active', 'btn-primary');
+            this.conversationButton.classList.remove('btn-outline-secondary');
+          } else {
+            this.conversationButton.classList.remove('active', 'btn-primary');
+            this.conversationButton.classList.add('btn-outline-secondary');
+          }
+        },
+        conversationModeSendPrompt: function conversationModeSendPrompt() {
+          // Legacy: only used by AudioInput mode's ReceiveTranscript.
+        },
+        conversationModeOnAudioEnded: function conversationModeOnAudioEnded() {
+          // Legacy: in conversation mode, audio playback continuation
+          // is handled by the persistent stream. This method is only
+          // called from playCollectedAudio for non-conversation TTS.
+        },
         generatePrompt: function generatePrompt(element) {
           if (!element) {
             console.error('The element paramter is required.');
@@ -1215,12 +1502,12 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this9 = this;
+          var _this10 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this9.chatContainer.scrollTop = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight;
+            _this10.chatContainer.scrollTop = _this10.chatContainer.scrollHeight - _this10.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -1259,7 +1546,7 @@ window.openAIChatManager = function () {
           });
         },
         initializeApp: function initializeApp() {
-          var _this0 = this;
+          var _this11 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1284,7 +1571,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this0.handleFileInputChange(e);
+                return _this11.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -1292,13 +1579,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this0.handleDragOver(e);
+                  return _this11.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this0.handleDragLeave(e);
+                  return _this11.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this0.handleDrop(e);
+                  return _this11.handleDrop(e);
                 });
               }
             }
@@ -1306,55 +1593,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this0.stream) {
+            if (!_this11.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight - _this0.chatContainer.scrollTop <= threshold;
-            _this0.autoScroll = atBottom;
+            var atBottom = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight - _this11.chatContainer.scrollTop <= threshold;
+            _this11.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this0.stream != null) {
+            if (_this11.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this0.buttonElement.click();
+              _this11.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this0.handleUserInput(e);
+            _this11.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this0.buttonElement.removeAttribute('disabled');
+              _this11.buttonElement.removeAttribute('disabled');
             } else {
-              _this0.buttonElement.setAttribute('disabled', true);
+              _this11.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this0.stream != null) {
-              _this0.stream.dispose();
-              _this0.stream = null;
-              _this0.streamingFinished();
-              _this0.hideTypingIndicator();
+            if (_this11.stream != null) {
+              _this11.stream.dispose();
+              _this11.stream = null;
+              _this11.streamingFinished();
+              _this11.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this0.messages.length > 0) {
-                var lastMsg = _this0.messages[_this0.messages.length - 1];
+              if (_this11.messages.length > 0) {
+                var lastMsg = _this11.messages[_this11.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this0.messages.pop();
+                  _this11.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this0.sendMessage();
+            _this11.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this0.generatePrompt(e.target);
+              _this11.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -1366,8 +1653,8 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this0.loadSession(sessionId);
-              _this0.showChatScreen();
+              _this11.loadSession(sessionId);
+              _this11.showChatScreen();
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1376,7 +1663,7 @@ window.openAIChatManager = function () {
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this0.refreshAllFeedbackIcons();
+            _this11.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -1408,7 +1695,27 @@ window.openAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this0.toggleRecording();
+                _this11.toggleRecording();
+              });
+            }
+          }
+
+          // Initialize text-to-speech stop button.
+          if (this.textToSpeechEnabled && config.ttsStopButtonElementSelector) {
+            this.ttsStopButton = document.querySelector(config.ttsStopButtonElementSelector);
+            if (this.ttsStopButton) {
+              this.ttsStopButton.addEventListener('click', function () {
+                _this11.stopAudio();
+              });
+            }
+          }
+
+          // Initialize conversation mode button.
+          if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+            this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
+            if (this.conversationButton) {
+              this.conversationButton.addEventListener('click', function () {
+                _this11.toggleConversationMode();
               });
             }
           }
@@ -1440,7 +1747,7 @@ window.openAIChatManager = function () {
           }
         },
         initializeWidget: function initializeWidget() {
-          var _this1 = this;
+          var _this12 = this;
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
@@ -1469,14 +1776,14 @@ window.openAIChatManager = function () {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {
               showHistoryButton.addEventListener('click', function () {
-                _this1.chatHistorySection.classList.toggle('show');
+                _this12.chatHistorySection.classList.toggle('show');
               });
             }
             if (config.widget.closeHistoryButton) {
               var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
               if (closeHistoryButton) {
                 closeHistoryButton.addEventListener('click', function () {
-                  _this1.showChatScreen();
+                  _this12.showChatScreen();
                 });
               }
             }
@@ -1485,8 +1792,8 @@ window.openAIChatManager = function () {
             var newChatButton = document.querySelector(config.widget.newChatButton);
             if (newChatButton) {
               newChatButton.addEventListener('click', function () {
-                _this1.resetSession();
-                _this1.showChatScreen();
+                _this12.resetSession();
+                _this12.showChatScreen();
               });
             }
           }
@@ -1596,25 +1903,54 @@ window.openAIChatManager = function () {
         },
         isUploading: function isUploading() {
           this.renderDocumentBar();
+        },
+        isPlayingAudio: function isPlayingAudio(playing) {
+          if (this.ttsStopButton) {
+            this.ttsStopButton.style.display = playing ? '' : 'none';
+          }
+        },
+        isConversationMode: function isConversationMode(active) {
+          // Hide/show mic button.
+          if (this.micButton) {
+            this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
+          }
+
+          // Hide/show send button.
+          if (this.buttonElement) {
+            this.buttonElement.style.display = active ? 'none' : '';
+          }
+
+          // Disable/enable textarea.
+          if (this.inputElement) {
+            this.inputElement.disabled = active;
+            if (active) {
+              this.inputElement.placeholder = '';
+            }
+          }
+
+          // Hide/show TTS stop button.
+          if (this.ttsStopButton) {
+            this.ttsStopButton.style.display = 'none';
+          }
         }
       },
       mounted: function mounted() {
-        var _this10 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
-          return _regenerator().w(function (_context5) {
-            while (1) switch (_context5.n) {
+        var _this13 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+          return _regenerator().w(function (_context6) {
+            while (1) switch (_context6.n) {
               case 0:
-                _context5.n = 1;
-                return _this10.startConnection();
+                _context6.n = 1;
+                return _this13.startConnection();
               case 1:
-                _this10.initializeApp();
+                _this13.initializeApp();
                 if (config.widget) {
-                  _this10.initializeWidget();
+                  _this13.initializeWidget();
                 }
               case 2:
-                return _context5.a(2);
+                return _context6.a(2);
             }
-          }, _callee5);
+          }, _callee6);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

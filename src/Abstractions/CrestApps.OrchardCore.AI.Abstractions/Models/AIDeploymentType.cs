@@ -7,4 +7,5 @@ public enum AIDeploymentType
     Embedding,
     Image,
     SpeechToText,
+    TextToSpeech,
 }

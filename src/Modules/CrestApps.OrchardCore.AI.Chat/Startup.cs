@@ -42,8 +42,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileSpeechToTextDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSpeechToTextDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {

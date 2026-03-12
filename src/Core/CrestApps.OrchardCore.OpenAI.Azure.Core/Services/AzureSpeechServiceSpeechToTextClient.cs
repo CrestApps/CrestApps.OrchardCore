@@ -38,7 +38,11 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     private readonly AzureAuthenticationType _authType;
     private readonly string _apiKey;
     private readonly string _identityId;
+    private readonly string _region;
     private readonly ILogger _logger;
+
+    private string _cachedToken;
+    private DateTimeOffset _tokenExpires;
 
     public AzureSpeechServiceSpeechToTextClient(
         Uri endpoint,
@@ -53,6 +57,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         _authType = authType;
         _apiKey = apiKey;
         _identityId = identityId;
+        _region = TryExtractRegion(endpoint);
         _logger = logger;
     }
 
@@ -80,7 +85,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         using var audioConfig = AudioConfig.FromStreamInput(pushStream);
         using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
 
-        var buffer = new byte[4096];
+        var buffer = new byte[32768];
         int bytesRead;
         var totalBytes = 0L;
 
@@ -243,15 +248,15 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             }
         };
 
+        // Start pushing audio data immediately so the recognizer receives data as soon as it starts.
+        var pushTask = PushAudioToStreamAsync(audioSpeechStream, pushStream, errorCts.Token);
+
         await recognizer.StartContinuousRecognitionAsync();
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Continuous recognition started. Pushing audio data...");
         }
-
-        // Push audio data concurrently while yielding recognition results.
-        var pushTask = PushAudioToStreamAsync(audioSpeechStream, pushStream, errorCts.Token);
 
         await foreach (var update in channel.Reader.ReadAllAsync(cancellationToken))
         {
@@ -285,7 +290,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         try
         {
-            var buffer = new byte[4096];
+            var buffer = new byte[32768];
             int bytesRead;
 
             while ((bytesRead = await audioSpeechStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
@@ -332,18 +337,16 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
     private async Task<SpeechConfig> CreateSpeechConfigAsync(string language, CancellationToken cancellationToken)
     {
-        var region = TryExtractRegion(_endpoint);
-
         SpeechConfig config;
 
-        if (region != null)
+        if (_region != null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("Extracted region '{Region}' from endpoint. Using region-based SDK configuration.", region);
+                _logger.LogDebug("Using region '{Region}' for SDK configuration.", _region);
             }
 
-            config = await CreateRegionBasedConfigAsync(region, cancellationToken);
+            config = await CreateRegionBasedConfigAsync(_region, cancellationToken);
         }
         else
         {
@@ -361,7 +364,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogTrace("SpeechConfig created. Language: {Language}, Region: {Region}", language, region ?? "(from endpoint)");
+            _logger.LogTrace("SpeechConfig created. Language: {Language}, Region: {Region}", language, _region ?? "(from endpoint)");
         }
 
         return config;
@@ -420,6 +423,11 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
     private async Task<string> GetAuthorizationTokenAsync(CancellationToken cancellationToken)
     {
+        if (_cachedToken != null && _tokenExpires > DateTimeOffset.UtcNow.AddMinutes(-1))
+        {
+            return _cachedToken;
+        }
+
         TokenCredential credential = _authType switch
         {
             AzureAuthenticationType.ManagedIdentity => string.IsNullOrEmpty(_identityId)
@@ -432,12 +440,15 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             new TokenRequestContext([CognitiveServicesScope]),
             cancellationToken);
 
+        _cachedToken = tokenResult.Token;
+        _tokenExpires = tokenResult.ExpiresOn;
+
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Successfully obtained authorization token for Azure Speech. AuthType: {AuthType}", _authType);
         }
 
-        return tokenResult.Token;
+        return _cachedToken;
     }
 
     /// <summary>
@@ -473,7 +484,8 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     /// <summary>
     /// Reads an optional <c>audioFormat</c> value from <see cref="SpeechToTextOptions.AdditionalProperties"/>
     /// and maps it to an <see cref="AudioStreamContainerFormat"/>. Falls back to
-    /// <see cref="AudioStreamContainerFormat.ANY"/> when the value is missing or unrecognized.
+    /// <see cref="AudioStreamContainerFormat.ANY"/> when the value is missing or unrecognized,
+    /// which lets the SDK auto-detect the container format.
     /// </summary>
 #pragma warning disable MEAI001
     private AudioStreamContainerFormat ResolveContainerFormat(SpeechToTextOptions options)
@@ -500,10 +512,11 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     /// <summary>
     /// Maps a MIME-type or short name to an <see cref="AudioStreamContainerFormat"/> value.
     /// Returns <see cref="AudioStreamContainerFormat.ANY"/> for unrecognized values.
+    /// WebM uses a Matroska container that has no dedicated SDK constant, so it falls back to auto-detect.
     /// </summary>
     private static AudioStreamContainerFormat MapToContainerFormat(string format)
     {
-        // Normalize: lower-case and strip codec parameters (e.g., "audio/ogg;codecs=opus" → "audio/ogg").
+        // Normalize: lower-case and strip codec parameters (e.g., "audio/webm;codecs=opus" → "audio/webm").
         var normalized = format.Trim().ToLowerInvariant();
         var semicolonIndex = normalized.IndexOf(';');
 

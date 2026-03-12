@@ -64,7 +64,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
 
-        services.AddSiteDisplayDriver<ChatInteractionSpeechToTextSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>();
 
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
