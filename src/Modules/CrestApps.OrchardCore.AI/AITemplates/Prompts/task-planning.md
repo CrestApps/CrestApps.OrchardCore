@@ -2,7 +2,7 @@
 Title: Task Planning
 Description: Plans task execution based on user requests and available tools and agents.
 Parameters:
-	- tools: array of objects with Name, Description, and Source (string: Local, System, Agent, or McpServer).
+  - tools: "array of objects with Name, Description, and Source (string: Local, System, Agent, or McpServer)."
 IsListable: false
 Category: Orchestration
 ---

@@ -125,6 +125,11 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public IList<string> McpConnectionIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the list of A2A connection IDs to use.
+    /// </summary>
+    public IList<string> A2AConnectionIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the collection of attached documents for "chat against own data" functionality.
     /// Only applicable when Source is AzureOpenAIOwnData.
     /// </summary>

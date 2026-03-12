@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CrestApps.OrchardCore.Cms.Web\CrestApps.OrchardCore.Cms.Web.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Samples.A2AClient\CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Samples.McpClient\CrestApps.OrchardCore.Samples.McpClient.csproj" />
   </ItemGroup>
 

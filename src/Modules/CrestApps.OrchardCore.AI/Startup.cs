@@ -1,3 +1,4 @@
+using CrestApps.AI.Prompting.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -45,6 +46,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAICoreServices();
+
+        // Register embedded AI templates from this module so they are always
+        // available, even when the AI Prompting feature is not enabled.
+        services.AddAITemplatesFromAssembly(typeof(Startup).Assembly);
         services.AddPermissionProvider<AIPermissionsProvider>();
         services.Configure<TemplateOptions>(o =>
         {

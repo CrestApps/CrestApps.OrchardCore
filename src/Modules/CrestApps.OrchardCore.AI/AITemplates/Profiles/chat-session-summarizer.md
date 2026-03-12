@@ -8,7 +8,7 @@ ProfileType: TemplatePrompt
 PromptSubject: Summary
 TitleType: Generated
 Temperature: 0.3
-PromptTemplate:
+PromptTemplate: |
   {% for prompt in Session.Prompts %}
   {% unless prompt.IsGeneratedPrompt %}
   Role: {{ prompt.Role }}

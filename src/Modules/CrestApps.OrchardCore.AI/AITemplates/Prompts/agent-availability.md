@@ -2,7 +2,7 @@
 Title: Agent Availability Instructions
 Description: Informs the AI model about available specialized agents and their capabilities.
 Parameters:
-	- agents: array of objects with Name (string) and Description (string) for each available agent.
+  - agents: array of objects with Name (string) and Description (string) for each available agent.
 IsListable: false
 Category: Orchestration
 ---
