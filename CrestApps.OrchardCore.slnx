@@ -46,6 +46,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
@@ -75,6 +76,7 @@
   <Folder Name="/Startup/">
     <Project Path="src/Startup/CrestApps.Aspire.AppHost/CrestApps.Aspire.AppHost.csproj" />
     <Project Path="src/Startup/CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
+    <Project Path="src/Startup/CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <Project Path="src/Startup/CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
   </Folder>
   <Folder Name="/Targets/">

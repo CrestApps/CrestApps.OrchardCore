@@ -340,15 +340,11 @@ public sealed class McpServerStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var mcpServerOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
-
-        var endpoint = routes.MapMcp("mcp");
-
-        // Only require authorization if not using anonymous access.
-        if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.None)
-        {
-            endpoint.RequireAuthorization(McpServerPolicyName);
-        }
+        // Always apply the authorization policy. The McpServerAuthorizationHandler dynamically
+        // checks McpServerOptions.AuthenticationType on every request, allowing the "None" mode
+        // to pass through without credentials.
+        routes.MapMcp("mcp")
+            .RequireAuthorization(McpServerPolicyName);
     }
 }
 
