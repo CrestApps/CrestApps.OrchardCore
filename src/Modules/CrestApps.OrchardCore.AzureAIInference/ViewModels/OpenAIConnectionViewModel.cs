@@ -12,6 +12,8 @@ public class AzureAIInferenceConnectionViewModel
 
     public string ApiKey { get; set; }
 
+    public string IdentityId { get; set; }
+
     [BindNever]
     public bool HasApiKey { get; set; }
 

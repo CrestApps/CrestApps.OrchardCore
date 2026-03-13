@@ -114,5 +114,7 @@ public static class AIConstants
         public const string ChatSessionUploadDocument = "ChatSessionUploadDocument";
 
         public const string ChatSessionRemoveDocument = "ChatSessionRemoveDocument";
+
+        public const string GetVoices = "AIApiGetVoices";
     }
 }

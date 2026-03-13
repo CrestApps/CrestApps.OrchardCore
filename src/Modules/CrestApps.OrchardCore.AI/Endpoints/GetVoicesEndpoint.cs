@@ -1,0 +1,92 @@
+using System.Globalization;
+using CrestApps.OrchardCore.AI.Core;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using OrchardCore.Localization;
+
+namespace CrestApps.OrchardCore.AI.Endpoints;
+
+internal static class GetVoicesEndpoint
+{
+    public static IEndpointRouteBuilder AddGetVoicesEndpoint(this IEndpointRouteBuilder builder)
+    {
+        _ = builder.MapGet("ai/api/voices", HandleAsync)
+            .AllowAnonymous()
+            .WithName(AIConstants.RouteNames.GetVoices)
+            .DisableAntiforgery();
+
+        return builder;
+    }
+
+    private static async Task<IResult> HandleAsync(
+        string deploymentId,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory clientFactory,
+        ILocalizationService localizationService)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
+        {
+            return TypedResults.Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(deploymentId))
+        {
+            return TypedResults.Ok(new { voices = Array.Empty<object>() });
+        }
+
+        var deployment = await deploymentManager.FindByIdAsync(deploymentId);
+
+        if (deployment is null)
+        {
+            return TypedResults.Ok(new { voices = Array.Empty<object>() });
+        }
+
+        try
+        {
+            var allVoices = await clientFactory.GetSpeechVoicesAsync(deployment);
+
+            var supportedCultures = await localizationService.GetSupportedCulturesAsync();
+            var supportedSet = new HashSet<string>(supportedCultures, StringComparer.OrdinalIgnoreCase);
+
+            var voices = allVoices
+                .Where(v => string.IsNullOrEmpty(v.Language) || supportedSet.Contains(v.Language))
+                .OrderBy(v => v.Language)
+                .ThenBy(v => v.Name)
+                .Select(v => new
+                {
+                    v.Id,
+                    v.Name,
+                    v.Language,
+                    LanguageDisplayName = GetCultureDisplayName(v.Language),
+                    Gender = v.Gender.ToString(),
+                });
+
+            return TypedResults.Ok(new { voices });
+        }
+        catch
+        {
+            return TypedResults.Ok(new { voices = Array.Empty<object>() });
+        }
+    }
+
+    private static string GetCultureDisplayName(string language)
+    {
+        if (string.IsNullOrEmpty(language))
+        {
+            return null;
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(language).DisplayName;
+        }
+        catch (CultureNotFoundException)
+        {
+            return language;
+        }
+    }
+}

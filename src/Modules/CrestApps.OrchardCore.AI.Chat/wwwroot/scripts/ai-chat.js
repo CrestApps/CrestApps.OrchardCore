@@ -35,8 +35,8 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
-    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n            Assistant\n        </div>\n    "
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
   };
 
   // Sanitize URLs to prevent javascript: protocol injection.
@@ -295,7 +295,7 @@ window.openAIChatManager = function () {
           chatWidgetStateSession: null,
           chatHistorySection: null,
           widgetIsInitialized: false,
-          isSteaming: false,
+          isStreaming: false,
           isNavigatingAway: false,
           autoScroll: true,
           stream: null,
@@ -311,8 +311,33 @@ window.openAIChatManager = function () {
           assistantLabel: config.assistantLabel,
           thumbsUpTitle: config.thumbsUpTitle,
           thumbsDownTitle: config.thumbsDownTitle,
-          copyTitle: config.copyTitle
+          copyTitle: config.copyTitle,
+          isRecording: false,
+          mediaRecorder: null,
+          preRecordingPrompt: '',
+          micButton: null,
+          speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation',
+          ttsVoiceName: config.ttsVoiceName || null,
+          audioChunks: [],
+          audioPlayQueue: [],
+          isPlayingAudio: false,
+          currentAudioElement: null,
+          ttsButton: null,
+          conversationModeEnabled: config.chatMode === 'Conversation',
+          conversationButton: null,
+          isConversationMode: false
         };
+      },
+      computed: {
+        lastAssistantIndex: function lastAssistantIndex() {
+          for (var i = this.messages.length - 1; i >= 0; i--) {
+            if (this.messages[i].role === 'assistant') {
+              return i;
+            }
+          }
+          return -1;
+        }
       },
       methods: {
         handleBeforeUnload: function handleBeforeUnload() {
@@ -636,6 +661,17 @@ window.openAIChatManager = function () {
                   });
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    if (_this3.isRecording) {
+                      _this3.stopRecording();
+                    }
+
+                    // If this is a widget with a stale cached session (e.g., profile was deleted),
+                    // clear the cached session and start fresh with the current profile.
+                    if (_this3.widgetIsInitialized && !_this3.isSessionStarted && !_this3._attemptedSessionRecovery) {
+                      _this3._attemptedSessionRecovery = true;
+                      localStorage.removeItem(_this3.chatWidgetStateSession);
+                      _this3.startNewSession();
+                    }
                   });
                   _this3.connection.on("MessageRated", function (messageId, userRating) {
                     var msg = _this3.messages.find(function (m) {
@@ -644,6 +680,128 @@ window.openAIChatManager = function () {
                     if (msg) {
                       msg.userRating = userRating;
                     }
+                  });
+                  _this3.connection.on("ReceiveTranscript", function (sessionId, text, isFinal) {
+                    if (_this3.isConversationMode) {
+                      if (!isFinal && text) {
+                        _this3._conversationPartialTranscript = text;
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                        // Show partial transcript as a live user message.
+                        if (!_this3._conversationPartialMessage) {
+                          _this3.hidePlaceholder();
+                          _this3._conversationPartialMessage = {
+                            role: 'user',
+                            content: text,
+                            htmlContent: html,
+                            isPartial: true
+                          };
+                          _this3.messages.push(_this3._conversationPartialMessage);
+                        } else {
+                          _this3._conversationPartialMessage.content = text;
+                          _this3._conversationPartialMessage.htmlContent = html;
+                        }
+                        _this3.scrollToBottom();
+                      }
+                      return;
+                    }
+                    if (text && !_this3._audioInputSent) {
+                      _this3.prompt = _this3.preRecordingPrompt + text;
+                      if (_this3.inputElement) {
+                        _this3.inputElement.value = _this3.prompt;
+                        _this3.inputElement.dispatchEvent(new Event('input'));
+                      }
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, text) {
+                    if (text) {
+                      _this3.stopAudio();
+
+                      // If there's an interrupted assistant message still streaming,
+                      // mark it as done to stop the spinner animation.
+                      if (_this3._conversationAssistantMessage) {
+                        var oldMsg = _this3.messages[_this3._conversationAssistantMessage.index];
+                        if (oldMsg) {
+                          oldMsg.isStreaming = false;
+                        }
+                        _this3._conversationAssistantMessage = null;
+                      }
+
+                      // Replace the partial transcript message with the final one.
+                      if (_this3._conversationPartialMessage) {
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        _this3._conversationPartialMessage.content = text;
+                        _this3._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                        _this3._conversationPartialMessage.isPartial = false;
+                        _this3._conversationPartialMessage = null;
+                      } else {
+                        _this3.addMessage({
+                          role: 'user',
+                          content: text
+                        });
+                      }
+                      _this3.scrollToBottom();
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId) {
+                    if (!_this3._conversationAssistantMessage) {
+                      _this3.stopAudio();
+                      _this3.hideTypingIndicator();
+
+                      // Ensure no stale streaming indicators remain from prior messages.
+                      for (var j = 0; j < _this3.messages.length; j++) {
+                        if (_this3.messages[j].isStreaming) {
+                          _this3.messages[j].isStreaming = false;
+                        }
+                      }
+                      var msgIndex = _this3.messages.length;
+                      var newMessage = {
+                        id: messageId,
+                        role: "assistant",
+                        content: "",
+                        htmlContent: "",
+                        isStreaming: true,
+                        userRating: null
+                      };
+                      _this3.messages.push(newMessage);
+                      _this3._conversationAssistantMessage = {
+                        index: msgIndex,
+                        content: ''
+                      };
+                    }
+                    _this3._conversationAssistantMessage.content += token;
+                    var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                    if (msg) {
+                      msg.content = _this3._conversationAssistantMessage.content;
+                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      _this3.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                        _this3.scrollToBottom();
+                      });
+                    }
+                  });
+                  _this3.connection.on("ReceiveConversationAssistantComplete", function (sessionId, messageId) {
+                    if (_this3._conversationAssistantMessage) {
+                      var msg = _this3.messages[_this3._conversationAssistantMessage.index];
+                      if (msg) {
+                        msg.isStreaming = false;
+                      }
+                      _this3._conversationAssistantMessage = null;
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioChunk", function (sessionId, base64Audio, contentType) {
+                    if (base64Audio) {
+                      var binaryString = atob(base64Audio);
+                      var bytes = new Uint8Array(binaryString.length);
+                      for (var i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      _this3.audioChunks.push(bytes);
+                    }
+                  });
+                  _this3.connection.on("ReceiveAudioComplete", function (sessionId) {
+                    _this3.playCollectedAudio();
                   });
                   _this3.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
@@ -823,6 +981,14 @@ window.openAIChatManager = function () {
           if (!trimmedPrompt) {
             return;
           }
+
+          // Stop any active recording before sending.
+          if (this.isRecording) {
+            this.stopRecording();
+          }
+
+          // Prevent stale ReceiveTranscript events from repopulating the prompt.
+          this._audioInputSent = true;
           this.addMessage({
             role: 'user',
             content: trimmedPrompt
@@ -831,8 +997,99 @@ window.openAIChatManager = function () {
           this.inputElement.value = '';
           this.prompt = '';
         },
-        streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
+        startRecording: function startRecording() {
           var _this7 = this;
+          if (this.isRecording || !this.connection) {
+            return;
+          }
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this7.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this7.preRecordingPrompt = _this7.prompt;
+            _this7._audioInputSent = false;
+            var subject = new signalR.Subject();
+            var profileId = _this7.getProfileId();
+            var sessionId = _this7.getSessionId() || '';
+            var pendingChunk = Promise.resolve();
+            _this7.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context4) {
+                    while (1) switch (_context4.n) {
+                      case 0:
+                        _context4.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context4.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte) {
+                          return str + String.fromCharCode(_byte);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        subject.next(base64);
+                      case 2:
+                        return _context4.a(2);
+                    }
+                  }, _callee4);
+                })));
+              }
+            });
+            _this7.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                return subject.complete();
+              });
+            });
+            var language = document.documentElement.lang || 'en-US';
+            _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
+            _this7.mediaRecorder.start(1000);
+            _this7.isRecording = true;
+            _this7.updateMicButton();
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+          });
+        },
+        stopRecording: function stopRecording() {
+          if (!this.isRecording || !this.mediaRecorder) {
+            return;
+          }
+          this.mediaRecorder.stop();
+          this.isRecording = false;
+          this.updateMicButton();
+        },
+        toggleRecording: function toggleRecording() {
+          if (this.isRecording) {
+            this.stopRecording();
+          } else {
+            this.startRecording();
+          }
+        },
+        updateMicButton: function updateMicButton() {
+          if (!this.micButton) {
+            return;
+          }
+          if (this.isRecording) {
+            this.micButton.classList.add('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+          } else {
+            this.micButton.classList.remove('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+          }
+        },
+        streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
+          var _this8 = this;
           if (this.stream) {
             this.stream.dispose();
             this.stream = null;
@@ -849,14 +1106,14 @@ window.openAIChatManager = function () {
           var currentSessionId = this.getSessionId();
           this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
             next: function next(chunk) {
-              var message = _this7.messages[messageIndex];
+              var message = _this8.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentSessionId) {
-                  _this7.initializeSession(chunk.sessionId);
+                  _this8.initializeSession(chunk.sessionId);
                 }
-                _this7.hideTypingIndicator();
+                _this8.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
-                messageIndex = _this7.messages.length;
+                messageIndex = _this8.messages.length;
                 var newMessage = {
                   id: chunk.messageId,
                   role: "assistant",
@@ -866,7 +1123,7 @@ window.openAIChatManager = function () {
                   isStreaming: true,
                   userRating: null
                 };
-                _this7.messages.push(newMessage);
+                _this8.messages.push(newMessage);
                 message = newMessage;
               }
               if (chunk.title && (!message.title || message.title !== chunk.title)) {
@@ -905,41 +1162,46 @@ window.openAIChatManager = function () {
               // Update the existing message
               message.content = content;
               message.htmlContent = parseMarkdownContent(content, message);
-              _this7.messages[messageIndex] = message;
-              _this7.$nextTick(function () {
+              _this8.messages[messageIndex] = message;
+              _this8.$nextTick(function () {
                 renderChartsInMessage(message);
-                _this7.scrollToBottom();
+                _this8.scrollToBottom();
               });
             },
             complete: function complete() {
-              var _this7$stream;
-              _this7.processReferences(references, messageIndex);
-              _this7.streamingFinished();
-              var msg = _this7.messages[messageIndex];
+              var _this8$stream;
+              _this8.processReferences(references, messageIndex);
+              _this8.streamingFinished();
+              var msg = _this8.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
               if (!msg || !msg.content) {
                 // No content received at all.
-                _this7.hideTypingIndicator();
+                _this8.hideTypingIndicator();
               }
-              (_this7$stream = _this7.stream) === null || _this7$stream === void 0 || _this7$stream.dispose();
-              _this7.stream = null;
+
+              // Trigger text-to-speech only in conversation mode.
+              if (_this8.isConversationMode && _this8.textToSpeechEnabled && msg && msg.content) {
+                _this8.synthesizeSpeech(msg.content);
+              }
+              (_this8$stream = _this8.stream) === null || _this8$stream === void 0 || _this8$stream.dispose();
+              _this8.stream = null;
             },
             error: function error(err) {
-              var _this7$stream2;
-              _this7.processReferences(references, messageIndex);
-              _this7.streamingFinished();
-              var msg = _this7.messages[messageIndex];
+              var _this8$stream2;
+              _this8.processReferences(references, messageIndex);
+              _this8.streamingFinished();
+              var msg = _this8.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
-              _this7.hideTypingIndicator();
-              if (!_this7.isNavigatingAway) {
-                _this7.addMessage(_this7.getServiceDownMessage());
+              _this8.hideTypingIndicator();
+              if (!_this8.isNavigatingAway) {
+                _this8.addMessage(_this8.getServiceDownMessage());
               }
-              (_this7$stream2 = _this7.stream) === null || _this7$stream2 === void 0 || _this7$stream2.dispose();
-              _this7.stream = null;
+              (_this8$stream2 = _this8.stream) === null || _this8$stream2 === void 0 || _this8$stream2.dispose();
+              _this8.stream = null;
               console.error("Stream error:", err);
             }
           });
@@ -959,10 +1221,10 @@ window.openAIChatManager = function () {
 
             // Only include references that were actually cited in the response.
             // Check both raw [doc:N] markers and already-rendered <sup> tags from streaming.
-            var citedRefs = Object.entries(references).filter(function (_ref7) {
-              var _ref8 = _slicedToArray(_ref7, 2),
-                key = _ref8[0],
-                value = _ref8[1];
+            var citedRefs = Object.entries(references).filter(function (_ref8) {
+              var _ref9 = _slicedToArray(_ref8, 2),
+                key = _ref9[0],
+                value = _ref9[1];
               return content.includes(key) || content.includes("<sup><strong>".concat(value.index, "</strong></sup>"));
             });
             if (!citedRefs.length) {
@@ -970,11 +1232,11 @@ window.openAIChatManager = function () {
             }
 
             // Sort by original index so display indices follow a natural order.
-            citedRefs.sort(function (_ref9, _ref0) {
-              var _ref1 = _slicedToArray(_ref9, 2),
-                a = _ref1[1];
+            citedRefs.sort(function (_ref0, _ref1) {
               var _ref10 = _slicedToArray(_ref0, 2),
-                b = _ref10[1];
+                a = _ref10[1];
+              var _ref11 = _slicedToArray(_ref1, 2),
+                b = _ref11[1];
               return a.index - b.index;
             });
 
@@ -1076,6 +1338,292 @@ window.openAIChatManager = function () {
             }
           }
         },
+        synthesizeSpeech: function synthesizeSpeech(text) {
+          var _this9 = this;
+          if (!this.textToSpeechEnabled || !text || !this.connection) {
+            return;
+          }
+          this.audioChunks = [];
+          this.isPlayingAudio = true;
+          this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
+            console.error("TTS synthesis error:", err);
+            _this9.isPlayingAudio = false;
+          });
+        },
+        playCollectedAudio: function playCollectedAudio() {
+          if (this.audioChunks.length === 0) {
+            if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
+              this.isPlayingAudio = false;
+            }
+            return;
+          }
+          var totalLength = this.audioChunks.reduce(function (sum, chunk) {
+            return sum + chunk.length;
+          }, 0);
+          var combined = new Uint8Array(totalLength);
+          var offset = 0;
+          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
+            _step8;
+          try {
+            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+              var chunk = _step8.value;
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } catch (err) {
+            _iterator8.e(err);
+          } finally {
+            _iterator8.f();
+          }
+          this.audioChunks = [];
+          var blob = new Blob([combined], {
+            type: 'audio/mp3'
+          });
+
+          // If audio is already playing, queue this blob for sequential playback.
+          if (this.currentAudioElement) {
+            this.audioPlayQueue.push(blob);
+            return;
+          }
+          this.playAudioBlob(blob);
+        },
+        playAudioBlob: function playAudioBlob(blob) {
+          var _this0 = this;
+          var url = URL.createObjectURL(blob);
+          var audio = new Audio(url);
+          this.currentAudioElement = audio;
+          this.isPlayingAudio = true;
+          audio.addEventListener('ended', function () {
+            URL.revokeObjectURL(url);
+            _this0.currentAudioElement = null;
+            _this0.playNextInQueue();
+          });
+          audio.addEventListener('error', function () {
+            URL.revokeObjectURL(url);
+            _this0.currentAudioElement = null;
+            _this0.playNextInQueue();
+          });
+          audio.play()["catch"](function (err) {
+            console.error("Audio playback error:", err);
+            URL.revokeObjectURL(url);
+            _this0.currentAudioElement = null;
+            _this0.isPlayingAudio = false;
+          });
+        },
+        playNextInQueue: function playNextInQueue() {
+          if (this.audioPlayQueue.length > 0) {
+            var nextBlob = this.audioPlayQueue.shift();
+            this.playAudioBlob(nextBlob);
+          } else {
+            this.isPlayingAudio = false;
+            this.conversationModeOnAudioEnded();
+          }
+        },
+        stopAudio: function stopAudio() {
+          if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement.currentTime = 0;
+            this.currentAudioElement = null;
+          }
+          this.audioChunks = [];
+          this.audioPlayQueue = [];
+          this.isPlayingAudio = false;
+        },
+        toggleConversationMode: function toggleConversationMode() {
+          if (this.isConversationMode) {
+            this.stopConversationMode();
+          } else {
+            this.startConversationMode();
+          }
+        },
+        startConversationMode: function startConversationMode() {
+          var _this1 = this;
+          if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
+            return;
+          }
+          this.isConversationMode = true;
+          this.updateConversationButton();
+          this._conversationPartialTranscript = '';
+          this._conversationAssistantMessage = null;
+          this._conversationPartialMessage = null;
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this1.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this1._conversationSubject = new signalR.Subject();
+            _this1._conversationStream = stream;
+
+            // Create an AnalyserNode for volume-based interrupt detection.
+            // During TTS playback, detect when the user speaks above
+            // the threshold to stop TTS (interrupt). Audio chunks are
+            // always forwarded — browser echo cancellation handles
+            // speaker echo so the STT stream has no gaps.
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              _this1._conversationAudioCtx = new AudioCtx();
+              _this1._conversationAnalyser = _this1._conversationAudioCtx.createAnalyser();
+              _this1._conversationAnalyser.fftSize = 256;
+              var micSource = _this1._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this1._conversationAnalyser);
+            }
+            var pendingChunk = Promise.resolve();
+            var analyser = _this1._conversationAnalyser;
+            var interruptVolumeThreshold = 30;
+            _this1.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                // During TTS playback, check mic volume to detect
+                // user interruption (speaking above threshold).
+                if (_this1.isPlayingAudio && analyser) {
+                  var freqData = new Uint8Array(analyser.frequencyBinCount);
+                  analyser.getByteFrequencyData(freqData);
+                  var sum = 0;
+                  for (var k = 0; k < freqData.length; k++) {
+                    sum += freqData[k];
+                  }
+                  var avg = sum / freqData.length;
+                  if (avg >= interruptVolumeThreshold) {
+                    // User is speaking — interrupt TTS playback.
+                    _this1.stopAudio();
+                  }
+                }
+
+                // Always send audio to STT — browser echo cancellation
+                // handles speaker echo; continuous audio avoids gaps
+                // that increase recognition latency.
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context5) {
+                    while (1) switch (_context5.n) {
+                      case 0:
+                        _context5.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context5.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte2) {
+                          return str + String.fromCharCode(_byte2);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        try {
+                          _this1._conversationSubject.next(base64);
+                        } catch (err) {
+                          // Subject may have been completed already.
+                        }
+                      case 2:
+                        return _context5.a(2);
+                    }
+                  }, _callee5);
+                })));
+              }
+            });
+            _this1.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                try {
+                  _this1._conversationSubject.complete();
+                } catch (err) {
+                  // Already completed.
+                }
+              });
+            });
+            var profileId = _this1.getProfileId();
+            var sessionId = _this1.getSessionId() || '';
+            var language = document.documentElement.lang || 'en-US';
+            _this1.connection.send("StartConversation", profileId, sessionId, _this1._conversationSubject, mimeType, language);
+            _this1.mediaRecorder.start(1000);
+            _this1.isRecording = true;
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+            _this1.isConversationMode = false;
+            _this1.updateConversationButton();
+          });
+        },
+        stopConversationMode: function stopConversationMode() {
+          if (!this.isConversationMode) {
+            return;
+          }
+          this.isConversationMode = false;
+          this.updateConversationButton();
+
+          // Signal the server to cancel all in-progress STT/TTS streams immediately.
+          if (this.connection) {
+            this.connection.invoke("StopConversation")["catch"](function () {});
+          }
+          if (this.isRecording && this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+          }
+          this.stopAudio();
+          this._conversationPartialTranscript = '';
+          this._conversationPartialMessage = null;
+
+          // Clean up the AudioContext used for volume monitoring.
+          if (this._conversationAudioCtx) {
+            this._conversationAudioCtx.close()["catch"](function () {});
+            this._conversationAudioCtx = null;
+            this._conversationAnalyser = null;
+          }
+
+          // Mark any in-flight assistant message as done to stop the spinner.
+          if (this._conversationAssistantMessage) {
+            var msg = this.messages[this._conversationAssistantMessage.index];
+            if (msg) {
+              msg.isStreaming = false;
+            }
+            this._conversationAssistantMessage = null;
+          }
+
+          // Safety net: clear all lingering streaming indicators.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
+        },
+        updateConversationButton: function updateConversationButton() {
+          if (!this.conversationButton) {
+            return;
+          }
+          if (this.isConversationMode) {
+            this.conversationButton.classList.add('active', 'btn-primary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
+            var endHtml = this.conversationButton.getAttribute('data-end-html');
+            if (endHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(endHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          } else {
+            this.conversationButton.classList.remove('active', 'btn-primary');
+            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
+            var startHtml = this.conversationButton.getAttribute('data-start-html');
+            if (startHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(startHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          }
+        },
+        conversationModeSendPrompt: function conversationModeSendPrompt() {
+          // Legacy: only used by AudioInput mode's ReceiveTranscript.
+        },
+        conversationModeOnAudioEnded: function conversationModeOnAudioEnded() {
+          // Legacy: in conversation mode, audio playback continuation
+          // is handled by the persistent stream. This method is only
+          // called from playCollectedAudio for non-conversation TTS.
+        },
         generatePrompt: function generatePrompt(element) {
           if (!element) {
             console.error('The element paramter is required.');
@@ -1113,12 +1661,12 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this8 = this;
+          var _this10 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this8.chatContainer.scrollTop = _this8.chatContainer.scrollHeight - _this8.chatContainer.clientHeight;
+            _this10.chatContainer.scrollTop = _this10.chatContainer.scrollHeight - _this10.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -1131,6 +1679,7 @@ window.openAIChatManager = function () {
           this.inputElement.setAttribute('data-session-id', sessionId || '');
         },
         resetSession: function resetSession() {
+          this.stopRecording();
           this.setSessionId('');
           this.isSessionStarted = false;
           this.sessionRating = null;
@@ -1156,7 +1705,7 @@ window.openAIChatManager = function () {
           });
         },
         initializeApp: function initializeApp() {
-          var _this9 = this;
+          var _this11 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1181,7 +1730,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this9.handleFileInputChange(e);
+                return _this11.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -1189,13 +1738,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this9.handleDragOver(e);
+                  return _this11.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this9.handleDragLeave(e);
+                  return _this11.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this9.handleDrop(e);
+                  return _this11.handleDrop(e);
                 });
               }
             }
@@ -1203,55 +1752,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this9.stream) {
+            if (!_this11.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight - _this9.chatContainer.scrollTop <= threshold;
-            _this9.autoScroll = atBottom;
+            var atBottom = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight - _this11.chatContainer.scrollTop <= threshold;
+            _this11.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this9.stream != null) {
+            if (_this11.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this9.buttonElement.click();
+              _this11.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this9.handleUserInput(e);
+            _this11.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this9.buttonElement.removeAttribute('disabled');
+              _this11.buttonElement.removeAttribute('disabled');
             } else {
-              _this9.buttonElement.setAttribute('disabled', true);
+              _this11.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this9.stream != null) {
-              _this9.stream.dispose();
-              _this9.stream = null;
-              _this9.streamingFinished();
-              _this9.hideTypingIndicator();
+            if (_this11.stream != null) {
+              _this11.stream.dispose();
+              _this11.stream = null;
+              _this11.streamingFinished();
+              _this11.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this9.messages.length > 0) {
-                var lastMsg = _this9.messages[_this9.messages.length - 1];
+              if (_this11.messages.length > 0) {
+                var lastMsg = _this11.messages[_this11.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this9.messages.pop();
+                  _this11.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this9.sendMessage();
+            _this11.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this9.generatePrompt(e.target);
+              _this11.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -1263,8 +1812,8 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this9.loadSession(sessionId);
-              _this9.showChatScreen();
+              _this11.loadSession(sessionId);
+              _this11.showChatScreen();
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1273,7 +1822,7 @@ window.openAIChatManager = function () {
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this9.refreshAllFeedbackIcons();
+            _this11.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -1297,6 +1846,27 @@ window.openAIChatManager = function () {
                 }, 2000);
               }
             });
+          }
+
+          // Initialize speech-to-text microphone button.
+          if (this.speechToTextEnabled && config.micButtonElementSelector) {
+            this.micButton = document.querySelector(config.micButtonElementSelector);
+            if (this.micButton) {
+              this.micButton.style.display = '';
+              this.micButton.addEventListener('click', function () {
+                _this11.toggleRecording();
+              });
+            }
+          }
+
+          // Initialize conversation mode button.
+          if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+            this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
+            if (this.conversationButton) {
+              this.conversationButton.addEventListener('click', function () {
+                _this11.toggleConversationMode();
+              });
+            }
           }
         },
         loadSession: function loadSession(sessionId) {
@@ -1326,7 +1896,7 @@ window.openAIChatManager = function () {
           }
         },
         initializeWidget: function initializeWidget() {
-          var _this0 = this;
+          var _this12 = this;
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
@@ -1355,14 +1925,14 @@ window.openAIChatManager = function () {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {
               showHistoryButton.addEventListener('click', function () {
-                _this0.chatHistorySection.classList.toggle('show');
+                _this12.chatHistorySection.classList.toggle('show');
               });
             }
             if (config.widget.closeHistoryButton) {
               var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
               if (closeHistoryButton) {
                 closeHistoryButton.addEventListener('click', function () {
-                  _this0.showChatScreen();
+                  _this12.showChatScreen();
                 });
               }
             }
@@ -1371,8 +1941,8 @@ window.openAIChatManager = function () {
             var newChatButton = document.querySelector(config.widget.newChatButton);
             if (newChatButton) {
               newChatButton.addEventListener('click', function () {
-                _this0.resetSession();
-                _this0.showChatScreen();
+                _this12.resetSession();
+                _this12.showChatScreen();
               });
             }
           }
@@ -1482,25 +2052,48 @@ window.openAIChatManager = function () {
         },
         isUploading: function isUploading() {
           this.renderDocumentBar();
+        },
+        isPlayingAudio: function isPlayingAudio() {
+          // Reserved for future use — volume-based interrupt detection
+          // no longer mutes tracks; browser echo cancellation handles echo.
+        },
+        isConversationMode: function isConversationMode(active) {
+          // Hide/show mic button.
+          if (this.micButton) {
+            this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
+          }
+
+          // Hide/show send button.
+          if (this.buttonElement) {
+            this.buttonElement.style.display = active ? 'none' : '';
+          }
+
+          // Disable/enable textarea.
+          if (this.inputElement) {
+            this.inputElement.disabled = active;
+            if (active) {
+              this.inputElement.placeholder = '';
+            }
+          }
         }
       },
       mounted: function mounted() {
-        var _this1 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-          return _regenerator().w(function (_context4) {
-            while (1) switch (_context4.n) {
+        var _this13 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+          return _regenerator().w(function (_context6) {
+            while (1) switch (_context6.n) {
               case 0:
-                _context4.n = 1;
-                return _this1.startConnection();
+                _context6.n = 1;
+                return _this13.startConnection();
               case 1:
-                _this1.initializeApp();
+                _this13.initializeApp();
                 if (config.widget) {
-                  _this1.initializeWidget();
+                  _this13.initializeWidget();
                 }
               case 2:
-                return _context4.a(2);
+                return _context6.a(2);
             }
-          }, _callee4);
+          }, _callee6);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

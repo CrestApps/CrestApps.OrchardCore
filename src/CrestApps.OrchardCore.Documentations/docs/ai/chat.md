@@ -29,6 +29,62 @@ When an AI profile has a **Welcome Message** configured, it is displayed as plac
 
 If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
 
+### Chat Mode
+
+AI Chat supports three chat modes that control how users interact with the AI. The **Chat Mode** dropdown appears on the AI Profile editor (and AI Profile Template editor for Profile source templates) only for profiles of type **Chat**.
+
+| Mode | Description | UI Element |
+| --- | --- | --- |
+| **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
+| **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
+| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
+
+#### Prerequisites
+
+- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
+- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
+
+#### Configuring Chat Mode
+
+1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
+2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required default deployments are configured.
+3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the configured text-to-speech provider. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+4. Save the profile.
+
+Once configured, the selected chat mode applies to all chat UIs associated with that profile:
+- Admin session chat
+- Frontend widget
+- Admin widget
+
+#### How Audio Input Works
+
+1. Click the microphone button to start recording.
+2. Speak your prompt — the button shows a pulsing red stop icon while recording.
+3. Audio is streamed to the server in real-time via SignalR as the user speaks (chunks are sent approximately every second).
+4. The server transcribes audio using the configured speech-to-text provider and streams transcript text back to the UI as it becomes available — you see words appear while still speaking.
+5. Click the stop button (or the transcription finishes automatically when you stop speaking).
+6. The complete transcribed text appears in the input field for review or editing before sending as a prompt.
+
+#### How Conversation Mode Works
+
+1. Click the **headset** button to start conversation mode.
+2. The microphone button, send button, and text input are hidden — a persistent audio stream opens to the server.
+3. Speak naturally — your speech is continuously streamed to the server and transcribed in real time.
+4. When a complete utterance is recognized, it is automatically displayed as a user message in the chat and sent to the AI.
+5. The AI response streams to the chat as text **and** is simultaneously synthesized to speech — you see the text appear while hearing it read aloud.
+6. If you start speaking while the AI is still responding, the AI's current response (both text and audio) is interrupted, and your new prompt is processed instead.
+7. The stream stays open for continuous back-and-forth conversation — no need to click send between turns.
+8. Click the headset button again to end the conversation. The microphone, send button, and text input are restored.
+
+:::info
+If the speech-to-text service encounters an error (e.g., authentication failure), the error is reported immediately and the recording stops automatically — the microphone button resets so you can try again.
+:::
+
+:::info
+Text-to-speech synthesis occurs after the full response text has been received — it does not interrupt or delay the text streaming experience.
+:::
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)

@@ -8,7 +8,7 @@ Category: Orchestration
 ---
 
 {% if agents.size > 0 %}
-## Available Agents
+[Available Agents]
 
 The following specialized agents are available as tools. Each agent has its own configuration, knowledge, and capabilities. You may invoke an agent by calling it as a tool with a clear prompt describing what you need.
 

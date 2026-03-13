@@ -18,6 +18,9 @@ public class EditDeploymentViewModel
     public bool IsNew { get; set; }
 
     [BindNever]
+    public bool HasContainedConnection { get; set; }
+
+    [BindNever]
     public IList<SelectListItem> Connections { get; set; }
 
     [BindNever]

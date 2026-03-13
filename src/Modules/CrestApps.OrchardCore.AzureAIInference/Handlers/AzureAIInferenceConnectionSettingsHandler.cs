@@ -67,6 +67,9 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
 
+        var identityId = metadataNode[nameof(metadata.IdentityId)]?.GetValue<string>()?.Trim();
+        metadata.IdentityId = string.IsNullOrEmpty(identityId) ? null : identityId;
+
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
         if (!string.IsNullOrWhiteSpace(apiKey))

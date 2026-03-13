@@ -38,6 +38,8 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultEmbeddingDeploymentId = settings.DefaultEmbeddingDeploymentId;
             model.DefaultImageDeploymentId = settings.DefaultImageDeploymentId;
             model.DefaultSpeechToTextDeploymentId = settings.DefaultSpeechToTextDeploymentId;
+            model.DefaultTextToSpeechDeploymentId = settings.DefaultTextToSpeechDeploymentId;
+            model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
@@ -50,6 +52,9 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
             model.SpeechToTextDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText));
+
+            model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
         }).Location("Content:4%Default Deployments;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -70,6 +75,8 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
         settings.DefaultEmbeddingDeploymentId = model.DefaultEmbeddingDeploymentId;
         settings.DefaultImageDeploymentId = model.DefaultImageDeploymentId;
         settings.DefaultSpeechToTextDeploymentId = model.DefaultSpeechToTextDeploymentId;
+        settings.DefaultTextToSpeechDeploymentId = model.DefaultTextToSpeechDeploymentId;
+        settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();
 
         return Edit(site, settings, context);
     }
@@ -83,9 +90,11 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
+                SelectListGroup group = null;
+
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;

@@ -41,7 +41,9 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {
@@ -49,6 +51,9 @@ public sealed class Startup : StartupBase
             // without the server dropping the connection prematurely.
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+            // Allow larger messages for audio transcription payloads.
+            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
     }
 

@@ -46,6 +46,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
+        context.Values["IdentityId"] = metadata.IdentityId;
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {

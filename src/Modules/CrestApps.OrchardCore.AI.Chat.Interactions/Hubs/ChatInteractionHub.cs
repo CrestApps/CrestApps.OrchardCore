@@ -1,6 +1,10 @@
+using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -19,11 +23,14 @@ using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
-public class ChatInteractionHub : Hub<IChatInteractionHubClient>
+public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
+    private const string _conversationCtsKey = "ConversationCts";
+
     private readonly ILogger<ChatInteractionHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -40,7 +47,11 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        _ = HandlePromptAsync(channel.Writer, itemId, prompt, cancellationToken);
+        // Create a child scope for proper ISession/IDocumentStore lifecycle.
+        _ = ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            await HandlePromptAsync(channel.Writer, scope.ServiceProvider, itemId, prompt, cancellationToken);
+        });
 
         return channel.Reader;
     }
@@ -345,196 +356,1156 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         });
     }
 
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, string itemId, string prompt, CancellationToken cancellationToken)
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, string itemId, string prompt, CancellationToken cancellationToken)
     {
         try
         {
-            // Each hub invocation gets its own child scope for proper ISession/IDocumentStore lifecycle.
-            await ShellScope.UsingChildScopeAsync(async scope =>
+            using var invocationScope = AIInvocationScope.Begin();
+
+            if (string.IsNullOrWhiteSpace(itemId))
             {
-                using var invocationScope = AIInvocationScope.Begin();
-                var services = scope.ServiceProvider;
+                await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
 
-                try
-                {
-                    if (string.IsNullOrWhiteSpace(itemId))
-                    {
-                        await Clients.Caller.ReceiveError(S["Interaction ID is required."].Value);
+                return;
+            }
 
-                        return;
-                    }
+            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var authorizationService = services.GetRequiredService<IAuthorizationService>();
 
-                    var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
-                    var authorizationService = services.GetRequiredService<IAuthorizationService>();
+            var interaction = await interactionManager.FindByIdAsync(itemId);
 
-                    var interaction = await interactionManager.FindByIdAsync(itemId);
+            if (interaction == null)
+            {
+                await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
 
-                    if (interaction == null)
-                    {
-                        await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                return;
+            }
 
-                        return;
-                    }
+            var httpContext = Context.GetHttpContext();
 
-                    var httpContext = Context.GetHttpContext();
+            if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+            {
+                await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
 
-                    if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
-                    {
-                        await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+                return;
+            }
 
-                        return;
-                    }
+            if (string.IsNullOrWhiteSpace(prompt))
+            {
+                await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
 
-                    if (string.IsNullOrWhiteSpace(prompt))
-                    {
-                        await Clients.Caller.ReceiveError(S["{0} is required.", nameof(prompt)].Value);
+                return;
+            }
 
-                        return;
-                    }
+            prompt = prompt.Trim();
 
-                    prompt = prompt.Trim();
+            var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
+            var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
+            var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+            var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
+            var clock = services.GetRequiredService<IClock>();
 
-                    var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
-                    var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
-                    var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
-                    var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
-                    var clock = services.GetRequiredService<IClock>();
+            // Create and save user prompt
+            var userPrompt = new ChatInteractionPrompt
+            {
+                ItemId = IdGenerator.GenerateId(),
+                ChatInteractionId = itemId,
+                Role = ChatRole.User,
+                Text = prompt,
+                CreatedUtc = clock.UtcNow,
+            };
 
-                    // Create and save user prompt
-                    var userPrompt = new ChatInteractionPrompt
-                    {
-                        ItemId = IdGenerator.GenerateId(),
-                        ChatInteractionId = itemId,
-                        Role = ChatRole.User,
-                        Text = prompt,
-                        CreatedUtc = clock.UtcNow,
-                    };
+            await promptStore.CreateAsync(userPrompt);
 
-                    await promptStore.CreateAsync(userPrompt);
+            var needsTitleUpdate = string.IsNullOrEmpty(interaction.Title);
+            if (needsTitleUpdate)
+            {
+                interaction.Title = Str.Truncate(prompt, 255);
+            }
 
-                    var needsTitleUpdate = string.IsNullOrEmpty(interaction.Title);
-                    if (needsTitleUpdate)
-                    {
-                        interaction.Title = Str.Truncate(prompt, 255);
-                    }
+            // Load all prompts for building transcript
+            var existingPrompts = await promptStore.GetPromptsAsync(itemId);
 
-                    // Load all prompts for building transcript
-                    var existingPrompts = await promptStore.GetPromptsAsync(itemId);
+            var assistantPrompt = new ChatInteractionPrompt
+            {
+                ItemId = IdGenerator.GenerateId(),
+                ChatInteractionId = itemId,
+                Role = ChatRole.Assistant,
+                CreatedUtc = clock.UtcNow,
+            };
 
-                    var assistantPrompt = new ChatInteractionPrompt
-                    {
-                        ItemId = IdGenerator.GenerateId(),
-                        ChatInteractionId = itemId,
-                        Role = ChatRole.Assistant,
-                        CreatedUtc = clock.UtcNow,
-                    };
+            var builder = ZString.CreateStringBuilder();
 
-                    var builder = ZString.CreateStringBuilder();
-
-                    // Build the orchestration context using the handler pipeline.
-                    var orchestratorContext = await orchestrationContextBuilder.BuildAsync(interaction, ctx =>
-                    {
-                        ctx.UserMessage = prompt;
-                        ctx.ConversationHistory = existingPrompts
-                            .Where(x => !x.IsGeneratedPrompt)
-                            .Select(p => new ChatMessage(p.Role, p.Text))
-                            .ToList();
-                    });
-
-                    AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-                    // Resolve the orchestrator for this interaction and execute the completion.
-                    var orchestrator = orchestratorResolver.Resolve(interaction.OrchestratorName);
-
-                    var contentItemIds = new HashSet<string>();
-                    var references = new Dictionary<string, AICompletionReference>();
-
-                    // Collect preemptive RAG references before streaming so the first chunk
-                    // already contains any references from data sources and documents.
-                    citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
-
-                    await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
-                    {
-                        if (string.IsNullOrEmpty(chunk.Text))
-                        {
-                            continue;
-                        }
-
-                        builder.Append(chunk.Text);
-
-                        // Incrementally collect any new tool references that appeared during streaming.
-                        citationCollector.CollectToolReferences(references, contentItemIds);
-
-                        var partialMessage = new CompletionPartialMessage
-                        {
-                            SessionId = interaction.ItemId,
-                            MessageId = assistantPrompt.ItemId,
-                            ResponseId = chunk.ResponseId,
-                            Content = chunk.Text,
-                            References = references,
-                        };
-
-                        await writer.WriteAsync(partialMessage, cancellationToken);
-                    }
-
-                    // Final pass to collect any tool references added by the last tool call.
-                    citationCollector.CollectToolReferences(references, contentItemIds);
-
-                    if (builder.Length > 0)
-                    {
-                        assistantPrompt.Text = builder.ToString();
-                        assistantPrompt.References = references;
-
-                        if (contentItemIds.Count > 0)
-                        {
-                            assistantPrompt.Put(new ChatInteractionPromptContentMetadata
-                            {
-                                ContentItemIds = contentItemIds.ToList(),
-                            });
-                        }
-
-                        await promptStore.CreateAsync(assistantPrompt);
-                    }
-
-                    // Update the interaction title after streaming is done to avoid holding
-                    // database locks for the duration of the AI response, which can cause
-                    // deadlocks with concurrent SaveSettings calls.
-                    if (needsTitleUpdate)
-                    {
-                        await interactionManager.UpdateAsync(interaction);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
-                    {
-                        _logger.LogDebug("Chat interaction processing was cancelled.");
-                        return;
-                    }
-
-                    _logger.LogError(ex, "An error occurred while processing the chat interaction.");
-
-                    try
-                    {
-                        var errorMessage = new CompletionPartialMessage
-                        {
-                            SessionId = itemId,
-                            MessageId = IdGenerator.GenerateId(),
-                            Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
-                        };
-
-                        await writer.WriteAsync(errorMessage, CancellationToken.None);
-                    }
-                    catch (Exception writeEx)
-                    {
-                        _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
-                    }
-                }
+            // Build the orchestration context using the handler pipeline.
+            var orchestratorContext = await orchestrationContextBuilder.BuildAsync(interaction, ctx =>
+            {
+                ctx.UserMessage = prompt;
+                ctx.ConversationHistory = existingPrompts
+                    .Where(x => !x.IsGeneratedPrompt)
+                    .Select(p => new ChatMessage(p.Role, p.Text))
+                    .ToList();
             });
+
+            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
+
+            // Resolve the orchestrator for this interaction and execute the completion.
+            var orchestrator = orchestratorResolver.Resolve(interaction.OrchestratorName);
+
+            var contentItemIds = new HashSet<string>();
+            var references = new Dictionary<string, AICompletionReference>();
+
+            // Collect preemptive RAG references before streaming so the first chunk
+            // already contains any references from data sources and documents.
+            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+
+            await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+            {
+                if (string.IsNullOrEmpty(chunk.Text))
+                {
+                    continue;
+                }
+
+                builder.Append(chunk.Text);
+
+                // Incrementally collect any new tool references that appeared during streaming.
+                citationCollector.CollectToolReferences(references, contentItemIds);
+
+                var partialMessage = new CompletionPartialMessage
+                {
+                    SessionId = interaction.ItemId,
+                    MessageId = assistantPrompt.ItemId,
+                    ResponseId = chunk.ResponseId,
+                    Content = chunk.Text,
+                    References = references,
+                };
+
+                await writer.WriteAsync(partialMessage, cancellationToken);
+            }
+
+            // Final pass to collect any tool references added by the last tool call.
+            citationCollector.CollectToolReferences(references, contentItemIds);
+
+            if (builder.Length > 0)
+            {
+                assistantPrompt.Text = builder.ToString();
+                assistantPrompt.References = references;
+
+                if (contentItemIds.Count > 0)
+                {
+                    assistantPrompt.Put(new ChatInteractionPromptContentMetadata
+                    {
+                        ContentItemIds = contentItemIds.ToList(),
+                    });
+                }
+
+                await promptStore.CreateAsync(assistantPrompt);
+            }
+
+            // Update the interaction title after streaming is done to avoid holding
+            // database locks for the duration of the AI response, which can cause
+            // deadlocks with concurrent SaveSettings calls.
+            if (needsTitleUpdate)
+            {
+                await interactionManager.UpdateAsync(interaction);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
+            {
+                _logger.LogDebug("Chat interaction processing was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred while processing the chat interaction.");
+
+            try
+            {
+                var errorMessage = new CompletionPartialMessage
+                {
+                    SessionId = itemId,
+                    MessageId = IdGenerator.GenerateId(),
+                    Content = AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value,
+                };
+
+                await writer.WriteAsync(errorMessage, CancellationToken.None);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write error message to the channel.");
+            }
         }
         finally
         {
             writer.Complete();
         }
     }
+
+    public async Task StartConversation(string itemId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, string language = null)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+            return;
+        }
+
+        var cancellationToken = Context.ConnectionAborted;
+
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var services = scope.ServiceProvider;
+                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var authorizationService = services.GetRequiredService<IAuthorizationService>();
+                var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+                var clientFactory = services.GetRequiredService<IAIClientFactory>();
+                var siteService = services.GetRequiredService<ISiteService>();
+
+                var interaction = await interactionManager.FindByIdAsync(itemId);
+
+                if (interaction is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                    return;
+                }
+
+                var httpContext = Context.GetHttpContext();
+
+                if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+                {
+                    await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+                    return;
+                }
+
+                var site = await siteService.GetSiteSettingsAsync();
+                var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+
+                if (chatModeSettings.ChatMode != ChatMode.Conversation)
+                {
+                    await Clients.Caller.ReceiveError(S["Conversation mode is not enabled for chat interactions."].Value);
+                    return;
+                }
+
+                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                {
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                {
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
+                    return;
+                }
+
+                var sttDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
+
+                if (sttDeployment is null)
+                {
+                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
+                    return;
+                }
+
+                var ttsDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
+
+                if (ttsDeployment is null)
+                {
+                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
+                    return;
+                }
+
+                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
+                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+
+                var effectiveVoiceName = deploymentSettings.DefaultTextToSpeechVoiceId;
+                var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
+
+                using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                Context.Items[_conversationCtsKey] = conversationCts;
+
+                try
+                {
+                    await RunConversationLoopAsync(
+                        itemId, audioChunks, audioFormat, speechLanguage,
+                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
+                }
+                finally
+                {
+                    Context.Items.Remove(_conversationCtsKey);
+                }
+
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                _logger.LogDebug("Conversation was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred during conversation mode.");
+
+            try
+            {
+                await Clients.Caller.ReceiveError(S["An error occurred during the conversation. Please try again."].Value);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write conversation error message.");
+            }
+        }
+    }
+
+    public Task StopConversation()
+    {
+        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
+        {
+            cts.Cancel();
+        }
+
+        return Task.CompletedTask;
+    }
+
+#pragma warning disable MEAI001
+    private async Task RunConversationLoopAsync(
+        string itemId,
+        IAsyncEnumerable<string> audioChunks,
+        string audioFormat,
+        string speechLanguage,
+        ISpeechToTextClient sttClient,
+        ITextToSpeechClient ttsClient,
+        string voiceName,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var pipe = new Pipe();
+
+        // CTS to break the audio chunk loop on transcription failure.
+        using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // Start the transcription pipeline. No Task.Run needed because TranscribeConversationAsync
+        // is async and returns at its first await, allowing the caller to proceed to the audio loop.
+        var transcriptionTask = TranscribeConversationAsync(
+            pipe.Reader, itemId, audioFormat, speechLanguage,
+            sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
+
+        // Write audio chunks to the pipe as they arrive.
+        try
+        {
+            await foreach (var base64Chunk in audioChunks.WithCancellation(errorCts.Token))
+            {
+                try
+                {
+                    var bytes = Convert.FromBase64String(base64Chunk);
+                    await pipe.Writer.WriteAsync(bytes, errorCts.Token);
+                }
+                catch (FormatException)
+                {
+                    continue;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
+        {
+            // Transcription error or connection aborted.
+        }
+
+        await pipe.Writer.CompleteAsync();
+        await transcriptionTask;
+    }
+
+    private async Task TranscribeConversationAsync(
+        PipeReader pipeReader,
+        string itemId,
+        string audioFormat,
+        string speechLanguage,
+        ISpeechToTextClient sttClient,
+        ITextToSpeechClient ttsClient,
+        string voiceName,
+        IServiceProvider services,
+        CancellationTokenSource errorCts,
+        CancellationToken cancellationToken)
+    {
+        CancellationTokenSource currentResponseCts = null;
+        Task currentResponseTask = null;
+
+        try
+        {
+            await using var readerStream = pipeReader.AsStream();
+
+            using var committedText = ZString.CreateStringBuilder();
+            var sttOptions = new SpeechToTextOptions
+            {
+                SpeechLanguage = speechLanguage,
+            };
+
+            if (!string.IsNullOrWhiteSpace(audioFormat))
+            {
+                sttOptions.AdditionalProperties ??= [];
+                sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("TranscribeConversationAsync: Starting STT stream. Language={Language}, Format={Format}.", speechLanguage, audioFormat);
+            }
+
+            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            {
+                if (string.IsNullOrEmpty(update.Text))
+                {
+                    continue;
+                }
+
+                var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
+
+                if (isPartial)
+                {
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
+                    await Clients.Caller.ReceiveTranscript(itemId, display, false);
+                }
+                else
+                {
+                    // User produced a complete utterance. Cancel any in-progress AI response
+                    // so we can process the new prompt.
+                    if (currentResponseCts != null)
+                    {
+                        _logger.LogDebug("TranscribeConversationAsync: New utterance received, cancelling previous AI response.");
+                        await currentResponseCts.CancelAsync();
+
+                        if (currentResponseTask != null)
+                        {
+                            try
+                            {
+                                await currentResponseTask;
+                            }
+                            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                            {
+                                _logger.LogDebug("AI response was interrupted by new user speech.");
+                            }
+                        }
+
+                        currentResponseCts.Dispose();
+                        currentResponseCts = null;
+                        currentResponseTask = null;
+                    }
+
+                    if (committedText.Length > 0)
+                    {
+                        committedText.Append(' ');
+                    }
+
+                    committedText.Append(update.Text);
+                    var fullText = committedText.ToString().TrimEnd();
+
+                    await Clients.Caller.ReceiveTranscript(itemId, fullText, true);
+                    await Clients.Caller.ReceiveConversationUserMessage(itemId, fullText);
+
+                    committedText.Clear();
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("TranscribeConversationAsync: Final utterance received: '{Text}'. Dispatching AI response.", fullText);
+                    }
+
+                    // Start the AI response as a non-blocking task so the STT loop continues
+                    // reading and the user can interrupt the AI by speaking again.
+                    currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    currentResponseTask = ProcessConversationPromptAsync(
+                        itemId, fullText, ttsClient, voiceName, services, currentResponseCts.Token);
+                }
+            }
+
+            _logger.LogDebug("TranscribeConversationAsync: STT stream ended.");
+
+            // Wait for any pending AI response after the audio stream ends.
+            if (currentResponseTask != null)
+            {
+                try
+                {
+                    await currentResponseTask;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Interrupted.
+                }
+
+                currentResponseCts?.Dispose();
+                currentResponseCts = null;
+                currentResponseTask = null;
+            }
+
+            var remainingText = committedText.ToString().TrimEnd();
+
+            if (!string.IsNullOrEmpty(remainingText))
+            {
+                await Clients.Caller.ReceiveConversationUserMessage(itemId, remainingText);
+
+                try
+                {
+                    await ProcessConversationPromptAsync(
+                        itemId, remainingText, ttsClient, voiceName, services, cancellationToken);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // Interrupted.
+                }
+            }
+        }
+        catch (Exception)
+        {
+            await errorCts.CancelAsync();
+            throw;
+        }
+    }
+
+    private async Task ProcessConversationPromptAsync(
+        string itemId,
+        string prompt,
+        ITextToSpeechClient ttsClient,
+        string voiceName,
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("ProcessConversationPromptAsync: Starting for prompt length={PromptLength}.", prompt.Length);
+        }
+
+        var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
+
+        var handleTask = HandlePromptAsync(channel.Writer, services, itemId, prompt, cancellationToken);
+
+        var sentenceChannel = Channel.CreateUnbounded<string>();
+        string messageId = null;
+        string responseId = null;
+
+        // Start TTS consumer that sends audio per sentence (text is sent immediately below).
+        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, itemId, sentenceChannel.Reader, voiceName, cancellationToken);
+
+        var sentenceBuffer = ZString.CreateStringBuilder();
+
+        try
+        {
+            // Stream text tokens to the client IMMEDIATELY as they arrive from the AI model,
+            // and also accumulate into sentences for parallel TTS synthesis.
+            await foreach (var chunk in channel.Reader.ReadAllAsync(cancellationToken))
+            {
+                messageId ??= chunk.MessageId;
+                responseId ??= chunk.ResponseId;
+
+                if (string.IsNullOrEmpty(chunk.Content))
+                {
+                    continue;
+                }
+
+                // Send text token to the client immediately so the user sees it right away.
+                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+
+                sentenceBuffer.Append(chunk.Content);
+
+                // Queue completed sentences for TTS synthesis.
+                if (SentenceBoundaryDetector.EndsWithSentenceBoundary(chunk.Content))
+                {
+                    var sentence = sentenceBuffer.ToString().Trim();
+
+                    if (!string.IsNullOrEmpty(sentence))
+                    {
+                        if (_logger.IsEnabled(LogLevel.Debug))
+                        {
+                            _logger.LogDebug("ProcessConversationPromptAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
+                        }
+
+                        await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
+                        sentenceBuffer.Dispose();
+                        sentenceBuffer = ZString.CreateStringBuilder();
+                    }
+                }
+            }
+
+            await handleTask;
+
+            // Flush any remaining text as the final sentence.
+            var remaining = sentenceBuffer.ToString().Trim();
+            sentenceBuffer.Dispose();
+
+            if (!string.IsNullOrEmpty(remaining))
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug("ProcessConversationPromptAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
+                }
+
+                await sentenceChannel.Writer.WriteAsync(remaining, cancellationToken);
+            }
+
+            sentenceChannel.Writer.Complete();
+
+            // Wait for all TTS sentences to finish streaming audio.
+            await ttsTask;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("ProcessConversationPromptAsync: Completed. ItemId={ItemId}.", itemId);
+            }
+        }
+        finally
+        {
+            sentenceChannel.Writer.TryComplete();
+            sentenceBuffer.Dispose();
+
+            // Always notify the client that the assistant response finished (or was
+            // interrupted/cancelled) so the spinner stops even on error or cancellation.
+            if (!string.IsNullOrEmpty(messageId))
+            {
+                try
+                {
+                    await Clients.Caller.ReceiveConversationAssistantComplete(itemId, messageId);
+                }
+                catch
+                {
+                    // Best-effort — the client may have disconnected.
+                }
+            }
+        }
+    }
+#pragma warning restore MEAI001
+
+    public async Task SendAudioStream(string itemId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, string language = null)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+            return;
+        }
+
+        var traceId = Guid.NewGuid().ToString("N")[..8];
+        var sw = Stopwatch.StartNew();
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms SendAudioStream START. ItemId={ItemId}, Format={Format}",
+                traceId, sw.ElapsedMilliseconds, itemId, audioFormat);
+        }
+
+        var cancellationToken = Context.ConnectionAborted;
+
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var services = scope.ServiceProvider;
+                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var authorizationService = services.GetRequiredService<IAuthorizationService>();
+                var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+                var clientFactory = services.GetRequiredService<IAIClientFactory>();
+                var siteService = services.GetRequiredService<ISiteService>();
+
+                var interaction = await interactionManager.FindByIdAsync(itemId);
+
+                if (interaction is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                    return;
+                }
+
+                var httpContext = Context.GetHttpContext();
+
+                if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+                {
+                    await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+                    return;
+                }
+
+                var site = await siteService.GetSiteSettingsAsync();
+                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                {
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
+                    return;
+                }
+
+                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
+
+                if (deployment is null)
+                {
+                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
+                    return;
+                }
+
+#pragma warning disable MEAI001
+                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
+#pragma warning restore MEAI001
+
+                var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Scope resolved, STT client created. Starting StreamTranscriptionAsync...",
+                        traceId, sw.ElapsedMilliseconds);
+                }
+
+                await StreamTranscriptionAsync(traceId, sw, sttClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms SendAudioStream COMPLETE.", traceId, sw.ElapsedMilliseconds);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                _logger.LogDebug("Audio transcription was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred while transcribing audio.");
+
+            try
+            {
+                await Clients.Caller.ReceiveError(S["An error occurred while transcribing the audio. Please try again."].Value);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write transcription error message.");
+            }
+        }
+    }
+
+#pragma warning disable MEAI001
+    private async Task StreamTranscriptionAsync(
+        string traceId,
+        Stopwatch sw,
+        ISpeechToTextClient sttClient,
+        string itemId,
+        IAsyncEnumerable<string> audioChunks,
+        string audioFormat,
+        string speechLanguage,
+        CancellationToken cancellationToken = default)
+    {
+        var pipe = new Pipe();
+        var chunkCount = 0;
+        var totalBytes = 0L;
+
+        // CTS to break the audio chunk loop when transcription fails.
+        using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // Start streaming transcription in the background.
+        var transcriptionTask = TranscribeAudioInputAsync(traceId, sw, itemId, pipe, audioFormat, speechLanguage, sttClient, errorCts, cancellationToken);
+
+        // Write audio chunks to the pipe as they arrive from SignalR.
+        try
+        {
+            await foreach (var base64Chunk in audioChunks.WithCancellation(errorCts.Token))
+            {
+                try
+                {
+                    var bytes = Convert.FromBase64String(base64Chunk);
+                    await pipe.Writer.WriteAsync(bytes, errorCts.Token);
+                    chunkCount++;
+                    totalBytes += bytes.Length;
+
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Pipe.Write chunk #{ChunkCount}: {Bytes} bytes (total={TotalBytes})",
+                            traceId, sw.ElapsedMilliseconds, chunkCount, bytes.Length, totalBytes);
+                    }
+                }
+                catch (FormatException)
+                {
+                    continue;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
+        {
+            // Transcription failed or connection aborted.
+        }
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms All audio chunks received. Chunks={ChunkCount}, TotalBytes={TotalBytes}. Completing pipe...",
+                traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
+        }
+
+        // Signal that all audio has been sent.
+        await pipe.Writer.CompleteAsync();
+
+        // Wait for the transcription to finish processing all audio.
+        await transcriptionTask;
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms StreamTranscriptionAsync DONE.", traceId, sw.ElapsedMilliseconds);
+        }
+    }
+
+    private async Task TranscribeAudioInputAsync(
+        string traceId,
+        Stopwatch sw,
+        string itemId,
+        Pipe pipe,
+        string audioFormat,
+        string speechLanguage,
+        ISpeechToTextClient sttClient,
+        CancellationTokenSource errorCts,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var readerStream = pipe.Reader.AsStream();
+
+            using var committedText = ZString.CreateStringBuilder();
+            var sttOptions = new SpeechToTextOptions
+            {
+                SpeechLanguage = speechLanguage,
+            };
+
+            if (!string.IsNullOrWhiteSpace(audioFormat))
+            {
+                sttOptions.AdditionalProperties ??= [];
+                sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms TranscribeAudioInputAsync: calling GetStreamingTextAsync...",
+                    traceId, sw.ElapsedMilliseconds);
+            }
+
+            var updateCount = 0;
+
+            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            {
+                if (string.IsNullOrEmpty(update.Text))
+                {
+                    continue;
+                }
+
+                updateCount++;
+                var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Received update #{UpdateCount}: isPartial={IsPartial}, text='{Text}'",
+                        traceId, sw.ElapsedMilliseconds, updateCount, isPartial, update.Text);
+                }
+
+                if (isPartial)
+                {
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
+                    await Clients.Caller.ReceiveTranscript(itemId, display, false);
+                }
+                else
+                {
+                    if (committedText.Length > 0)
+                    {
+                        committedText.Append(' ');
+                    }
+
+                    committedText.Append(update.Text);
+                    await Clients.Caller.ReceiveTranscript(itemId, committedText.ToString(), false);
+                }
+            }
+
+            var finalText = committedText.ToString().TrimEnd();
+
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms STT stream ended. Updates={UpdateCount}, FinalText='{FinalText}'",
+                    traceId, sw.ElapsedMilliseconds, updateCount, finalText);
+            }
+
+            if (!string.IsNullOrEmpty(finalText))
+            {
+                await Clients.Caller.ReceiveTranscript(itemId, finalText, true);
+            }
+        }
+        catch (Exception)
+        {
+            // Cancel the audio chunk loop so the error surfaces immediately.
+            await errorCts.CancelAsync();
+            throw;
+        }
+    }
+#pragma warning restore MEAI001
+
+    public async Task SynthesizeSpeech(string itemId, string text, string voiceName = null)
+    {
+        if (string.IsNullOrWhiteSpace(itemId))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            await Clients.Caller.ReceiveError(S["{0} is required.", nameof(text)].Value);
+            return;
+        }
+
+        var cancellationToken = Context.ConnectionAborted;
+
+        try
+        {
+            await ShellScope.UsingChildScopeAsync(async scope =>
+            {
+                var services = scope.ServiceProvider;
+                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var authorizationService = services.GetRequiredService<IAuthorizationService>();
+                var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+                var clientFactory = services.GetRequiredService<IAIClientFactory>();
+                var siteService = services.GetRequiredService<ISiteService>();
+
+                var interaction = await interactionManager.FindByIdAsync(itemId);
+
+                if (interaction is null)
+                {
+                    await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
+                    return;
+                }
+
+                var httpContext = Context.GetHttpContext();
+
+                if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
+                {
+                    await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
+                    return;
+                }
+
+                var site = await siteService.GetSiteSettingsAsync();
+                var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+
+                if (chatModeSettings.ChatMode != ChatMode.Conversation)
+                {
+                    await Clients.Caller.ReceiveError(S["Text-to-speech is not enabled for chat interactions."].Value);
+                    return;
+                }
+
+                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                {
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
+                    return;
+                }
+
+                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
+
+                if (deployment is null)
+                {
+                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
+                    return;
+                }
+
+                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+
+                var effectiveVoiceName = !string.IsNullOrWhiteSpace(voiceName)
+                    ? voiceName
+                    : deploymentSettings.DefaultTextToSpeechVoiceId;
+
+                using (ttsClient)
+                {
+                    await StreamSpeechAsync(ttsClient, itemId, text, effectiveVoiceName, cancellationToken);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                _logger.LogDebug("Speech synthesis was cancelled.");
+                return;
+            }
+
+            _logger.LogError(ex, "An error occurred while synthesizing speech.");
+
+            try
+            {
+                await Clients.Caller.ReceiveError(S["An error occurred while synthesizing speech. Please try again."].Value);
+            }
+            catch (Exception writeEx)
+            {
+                _logger.LogWarning(writeEx, "Failed to write speech synthesis error message.");
+            }
+        }
+    }
+
+    private async Task StreamSpeechAsync(
+        ITextToSpeechClient ttsClient,
+        string itemId,
+        string text,
+        string voiceName,
+        CancellationToken cancellationToken)
+    {
+        var options = new TextToSpeechOptions();
+
+        if (!string.IsNullOrWhiteSpace(voiceName))
+        {
+            options.VoiceId = voiceName;
+        }
+
+        var speechText = SanitizeForSpeech(text);
+
+        if (string.IsNullOrWhiteSpace(speechText))
+        {
+            await Clients.Caller.ReceiveAudioComplete(itemId);
+            return;
+        }
+
+        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+        {
+            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+            if (audioContent?.Data is not { Length: > 0 } audioData)
+            {
+                continue;
+            }
+
+            var base64Audio = Convert.ToBase64String(audioData.ToArray());
+            await Clients.Caller.ReceiveAudioChunk(itemId, base64Audio, audioContent.MediaType ?? "audio/mp3");
+        }
+
+        await Clients.Caller.ReceiveAudioComplete(itemId);
+    }
+
+    private async Task StreamSentencesAsSpeechAsync(
+        ITextToSpeechClient ttsClient,
+        string identifier,
+        ChannelReader<string> sentenceReader,
+        string voiceName,
+        CancellationToken cancellationToken)
+    {
+        var options = new TextToSpeechOptions();
+
+        if (!string.IsNullOrWhiteSpace(voiceName))
+        {
+            options.VoiceId = voiceName;
+        }
+
+        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
+        {
+            var speechText = SanitizeForSpeech(sentence);
+
+            if (string.IsNullOrWhiteSpace(speechText))
+            {
+                continue;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
+            }
+
+            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
+            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            {
+                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+                if (audioContent?.Data is not { Length: > 0 } audioData)
+                {
+                    continue;
+                }
+
+                var base64Audio = Convert.ToBase64String(audioData.ToArray());
+                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
+            }
+
+            // Signal that this sentence's audio is ready for playback immediately,
+            // so the client can start playing each sentence as it's synthesized
+            // rather than waiting for all sentences to finish.
+            await Clients.Caller.ReceiveAudioComplete(identifier);
+        }
+    }
+
+    private static string SanitizeForSpeech(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        // Remove fenced code blocks (```...```).
+        text = FencedCodeBlockPattern().Replace(text, " ");
+
+        // Remove inline code (`code`).
+        text = InlineCodePattern().Replace(text, " ");
+
+        // Remove markdown images ![alt](url).
+        text = MarkdownImagePattern().Replace(text, " ");
+
+        // Convert markdown links [text](url) to just text.
+        text = MarkdownLinkPattern().Replace(text, "$1");
+
+        // Remove bold/italic markers (**, *, ___, __, _).
+        text = BoldItalicMarkerPattern().Replace(text, string.Empty);
+
+        // Remove heading markers (# through ######).
+        text = HeadingMarkerPattern().Replace(text, string.Empty);
+
+        // Remove horizontal rules (---, ***, ___).
+        text = HorizontalRulePattern().Replace(text, string.Empty);
+
+        // Remove list markers (- item, * item, + item).
+        text = UnorderedListMarkerPattern().Replace(text, string.Empty);
+
+        // Remove numbered list markers (1. item, 2. item).
+        text = OrderedListMarkerPattern().Replace(text, string.Empty);
+
+        // Remove emoji surrogate pairs (supplementary plane: 😀🎉🚀 etc.).
+        text = EmojiSurrogatePairPattern().Replace(text, string.Empty);
+
+        // Remove common BMP emoji/symbol characters.
+        text = BmpEmojiSymbolPattern().Replace(text, string.Empty);
+
+        // Collapse multiple whitespace into a single space.
+        text = MultipleWhitespacePattern().Replace(text, " ");
+
+        return text.Trim();
+    }
+
+    [GeneratedRegex(@"```[\s\S]*?```")]
+    private static partial Regex FencedCodeBlockPattern();
+
+    [GeneratedRegex(@"`[^`]+`")]
+    private static partial Regex InlineCodePattern();
+
+    [GeneratedRegex(@"!\[[^\]]*\]\([^\)]*\)")]
+    private static partial Regex MarkdownImagePattern();
+
+    [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
+    private static partial Regex MarkdownLinkPattern();
+
+    [GeneratedRegex(@"\*{1,3}|_{1,3}")]
+    private static partial Regex BoldItalicMarkerPattern();
+
+    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
+    private static partial Regex HeadingMarkerPattern();
+
+    [GeneratedRegex(@"^[-*_]{3,}\s*$", RegexOptions.Multiline)]
+    private static partial Regex HorizontalRulePattern();
+
+    [GeneratedRegex(@"^\s*[-*+]\s+", RegexOptions.Multiline)]
+    private static partial Regex UnorderedListMarkerPattern();
+
+    [GeneratedRegex(@"^\s*\d+\.\s+", RegexOptions.Multiline)]
+    private static partial Regex OrderedListMarkerPattern();
+
+    [GeneratedRegex(@"[\uD800-\uDBFF][\uDC00-\uDFFF]")]
+    private static partial Regex EmojiSurrogatePairPattern();
+
+    [GeneratedRegex(@"[\u2600-\u27BF\uFE00-\uFE0F\u200D]")]
+    private static partial Regex BmpEmojiSymbolPattern();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex MultipleWhitespacePattern();
 }

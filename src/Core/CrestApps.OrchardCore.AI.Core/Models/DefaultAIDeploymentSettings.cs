@@ -33,4 +33,16 @@ public sealed class DefaultAIDeploymentSettings
     /// Used globally for speech-to-text transcription when no specific deployment is configured.
     /// </summary>
     public string DefaultSpeechToTextDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default text-to-speech deployment identifier.
+    /// Used globally for text-to-speech synthesis when no specific deployment is configured.
+    /// </summary>
+    public string DefaultTextToSpeechDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the default voice identifier for text-to-speech synthesis.
+    /// When a profile does not specify a voice, this value is used as the fallback.
+    /// </summary>
+    public string DefaultTextToSpeechVoiceId { get; set; }
 }

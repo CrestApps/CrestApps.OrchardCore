@@ -41,6 +41,11 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
             IsOnAdminMenu = true,
         });
 
+        profile.WithSettings(new ChatModeProfileSettings
+        {
+            ChatMode = ChatMode.AudioInput,
+        });
+
         profile.Put(new AIProfileMetadata
         {
             SystemMessage = "some system message",
@@ -174,7 +179,7 @@ You can create or update AI deployments using the following recipe:
           "Name": "<!-- Deployment name as specified by the vendor -->",
           "ProviderName": "<!-- Provider name (e.g., OpenAI, DeepSeek) -->",
           "ConnectionName": "<!-- Connection name used to configure the provider -->",
-          "Type": "<!-- Deployment type: Chat, Utility, Embedding, Image, or SpeechToText -->",
+          "Type": "<!-- Deployment type: Chat, Utility, Embedding, Image, SpeechToText, or TextToSpeech -->",
           "IsDefault": false
         }
       ]
