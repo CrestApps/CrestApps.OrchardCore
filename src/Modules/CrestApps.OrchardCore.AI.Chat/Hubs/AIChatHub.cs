@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -27,7 +26,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
-public partial class AIChatHub : Hub<IAIChatHubClient>
+public class AIChatHub : Hub<IAIChatHubClient>
 {
     private const string _conversationCtsKey = "ConversationCts";
 
@@ -475,7 +474,11 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
 
         // Resolve the chat response handler for this session.
-        var handler = handlerResolver.Resolve(chatSession.ResponseHandlerName);
+        // In conversation mode, always use the AI handler for TTS/STT integration.
+        var chatMode = profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
+            ? chatModeSettings.ChatMode
+            : ChatMode.TextInput;
+        var handler = handlerResolver.Resolve(chatSession.ResponseHandlerName, chatMode);
 
         var handlerContext = new ChatResponseHandlerContext
         {
@@ -1109,7 +1112,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                     sentenceBuffer.Append(chunk.Content);
 
                     // Queue completed sentences for TTS synthesis.
-                    if (EndsWithSentenceBoundary(chunk.Content))
+                    if (SentenceBoundaryDetector.EndsWithSentenceBoundary(chunk.Content))
                     {
                         var sentence = sentenceBuffer.ToString().Trim();
 
@@ -1558,7 +1561,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             options.VoiceId = voiceName;
         }
 
-        var speechText = SanitizeForSpeech(text);
+        var speechText = SpeechTextSanitizer.Sanitize(text);
 
         if (string.IsNullOrWhiteSpace(speechText))
         {
@@ -1598,7 +1601,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
         await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
         {
             var identifier = getIdentifier();
-            var speechText = SanitizeForSpeech(sentence);
+            var speechText = SpeechTextSanitizer.Sanitize(sentence);
 
             if (string.IsNullOrWhiteSpace(speechText))
             {
@@ -1629,106 +1632,4 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             await Clients.Caller.ReceiveAudioComplete(identifier);
         }
     }
-
-    private static bool EndsWithSentenceBoundary(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        var trimmed = text.AsSpan().TrimEnd();
-
-        if (trimmed.IsEmpty)
-        {
-            return false;
-        }
-
-        var lastChar = trimmed[^1];
-
-        return lastChar is '.' or '!' or '?' or '\n';
-    }
-
-    private static string SanitizeForSpeech(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return text;
-        }
-
-        // Remove fenced code blocks (```...```).
-        text = FencedCodeBlockPattern().Replace(text, " ");
-
-        // Remove inline code (`code`).
-        text = InlineCodePattern().Replace(text, " ");
-
-        // Remove markdown images ![alt](url).
-        text = MarkdownImagePattern().Replace(text, " ");
-
-        // Convert markdown links [text](url) to just text.
-        text = MarkdownLinkPattern().Replace(text, "$1");
-
-        // Remove bold/italic markers (**, *, ___, __, _).
-        text = BoldItalicMarkerPattern().Replace(text, string.Empty);
-
-        // Remove heading markers (# through ######).
-        text = HeadingMarkerPattern().Replace(text, string.Empty);
-
-        // Remove horizontal rules (---, ***, ___).
-        text = HorizontalRulePattern().Replace(text, string.Empty);
-
-        // Remove list markers (- item, * item, + item).
-        text = UnorderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove numbered list markers (1. item, 2. item).
-        text = OrderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove emoji surrogate pairs (supplementary plane: 😀🎉🚀 etc.).
-        text = EmojiSurrogatePairPattern().Replace(text, string.Empty);
-
-        // Remove common BMP emoji/symbol characters.
-        text = BmpEmojiSymbolPattern().Replace(text, string.Empty);
-
-        // Collapse multiple whitespace into a single space.
-        text = MultipleWhitespacePattern().Replace(text, " ");
-
-        return text.Trim();
-    }
-
-    [GeneratedRegex(@"```[\s\S]*?```")]
-    private static partial Regex FencedCodeBlockPattern();
-
-    [GeneratedRegex(@"`[^`]+`")]
-    private static partial Regex InlineCodePattern();
-
-    [GeneratedRegex(@"!\[[^\]]*\]\([^\)]*\)")]
-    private static partial Regex MarkdownImagePattern();
-
-    [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
-    private static partial Regex MarkdownLinkPattern();
-
-    [GeneratedRegex(@"\*{1,3}|_{1,3}")]
-    private static partial Regex BoldItalicMarkerPattern();
-
-    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
-    private static partial Regex HeadingMarkerPattern();
-
-    [GeneratedRegex(@"^[-*_]{3,}\s*$", RegexOptions.Multiline)]
-    private static partial Regex HorizontalRulePattern();
-
-    [GeneratedRegex(@"^\s*[-*+]\s+", RegexOptions.Multiline)]
-    private static partial Regex UnorderedListMarkerPattern();
-
-    [GeneratedRegex(@"^\s*\d+\.\s+", RegexOptions.Multiline)]
-    private static partial Regex OrderedListMarkerPattern();
-
-    [GeneratedRegex(@"[\uD800-\uDBFF][\uDC00-\uDFFF]")]
-    private static partial Regex EmojiSurrogatePairPattern();
-
-    [GeneratedRegex(@"[\u2600-\u27BF\uFE00-\uFE0F\u200D]")]
-    private static partial Regex BmpEmojiSymbolPattern();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex MultipleWhitespacePattern();
-
 }

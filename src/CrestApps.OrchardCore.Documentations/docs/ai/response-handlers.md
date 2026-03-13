@@ -20,6 +20,16 @@ This enables scenarios like:
 - **Hybrid AI + human**: AI handles initial triage, then a human agent takes over mid-conversation.
 - **Non-AI chat profiles**: Configure a profile to skip AI entirely and route all prompts to an external system from the start.
 
+## Conversation Mode Limitation
+
+:::warning
+**Custom response handlers are not supported in Conversation mode.** When Conversation mode (`ChatMode.Conversation`) is active, the resolver always returns the built-in AI handler regardless of the session's `ResponseHandlerName`. This is by design — Conversation mode requires the AI orchestration pipeline for speech-to-text transcription, text-to-speech synthesis, and real-time audio streaming.
+
+If a user is in Conversation mode and an AI function attempts to transfer the session to a custom handler, the transfer will still update the `ResponseHandlerName` on the session, but prompts will continue to be processed by the AI handler until the user switches out of Conversation mode.
+
+When implementing transfer functions, check the current chat mode and reject the transfer if Conversation mode is active. See the [example below](#mid-conversation-handler-transfer) for the recommended pattern.
+:::
+
 ## Architecture
 
 ### Request Flow
@@ -189,8 +199,21 @@ public sealed class TransferToAgentFunction
     public async Task<string> TransferToLiveAgent(
         [Description("The queue to transfer to")] string queueName,
         IAIChatSessionManager sessionManager,
+        IAIProfileManager profileManager,
         AIChatSession chatSession)
     {
+        // Conversation mode requires AI for speech-to-text / text-to-speech.
+        // Custom handlers cannot process voice audio streams.
+        var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
+
+        if (profile != null
+            && profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
+            && chatModeSettings.ChatMode == ChatMode.Conversation)
+        {
+            return "Live agent transfer is not available in conversation mode. " +
+                   "Please switch to text mode to connect with a live agent.";
+        }
+
         // Update the session to use the Genesys handler for subsequent prompts.
         chatSession.ResponseHandlerName = "Genesys";
         await sessionManager.SaveAsync(chatSession);
@@ -270,3 +293,17 @@ The built-in AI handler (`AIChatResponseHandler`) wraps the existing orchestrati
 4. Stores the `OrchestrationContext` in `context.Properties["OrchestrationContext"]` for citation collection by the hub.
 
 The AI handler's name is `"AI"`. When a session's `ResponseHandlerName` is `null` or empty, the resolver defaults to the AI handler.
+
+## Handler Resolution Logic
+
+The `IChatResponseHandlerResolver.Resolve()` method accepts an optional `ChatMode` parameter:
+
+1. If `chatMode` is `ChatMode.Conversation`, the AI handler is **always** returned.
+2. If `handlerName` is `null` or empty, the AI handler is returned.
+3. If a handler matching `handlerName` is found, it is returned.
+4. If no match is found, a warning is logged and the AI handler is returned as a fallback.
+
+```csharp
+// Resolve with conversation mode awareness
+var handler = handlerResolver.Resolve(session.ResponseHandlerName, ChatMode.TextInput);
+```

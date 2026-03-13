@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -5,6 +6,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// <summary>
 /// Resolves <see cref="IChatResponseHandler"/> instances by name from the DI container.
 /// When the requested name is <see langword="null"/> or empty, returns the default AI handler.
+/// When <see cref="ChatMode.Conversation"/> is active, always returns the AI handler.
 /// </summary>
 internal sealed class DefaultChatResponseHandlerResolver : IChatResponseHandlerResolver
 {
@@ -19,8 +21,24 @@ internal sealed class DefaultChatResponseHandlerResolver : IChatResponseHandlerR
         _logger = logger;
     }
 
-    public IChatResponseHandler Resolve(string handlerName = null)
+    public IChatResponseHandler Resolve(string handlerName = null, ChatMode chatMode = ChatMode.TextInput)
     {
+        // Conversation mode requires the AI orchestration pipeline for
+        // speech-to-text and text-to-speech integration. Custom handlers
+        // are not supported in this mode.
+        if (chatMode == ChatMode.Conversation)
+        {
+            if (!string.IsNullOrWhiteSpace(handlerName)
+                && !string.Equals(handlerName, AIChatResponseHandler.HandlerName, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Chat response handler '{HandlerName}' was requested but conversation mode requires the AI handler. Falling back to AI.",
+                    handlerName);
+            }
+
+            return ResolveAIHandler();
+        }
+
         // When no name is specified, return the default AI handler.
         if (string.IsNullOrWhiteSpace(handlerName))
         {
