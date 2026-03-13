@@ -89,4 +89,11 @@ public interface IAIClientFactory
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ITextToSpeechClient"/>.
     /// </returns>
     ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment);
+
+    /// <summary>
+    /// Gets the available speech voices for the specified deployment by delegating to the appropriate provider.
+    /// </summary>
+    /// <param name="deployment">The AI deployment containing provider, connection, and model information.</param>
+    /// <returns>An array of available <see cref="SpeechVoice"/> instances.</returns>
+    Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment);
 }

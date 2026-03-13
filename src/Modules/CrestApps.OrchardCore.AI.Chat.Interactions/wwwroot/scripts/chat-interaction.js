@@ -1191,10 +1191,22 @@ window.chatInteractionManager = function () {
             this.conversationButton.classList.add('active', 'btn-primary');
             this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
             this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
+            var endHtml = this.conversationButton.getAttribute('data-end-html');
+            if (endHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(endHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
             this.conversationButton.classList.add('btn-dark');
             this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
+            var startHtml = this.conversationButton.getAttribute('data-start-html');
+            if (startHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(startHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
           }
         },
         conversationModeSendPrompt: function conversationModeSendPrompt() {

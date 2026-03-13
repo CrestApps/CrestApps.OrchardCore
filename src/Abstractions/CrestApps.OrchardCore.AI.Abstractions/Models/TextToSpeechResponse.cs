@@ -1,22 +1,85 @@
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.AI;
+
 namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
-/// Represents the response from a text-to-speech synthesis operation.
+/// Represents the result of a text to speech request.
 /// </summary>
-public sealed class TextToSpeechResponse
+public class TextToSpeechResponse
 {
-    /// <summary>
-    /// Gets or sets the synthesized audio data.
-    /// </summary>
-    public byte[] AudioData { get; set; }
+    private IList<AIContent> _contents;
 
     /// <summary>
-    /// Gets or sets the MIME content type of the audio (e.g., "audio/mp3", "audio/wav").
+    /// Initializes a new instance of the <see cref="TextToSpeechResponse"/> class.
     /// </summary>
-    public string ContentType { get; set; }
+    [JsonConstructor]
+    public TextToSpeechResponse()
+    {
+    }
 
     /// <summary>
-    /// Gets or sets the duration of the synthesized audio.
+    /// Initializes a new instance of the <see cref="TextToSpeechResponse"/> class.
     /// </summary>
-    public TimeSpan? Duration { get; set; }
+    /// <param name="contents">The contents for this response.</param>
+    public TextToSpeechResponse(IList<AIContent> contents)
+    {
+        ArgumentNullException.ThrowIfNull(contents);
+        _contents = contents;
+    }
+
+    /// <summary>
+    /// Gets or sets the ID of the text to speech response.
+    /// </summary>
+    public string ResponseId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the model ID used in the creation of the text to speech response.
+    /// </summary>
+    public string ModelId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the raw representation of the text to speech response from an underlying implementation.
+    /// </summary>
+    [JsonIgnore]
+    public object RawRepresentation { get; set; }
+
+    /// <summary>
+    /// Gets or sets any additional properties associated with the text to speech response.
+    /// </summary>
+    public IDictionary<string, object> AdditionalProperties { get; set; }
+
+    /// <summary>
+    /// Creates an array of <see cref="TextToSpeechResponseUpdate"/> instances that represent this
+    /// <see cref="TextToSpeechResponse"/>.
+    /// </summary>
+    /// <returns>An array of <see cref="TextToSpeechResponseUpdate"/> instances.</returns>
+    public TextToSpeechResponseUpdate[] ToTextToSpeechResponseUpdates()
+    {
+        var update = new TextToSpeechResponseUpdate
+        {
+            Contents = Contents,
+            AdditionalProperties = AdditionalProperties,
+            RawRepresentation = RawRepresentation,
+            Kind = TextToSpeechResponseUpdateKind.AudioUpdated,
+            ResponseId = ResponseId,
+            ModelId = ModelId,
+        };
+
+        return [update];
+    }
+
+    /// <summary>
+    /// Gets or sets the generated content items.
+    /// </summary>
+    public IList<AIContent> Contents
+    {
+        get => _contents ??= [];
+        set => _contents = value;
+    }
+
+    /// <summary>
+    /// Gets or sets usage details for the text to speech response.
+    /// </summary>
+    public UsageDetails Usage { get; set; }
 }

@@ -1518,7 +1518,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
         if (!string.IsNullOrWhiteSpace(voiceName))
         {
-            options.VoiceName = voiceName;
+            options.VoiceId = voiceName;
         }
 
         var speechText = SanitizeForSpeech(text);
@@ -1531,13 +1531,14 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
         await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
         {
-            if (update.AudioData == null || update.AudioData.Length == 0)
+            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+            if (audioContent?.Data is not { Length: > 0 } audioData)
             {
                 continue;
             }
 
-            var base64Audio = Convert.ToBase64String(update.AudioData);
-            await Clients.Caller.ReceiveAudioChunk(sessionId, base64Audio, update.ContentType ?? "audio/mp3");
+            var base64Audio = Convert.ToBase64String(audioData.ToArray());
+            await Clients.Caller.ReceiveAudioChunk(sessionId, base64Audio, audioContent.MediaType ?? "audio/mp3");
         }
 
         await Clients.Caller.ReceiveAudioComplete(sessionId);
@@ -1554,7 +1555,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
         if (!string.IsNullOrWhiteSpace(voiceName))
         {
-            options.VoiceName = voiceName;
+            options.VoiceId = voiceName;
         }
 
         await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
@@ -1575,13 +1576,14 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
             await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
-                if (update.AudioData == null || update.AudioData.Length == 0)
+                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+                if (audioContent?.Data is not { Length: > 0 } audioData)
                 {
                     continue;
                 }
 
-                var base64Audio = Convert.ToBase64String(update.AudioData);
-                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, update.ContentType ?? "audio/mp3");
+                var base64Audio = Convert.ToBase64String(audioData.ToArray());
+                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
             }
 
             // Signal that this sentence's audio is ready for playback immediately,

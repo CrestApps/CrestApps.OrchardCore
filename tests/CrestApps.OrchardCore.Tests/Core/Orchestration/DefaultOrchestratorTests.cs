@@ -487,6 +487,9 @@ public sealed class DefaultOrchestratorTests
 
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
             => new((ITextToSpeechClient)null);
+
+        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
+            => Task.FromResult(Array.Empty<SpeechVoice>());
     }
 
     /// <summary>

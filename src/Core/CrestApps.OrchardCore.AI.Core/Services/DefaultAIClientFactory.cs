@@ -222,6 +222,42 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
     }
 
+    public async Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
+    {
+        ArgumentNullException.ThrowIfNull(deployment);
+        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
+
+        var connectionEntry = GetConnectionEntry(deployment);
+
+        foreach (var clientProvider in _clientProviders)
+        {
+            if (!clientProvider.CanHandle(deployment.ProviderName))
+            {
+                continue;
+            }
+
+            return await clientProvider.GetSpeechVoicesAsync(connectionEntry, deployment.Name);
+        }
+
+        return [];
+    }
+
+    private AIProviderConnectionEntry GetConnectionEntry(AIDeployment deployment)
+    {
+        if (!string.IsNullOrEmpty(deployment.ConnectionName))
+        {
+            if (_options.Providers.TryGetValue(deployment.ProviderName, out var provider)
+                && provider.Connections.TryGetValue(deployment.ConnectionName, out var connection))
+            {
+                return connection;
+            }
+
+            throw new ArgumentException($"Connection '{deployment.ConnectionName}' not found within the provider '{deployment.ProviderName}'.");
+        }
+
+        return BuildConnectionEntry(deployment);
+    }
+
     private AIProviderConnectionEntry BuildConnectionEntry(AIDeployment deployment)
     {
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);

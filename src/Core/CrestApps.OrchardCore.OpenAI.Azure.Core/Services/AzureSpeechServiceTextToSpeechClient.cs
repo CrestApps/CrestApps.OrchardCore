@@ -6,6 +6,7 @@ using CrestApps.Azure.Core.Models;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.CognitiveServices.Speech;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
@@ -17,6 +18,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
 {
     private const string CognitiveServicesScope = "https://cognitiveservices.azure.com/.default";
+    private const string DefaultContentType = "audio/mp3";
 
     private static readonly string[] _regionSuffixes =
     [
@@ -62,8 +64,8 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Starting single-shot speech synthesis. VoiceName: {VoiceName}, Endpoint: {Endpoint}, AuthType: {AuthType}",
-                options?.VoiceName ?? "(default)", _endpoint, _authType);
+                "Starting single-shot speech synthesis. VoiceId: {VoiceId}, Endpoint: {Endpoint}, AuthType: {AuthType}",
+                options?.VoiceId ?? "(default)", _endpoint, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(options, cancellationToken);
@@ -79,12 +81,10 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
                 _logger.LogDebug("Single-shot synthesis succeeded. Audio bytes: {AudioBytes}", result.AudioData.Length);
             }
 
-            return new TextToSpeechResponse
+            return new TextToSpeechResponse(new List<AIContent>
             {
-                AudioData = result.AudioData,
-                ContentType = "audio/mp3",
-                Duration = result.AudioDuration,
-            };
+                new DataContent(result.AudioData, DefaultContentType),
+            });
         }
 
         if (result.Reason == ResultReason.Canceled)
@@ -111,8 +111,8 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Starting streaming speech synthesis. VoiceName: {VoiceName}, Endpoint: {Endpoint}, AuthType: {AuthType}",
-                options?.VoiceName ?? "(default)", _endpoint, _authType);
+                "Starting streaming speech synthesis. VoiceId: {VoiceId}, Endpoint: {Endpoint}, AuthType: {AuthType}",
+                options?.VoiceId ?? "(default)", _endpoint, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(options, cancellationToken);
@@ -135,10 +135,12 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
                     _logger.LogTrace("Streaming synthesis chunk: {AudioBytes} bytes", e.Result.AudioData.Length);
                 }
 
-                channel.Writer.TryWrite(new TextToSpeechResponseUpdate
+                channel.Writer.TryWrite(new TextToSpeechResponseUpdate(new List<AIContent>
                 {
-                    AudioData = e.Result.AudioData,
-                    ContentType = "audio/mp3",
+                    new DataContent(e.Result.AudioData, DefaultContentType),
+                })
+                {
+                    Kind = TextToSpeechResponseUpdateKind.AudioUpdating,
                 });
             }
         };
@@ -193,6 +195,12 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         }
     }
 
+    /// <summary>
+    /// Gets the available voices for text-to-speech synthesis.
+    /// </summary>
+    /// <param name="locale">An optional locale to filter voices (e.g., "en-US"). If <c>null</c>, all voices are returned.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>An array of available <see cref="SpeechVoice"/> instances.</returns>
     public async Task<SpeechVoice[]> GetVoicesAsync(
         string locale = null,
         CancellationToken cancellationToken = default)
@@ -230,6 +238,14 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         return [];
     }
 
+    /// <inheritdoc/>
+    public object GetService(Type serviceType, object serviceKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+
+        return serviceKey is null && serviceType.IsInstanceOfType(this) ? this : null;
+    }
+
     public void Dispose()
     {
         // No owned resources to dispose; SpeechConfig/synthesizers are disposed per-call.
@@ -260,13 +276,13 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
             config = await CreateEndpointBasedConfigAsync(cancellationToken);
         }
 
-        if (!string.IsNullOrEmpty(options?.VoiceName))
+        if (!string.IsNullOrEmpty(options?.VoiceId))
         {
-            config.SpeechSynthesisVoiceName = options.VoiceName;
+            config.SpeechSynthesisVoiceName = options.VoiceId;
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("Using voice: {VoiceName}", options.VoiceName);
+                _logger.LogDebug("Using voice: {VoiceId}", options.VoiceId);
             }
         }
 

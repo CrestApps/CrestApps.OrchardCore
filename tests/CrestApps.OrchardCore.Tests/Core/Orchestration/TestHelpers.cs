@@ -97,4 +97,7 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 
     public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
         => new((ITextToSpeechClient)null);
+
+    public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
+        => Task.FromResult(Array.Empty<SpeechVoice>());
 }

@@ -1,10 +1,10 @@
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
@@ -15,23 +15,18 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly ISiteService _siteService;
-    private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAIClientFactory _clientFactory;
-    private readonly IStringLocalizer S;
-    private readonly ILogger _logger;
+    private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
+
+    internal readonly IStringLocalizer S;
 
     public AIProfileTemplateChatModeDisplayDriver(
         ISiteService siteService,
-        IAIDeploymentManager deploymentManager,
-        IAIClientFactory clientFactory,
-        IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer,
-        ILogger<AIProfileTemplateChatModeDisplayDriver> logger)
+        DefaultSpeechVoicePresenter speechVoiceMenuService,
+        IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
-        _deploymentManager = deploymentManager;
-        _clientFactory = clientFactory;
+        _speechVoiceMenuService = speechVoiceMenuService;
         S = stringLocalizer;
-        _logger = logger;
     }
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
@@ -114,42 +109,9 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
     {
-        var voices = new List<SelectListItem>();
+        var site = await _siteService.GetSiteSettingsAsync();
+        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
 
-        try
-        {
-            var site = await _siteService.GetSiteSettingsAsync();
-            var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-            if (!string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
-            {
-                var deployment = await _deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-
-                if (deployment != null)
-                {
-                    using var client = await _clientFactory.CreateTextToSpeechClientAsync(deployment);
-                    var speechVoices = await client.GetVoicesAsync();
-
-                    foreach (var voiceGroup in speechVoices
-                        .OrderBy(v => v.Language)
-                        .ThenBy(v => v.Name)
-                        .GroupBy(v => v.Language ?? S["Unknown"]))
-                    {
-                        var group = new SelectListGroup { Name = voiceGroup.Key };
-
-                        foreach (var voice in voiceGroup)
-                        {
-                            voices.Add(new SelectListItem(voice.Name, voice.Id) { Group = group });
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to fetch available TTS voices.");
-        }
-
-        return voices;
+        return await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
     }
 }
