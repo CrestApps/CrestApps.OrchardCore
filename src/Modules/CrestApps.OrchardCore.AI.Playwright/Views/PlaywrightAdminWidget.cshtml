@@ -1,0 +1,192 @@
+@{
+    var apiBase = Context.Request.PathBase.ToString().TrimEnd('/') + "/api/playwright";
+}
+<div id="pw-status-bar"
+     aria-live="polite"
+     style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:10000;
+            background:#1f2937; color:#e5e7eb; font-family:monospace; font-size:13px;
+            padding:6px 14px; border-top:2px solid #2563eb;
+            align-items:center; gap:10px; flex-wrap:wrap;">
+
+    <span style="font-weight:600; color:#93c5fd;">Playwright</span>
+
+    <span id="pw-status-label" style="color:#86efac;">Idle</span>
+
+    <span id="pw-page-label"
+          style="color:#bfdbfe; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+
+    <span id="pw-url-label"
+          style="color:#93c5fd; max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+
+    <span style="flex:1"></span>
+
+    <button id="pw-stop-btn"
+            type="button"
+            onclick="pwStopSession()"
+            style="background:#fca5a5; color:#111827; border:none; border-radius:4px;
+                   padding:3px 10px; cursor:pointer; font-size:12px; font-weight:600; display:none;">
+        Stop
+    </button>
+
+    <button id="pw-close-btn"
+            type="button"
+            onclick="pwCloseSession()"
+            style="background:#fdba74; color:#111827; border:none; border-radius:4px;
+                   padding:3px 10px; cursor:pointer; font-size:12px; font-weight:600;">
+        Close Browser
+    </button>
+</div>
+
+<script>
+(function () {
+    var storageKey = 'playwright-active-session-id';
+    var bar = document.getElementById('pw-status-bar');
+    var statusLabel = document.getElementById('pw-status-label');
+    var pageLabel = document.getElementById('pw-page-label');
+    var urlLabel = document.getElementById('pw-url-label');
+    var stopBtn = document.getElementById('pw-stop-btn');
+    var pollTimer = null;
+    var activeSid = null;
+    var API = '@Html.Raw(apiBase)';
+
+    function storeSessionId(sessionId) {
+        activeSid = sessionId || null;
+
+        if (activeSid) {
+            localStorage.setItem(storageKey, activeSid);
+        } else {
+            localStorage.removeItem(storageKey);
+        }
+    }
+
+    function getActiveSessionId() {
+        return activeSid
+            || localStorage.getItem(storageKey)
+            || sessionStorage.getItem('ai-chat-session-id');
+    }
+
+    function startPolling() {
+        if (pollTimer) {
+            return;
+        }
+
+        pollTimer = setInterval(poll, 2000);
+        poll();
+    }
+
+    function updateBar(data) {
+        bar.style.display = 'flex';
+
+        var status = (data.status || '').toLowerCase();
+        var labels = {
+            idle: 'Idle',
+            running: 'Running',
+            stopped: 'Stopped',
+            closed: 'Closed'
+        };
+
+        statusLabel.textContent = labels[status] || data.status || 'Unknown';
+        statusLabel.style.color = status === 'running'
+            ? '#fde68a'
+            : (status === 'stopped' ? '#fca5a5' : '#86efac');
+
+        pageLabel.textContent = data.currentPageTitle || '';
+        urlLabel.textContent = data.currentUrl || '';
+        stopBtn.style.display = status === 'running' ? 'inline-block' : 'none';
+    }
+
+    function hideBar() {
+        bar.style.display = 'none';
+    }
+
+    async function poll() {
+        var sid = getActiveSessionId();
+
+        if (!sid) {
+            try {
+                var activeResp = await fetch(API + '/active', { credentials: 'same-origin' });
+                if (!activeResp.ok) {
+                    return;
+                }
+
+                var activeSessions = await activeResp.json();
+                if (activeSessions && activeSessions.length > 0) {
+                    storeSessionId(activeSessions[0].chatSessionId);
+                    updateBar(activeSessions[0]);
+                } else {
+                    hideBar();
+                }
+            } catch (_) {
+            }
+
+            return;
+        }
+
+        try {
+            var response = await fetch(API + '/' + encodeURIComponent(sid) + '/status', { credentials: 'same-origin' });
+            if (!response.ok) {
+                return;
+            }
+
+            var data = await response.json();
+            if (data.isActive) {
+                storeSessionId(sid);
+                updateBar(data);
+            } else {
+                storeSessionId(null);
+                hideBar();
+            }
+        } catch (_) {
+        }
+    }
+
+    window.pwStopSession = async function () {
+        var sid = getActiveSessionId();
+        if (!sid) {
+            return;
+        }
+
+        try {
+            var response = await fetch(API + '/' + encodeURIComponent(sid) + '/stop', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            var data = await response.json();
+            updateBar(data);
+        } catch (_) {
+        }
+    };
+
+    window.pwCloseSession = async function () {
+        var sid = getActiveSessionId();
+        if (!sid) {
+            return;
+        }
+
+        try {
+            await fetch(API + '/' + encodeURIComponent(sid) + '/close', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+        } catch (_) {
+        }
+
+        storeSessionId(null);
+        hideBar();
+    };
+
+    document.addEventListener('initializingSessionOpenAIChat', function (event) {
+        if (event.detail && event.detail.sessionId) {
+            storeSessionId(event.detail.sessionId);
+        }
+    });
+
+    document.addEventListener('initializingChatInteraction', function (event) {
+        if (event.detail && event.detail.itemId) {
+            storeSessionId(event.detail.itemId);
+        }
+    });
+
+    startPolling();
+})();
+</script>

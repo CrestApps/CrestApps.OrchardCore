@@ -1,0 +1,91 @@
+@model CrestApps.OrchardCore.AI.Playwright.ViewModels.ChatInteractionPlaywrightSettingsViewModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<CrestApps.OrchardCore.AI.Playwright.Drivers.ChatInteractionPlaywrightSettingsDisplayDriver> S
+
+<div class="mb-3">
+    <h5>@S["Playwright Browser Automation"]</h5>
+    <p class="text-muted mb-3">@S["When enabled, this interaction can open its own browser window and carry out Orchard admin steps in that browser."]</p>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="PlaywrightEnabled" class="form-check-input" type="checkbox" />
+            <label asp-for="PlaywrightEnabled" class="form-check-label">@S["Let this interaction open a browser and do the work"]</label>
+        </div>
+    </div>
+
+    <div id="interaction-playwright-config" class="@(Model.PlaywrightEnabled ? "" : "d-none")">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="PlaywrightUsername" class="form-label">@S["Login username"]</label>
+                <input asp-for="PlaywrightUsername" class="form-control" autocomplete="username" />
+                <span class="hint">@S["Optional. Used only if the browser reaches the Orchard login page."]</span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="PlaywrightPassword" class="form-label">@S["Login password"]</label>
+                <input asp-for="PlaywrightPassword" class="form-control" type="password" autocomplete="current-password" />
+                <span class="hint">
+                    @(Model.HasSavedPassword
+                        ? S["Leave blank to keep the saved password."]
+                        : S["Optional. Used only if the browser reaches the Orchard login page."])
+                </span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input asp-for="PlaywrightPublishByDefault" class="form-check-input" type="checkbox" />
+                <label asp-for="PlaywrightPublishByDefault" class="form-check-label">@S["Publish by default"]</label>
+            </div>
+        </div>
+
+        <details class="mb-3">
+            <summary class="fw-semibold">@S["Advanced options"]</summary>
+
+            <div class="mt-3">
+                <div class="mb-3">
+                    <label asp-for="PlaywrightPersistentProfilePath" class="form-label">@S["Browser profile folder"]</label>
+                    <input asp-for="PlaywrightPersistentProfilePath" class="form-control" placeholder="@S["Leave blank to let the module manage it for you"]" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PlaywrightBaseUrl" class="form-label">@S["Site URL override"]</label>
+                    <input asp-for="PlaywrightBaseUrl" class="form-control" placeholder="@S["Leave blank to use the current tenant URL"]" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="PlaywrightAdminBaseUrl" class="form-label">@S["Admin URL override"]</label>
+                    <input asp-for="PlaywrightAdminBaseUrl" class="form-control" placeholder="@S["Leave blank to derive it automatically"]" />
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input asp-for="PlaywrightHeadless" class="form-check-input" type="checkbox" />
+                        <label asp-for="PlaywrightHeadless" class="form-check-label">@S["Run without showing the browser window"]</label>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var enabled = document.getElementById('@Html.IdFor(m => m.PlaywrightEnabled)');
+        var block = document.getElementById('interaction-playwright-config');
+
+        function update() {
+            if (!enabled || !block) {
+                return;
+            }
+
+            block.classList.toggle('d-none', !enabled.checked);
+        }
+
+        if (enabled) {
+            enabled.addEventListener('change', update);
+        }
+
+        update();
+    })();
+</script>

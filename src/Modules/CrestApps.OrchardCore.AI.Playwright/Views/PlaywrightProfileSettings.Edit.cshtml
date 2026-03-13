@@ -1,0 +1,94 @@
+@model CrestApps.OrchardCore.AI.Playwright.ViewModels.PlaywrightProfileSettingsViewModel
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<CrestApps.OrchardCore.AI.Playwright.Drivers.PlaywrightProfileSettingsDisplayDriver> S
+
+<fieldset class="mb-3">
+    <legend class="h6">@S["Playwright Browser Automation"]</legend>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" type="checkbox" />
+            <label asp-for="Enabled" class="form-check-label">@S["Let this AI profile open a browser and do the work"]</label>
+        </div>
+        <span class="hint">@S["When enabled, this profile can open its own browser window and carry out Orchard admin steps for you. The browser keeps its own session between runs so it can stay signed in. Playwright tools are added automatically."]</span>
+    </div>
+
+    <div id="playwright-config-block" class="@(Model.Enabled ? "" : "d-none")">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label asp-for="Username" class="form-label">@S["Login username"]</label>
+                <input asp-for="Username" class="form-control" autocomplete="username" />
+                <span class="hint">@S["Optional. Used only if the browser reaches the Orchard login page."]</span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label asp-for="Password" class="form-label">@S["Login password"]</label>
+                <input asp-for="Password" class="form-control" type="password" autocomplete="current-password" />
+                <span class="hint">
+                    @(Model.HasSavedPassword
+                        ? S["Leave blank to keep the saved password."]
+                        : S["Optional. Used only if the browser reaches the Orchard login page."])
+                </span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input asp-for="PublishByDefault" class="form-check-input" type="checkbox" />
+                <label asp-for="PublishByDefault" class="form-check-label">@S["Publish by default"]</label>
+            </div>
+            <span class="hint">@S["When unchecked, the AI prefers saving drafts unless you explicitly ask it to publish."]</span>
+        </div>
+
+        <details class="mb-3">
+            <summary class="fw-semibold">@S["Advanced options"]</summary>
+
+            <div class="mt-3">
+                <div class="mb-3">
+                    <label asp-for="PersistentProfilePath" class="form-label">@S["Browser profile folder"]</label>
+                    <input asp-for="PersistentProfilePath" class="form-control" placeholder="@S["Leave blank to let the module manage it for you"]" />
+                    <span class="hint">@S["Optional. Most users should leave this empty."]</span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="BaseUrl" class="form-label">@S["Site URL override"]</label>
+                    <input asp-for="BaseUrl" class="form-control" placeholder="@S["Leave blank to use the current tenant URL"]" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="AdminBaseUrl" class="form-label">@S["Admin URL override"]</label>
+                    <input asp-for="AdminBaseUrl" class="form-control" placeholder="@S["Leave blank to derive it automatically"]" />
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input asp-for="Headless" class="form-check-input" type="checkbox" />
+                        <label asp-for="Headless" class="form-check-label">@S["Run without showing the browser window"]</label>
+                    </div>
+                    <span class="hint">@S["Leave this off while you are testing so you can watch what the AI is doing."]</span>
+                </div>
+            </div>
+        </details>
+    </div>
+</fieldset>
+
+<script at="Foot">
+    (function () {
+        var enabled = document.getElementById('@Html.IdFor(m => m.Enabled)');
+        var block = document.getElementById('playwright-config-block');
+
+        function update() {
+            if (!enabled || !block) {
+                return;
+            }
+
+            block.classList.toggle('d-none', !enabled.checked);
+        }
+
+        if (enabled) {
+            enabled.addEventListener('change', update);
+        }
+
+        update();
+    })();
+</script>
