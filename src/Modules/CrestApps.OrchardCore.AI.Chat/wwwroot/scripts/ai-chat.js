@@ -326,7 +326,9 @@ window.openAIChatManager = function () {
           ttsButton: null,
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
-          isConversationMode: false
+          isConversationMode: false,
+          selectedResponseHandler: '',
+          responseHandlers: config.responseHandlers || []
         };
       },
       computed: {
@@ -535,6 +537,42 @@ window.openAIChatManager = function () {
           if (bytes < 1024) return bytes + ' B';
           if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
           return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        },
+        renderHandlerSelector: function renderHandlerSelector() {
+          if (!this.placeholder || this.responseHandlers.length === 0) {
+            return;
+          }
+          var existing = this.placeholder.querySelector('.ai-chat-handler-selector');
+          if (existing) {
+            return;
+          }
+          var container = document.createElement('div');
+          container.className = 'ai-chat-handler-selector mt-2';
+          container.style.cssText = 'font-size: 0.85rem;';
+          var label = document.createElement('label');
+          label.className = 'form-label mb-1';
+          label.style.fontSize = '0.8rem';
+          label.textContent = 'Response Handler';
+          var select = document.createElement('select');
+          select.className = 'form-select form-select-sm';
+          var defaultOption = document.createElement('option');
+          defaultOption.value = '';
+          defaultOption.textContent = 'Default (AI)';
+          select.appendChild(defaultOption);
+          for (var i = 0; i < this.responseHandlers.length; i++) {
+            var handler = this.responseHandlers[i];
+            var option = document.createElement('option');
+            option.value = handler.name;
+            option.textContent = handler.name;
+            select.appendChild(option);
+          }
+          var self = this;
+          select.addEventListener('change', function () {
+            self.selectedResponseHandler = this.value;
+          });
+          container.appendChild(label);
+          container.appendChild(select);
+          this.placeholder.appendChild(container);
         },
         renderDocumentBar: function renderDocumentBar() {
           if (!this.documentBar) return;
@@ -1700,7 +1738,8 @@ window.openAIChatManager = function () {
           if (!profileId || !this.connection) {
             return;
           }
-          this.connection.invoke("StartSession", profileId)["catch"](function (err) {
+          var handlerName = this.selectedResponseHandler || null;
+          this.connection.invoke("StartSession", profileId, handlerName)["catch"](function (err) {
             return console.error(err);
           });
         },
@@ -1710,6 +1749,11 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+
+          // Render the handler selector in the placeholder if multiple handlers are available.
+          if (this.placeholder && this.responseHandlers.length > 0) {
+            this.renderHandlerSelector();
+          }
           if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
             this.startNewSession();
           }

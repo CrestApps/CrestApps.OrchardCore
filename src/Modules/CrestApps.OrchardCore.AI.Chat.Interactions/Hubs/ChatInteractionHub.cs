@@ -96,6 +96,10 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var prompts = await promptStore.GetPromptsAsync(itemId);
 
+            // Join the SignalR group for this interaction so deferred responses
+            // (e.g., from an external agent via webhook) can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetInteractionGroupName(interaction.ItemId));
+
             await Clients.Caller.LoadInteraction(new
             {
                 interaction.ItemId,
@@ -114,6 +118,13 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             });
         });
     }
+
+    /// <summary>
+    /// Gets the SignalR group name for a chat interaction. Clients in this group
+    /// receive deferred responses delivered via webhook or external callback.
+    /// </summary>
+    internal static string GetInteractionGroupName(string itemId)
+        => $"chat-interaction-{itemId}";
 
     public async Task SaveSettings(string itemId, JsonElement settings)
     {
@@ -400,8 +411,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             prompt = prompt.Trim();
 
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
-            var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
-            var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+            var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
             var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
             var clock = services.GetRequiredService<IClock>();
 
@@ -426,6 +436,42 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // Load all prompts for building transcript
             var existingPrompts = await promptStore.GetPromptsAsync(itemId);
 
+            var conversationHistory = existingPrompts
+                .Where(x => !x.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Text))
+                .ToList();
+
+            // Resolve the chat response handler for this interaction.
+            var handler = handlerResolver.Resolve(interaction.ResponseHandlerName);
+
+            var handlerContext = new ChatResponseHandlerContext
+            {
+                Prompt = prompt,
+                ConnectionId = Context.ConnectionId,
+                SessionId = interaction.ItemId,
+                ChatType = ChatContextType.ChatInteraction,
+                ConversationHistory = conversationHistory,
+                Services = services,
+                Interaction = interaction,
+            };
+
+            var handlerResult = await handler.HandleAsync(handlerContext, cancellationToken);
+
+            if (handlerResult.IsDeferred)
+            {
+                // Deferred response: save user prompt (already done) and update title.
+                // The response will arrive later via webhook or external callback.
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetInteractionGroupName(interaction.ItemId), cancellationToken);
+
+                if (needsTitleUpdate)
+                {
+                    await interactionManager.UpdateAsync(interaction);
+                }
+
+                return;
+            }
+
+            // Streaming response: enumerate the response stream with citation collection.
             var assistantPrompt = new ChatInteractionPrompt
             {
                 ItemId = IdGenerator.GenerateId(),
@@ -436,29 +482,16 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = ZString.CreateStringBuilder();
 
-            // Build the orchestration context using the handler pipeline.
-            var orchestratorContext = await orchestrationContextBuilder.BuildAsync(interaction, ctx =>
-            {
-                ctx.UserMessage = prompt;
-                ctx.ConversationHistory = existingPrompts
-                    .Where(x => !x.IsGeneratedPrompt)
-                    .Select(p => new ChatMessage(p.Role, p.Text))
-                    .ToList();
-            });
-
-            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-            // Resolve the orchestrator for this interaction and execute the completion.
-            var orchestrator = orchestratorResolver.Resolve(interaction.OrchestratorName);
-
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 
-            // Collect preemptive RAG references before streaming so the first chunk
-            // already contains any references from data sources and documents.
-            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+            // Collect preemptive RAG references if the handler produced an OrchestrationContext.
+            if (handlerContext.Properties.TryGetValue("OrchestrationContext", out var ctxObj) && ctxObj is OrchestrationContext orchestratorContext)
+            {
+                citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+            }
 
-            await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+            await foreach (var chunk in handlerResult.ResponseStream.WithCancellation(cancellationToken))
             {
                 if (string.IsNullOrEmpty(chunk.Text))
                 {

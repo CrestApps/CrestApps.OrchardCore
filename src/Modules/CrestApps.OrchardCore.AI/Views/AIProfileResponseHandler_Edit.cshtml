@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditResponseHandlerProfileSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="InitialResponseHandlerName" class="@Orchard.GetLabelClasses()">@T["Initial Response Handler"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="InitialResponseHandlerName" class="form-select">
+            <option value="">@T["Default (AI)"]</option>
+            @foreach (var handler in Model.ResponseHandlers)
+            {
+                <option value="@handler.Value" selected="@(handler.Value == Model.InitialResponseHandlerName)">@handler.Text</option>
+            }
+        </select>
+        <span asp-validation-for="InitialResponseHandlerName" class="text-danger"></span>
+        <span class="hint">@T["The response handler used when a new chat session starts. When set to a non-AI handler, prompts are routed to an external system (e.g., a live agent platform) instead of AI. The active handler can be changed mid-conversation by an AI function."]</span>
+    </div>
+</div>

@@ -106,11 +106,15 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
+            // Join the SignalR group for this session so deferred responses
+            // (e.g., from an external agent via webhook) can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId));
+
             await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
         });
     }
 
-    public async Task StartSession(string profileId)
+    public async Task StartSession(string profileId, string initialResponseHandlerName = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
@@ -147,8 +151,18 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             }
 
             var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+
+            // Allow the caller to override the initial response handler set by the profile.
+            if (!string.IsNullOrWhiteSpace(initialResponseHandlerName))
+            {
+                chatSession.ResponseHandlerName = initialResponseHandlerName.Trim();
+            }
+
             await sessionManager.SaveAsync(chatSession);
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            // Join the SignalR group for this session so deferred responses can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId));
 
             await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
         });
@@ -406,8 +420,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
-        var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
-        var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+        var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
         var sessionHandlers = services.GetRequiredService<IEnumerable<IAIChatSessionHandler>>();
         var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
         var clock = services.GetRequiredService<IClock>();
@@ -461,6 +474,36 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             .Where(x => !x.IsGeneratedPrompt)
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
 
+        // Resolve the chat response handler for this session.
+        var handler = handlerResolver.Resolve(chatSession.ResponseHandlerName);
+
+        var handlerContext = new ChatResponseHandlerContext
+        {
+            Prompt = prompt,
+            ConnectionId = Context.ConnectionId,
+            SessionId = chatSession.SessionId,
+            ChatType = ChatContextType.AIChatSession,
+            ConversationHistory = conversationHistory,
+            Services = services,
+            Profile = profile,
+            ChatSession = chatSession,
+        };
+
+        var handlerResult = await handler.HandleAsync(handlerContext, cancellationToken);
+
+        if (handlerResult.IsDeferred)
+        {
+            // Deferred response: save the user prompt (already done above) and session state.
+            // The response will arrive later via webhook or external callback.
+            // Join the SignalR group so deferred responses can reach the client after reconnection.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId), cancellationToken);
+
+            await sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
+        // Streaming response: enumerate the response stream with citation collection.
         var assistantMessage = new AIChatSessionPrompt
         {
             ItemId = IdGenerator.GenerateId(),
@@ -471,30 +514,17 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = ZString.CreateStringBuilder();
 
-        // Build the orchestration context using the handler pipeline.
-        var orchestratorContext = await orchestrationContextBuilder.BuildAsync(profile, ctx =>
-        {
-            ctx.UserMessage = prompt;
-            ctx.ConversationHistory = conversationHistory;
-            ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
-        });
-
-        // Store the session in the invocation context so document tools can resolve session documents.
-        AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
-        AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-        // Resolve the orchestrator for this profile and execute the completion.
-        var orchestrator = orchestratorResolver.Resolve(profile.OrchestratorName);
-
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
         var stopwatch = Stopwatch.StartNew();
 
-        // Collect preemptive RAG references before streaming so the first chunk
-        // already contains any references from data sources and documents.
-        citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+        // Collect preemptive RAG references if the handler produced an OrchestrationContext.
+        if (handlerContext.Properties.TryGetValue("OrchestrationContext", out var ctxObj) && ctxObj is OrchestrationContext orchestratorContext)
+        {
+            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+        }
 
-        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+        await foreach (var chunk in handlerResult.ResponseStream.WithCancellation(cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {
@@ -682,6 +712,13 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             ? initialPrompt
             : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
+
+    /// <summary>
+    /// Gets the SignalR group name for a chat session. Clients in this group
+    /// receive deferred responses delivered via webhook or external callback.
+    /// </summary>
+    internal static string GetSessionGroupName(string sessionId)
+        => $"aichat-session-{sessionId}";
 
     public async Task StartConversation(string profileId, string sessionId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, string language = null)
     {

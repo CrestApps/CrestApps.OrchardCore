@@ -71,6 +71,7 @@ public sealed class Startup : StartupBase
             .AddScoped<CitationReferenceCollector>()
             .AddScoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
