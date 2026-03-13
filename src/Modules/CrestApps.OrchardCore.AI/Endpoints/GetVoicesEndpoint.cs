@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -65,7 +66,7 @@ internal static class GetVoicesEndpoint
                     Gender = v.Gender.ToString(),
                 });
 
-            return TypedResults.Ok(new { voices });
+            return TypedResults.Json(new { voices }, JOptions.CamelCase);
         }
         catch
         {

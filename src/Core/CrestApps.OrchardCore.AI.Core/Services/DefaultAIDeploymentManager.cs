@@ -60,6 +60,34 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
 
     public async ValueTask<AIDeployment> ResolveAsync(AIDeploymentType type, string deploymentId = null, string providerName = null, string connectionName = null)
     {
+        var result = await ResolveByTypeAsync(type, deploymentId, providerName, connectionName);
+
+        // When resolving a Utility deployment and nothing was found,
+        // fall back to the Chat deployment chain as a last resort.
+        if (result == null && type == AIDeploymentType.Utility)
+        {
+            result = await ResolveByTypeAsync(AIDeploymentType.Chat, deploymentId: null, providerName, connectionName);
+        }
+
+        return result;
+    }
+
+    public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string providerName = null)
+    {
+        var allDeployments = await GetAllAsync();
+
+        var filtered = allDeployments.Where(d => d.Type == type);
+
+        if (!string.IsNullOrEmpty(providerName))
+        {
+            filtered = filtered.Where(d => string.Equals(d.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return filtered;
+    }
+
+    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentId, string providerName, string connectionName)
+    {
         if (!string.IsNullOrEmpty(deploymentId))
         {
             var deployment = await FindByIdAsync(deploymentId);
@@ -88,20 +116,6 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
         }
 
         return null;
-    }
-
-    public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string providerName = null)
-    {
-        var allDeployments = await GetAllAsync();
-
-        var filtered = allDeployments.Where(d => d.Type == type);
-
-        if (!string.IsNullOrEmpty(providerName))
-        {
-            filtered = filtered.Where(d => string.Equals(d.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        return filtered;
     }
 
     private async ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)

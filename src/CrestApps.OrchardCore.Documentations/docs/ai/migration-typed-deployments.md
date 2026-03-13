@@ -28,6 +28,10 @@ When resolving a deployment for a given type, the system follows this fallback c
 3. **Global default** — The global default deployment configured in **Settings > Artificial Intelligence > Default Deployments**
 4. **null** — No deployment found
 
+:::info Utility → Chat Fallback
+When resolving a **Utility** deployment and no utility deployment is found at any level of the chain above, the system automatically retries the entire chain using the **Chat** type as a last resort. This means you don't need to configure a separate Utility deployment — if one is missing, the default Chat deployment will be used instead.
+:::
+
 ---
 
 ## Automatic Migration

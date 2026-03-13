@@ -92,7 +92,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         var audioFormat = AudioStreamFormat.GetCompressedFormat(containerFormat);
         using var pushStream = AudioInputStream.CreatePushStream(audioFormat);
         using var audioConfig = AudioConfig.FromStreamInput(pushStream);
-        using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
+        using var recognizer = CreateRecognizer(speechConfig, audioConfig);
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
@@ -184,7 +184,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         var audioFormat = AudioStreamFormat.GetCompressedFormat(containerFormat);
         using var pushStream = AudioInputStream.CreatePushStream(audioFormat);
         using var audioConfig = AudioConfig.FromStreamInput(pushStream);
-        using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
+        using var recognizer = CreateRecognizer(speechConfig, audioConfig);
 
         // Create a linked CancellationTokenSource so SDK errors can immediately stop the push task.
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -642,4 +642,32 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             _ => AudioStreamContainerFormat.ANY,
         };
     }
+
+    /// <summary>
+    /// Creates a <see cref="SpeechRecognizer"/> and wraps the constructor to provide a clear error
+    /// message when GStreamer is missing (required for compressed audio formats on all platforms).
+    /// </summary>
+    private static SpeechRecognizer CreateRecognizer(SpeechConfig speechConfig, AudioConfig audioConfig)
+    {
+        try
+        {
+            return new SpeechRecognizer(speechConfig, audioConfig);
+        }
+        catch (ApplicationException ex) when (IsGStreamerError(ex))
+        {
+            throw new InvalidOperationException(
+                "Azure Speech SDK requires GStreamer to decode compressed audio. " +
+                "Install GStreamer from https://gstreamer.freedesktop.org/download/ and ensure " +
+                "the binaries are in the system PATH. " +
+                "See: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams",
+                ex);
+        }
+    }
+
+    /// <summary>
+    /// Checks whether an exception is the GStreamer-not-found error (SPXERR_GSTREAMER_NOT_FOUND_ERROR = 0x29).
+    /// </summary>
+    private static bool IsGStreamerError(ApplicationException ex)
+        => ex.Message.Contains("0x29", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("GSTREAMER", StringComparison.OrdinalIgnoreCase);
 }

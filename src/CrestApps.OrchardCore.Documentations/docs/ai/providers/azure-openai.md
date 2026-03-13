@@ -177,3 +177,96 @@ You can find your Speech Service endpoint and API key in the [Azure AI Foundry p
 ### Setting as Default Speech-to-Text Deployment
 
 After creating the deployment, go to **Configuration** → **Settings** → **AI** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.
+
+### GStreamer Requirement
+
+The Azure Speech SDK uses [GStreamer](https://gstreamer.freedesktop.org) to decode compressed audio formats (OGG/Opus, WebM/Opus, MP3, FLAC). Because browsers send compressed audio (typically WebM/Opus or OGG/Opus) via MediaRecorder, **GStreamer must be installed on every platform** where the application runs — including Windows, Linux, and macOS.
+
+If GStreamer is missing, speech-to-text requests will fail with error code `0x29 (SPXERR_GSTREAMER_NOT_FOUND_ERROR)`.
+
+For more details, see the [Azure Speech SDK compressed audio documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/how-to-use-codec-compressed-audio-input-streams).
+
+#### Windows
+
+1. Download the GStreamer installer from [https://gstreamer.freedesktop.org/download/](https://gstreamer.freedesktop.org/download/). Choose the **MSVC 64-bit** runtime installer (e.g., `gstreamer-1.0-msvc-x86_64-X.X.X.msi`).
+2. Run the installer. During setup, ensure the installation directory is added to the system `PATH` (the installer offers this option).
+3. Verify that the GStreamer `bin` directory (e.g., `C:\gstreamer\1.0\msvc_x86_64\bin`) is in your `PATH`. The Speech SDK looks for `libgstreamer-1.0-0.dll` or `gstreamer-1.0-0.dll` at runtime.
+4. Restart any running applications or terminals after installation.
+
+To verify:
+
+```powershell
+gst-inspect-1.0.exe --version
+```
+
+#### Ubuntu / Debian
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  libgstreamer1.0-0 \
+  gstreamer1.0-plugins-base \
+  gstreamer1.0-plugins-good \
+  gstreamer1.0-plugins-bad \
+  gstreamer1.0-plugins-ugly
+```
+
+#### RHEL / CentOS / Fedora
+
+```bash
+sudo dnf install -y \
+  gstreamer1 \
+  gstreamer1-plugins-base \
+  gstreamer1-plugins-good \
+  gstreamer1-plugins-bad-free \
+  gstreamer1-plugins-ugly-free
+```
+
+#### Alpine Linux
+
+```bash
+apk add --no-cache \
+  gstreamer \
+  gst-plugins-base \
+  gst-plugins-good \
+  gst-plugins-bad \
+  gst-plugins-ugly
+```
+
+#### macOS
+
+```bash
+brew install gstreamer
+```
+
+#### Docker
+
+Add GStreamer installation to your `Dockerfile` before the application layer:
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+
+# Install GStreamer for Azure Speech SDK compressed audio support
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      libgstreamer1.0-0 \
+      gstreamer1.0-plugins-base \
+      gstreamer1.0-plugins-good \
+      gstreamer1.0-plugins-bad \
+      gstreamer1.0-plugins-ugly && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "CrestApps.OrchardCore.Cms.Web.dll"]
+```
+
+#### Verifying GStreamer Installation
+
+Run the following command to confirm GStreamer is available:
+
+```bash
+gst-inspect-1.0 --version
+```
+
+You should see output like `gst-inspect-1.0 version 1.x.x`. If the command is not found, GStreamer is not installed correctly.
