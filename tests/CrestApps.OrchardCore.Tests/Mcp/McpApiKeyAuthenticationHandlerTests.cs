@@ -268,7 +268,7 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         return await handler.AuthenticateAsync();
     }
 
-    private static IOptionsMonitor<T> CreateOptionsMonitor<T>(T value)
+    private static TestOptionsMonitor<T> CreateOptionsMonitor<T>(T value)
         where T : class, new()
     {
         return new TestOptionsMonitor<T>(value);
