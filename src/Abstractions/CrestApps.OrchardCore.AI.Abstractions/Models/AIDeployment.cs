@@ -28,7 +28,7 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
     public string ConnectionNameAlias { get; set; }
 
     /// <summary>
-    /// Gets or sets the type of this deployment (Chat, Utility, Embedding, Image, SpeechToText).
+    /// Gets or sets the type of this deployment (Chat, Utility, Embedding, Image, SpeechToText, TextToSpeech).
     /// Determines what capability this deployment provides.
     /// </summary>
     public AIDeploymentType Type { get; set; }

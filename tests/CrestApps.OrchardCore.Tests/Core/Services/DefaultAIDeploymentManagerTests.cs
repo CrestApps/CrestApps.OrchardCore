@@ -178,6 +178,28 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
+    public async Task ResolveAsync_UtilityFallsBackToChat_WhenNoUtilityFound()
+    {
+        // No utility deployment exists, but a chat deployment does.
+        var chatDeployment = CreateDeployment("dep-chat", "gpt-4o", AIDeploymentType.Chat, isDefault: true, connectionName: "conn-1");
+
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync(new[] { chatDeployment });
+
+        _storeMock.Setup(m => m.FindByIdAsync("dep-chat"))
+            .ReturnsAsync(chatDeployment);
+
+        var result = await _manager.ResolveAsync(
+            AIDeploymentType.Utility,
+            providerName: "openai",
+            connectionName: "conn-1");
+
+        Assert.NotNull(result);
+        Assert.Equal("dep-chat", result.ItemId);
+        Assert.Equal(AIDeploymentType.Chat, result.Type);
+    }
+
+    [Fact]
     public async Task ResolveAsync_WithNoFallbacks_ReturnsNull()
     {
         _storeMock.Setup(m => m.GetAllAsync())

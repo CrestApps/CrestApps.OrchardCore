@@ -415,6 +415,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         }
 
         // Try the deployment resolver first for a Utility deployment.
+        // ResolveAsync will fall back to Chat if no Utility deployment is found.
         var utilityDeployment = await _deploymentManager.ResolveAsync(
             AIDeploymentType.Utility,
             deploymentId: context.CompletionContext?.UtilityDeploymentId,

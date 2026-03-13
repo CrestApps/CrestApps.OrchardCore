@@ -3,7 +3,7 @@
 
 @model ChatInteractionChatModeSettingsViewModel
 
-<div class="@Orchard.GetWrapperClasses() speech-to-text-model-selector-dependent">
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat Interactions Mode"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select">

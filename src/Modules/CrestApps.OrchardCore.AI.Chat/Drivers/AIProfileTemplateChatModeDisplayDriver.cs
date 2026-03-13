@@ -40,7 +40,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 model.VoiceName = settings.VoiceName;
             }
 
-            var (availableModes, hasConversation) = await GetAvailableModesAsync();
+            var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
         }).Location("Content:5.3")
@@ -79,32 +79,16 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         return Edit(template, context);
     }
 
-    private async Task<(IEnumerable<SelectListItem> Items, bool HasConversation)> GetAvailableModesAsync()
+    private (IEnumerable<SelectListItem> Items, bool HasConversation) GetAvailableModes()
     {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        var hasSTT = !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
-        var hasTTS = !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
-
         var modes = new List<SelectListItem>
         {
             new(S["Text Only"], nameof(ChatMode.TextInput)),
+            new(S["Audio Input"], nameof(ChatMode.AudioInput)),
+            new(S["Conversation"], nameof(ChatMode.Conversation)),
         };
 
-        if (hasSTT)
-        {
-            modes.Add(new SelectListItem(S["Audio Input"], nameof(ChatMode.AudioInput)));
-        }
-
-        var hasConversation = hasSTT && hasTTS;
-
-        if (hasConversation)
-        {
-            modes.Add(new SelectListItem(S["Conversation"], nameof(ChatMode.Conversation)));
-        }
-
-        return (modes, hasConversation);
+        return (modes, true);
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
