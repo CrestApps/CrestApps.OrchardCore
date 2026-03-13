@@ -29,6 +29,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
 public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 {
+    private const string _conversationCtsKey = "ConversationCts";
+
     private readonly ILogger<ChatInteractionHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -615,20 +617,26 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     return;
                 }
 
-#pragma warning disable MEAI001
-                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
-#pragma warning restore MEAI001
-                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
+                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
 
                 var effectiveVoiceName = deploymentSettings.DefaultTextToSpeechVoiceId;
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
-                using (ttsClient)
+                using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                Context.Items[_conversationCtsKey] = conversationCts;
+
+                try
                 {
                     await RunConversationLoopAsync(
                         itemId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, services, cancellationToken);
+                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
                 }
+                finally
+                {
+                    Context.Items.Remove(_conversationCtsKey);
+                }
+
             });
         }
         catch (Exception ex)
@@ -650,6 +658,16 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 _logger.LogWarning(writeEx, "Failed to write conversation error message.");
             }
         }
+    }
+
+    public Task StopConversation()
+    {
+        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
+        {
+            cts.Cancel();
+        }
+
+        return Task.CompletedTask;
     }
 
 #pragma warning disable MEAI001
@@ -747,7 +765,9 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 if (isPartial)
                 {
-                    var display = committedText.ToString() + update.Text;
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
                     await Clients.Caller.ReceiveTranscript(itemId, display, false);
                 }
                 else
@@ -797,7 +817,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     // Start the AI response as a non-blocking task so the STT loop continues
                     // reading and the user can interrupt the AI by speaking again.
                     currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    currentResponseTask = ProcessConversationTurnAsync(
+                    currentResponseTask = ProcessConversationPromptAsync(
                         itemId, fullText, ttsClient, voiceName, services, currentResponseCts.Token);
                 }
             }
@@ -829,7 +849,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 try
                 {
-                    await ProcessConversationTurnAsync(
+                    await ProcessConversationPromptAsync(
                         itemId, remainingText, ttsClient, voiceName, services, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -845,7 +865,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
     }
 
-    private async Task ProcessConversationTurnAsync(
+    private async Task ProcessConversationPromptAsync(
         string itemId,
         string prompt,
         ITextToSpeechClient ttsClient,
@@ -855,7 +875,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
     {
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("ProcessConversationTurnAsync: Starting for prompt length={PromptLength}.", prompt.Length);
+            _logger.LogDebug("ProcessConversationPromptAsync: Starting for prompt length={PromptLength}.", prompt.Length);
         }
 
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
@@ -880,30 +900,31 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 messageId ??= chunk.MessageId;
                 responseId ??= chunk.ResponseId;
 
-                if (!string.IsNullOrEmpty(chunk.Content))
+                if (string.IsNullOrEmpty(chunk.Content))
                 {
-                    // Send text token to the client immediately so the user sees it right away.
-                    await Clients.Caller.ReceiveConversationAssistantToken(
-                        itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                    continue;
+                }
 
-                    sentenceBuffer.Append(chunk.Content);
+                // Send text token to the client immediately so the user sees it right away.
+                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
 
-                    // Queue completed sentences for TTS synthesis.
-                    if (EndsWithSentenceBoundary(chunk.Content))
+                sentenceBuffer.Append(chunk.Content);
+
+                // Queue completed sentences for TTS synthesis.
+                if (SentenceBoundaryDetector.EndsWithSentenceBoundary(chunk.Content))
+                {
+                    var sentence = sentenceBuffer.ToString().Trim();
+
+                    if (!string.IsNullOrEmpty(sentence))
                     {
-                        var sentence = sentenceBuffer.ToString().Trim();
-
-                        if (!string.IsNullOrEmpty(sentence))
+                        if (_logger.IsEnabled(LogLevel.Debug))
                         {
-                            if (_logger.IsEnabled(LogLevel.Debug))
-                            {
-                                _logger.LogDebug("ProcessConversationTurnAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
-                            }
-
-                            await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
-                            sentenceBuffer.Dispose();
-                            sentenceBuffer = ZString.CreateStringBuilder();
+                            _logger.LogDebug("ProcessConversationPromptAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
                         }
+
+                        await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
+                        sentenceBuffer.Dispose();
+                        sentenceBuffer = ZString.CreateStringBuilder();
                     }
                 }
             }
@@ -918,7 +939,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.LogDebug("ProcessConversationTurnAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
+                    _logger.LogDebug("ProcessConversationPromptAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
                 }
 
                 await sentenceChannel.Writer.WriteAsync(remaining, cancellationToken);
@@ -931,7 +952,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("ProcessConversationTurnAsync: Completed. ItemId={ItemId}.", itemId);
+                _logger.LogDebug("ProcessConversationPromptAsync: Completed. ItemId={ItemId}.", itemId);
             }
         }
         finally
@@ -1181,7 +1202,9 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 if (isPartial)
                 {
-                    var display = committedText.ToString() + update.Text;
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
                     await Clients.Caller.ReceiveTranscript(itemId, display, false);
                 }
                 else
@@ -1383,7 +1406,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
             }
 
-            // Only stream audio — text tokens were already sent immediately in ProcessConversationTurnAsync.
+            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
             await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
                 if (update.AudioData == null || update.AudioData.Length == 0)
@@ -1400,25 +1423,6 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // rather than waiting for all sentences to finish.
             await Clients.Caller.ReceiveAudioComplete(identifier);
         }
-    }
-
-    private static bool EndsWithSentenceBoundary(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        var trimmed = text.AsSpan().TrimEnd();
-
-        if (trimmed.IsEmpty)
-        {
-            return false;
-        }
-
-        var lastChar = trimmed[^1];
-
-        return lastChar is '.' or '!' or '?' or '\n';
     }
 
     private static string SanitizeForSpeech(string text)

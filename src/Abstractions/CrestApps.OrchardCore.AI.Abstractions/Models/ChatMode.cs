@@ -9,7 +9,7 @@ public enum ChatMode
     /// <summary>
     /// Standard text-only chat. No voice features are enabled.
     /// </summary>
-    TextOnly,
+    TextInput,
 
     /// <summary>
     /// Audio input mode. A microphone button is shown so users can

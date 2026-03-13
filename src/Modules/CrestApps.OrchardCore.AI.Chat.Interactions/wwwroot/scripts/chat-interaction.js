@@ -398,7 +398,7 @@ window.chatInteractionManager = function () {
                       }
                       return;
                     }
-                    if (text) {
+                    if (text && !_this._audioInputSent) {
                       _this.prompt = _this.preRecordingPrompt + text;
                       if (_this.inputElement) {
                         _this.inputElement.value = _this.prompt;
@@ -675,6 +675,9 @@ window.chatInteractionManager = function () {
                   if (_this4.isRecording) {
                     _this4.stopRecording();
                   }
+
+                  // Prevent stale ReceiveTranscript events from repopulating the prompt.
+                  _this4._audioInputSent = true;
 
                   // Flush any pending settings save before sending a message
                   // to prevent concurrent hub calls that can cause database deadlocks.
@@ -1144,6 +1147,11 @@ window.chatInteractionManager = function () {
           }
           this.isConversationMode = false;
           this.updateConversationButton();
+
+          // Signal the server to cancel all in-progress STT/TTS streams immediately.
+          if (this.connection) {
+            this.connection.invoke("StopConversation")["catch"](function () {});
+          }
           if (this.isRecording && this.mediaRecorder) {
             this.mediaRecorder.stop();
             this.isRecording = false;
@@ -1182,9 +1190,11 @@ window.chatInteractionManager = function () {
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
             this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
             this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
           }
         },
         conversationModeSendPrompt: function conversationModeSendPrompt() {
@@ -1607,6 +1617,7 @@ window.chatInteractionManager = function () {
               audioBitsPerSecond: 128000
             });
             _this10.preRecordingPrompt = _this10.prompt;
+            _this10._audioInputSent = false;
             var subject = new signalR.Subject();
             var itemId = _this10.getItemId();
             var pendingChunk = Promise.resolve();

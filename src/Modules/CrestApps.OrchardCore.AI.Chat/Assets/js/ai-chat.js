@@ -688,7 +688,7 @@ window.openAIChatManager = function () {
                             return;
                         }
 
-                        if (text) {
+                        if (text && !this._audioInputSent) {
                             this.prompt = this.preRecordingPrompt + text;
                             if (this.inputElement) {
                                 this.inputElement.value = this.prompt;
@@ -932,6 +932,9 @@ window.openAIChatManager = function () {
                         this.stopRecording();
                     }
 
+                    // Prevent stale ReceiveTranscript events from repopulating the prompt.
+                    this._audioInputSent = true;
+
                     this.addMessage({
                         role: 'user',
                         content: trimmedPrompt
@@ -960,6 +963,7 @@ window.openAIChatManager = function () {
                             });
 
                             this.preRecordingPrompt = this.prompt;
+                            this._audioInputSent = false;
 
                             var subject = new signalR.Subject();
                             var profileId = this.getProfileId();
@@ -1468,6 +1472,11 @@ window.openAIChatManager = function () {
                     this.isConversationMode = false;
                     this.updateConversationButton();
 
+                    // Signal the server to cancel all in-progress STT/TTS streams immediately.
+                    if (this.connection) {
+                        this.connection.invoke("StopConversation").catch(function () { });
+                    }
+
                     if (this.isRecording && this.mediaRecorder) {
                         this.mediaRecorder.stop();
                         this.isRecording = false;
@@ -1508,9 +1517,11 @@ window.openAIChatManager = function () {
                     if (this.isConversationMode) {
                         this.conversationButton.classList.add('active', 'btn-primary');
                         this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
                     } else {
                         this.conversationButton.classList.remove('active', 'btn-primary');
                         this.conversationButton.classList.add('btn-dark');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
                     }
                 },
                 conversationModeSendPrompt() {

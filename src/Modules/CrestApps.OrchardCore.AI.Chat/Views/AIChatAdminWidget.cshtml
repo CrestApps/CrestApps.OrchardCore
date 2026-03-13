@@ -57,7 +57,7 @@
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
     ChatModeProfileSettings chatModeSettings = null;
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
-    var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextOnly;
+    var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
     var textToSpeechEnabled = chatMode == ChatMode.Conversation;
     var ttsVoiceName = chatModeSettings?.VoiceName;
@@ -132,7 +132,9 @@
                 <button class="ai-admin-widget-send-btn"
                         type="button"
                         id="@conversationBtnHtmlId"
-                        title="@T["Conversation mode"]">
+                        title="@T["Start Conversation"]"
+                        data-start-title="@T["Start Conversation"]"
+                        data-end-title="@T["End Conversation"]">
                     <i class="fa-solid fa-wave-square"></i>
                 </button>
             }

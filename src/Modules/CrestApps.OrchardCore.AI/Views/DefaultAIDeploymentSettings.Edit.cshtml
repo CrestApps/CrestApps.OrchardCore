@@ -46,7 +46,7 @@
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DefaultTextToSpeechDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Text-to-Speech Deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultTextToSpeechDeploymentId" asp-items="Model.TextToSpeechDeployments" class="form-select" id="defaultTextToSpeechDeploymentId">
+        <select asp-for="DefaultTextToSpeechDeploymentId" asp-items="Model.TextToSpeechDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default model used for text-to-speech synthesis."]</span>
@@ -56,7 +56,7 @@
 <div class="@Orchard.GetWrapperClasses() text-to-speech-model-selector-dependent">
     <label asp-for="DefaultTextToSpeechVoiceId" class="@Orchard.GetLabelClasses()">@T["Default Text-to-Speech Voice"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select" id="defaultTextToSpeechVoiceSelect">
+        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select">
             <option value="">@T["Default voice"]</option>
         </select>
         <span class="hint">@T["The default voice for text-to-speech synthesis. When a profile does not specify a voice, this value is used. Leave as default to use the provider's default voice."]</span>
@@ -84,7 +84,7 @@
         setupDependentToggle('defaultSpeechToTextDeploymentId', 'speech-to-text-model-selector-dependent');
         setupDependentToggle('defaultTextToSpeechDeploymentId', 'text-to-speech-model-selector-dependent');
 
-        var ttsDeploymentSelect = document.getElementById('defaultTextToSpeechDeploymentId');
+        var ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechVoiceId)');
         var voiceSelect = document.getElementById('defaultTextToSpeechVoiceSelect');
         var currentVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? "")';
 

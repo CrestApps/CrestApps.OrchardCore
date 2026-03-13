@@ -55,7 +55,7 @@
     ChatModeProfileSettings chatModeSettings = null;
     var chatMode = Model.Profile != null && Model.Profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings)
         ? chatModeSettings.ChatMode
-        : ChatMode.TextOnly;
+        : ChatMode.TextInput;
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
     var textToSpeechEnabled = chatMode == ChatMode.Conversation;
     var ttsVoiceName = chatModeSettings?.VoiceName;
@@ -122,7 +122,7 @@
                     </button>
                     @if (conversationModeEnabled)
                     {
-                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Conversation mode"]">
+                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]">
                             <i class="fa-solid fa-wave-square"></i>
                         </button>
                     }

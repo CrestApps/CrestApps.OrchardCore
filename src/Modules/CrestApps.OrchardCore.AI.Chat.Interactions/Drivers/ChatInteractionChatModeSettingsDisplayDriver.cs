@@ -10,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
@@ -73,7 +72,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
         var modes = new List<SelectListItem>
         {
-            new(S["Text Only"], nameof(ChatMode.TextOnly)),
+            new(S["Text Input"], nameof(ChatMode.TextInput)),
         };
 
         if (hasSTT)

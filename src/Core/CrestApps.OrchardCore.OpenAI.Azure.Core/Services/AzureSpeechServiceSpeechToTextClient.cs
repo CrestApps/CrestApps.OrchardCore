@@ -301,7 +301,11 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Continuous recognition started. Reading channel...", traceId, sw.ElapsedMilliseconds);
         }
 
-        await foreach (var update in channel.Reader.ReadAllAsync(cancellationToken))
+        // When the caller cancels, complete the channel so ReadAllAsync
+        // finishes gracefully instead of throwing OperationCanceledException.
+        using var ctr = cancellationToken.Register(() => channel.Writer.TryComplete());
+
+        await foreach (var update in channel.Reader.ReadAllAsync(CancellationToken.None))
         {
             yield return update;
         }

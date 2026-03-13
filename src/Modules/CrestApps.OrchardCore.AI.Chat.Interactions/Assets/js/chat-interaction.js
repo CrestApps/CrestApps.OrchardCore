@@ -433,7 +433,7 @@ window.chatInteractionManager = function () {
                             return;
                         }
 
-                        if (text) {
+                        if (text && !this._audioInputSent) {
                             this.prompt = this.preRecordingPrompt + text;
                             if (this.inputElement) {
                                 this.inputElement.value = this.prompt;
@@ -663,6 +663,9 @@ window.chatInteractionManager = function () {
                     if (this.isRecording) {
                         this.stopRecording();
                     }
+
+                    // Prevent stale ReceiveTranscript events from repopulating the prompt.
+                    this._audioInputSent = true;
 
                     // Flush any pending settings save before sending a message
                     // to prevent concurrent hub calls that can cause database deadlocks.
@@ -1099,6 +1102,11 @@ window.chatInteractionManager = function () {
                     this.isConversationMode = false;
                     this.updateConversationButton();
 
+                    // Signal the server to cancel all in-progress STT/TTS streams immediately.
+                    if (this.connection) {
+                        this.connection.invoke("StopConversation").catch(function () { });
+                    }
+
                     if (this.isRecording && this.mediaRecorder) {
                         this.mediaRecorder.stop();
                         this.isRecording = false;
@@ -1139,9 +1147,11 @@ window.chatInteractionManager = function () {
                     if (this.isConversationMode) {
                         this.conversationButton.classList.add('active', 'btn-primary');
                         this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
                     } else {
                         this.conversationButton.classList.remove('active', 'btn-primary');
                         this.conversationButton.classList.add('btn-dark');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
                     }
                 },
                 conversationModeSendPrompt() {
@@ -1598,6 +1608,7 @@ window.chatInteractionManager = function () {
                             });
 
                             this.preRecordingPrompt = this.prompt;
+                            this._audioInputSent = false;
 
                             var subject = new signalR.Subject();
                             var itemId = this.getItemId();

@@ -9,7 +9,7 @@ public sealed class ChatInteractionChatModeSettings
 {
     /// <summary>
     /// Gets or sets the chat mode for all chat interactions.
-    /// Defaults to <see cref="ChatMode.TextOnly"/>.
+    /// Defaults to <see cref="ChatMode.TextInput"/>.
     /// </summary>
     public ChatMode ChatMode { get; set; }
 }

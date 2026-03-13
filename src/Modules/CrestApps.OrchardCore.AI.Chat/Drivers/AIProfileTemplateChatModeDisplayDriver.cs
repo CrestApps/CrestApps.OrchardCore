@@ -94,7 +94,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
 
         var modes = new List<SelectListItem>
         {
-            new(S["Text Only"], nameof(ChatMode.TextOnly)),
+            new(S["Text Only"], nameof(ChatMode.TextInput)),
         };
 
         if (hasSTT)

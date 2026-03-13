@@ -29,6 +29,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
 public partial class AIChatHub : Hub<IAIChatHubClient>
 {
+    private const string _conversationCtsKey = "ConversationCts";
+
     private readonly ILogger<AIChatHub> _logger;
 
     protected readonly IStringLocalizer S;
@@ -756,10 +758,8 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                     return;
                 }
 
-#pragma warning disable MEAI001
-                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
-#pragma warning restore MEAI001
-                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
+                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
                     ? chatModeSettings.VoiceName
@@ -767,11 +767,20 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
-                using (ttsClient)
+                using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                Context.Items[_conversationCtsKey] = conversationCts;
+
+                try
                 {
+
                     await RunConversationLoopAsync(
                         profile, sessionId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, services, cancellationToken);
+                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
+
+                }
+                finally
+                {
+                    Context.Items.Remove(_conversationCtsKey);
                 }
             });
         }
@@ -794,6 +803,16 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                 _logger.LogWarning(writeEx, "Failed to write conversation error message.");
             }
         }
+    }
+
+    public Task StopConversation()
+    {
+        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
+        {
+            cts.Cancel();
+        }
+
+        return Task.CompletedTask;
     }
 
 #pragma warning disable MEAI001
@@ -895,7 +914,9 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
                 if (isPartial)
                 {
-                    var display = committedText.ToString() + update.Text;
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
                     await Clients.Caller.ReceiveTranscript(effectiveSessionId, display, false);
                 }
                 else
@@ -949,7 +970,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                     // Start the AI response as a non-blocking task so the STT loop continues
                     // reading and the user can interrupt the AI by speaking again.
                     currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                    currentResponseTask = ProcessConversationTurnAsync(
+                    currentResponseTask = ProcessConversationPromptAsync(
                         profile, effectiveSessionId, fullText,
                         ttsClient, voiceName, services, currentResponseCts.Token);
                 }
@@ -983,7 +1004,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
                 try
                 {
-                    await ProcessConversationTurnAsync(
+                    await ProcessConversationPromptAsync(
                         profile, effectiveSessionId, remainingText,
                         ttsClient, voiceName, services, cancellationToken);
                 }
@@ -1000,7 +1021,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
         }
     }
 
-    private async Task<string> ProcessConversationTurnAsync(
+    private async Task<string> ProcessConversationPromptAsync(
         AIProfile profile,
         string sessionId,
         string prompt,
@@ -1011,7 +1032,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
     {
         if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.LogDebug("ProcessConversationTurnAsync: Starting for prompt length={PromptLength}.", prompt.Length);
+            _logger.LogDebug("ProcessConversationPromptAsync: Starting for prompt length={PromptLength}.", prompt.Length);
         }
 
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
@@ -1059,7 +1080,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                         {
                             if (_logger.IsEnabled(LogLevel.Debug))
                             {
-                                _logger.LogDebug("ProcessConversationTurnAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
+                                _logger.LogDebug("ProcessConversationPromptAsync: Queuing sentence for TTS ({Length} chars).", sentence.Length);
                             }
 
                             await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
@@ -1080,7 +1101,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.LogDebug("ProcessConversationTurnAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
+                    _logger.LogDebug("ProcessConversationPromptAsync: Queuing final partial sentence for TTS ({Length} chars).", remaining.Length);
                 }
 
                 await sentenceChannel.Writer.WriteAsync(remaining, cancellationToken);
@@ -1093,7 +1114,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("ProcessConversationTurnAsync: Completed. SessionId={SessionId}.", effectiveSessionId);
+                _logger.LogDebug("ProcessConversationPromptAsync: Completed. SessionId={SessionId}.", effectiveSessionId);
             }
         }
         finally
@@ -1345,7 +1366,9 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
                 if (isPartial)
                 {
-                    var display = committedText.ToString() + update.Text;
+                    var display = committedText.Length > 0
+                        ? committedText.ToString() + update.Text
+                        : update.Text;
                     await Clients.Caller.ReceiveTranscript(sessionId, display, false);
                 }
                 else
@@ -1549,7 +1572,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                 _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
             }
 
-            // Only stream audio — text tokens were already sent immediately in ProcessConversationTurnAsync.
+            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
             await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
                 if (update.AudioData == null || update.AudioData.Length == 0)

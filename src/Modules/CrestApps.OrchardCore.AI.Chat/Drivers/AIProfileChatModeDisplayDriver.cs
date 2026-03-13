@@ -93,7 +93,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
         var modes = new List<SelectListItem>
         {
-            new(S["Text Only"], nameof(ChatMode.TextOnly)),
+            new(S["Text Only"], nameof(ChatMode.TextInput)),
         };
 
         if (hasSTT)

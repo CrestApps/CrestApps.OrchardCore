@@ -8,7 +8,7 @@ public class ChatModeProfileSettings
 {
     /// <summary>
     /// Gets or sets the chat mode for this profile.
-    /// Defaults to <see cref="ChatMode.TextOnly"/>.
+    /// Defaults to <see cref="ChatMode.TextInput"/>.
     /// </summary>
     public ChatMode ChatMode { get; set; }
 
