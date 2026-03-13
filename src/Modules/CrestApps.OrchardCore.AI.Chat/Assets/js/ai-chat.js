@@ -664,10 +664,26 @@ window.openAIChatManager = function () {
 
                     this.connection.on("ReceiveTranscript", (sessionId, text, isFinal) => {
                         if (this.isConversationMode) {
-                            // In conversation mode, show partial transcript as a live indicator
-                            // but don't put it in the textarea.
-                            if (!isFinal) {
+                            if (!isFinal && text) {
                                 this._conversationPartialTranscript = text;
+                                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                                // Show partial transcript as a live user message.
+                                if (!this._conversationPartialMessage) {
+                                    this.hidePlaceholder();
+                                    this._conversationPartialMessage = {
+                                        role: 'user',
+                                        content: text,
+                                        htmlContent: html,
+                                        isPartial: true
+                                    };
+                                    this.messages.push(this._conversationPartialMessage);
+                                } else {
+                                    this._conversationPartialMessage.content = text;
+                                    this._conversationPartialMessage.htmlContent = html;
+                                }
+                                this.scrollToBottom();
                             }
                             return;
                         }
@@ -695,10 +711,19 @@ window.openAIChatManager = function () {
                                 this._conversationAssistantMessage = null;
                             }
 
-                            this.addMessage({
-                                role: 'user',
-                                content: text
-                            });
+                            // Replace the partial transcript message with the final one.
+                            if (this._conversationPartialMessage) {
+                                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                this._conversationPartialMessage.content = text;
+                                this._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                                this._conversationPartialMessage.isPartial = false;
+                                this._conversationPartialMessage = null;
+                            } else {
+                                this.addMessage({
+                                    role: 'user',
+                                    content: text
+                                });
+                            }
                             this.scrollToBottom();
                         }
                     });
@@ -902,6 +927,11 @@ window.openAIChatManager = function () {
                         return;
                     }
 
+                    // Stop any active recording before sending.
+                    if (this.isRecording) {
+                        this.stopRecording();
+                    }
+
                     this.addMessage({
                         role: 'user',
                         content: trimmedPrompt
@@ -918,13 +948,15 @@ window.openAIChatManager = function () {
 
                     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
                         .then(stream => {
-                            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                                ? 'audio/webm;codecs=opus'
-                                : 'audio/webm';
+                            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                                ? 'audio/ogg;codecs=opus'
+                                : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                                    ? 'audio/webm;codecs=opus'
+                                    : 'audio/webm';
 
                             this.mediaRecorder = new MediaRecorder(stream, {
                                 mimeType: mimeType,
-                                audioBitsPerSecond: 16000,
+                                audioBitsPerSecond: 128000,
                             });
 
                             this.preRecordingPrompt = this.prompt;
@@ -1098,8 +1130,8 @@ window.openAIChatManager = function () {
                                     this.hideTypingIndicator();
                                 }
 
-                                // Trigger text-to-speech if enabled and content was received.
-                                if (this.textToSpeechEnabled && msg && msg.content) {
+                                // Trigger text-to-speech only in conversation mode.
+                                if (this.isConversationMode && this.textToSpeechEnabled && msg && msg.content) {
                                     this.synthesizeSpeech(msg.content);
                                 }
 
@@ -1333,26 +1365,29 @@ window.openAIChatManager = function () {
                     this.updateConversationButton();
                     this._conversationPartialTranscript = '';
                     this._conversationAssistantMessage = null;
+                    this._conversationPartialMessage = null;
 
                     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
                         .then(stream => {
-                            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-                                ? 'audio/webm;codecs=opus'
-                                : 'audio/webm';
+                            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                                ? 'audio/ogg;codecs=opus'
+                                : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                                    ? 'audio/webm;codecs=opus'
+                                    : 'audio/webm';
 
                             this.mediaRecorder = new MediaRecorder(stream, {
                                 mimeType: mimeType,
-                                audioBitsPerSecond: 16000,
+                                audioBitsPerSecond: 128000,
                             });
 
                             this._conversationSubject = new signalR.Subject();
                             this._conversationStream = stream;
 
-                            // Create an AnalyserNode for volume-based echo gating.
-                            // During TTS playback, only forward audio when the user
-                            // is actually speaking (volume above threshold) to prevent
-                            // the speaker echo from being transcribed while still
-                            // allowing intentional user interrupts.
+                            // Create an AnalyserNode for volume-based interrupt detection.
+                            // During TTS playback, detect when the user speaks above
+                            // the threshold to stop TTS (interrupt). Audio chunks are
+                            // always forwarded — browser echo cancellation handles
+                            // speaker echo so the STT stream has no gaps.
                             var AudioCtx = window.AudioContext || window.webkitAudioContext;
                             if (AudioCtx) {
                                 this._conversationAudioCtx = new AudioCtx();
@@ -1364,12 +1399,12 @@ window.openAIChatManager = function () {
 
                             var pendingChunk = Promise.resolve();
                             var analyser = this._conversationAnalyser;
-                            var echoVolumeThreshold = 30;
+                            var interruptVolumeThreshold = 30;
 
                             this.mediaRecorder.addEventListener('dataavailable', (e) => {
                                 if (e.data && e.data.size > 0) {
-                                    // During TTS playback, check mic volume to distinguish
-                                    // echo (low volume) from the user speaking (high volume).
+                                    // During TTS playback, check mic volume to detect
+                                    // user interruption (speaking above threshold).
                                     if (this.isPlayingAudio && analyser) {
                                         var freqData = new Uint8Array(analyser.frequencyBinCount);
                                         analyser.getByteFrequencyData(freqData);
@@ -1377,29 +1412,15 @@ window.openAIChatManager = function () {
                                         for (var k = 0; k < freqData.length; k++) { sum += freqData[k]; }
                                         var avg = sum / freqData.length;
 
-                                        if (avg < echoVolumeThreshold) {
-                                            // Volume too low — likely speaker echo, skip chunk.
-                                            return;
+                                        if (avg >= interruptVolumeThreshold) {
+                                            // User is speaking — interrupt TTS playback.
+                                            this.stopAudio();
                                         }
-
-                                        // Volume above threshold — user is interrupting.
-                                        // Mute the mic briefly to avoid sending the
-                                        // remaining echo, then stop TTS playback.
-                                        this._conversationStream.getAudioTracks().forEach(function (track) {
-                                            track.enabled = false;
-                                        });
-                                        this.stopAudio();
-                                        // Re-enable after a short delay so the echo fades.
-                                        var self = this;
-                                        setTimeout(function () {
-                                            if (self._conversationStream) {
-                                                self._conversationStream.getAudioTracks().forEach(function (track) {
-                                                    track.enabled = true;
-                                                });
-                                            }
-                                        }, 300);
                                     }
 
+                                    // Always send audio to STT — browser echo cancellation
+                                    // handles speaker echo; continuous audio avoids gaps
+                                    // that increase recognition latency.
                                     pendingChunk = pendingChunk.then(async () => {
                                         var data = await e.data.arrayBuffer();
                                         var uint8Array = new Uint8Array(data);
@@ -1454,6 +1475,7 @@ window.openAIChatManager = function () {
 
                     this.stopAudio();
                     this._conversationPartialTranscript = '';
+                    this._conversationPartialMessage = null;
 
                     // Clean up the AudioContext used for volume monitoring.
                     if (this._conversationAudioCtx) {
@@ -1960,14 +1982,9 @@ window.openAIChatManager = function () {
                     deep: true
                 },
                 isUploading() { this.renderDocumentBar(); },
-                isPlayingAudio(playing) {
-                    // When TTS audio stops during conversation mode, re-enable the
-                    // mic in case it was disabled by the volume-based echo gate.
-                    if (!playing && this.isConversationMode && this._conversationStream) {
-                        this._conversationStream.getAudioTracks().forEach(function (track) {
-                            track.enabled = true;
-                        });
-                    }
+                isPlayingAudio() {
+                    // Reserved for future use — volume-based interrupt detection
+                    // no longer mutes tracks; browser echo cancellation handles echo.
                 },
                 isConversationMode(active) {
                     // Hide/show mic button.

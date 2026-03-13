@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -963,6 +964,15 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             return;
         }
 
+        var traceId = Guid.NewGuid().ToString("N")[..8];
+        var sw = Stopwatch.StartNew();
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms SendAudioStream START. ItemId={ItemId}, Format={Format}",
+                traceId, sw.ElapsedMilliseconds, itemId, audioFormat);
+        }
+
         var cancellationToken = Context.ConnectionAborted;
 
         try
@@ -1015,7 +1025,18 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
-                await StreamTranscriptionAsync(sttClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Scope resolved, STT client created. Starting StreamTranscriptionAsync...",
+                        traceId, sw.ElapsedMilliseconds);
+                }
+
+                await StreamTranscriptionAsync(traceId, sw, sttClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms SendAudioStream COMPLETE.", traceId, sw.ElapsedMilliseconds);
+                }
             });
         }
         catch (Exception ex)
@@ -1041,6 +1062,8 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
 #pragma warning disable MEAI001
     private async Task StreamTranscriptionAsync(
+        string traceId,
+        Stopwatch sw,
         ISpeechToTextClient sttClient,
         string itemId,
         IAsyncEnumerable<string> audioChunks,
@@ -1049,12 +1072,14 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
         CancellationToken cancellationToken = default)
     {
         var pipe = new Pipe();
+        var chunkCount = 0;
+        var totalBytes = 0L;
 
-        // Cancellation source to break the audio chunk loop when transcription fails.
+        // CTS to break the audio chunk loop when transcription fails.
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Start streaming transcription in the background.
-        var transcriptionTask = TranscribeAsync(itemId, pipe, audioFormat, speechLanguage, sttClient, errorCts, cancellationToken);
+        var transcriptionTask = TranscribeAudioInputAsync(traceId, sw, itemId, pipe, audioFormat, speechLanguage, sttClient, errorCts, cancellationToken);
 
         // Write audio chunks to the pipe as they arrive from SignalR.
         try
@@ -1065,6 +1090,14 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 {
                     var bytes = Convert.FromBase64String(base64Chunk);
                     await pipe.Writer.WriteAsync(bytes, errorCts.Token);
+                    chunkCount++;
+                    totalBytes += bytes.Length;
+
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Pipe.Write chunk #{ChunkCount}: {Bytes} bytes (total={TotalBytes})",
+                            traceId, sw.ElapsedMilliseconds, chunkCount, bytes.Length, totalBytes);
+                    }
                 }
                 catch (FormatException)
                 {
@@ -1074,7 +1107,13 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
         }
         catch (OperationCanceledException) when (errorCts.IsCancellationRequested)
         {
-            // Transcription failed; stop consuming audio chunks.
+            // Transcription failed or connection aborted.
+        }
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms All audio chunks received. Chunks={ChunkCount}, TotalBytes={TotalBytes}. Completing pipe...",
+                traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
         }
 
         // Signal that all audio has been sent.
@@ -1082,16 +1121,29 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
         // Wait for the transcription to finish processing all audio.
         await transcriptionTask;
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms StreamTranscriptionAsync DONE.", traceId, sw.ElapsedMilliseconds);
+        }
     }
 
-    private async Task TranscribeAsync(string itemId, Pipe pipe, string audioFormat, string speechLanguage, ISpeechToTextClient sttClient, CancellationTokenSource errorCts, CancellationToken cancellationToken)
+    private async Task TranscribeAudioInputAsync(
+        string traceId,
+        Stopwatch sw,
+        string itemId,
+        Pipe pipe,
+        string audioFormat,
+        string speechLanguage,
+        ISpeechToTextClient sttClient,
+        CancellationTokenSource errorCts,
+        CancellationToken cancellationToken)
     {
         try
         {
             await using var readerStream = pipe.Reader.AsStream();
 
             using var committedText = ZString.CreateStringBuilder();
-
             var sttOptions = new SpeechToTextOptions
             {
                 SpeechLanguage = speechLanguage,
@@ -1103,6 +1155,14 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
             }
 
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms TranscribeAudioInputAsync: calling GetStreamingTextAsync...",
+                    traceId, sw.ElapsedMilliseconds);
+            }
+
+            var updateCount = 0;
+
             await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
             {
                 if (string.IsNullOrEmpty(update.Text))
@@ -1110,7 +1170,14 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                     continue;
                 }
 
+                updateCount++;
                 var isPartial = update.AdditionalProperties?.TryGetValue("isPartial", out var p) == true && p is true;
+
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Received update #{UpdateCount}: isPartial={IsPartial}, text='{Text}'",
+                        traceId, sw.ElapsedMilliseconds, updateCount, isPartial, update.Text);
+                }
 
                 if (isPartial)
                 {
@@ -1130,6 +1197,12 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
 
             var finalText = committedText.ToString().TrimEnd();
+
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms STT stream ended. Updates={UpdateCount}, FinalText='{FinalText}'",
+                    traceId, sw.ElapsedMilliseconds, updateCount, finalText);
+            }
 
             if (!string.IsNullOrEmpty(finalText))
             {

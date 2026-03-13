@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Azure.Core;
@@ -40,6 +41,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     private readonly string _identityId;
     private readonly string _region;
     private readonly ILogger _logger;
+    private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
     private string _cachedToken;
     private DateTimeOffset _tokenExpires;
@@ -69,15 +71,22 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     {
         ArgumentNullException.ThrowIfNull(audioSpeechStream);
 
+        var traceId = Guid.NewGuid().ToString("N")[..8];
+        var sw = Stopwatch.StartNew();
         var language = options?.SpeechLanguage ?? "en-US";
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogDebug("Starting single-shot speech recognition. Language: {Language}, Endpoint: {Endpoint}, AuthType: {AuthType}",
-                language, _endpoint, _authType);
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms GetTextAsync START. Language={Language}, AuthType={AuthType}",
+                traceId, sw.ElapsedMilliseconds, language, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(language, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SpeechConfig created.", traceId, sw.ElapsedMilliseconds);
+        }
 
         var containerFormat = ResolveContainerFormat(options);
         var audioFormat = AudioStreamFormat.GetCompressedFormat(containerFormat);
@@ -85,7 +94,13 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         using var audioConfig = AudioConfig.FromStreamInput(pushStream);
         using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
 
-        var buffer = new byte[32768];
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Recognizer created. Format={Format}. Pushing audio...",
+                traceId, sw.ElapsedMilliseconds, containerFormat);
+        }
+
+        var buffer = new byte[1024];
         int bytesRead;
         var totalBytes = 0L;
 
@@ -97,18 +112,26 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         pushStream.Close();
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogDebug("Pushed {TotalBytes} bytes of audio data for single-shot recognition.", totalBytes);
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Audio push complete. TotalBytes={TotalBytes}. Starting RecognizeOnceAsync...",
+                traceId, sw.ElapsedMilliseconds, totalBytes);
         }
 
         var result = await recognizer.RecognizeOnceAsync();
 
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms RecognizeOnceAsync returned. Reason={Reason}",
+                traceId, sw.ElapsedMilliseconds, result.Reason);
+        }
+
         if (result.Reason == ResultReason.RecognizedSpeech)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogDebug("Single-shot recognition succeeded. Text length: {TextLength}", result.Text?.Length ?? 0);
+                _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SUCCESS. Text='{Text}'",
+                    traceId, sw.ElapsedMilliseconds, result.Text);
             }
 
             return new SpeechToTextResponse(result.Text);
@@ -118,15 +141,16 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("Azure Speech SDK: No speech could be recognized from {TotalBytes} bytes of audio.", totalBytes);
+                _logger.LogDebug("[STT:{TraceId}] +{Elapsed}ms NoMatch from {TotalBytes} bytes.",
+                    traceId, sw.ElapsedMilliseconds, totalBytes);
             }
         }
         else if (result.Reason == ResultReason.Canceled)
         {
             var cancellation = CancellationDetails.FromResult(result);
             _logger.LogWarning(
-                "Azure Speech SDK recognition canceled: Reason={Reason}, ErrorCode={ErrorCode}, ErrorDetails={ErrorDetails}",
-                cancellation.Reason, cancellation.ErrorCode, cancellation.ErrorDetails);
+                "[STT:{TraceId}] +{Elapsed}ms CANCELED. Reason={Reason}, ErrorCode={ErrorCode}, Details={ErrorDetails}",
+                traceId, sw.ElapsedMilliseconds, cancellation.Reason, cancellation.ErrorCode, cancellation.ErrorDetails);
         }
 
         return null;
@@ -139,15 +163,22 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     {
         ArgumentNullException.ThrowIfNull(audioSpeechStream);
 
+        var traceId = Guid.NewGuid().ToString("N")[..8];
+        var sw = Stopwatch.StartNew();
         var language = options?.SpeechLanguage ?? "en-US";
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogDebug("Starting continuous speech recognition. Language: {Language}, Endpoint: {Endpoint}, AuthType: {AuthType}",
-                language, _endpoint, _authType);
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms GetStreamingTextAsync START. Language={Language}, AuthType={AuthType}",
+                traceId, sw.ElapsedMilliseconds, language, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(language, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SpeechConfig created.", traceId, sw.ElapsedMilliseconds);
+        }
 
         var containerFormat = ResolveContainerFormat(options);
         var audioFormat = AudioStreamFormat.GetCompressedFormat(containerFormat);
@@ -164,13 +195,20 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             SingleWriter = false,
         });
 
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Recognizer created. Format={Format}. Wiring events...",
+                traceId, sw.ElapsedMilliseconds, containerFormat);
+        }
+
         recognizer.Recognizing += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Result.Text))
             {
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogTrace("Continuous recognition partial result: '{Text}'", e.Result.Text);
+                    _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PARTIAL: '{Text}'",
+                        traceId, sw.ElapsedMilliseconds, e.Result.Text);
                 }
 
                 channel.Writer.TryWrite(new SpeechToTextResponseUpdate(e.Result.Text)
@@ -187,35 +225,38 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         {
             if (e.Result.Reason == ResultReason.RecognizedSpeech && !string.IsNullOrEmpty(e.Result.Text))
             {
-                if (_logger.IsEnabled(LogLevel.Debug))
+                if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogDebug("Continuous recognition final segment: '{Text}'", e.Result.Text);
+                    _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms FINAL: '{Text}'",
+                        traceId, sw.ElapsedMilliseconds, e.Result.Text);
                 }
 
                 channel.Writer.TryWrite(new SpeechToTextResponseUpdate(e.Result.Text));
             }
             else if (e.Result.Reason == ResultReason.NoMatch)
             {
-                if (_logger.IsEnabled(LogLevel.Debug))
+                if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogDebug("Continuous recognition segment: No match.");
+                    _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms NoMatch segment.", traceId, sw.ElapsedMilliseconds);
                 }
             }
         };
 
         recognizer.SessionStarted += (_, e) =>
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogDebug("Azure Speech SDK session started. SessionId: {SessionId}", e.SessionId);
+                _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SessionStarted. SdkSessionId={SessionId}",
+                    traceId, sw.ElapsedMilliseconds, e.SessionId);
             }
         };
 
         recognizer.SessionStopped += (_, e) =>
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogDebug("Azure Speech SDK session stopped. SessionId: {SessionId}", e.SessionId);
+                _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SessionStopped. SdkSessionId={SessionId}",
+                    traceId, sw.ElapsedMilliseconds, e.SessionId);
             }
 
             channel.Writer.TryComplete();
@@ -226,22 +267,19 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (e.Reason == CancellationReason.Error)
             {
                 _logger.LogWarning(
-                    "Azure Speech SDK streaming canceled with error. ErrorCode={ErrorCode}, ErrorDetails={ErrorDetails}",
-                    e.ErrorCode, e.ErrorDetails);
+                    "[STT:{TraceId}] +{Elapsed}ms CANCELED with error. ErrorCode={ErrorCode}, Details={ErrorDetails}",
+                    traceId, sw.ElapsedMilliseconds, e.ErrorCode, e.ErrorDetails);
 
-                // Signal the push task to stop immediately so we don't keep pushing audio after a fatal error.
                 errorCts.Cancel();
-
-                // Close the push stream to unblock the recognizer if it's waiting for data.
                 pushStream.Close();
-
-                channel.Writer.TryComplete(new InvalidOperationException(e.ErrorDetails));
+                channel.Writer.TryComplete(new InvalidOperationException($"Error Code: {e.ErrorCode}. Error Details: {e.ErrorDetails}"));
             }
             else
             {
-                if (_logger.IsEnabled(LogLevel.Debug))
+                if (_logger.IsEnabled(LogLevel.Trace))
                 {
-                    _logger.LogDebug("Azure Speech SDK streaming ended with reason: {Reason}", e.Reason);
+                    _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms CANCELED (non-error). Reason={Reason}",
+                        traceId, sw.ElapsedMilliseconds, e.Reason);
                 }
 
                 channel.Writer.TryComplete();
@@ -249,18 +287,28 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         };
 
         // Start pushing audio data immediately so the recognizer receives data as soon as it starts.
-        var pushTask = PushAudioToStreamAsync(audioSpeechStream, pushStream, errorCts.Token);
+        var pushTask = PushAudioToStreamAsync(traceId, sw, audioSpeechStream, pushStream, errorCts.Token);
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Starting continuous recognition...", traceId, sw.ElapsedMilliseconds);
+        }
 
         await recognizer.StartContinuousRecognitionAsync();
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogDebug("Continuous recognition started. Pushing audio data...");
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Continuous recognition started. Reading channel...", traceId, sw.ElapsedMilliseconds);
         }
 
         await foreach (var update in channel.Reader.ReadAllAsync(cancellationToken))
         {
             yield return update;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Channel drained. Awaiting push task...", traceId, sw.ElapsedMilliseconds);
         }
 
         try
@@ -278,46 +326,68 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error stopping continuous recognition.");
+            _logger.LogWarning(ex, "[STT:{TraceId}] Error stopping continuous recognition.", traceId);
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogDebug("Continuous recognition completed.");
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms GetStreamingTextAsync COMPLETE.", traceId, sw.ElapsedMilliseconds);
         }
     }
 #pragma warning restore MEAI001
 
     private async Task PushAudioToStreamAsync(
+        string traceId,
+        Stopwatch sw,
         Stream audioSpeechStream,
         PushAudioInputStream pushStream,
         CancellationToken cancellationToken)
     {
         var totalBytes = 0L;
+        var chunkCount = 0;
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushAudioToStream START.", traceId, sw.ElapsedMilliseconds);
+        }
 
         try
         {
-            var buffer = new byte[32768];
+            var buffer = new byte[1024];
             int bytesRead;
 
             while ((bytesRead = await audioSpeechStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
             {
                 pushStream.Write(buffer, bytesRead);
                 totalBytes += bytesRead;
+                chunkCount++;
+
+                // Log every chunk to trace latency between chunks.
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushChunk #{ChunkCount}: {BytesRead} bytes (total={TotalBytes})",
+                        traceId, sw.ElapsedMilliseconds, chunkCount, bytesRead, totalBytes);
+                }
             }
 
-            if (_logger.IsEnabled(LogLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
-                _logger.LogDebug("Finished pushing audio data. Total bytes: {TotalBytes}", totalBytes);
+                _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushAudioToStream DONE. Chunks={ChunkCount}, TotalBytes={TotalBytes}",
+                    traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Audio push was cancelled due to an SDK error after {TotalBytes} bytes.", totalBytes);
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushAudioToStream CANCELED after {TotalBytes} bytes.",
+                    traceId, sw.ElapsedMilliseconds, totalBytes);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error while pushing audio data after {TotalBytes} bytes.", totalBytes);
+            _logger.LogWarning(ex, "[STT:{TraceId}] +{Elapsed}ms PushAudioToStream ERROR after {TotalBytes} bytes.",
+                traceId, sw.ElapsedMilliseconds, totalBytes);
         }
         finally
         {
@@ -339,7 +409,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
     public void Dispose()
     {
-        // No owned resources to dispose; SpeechConfig/recognizers are disposed per-call.
+        _tokenLock.Dispose();
     }
 
     private async Task<SpeechConfig> CreateSpeechConfigAsync(string language, CancellationToken cancellationToken)
@@ -369,9 +439,10 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         config.SpeechRecognitionLanguage = language;
 
-        // Reduce silence detection timeouts for faster partial results.
-        config.SetProperty(PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "2000");
-        config.SetProperty(PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "500");
+        // Use reasonable timeouts: long enough for audio to arrive over the network,
+        // short enough to avoid excessive delay after the user stops speaking.
+        config.SetProperty(PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "3000");
+        config.SetProperty(PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1000");
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
@@ -434,32 +505,41 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
     private async Task<string> GetAuthorizationTokenAsync(CancellationToken cancellationToken)
     {
-        if (_cachedToken != null && _tokenExpires > DateTimeOffset.UtcNow.AddMinutes(-1))
+        await _tokenLock.WaitAsync(cancellationToken);
+
+        try
         {
+            if (_cachedToken != null && _tokenExpires > DateTimeOffset.UtcNow.AddMinutes(-1))
+            {
+                return _cachedToken;
+            }
+
+            TokenCredential credential = _authType switch
+            {
+                AzureAuthenticationType.ManagedIdentity => string.IsNullOrEmpty(_identityId)
+                    ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+                    : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
+                _ => new DefaultAzureCredential(),
+            };
+
+            var tokenResult = await credential.GetTokenAsync(
+                new TokenRequestContext([CognitiveServicesScope]),
+                cancellationToken);
+
+            _cachedToken = tokenResult.Token;
+            _tokenExpires = tokenResult.ExpiresOn;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Successfully obtained authorization token for Azure Speech. AuthType: {AuthType}", _authType);
+            }
+
             return _cachedToken;
         }
-
-        TokenCredential credential = _authType switch
+        finally
         {
-            AzureAuthenticationType.ManagedIdentity => string.IsNullOrEmpty(_identityId)
-                ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
-                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
-            _ => new DefaultAzureCredential(),
-        };
-
-        var tokenResult = await credential.GetTokenAsync(
-            new TokenRequestContext([CognitiveServicesScope]),
-            cancellationToken);
-
-        _cachedToken = tokenResult.Token;
-        _tokenExpires = tokenResult.ExpiresOn;
-
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug("Successfully obtained authorization token for Azure Speech. AuthType: {AuthType}", _authType);
+            _tokenLock.Release();
         }
-
-        return _cachedToken;
     }
 
     /// <summary>
@@ -523,12 +603,22 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     /// <summary>
     /// Maps a MIME-type or short name to an <see cref="AudioStreamContainerFormat"/> value.
     /// Returns <see cref="AudioStreamContainerFormat.ANY"/> for unrecognized values.
-    /// WebM uses a Matroska container that has no dedicated SDK constant, so it falls back to auto-detect.
+    /// Browsers typically produce OGG/Opus or WebM/Opus from MediaRecorder; both map to
+    /// <see cref="AudioStreamContainerFormat.OGG_OPUS"/> because the Opus codec payload
+    /// is identical and the Azure Speech SDK natively supports OGG/Opus decoding.
     /// </summary>
     private static AudioStreamContainerFormat MapToContainerFormat(string format)
     {
-        // Normalize: lower-case and strip codec parameters (e.g., "audio/webm;codecs=opus" → "audio/webm").
         var normalized = format.Trim().ToLowerInvariant();
+
+        // If the full MIME type explicitly mentions the opus codec, use OGG_OPUS
+        // regardless of the container (ogg, webm, etc.).
+        if (normalized.Contains("opus"))
+        {
+            return AudioStreamContainerFormat.OGG_OPUS;
+        }
+
+        // Strip codec parameters for base MIME type matching.
         var semicolonIndex = normalized.IndexOf(';');
 
         if (semicolonIndex >= 0)

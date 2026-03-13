@@ -375,8 +375,26 @@ window.chatInteractionManager = function () {
                   });
                   _this.connection.on("ReceiveTranscript", function (itemId, text, isFinal) {
                     if (_this.isConversationMode) {
-                      if (!isFinal) {
+                      if (!isFinal && text) {
                         _this._conversationPartialTranscript = text;
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                        // Show partial transcript as a live user message.
+                        if (!_this._conversationPartialMessage) {
+                          _this.hidePlaceholder();
+                          _this._conversationPartialMessage = {
+                            role: 'user',
+                            content: text,
+                            htmlContent: html,
+                            isPartial: true
+                          };
+                          _this.messages.push(_this._conversationPartialMessage);
+                        } else {
+                          _this._conversationPartialMessage.content = text;
+                          _this._conversationPartialMessage.htmlContent = html;
+                        }
+                        _this.scrollToBottom();
                       }
                       return;
                     }
@@ -401,10 +419,20 @@ window.chatInteractionManager = function () {
                         }
                         _this._conversationAssistantMessage = null;
                       }
-                      _this.addMessage({
-                        role: 'user',
-                        content: text
-                      });
+
+                      // Replace the partial transcript message with the final one.
+                      if (_this._conversationPartialMessage) {
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        _this._conversationPartialMessage.content = text;
+                        _this._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                        _this._conversationPartialMessage.isPartial = false;
+                        _this._conversationPartialMessage = null;
+                      } else {
+                        _this.addMessage({
+                          role: 'user',
+                          content: text
+                        });
+                      }
                       _this.scrollToBottom();
                     }
                   });
@@ -643,6 +671,13 @@ window.chatInteractionManager = function () {
                   }
                   return _context2.a(2);
                 case 1:
+                  // Stop any active recording before sending.
+                  if (_this4.isRecording) {
+                    _this4.stopRecording();
+                  }
+
+                  // Flush any pending settings save before sending a message
+                  // to prevent concurrent hub calls that can cause database deadlocks.
                   _context2.n = 2;
                   return _this4.flushPendingSave();
                 case 2:
@@ -744,8 +779,8 @@ window.chatInteractionManager = function () {
                 _this5.hideTypingIndicator();
               }
 
-              // Trigger text-to-speech if enabled and content was received.
-              if (_this5.textToSpeechEnabled && msg && msg.content) {
+              // Trigger text-to-speech only in conversation mode.
+              if (_this5.isConversationMode && _this5.textToSpeechEnabled && msg && msg.content) {
                 _this5.synthesizeSpeech(msg.content);
               }
               (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
@@ -1005,6 +1040,7 @@ window.chatInteractionManager = function () {
           this.updateConversationButton();
           this._conversationPartialTranscript = '';
           this._conversationAssistantMessage = null;
+          this._conversationPartialMessage = null;
           navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -1012,15 +1048,15 @@ window.chatInteractionManager = function () {
               autoGainControl: true
             }
           }).then(function (stream) {
-            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
             _this8.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
-              audioBitsPerSecond: 16000
+              audioBitsPerSecond: 128000
             });
             _this8._conversationSubject = new signalR.Subject();
             _this8._conversationStream = stream;
 
-            // Create an AnalyserNode for volume-based echo gating.
+            // Create an AnalyserNode for volume-based interrupt detection.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
               _this8._conversationAudioCtx = new AudioCtx();
@@ -1031,11 +1067,11 @@ window.chatInteractionManager = function () {
             }
             var pendingChunk = Promise.resolve();
             var analyser = _this8._conversationAnalyser;
-            var echoVolumeThreshold = 30;
+            var interruptVolumeThreshold = 30;
             _this8.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
-                // During TTS playback, check mic volume to distinguish
-                // echo (low volume) from the user speaking (high volume).
+                // During TTS playback, check mic volume to detect
+                // user interruption (speaking above threshold).
                 if (_this8.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
@@ -1044,25 +1080,15 @@ window.chatInteractionManager = function () {
                     sum += freqData[k];
                   }
                   var avg = sum / freqData.length;
-                  if (avg < echoVolumeThreshold) {
-                    // Volume too low — likely speaker echo, skip chunk.
-                    return;
+                  if (avg >= interruptVolumeThreshold) {
+                    // User is speaking — interrupt TTS playback.
+                    _this8.stopAudio();
                   }
-
-                  // Volume above threshold — user is interrupting.
-                  _this8._conversationStream.getAudioTracks().forEach(function (track) {
-                    track.enabled = false;
-                  });
-                  _this8.stopAudio();
-                  var self = _this8;
-                  setTimeout(function () {
-                    if (self._conversationStream) {
-                      self._conversationStream.getAudioTracks().forEach(function (track) {
-                        track.enabled = true;
-                      });
-                    }
-                  }, 300);
                 }
+
+                // Always send audio to STT — browser echo cancellation
+                // handles speaker echo; continuous audio avoids gaps
+                // that increase recognition latency.
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
                   var data, uint8Array, binaryString, base64;
                   return _regenerator().w(function (_context3) {
@@ -1124,6 +1150,7 @@ window.chatInteractionManager = function () {
           }
           this.stopAudio();
           this._conversationPartialTranscript = '';
+          this._conversationPartialMessage = null;
 
           // Clean up the AudioContext used for volume monitoring.
           if (this._conversationAudioCtx) {
@@ -1574,10 +1601,10 @@ window.chatInteractionManager = function () {
               autoGainControl: true
             }
           }).then(function (stream) {
-            var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
             _this10.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
-              audioBitsPerSecond: 16000
+              audioBitsPerSecond: 128000
             });
             _this10.preRecordingPrompt = _this10.prompt;
             var subject = new signalR.Subject();
@@ -1653,14 +1680,9 @@ window.chatInteractionManager = function () {
         }
       },
       watch: {
-        isPlayingAudio: function isPlayingAudio(playing) {
-          // When TTS audio stops during conversation mode, re-enable the
-          // mic in case it was disabled by the volume-based echo gate.
-          if (!playing && this.isConversationMode && this._conversationStream) {
-            this._conversationStream.getAudioTracks().forEach(function (track) {
-              track.enabled = true;
-            });
-          }
+        isPlayingAudio: function isPlayingAudio() {
+          // Reserved for future use — volume-based interrupt detection
+          // no longer mutes tracks; browser echo cancellation handles echo.
         },
         isConversationMode: function isConversationMode(active) {
           if (this.micButton) {

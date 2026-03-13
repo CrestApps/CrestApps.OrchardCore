@@ -310,6 +310,11 @@
     padding: 0.15rem;
 }
 
+.ai-admin-widget .ai-partial-transcript {
+    font-style: italic;
+    opacity: 0.7;
+}
+
 .ai-admin-widget-body .ai-chat-message-item + .ai-chat-message-item::before {
     content: '';
     display: block;
