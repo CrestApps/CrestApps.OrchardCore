@@ -115,118 +115,290 @@ public sealed class Startup : StartupBase
 
 ### Step 3: Handle Deferred Responses (Webhook)
 
-When the external system sends a response, create a webhook endpoint that writes the response to the chat session and notifies the user via SignalR:
+When the external system sends a response, create a webhook endpoint that writes the response to the chat history and notifies the user via SignalR. The payload should identify whether the chat is an **AI Chat Session** or a **Chat Interaction**, so you can resolve the correct hub context and follow the appropriate pipeline.
+
+:::tip
+The hub classes (`AIChatHub`, `ChatInteractionHub`) and their client interfaces live in the **`CrestApps.OrchardCore.AI.Chat.Core`** library. Reference this Core project (not the module projects) when you need to resolve `IHubContext<AIChatHub>` or `IHubContext<ChatInteractionHub>` from your webhook or external module.
+:::
 
 ```csharp
 using CrestApps.OrchardCore.AI.Chat.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.Mvc;
+using CrestApps.Support;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
-[Route("api/genesys/webhook")]
-public sealed class GenesysWebhookController : Controller
+internal static class GenesysWebhookEndpoint
 {
-    private readonly IAIChatSessionManager _sessionManager;
-    private readonly IAIChatSessionPromptStore _promptStore;
-    private readonly IHubContext<AIChatHub> _hubContext;
-    private readonly IClock _clock;
-
-    public GenesysWebhookController(
-        IAIChatSessionManager sessionManager,
-        IAIChatSessionPromptStore promptStore,
-        IHubContext<AIChatHub> hubContext,
-        IClock clock)
+    public static IEndpointRouteBuilder AddGenesysWebhookEndpoint(this IEndpointRouteBuilder builder)
     {
-        _sessionManager = sessionManager;
-        _promptStore = promptStore;
-        _hubContext = hubContext;
-        _clock = clock;
+        builder.MapPost("api/genesys/webhook", HandleAsync)
+            .AllowAnonymous()
+            .DisableAntiforgery();
+
+        return builder;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> ReceiveMessage([FromBody] GenesysWebhookPayload payload)
+    private static async Task<IResult> HandleAsync(
+        HttpRequest request,
+        GenesysWebhookPayload payload,
+        IAIChatSessionManager sessionManager,
+        IAIChatSessionPromptStore promptStore,
+        IHubContext<AIChatHub> chatHubContext,
+        ISourceCatalogManager<ChatInteraction> interactionManager,
+        IChatInteractionPromptStore interactionPromptStore,
+        IHubContext<ChatInteractionHub> interactionHubContext)
     {
-        // 1. Find the chat session.
-        var session = await _sessionManager.FindByIdAsync(payload.SessionId);
-        if (session == null)
+        // TODO: Validate the webhook payload signature to ensure it's authentic.
+
+        if (payload.ChatType == ChatContextType.AIChatSession)
         {
-            return NotFound();
+            // --- AI Chat Session pipeline ---
+            var session = await sessionManager.FindByIdAsync(payload.SessionId);
+
+            if (session is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            // Save the agent's response as an assistant prompt.
+            var prompt = new AIChatSessionPrompt
+            {
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = session.SessionId,
+                Role = ChatRole.Assistant,
+                Content = payload.AgentMessage,
+            };
+            await promptStore.CreateAsync(prompt);
+
+            // Notify connected client(s) via the SignalR group.
+            var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
+
+            await chatHubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
+            {
+                sessionId = session.SessionId,
+                messageId = prompt.ItemId,
+                content = payload.AgentMessage,
+                role = "assistant",
+            });
+        }
+        else if (payload.ChatType == ChatContextType.ChatInteraction)
+        {
+            // --- Chat Interaction pipeline ---
+            var interaction = await interactionManager.FindByIdAsync(payload.SessionId);
+
+            if (interaction is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            // Save the agent's response as an assistant prompt.
+            var prompt = new ChatInteractionPrompt
+            {
+                ItemId = IdGenerator.GenerateId(),
+                InteractionId = interaction.ItemId,
+                Role = ChatRole.Assistant,
+                Content = payload.AgentMessage,
+            };
+            await interactionPromptStore.CreateAsync(prompt);
+
+            // Notify connected client(s) via the SignalR group.
+            var groupName = ChatInteractionHub.GetInteractionGroupName(interaction.ItemId);
+
+            await interactionHubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
+            {
+                sessionId = interaction.ItemId,
+                messageId = prompt.ItemId,
+                content = payload.AgentMessage,
+                role = "assistant",
+            });
+        }
+        else
+        {
+            return TypedResults.BadRequest("Unknown chat type.");
         }
 
-        // 2. Save the agent's response as an assistant prompt.
-        var prompt = new AIChatSessionPrompt
-        {
-            ItemId = IdGenerator.GenerateId(),
-            SessionId = session.SessionId,
-            Role = ChatRole.Assistant,
-            Content = payload.AgentMessage,
-        };
-        await _promptStore.CreateAsync(prompt);
-
-        // 3. Notify the connected client(s) via SignalR group.
-        // The group name follows the pattern used by AIChatHub.
-        var groupName = $"aichat-session-{session.SessionId}";
-
-        await _hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
-        {
-            sessionId = session.SessionId,
-            messageId = prompt.ItemId,
-            content = payload.AgentMessage,
-            role = "assistant",
-        });
-
-        return Ok();
+        return TypedResults.Ok();
     }
 }
 ```
 
-:::note
-For **Chat Interactions** (not AI Chat Sessions), use `IHubContext<ChatInteractionHub>` instead and the group name pattern `chat-interaction-{itemId}`.
-:::
+Register the endpoint in your module's `Startup.cs`:
+
+```csharp
+public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+{
+    routes.AddGenesysWebhookEndpoint();
+}
+```
 
 ## Mid-Conversation Handler Transfer
 
-An AI function can transfer the session to a different handler mid-conversation by updating the session's `ResponseHandlerName` property:
+An AI function can transfer the session to a different handler mid-conversation. Implement the transfer as a proper `AIFunction` so it integrates with the AI tool registration system.
+
+### Step 1: Create the Transfer Function
+
+The function accesses the current `AIChatSession` or `ChatInteraction` via `AIInvocationScope.Current` and sets the `ResponseHandlerName`. The hub automatically saves the session after the AI response completes, so you do **not** need to call `SaveAsync` manually.
 
 ```csharp
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-public sealed class TransferToAgentFunction
+namespace MyModule.Tools;
+
+/// <summary>
+/// AI tool that transfers the chat session to a live support agent
+/// via an external platform (e.g., Genesys).
+/// </summary>
+public sealed class TransferToAgentFunction : AIFunction
 {
-    [Description("Transfers the user to a live support agent")]
-    public async Task<string> TransferToLiveAgent(
-        [Description("The queue to transfer to")] string queueName,
-        IAIChatSessionManager sessionManager,
-        IAIProfileManager profileManager,
-        AIChatSession chatSession)
-    {
-        // Conversation mode requires AI for speech-to-text / text-to-speech.
-        // Custom handlers cannot process voice audio streams.
-        var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
+    public const string TheName = "transfer_to_live_agent";
 
-        if (profile != null
-            && profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
-            && chatModeSettings.ChatMode == ChatMode.Conversation)
+    private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
+        """
         {
-            return "Live agent transfer is not available in conversation mode. " +
-                   "Please switch to text mode to connect with a live agent.";
+          "type": "object",
+          "properties": {
+            "queue_name": {
+              "type": "string",
+              "description": "The name of the agent queue to transfer the user to."
+            },
+            "reason": {
+              "type": "string",
+              "description": "A brief summary of why the user is being transferred."
+            }
+          },
+          "required": ["queue_name"],
+          "additionalProperties": false
+        }
+        """);
+
+    public override string Name => TheName;
+
+    public override string Description => "Transfers the user to a live support agent in a specified queue.";
+
+    public override JsonElement JsonSchema => _jsonSchema;
+
+    protected override async ValueTask<object> InvokeCoreAsync(
+        AIFunctionArguments arguments,
+        CancellationToken cancellationToken)
+    {
+        var logger = arguments.Services.GetRequiredService<ILogger<TransferToAgentFunction>>();
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
-        // Update the session to use the Genesys handler for subsequent prompts.
-        chatSession.ResponseHandlerName = "Genesys";
-        await sessionManager.SaveAsync(chatSession);
+        if (!arguments.TryGetFirstString("queue_name", out var queueName))
+        {
+            return "Unable to find a 'queue_name' argument.";
+        }
 
-        // Create a session in the external system.
-        // (implementation details depend on your integration)
+        arguments.TryGetFirstString("reason", out var reason);
 
-        return $"Transferring you to a live agent in the {queueName} queue. Please wait...";
+        // Get the current session or interaction from the invocation context.
+        var invocationScope = AIInvocationScope.Current;
+        string sessionId = null;
+        ChatContextType chatType;
+
+        // Check for an AI Chat Session.
+        if (invocationScope?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true
+            && sessionObj is AIChatSession chatSession)
+        {
+            chatType = ChatContextType.AIChatSession;
+            sessionId = chatSession.SessionId;
+
+            // Check if the session is in Conversation mode.
+            // Custom handlers cannot process voice audio streams.
+            var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
+            var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
+
+            if (profile != null
+                && profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
+                && chatModeSettings.ChatMode == ChatMode.Conversation)
+            {
+                return "Live agent transfer is not available in Conversation mode. "
+                     + "Please switch to text mode to connect with a live agent.";
+            }
+
+            // Set the handler name. The hub will persist this automatically
+            // when it saves the session after the AI response completes.
+            chatSession.ResponseHandlerName = "Genesys";
+        }
+        // Check for a Chat Interaction.
+        else if (invocationScope?.ToolExecutionContext?.Resource is ChatInteraction interaction)
+        {
+            chatType = ChatContextType.ChatInteraction;
+            sessionId = interaction.ItemId;
+
+            // Set the handler name. The hub will persist this automatically.
+            interaction.ResponseHandlerName = "Genesys";
+        }
+        else
+        {
+            logger.LogWarning("AI tool '{ToolName}' failed: no active chat session or interaction found.", Name);
+            return "Unable to transfer — no active chat session found.";
+        }
+
+        // Create a session in the external system (e.g., Genesys).
+        var genesysClient = arguments.Services.GetRequiredService<IGenesysClient>();
+
+        await genesysClient.CreateSessionAsync(new GenesysSessionRequest
+        {
+            SessionId = sessionId,
+            ChatType = chatType,
+            QueueName = queueName,
+            Reason = reason,
+            // Pass the SignalR connection ID so the external system can send messages back.
+            ConnectionId = invocationScope?.Items.TryGetValue("ConnectionId", out var connId) == true
+                ? connId as string
+                : null,
+        });
+
+        return $"You are being transferred to a live agent in the '{queueName}' queue. Please wait...";
     }
 }
 ```
 
-After this function executes, all subsequent prompts from the user are routed to the `GenesysResponseHandler` instead of AI.
+### Step 2: Register the Transfer Function
+
+Register the function as a selectable AI tool in your module's `Startup.cs`:
+
+```csharp
+using CrestApps.OrchardCore.AI.Core.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Modules;
+
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAITool<TransferToAgentFunction>(TransferToAgentFunction.TheName)
+            .WithTitle("Transfer to Live Agent")
+            .WithDescription("Transfers the user to a live support agent queue.")
+            .WithCategory("Live Agent")
+            .Selectable();
+    }
+}
+```
+
+Once registered, the tool appears in the **AI Profile → Tools** section where administrators can enable it for specific profiles.
+
+### How It Works
+
+1. The AI model decides to call `transfer_to_live_agent` based on the conversation context.
+2. The function accesses the current `AIChatSession` or `ChatInteraction` via `AIInvocationScope.Current`.
+3. It sets `ResponseHandlerName = "Genesys"` on the session/interaction object.
+4. The hub automatically saves the updated session after the AI response completes — no manual `SaveAsync` call needed.
+5. From this point on, all subsequent user prompts are routed to the `GenesysResponseHandler` instead of AI.
 
 ## Configuring the Initial Response Handler
 

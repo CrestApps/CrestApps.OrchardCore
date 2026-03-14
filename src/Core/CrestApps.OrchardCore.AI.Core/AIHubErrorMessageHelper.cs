@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 /// <summary>
 /// Provides shared error message formatting for AI chat hubs.
 /// </summary>
-internal static class AIHubErrorMessageHelper
+public static class AIHubErrorMessageHelper
 {
     private const string ClientResultExceptionName = "ClientResultException";
     private static readonly string[] RateLimitIndicators = ["ratelimitreached", "rate limit", "too many requests"];

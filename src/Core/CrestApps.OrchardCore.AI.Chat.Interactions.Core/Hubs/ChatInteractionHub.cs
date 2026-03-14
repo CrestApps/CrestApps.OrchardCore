@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -26,20 +27,16 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
-public class ChatInteractionHub : Hub<IChatInteractionHubClient>
+public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 {
-    private const string _conversationCtsKey = "ConversationCts";
-
     private readonly ILogger<ChatInteractionHub> _logger;
-
-    protected readonly IStringLocalizer S;
 
     public ChatInteractionHub(
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
+        : base(logger, stringLocalizer)
     {
         _logger = logger;
-        S = stringLocalizer;
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
@@ -122,7 +119,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
     /// Gets the SignalR group name for a chat interaction. Clients in this group
     /// receive deferred responses delivered via webhook or external callback.
     /// </summary>
-    internal static string GetInteractionGroupName(string itemId)
+    public static string GetInteractionGroupName(string itemId)
         => $"chat-interaction-{itemId}";
 
     public async Task SaveSettings(string itemId, JsonElement settings)
@@ -660,7 +657,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
                 using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                Context.Items[_conversationCtsKey] = conversationCts;
+                Context.Items[ConversationCtsKey] = conversationCts;
 
                 try
                 {
@@ -670,7 +667,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 }
                 finally
                 {
-                    Context.Items.Remove(_conversationCtsKey);
+                    Context.Items.Remove(ConversationCtsKey);
                 }
 
             });
@@ -694,16 +691,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 _logger.LogWarning(writeEx, "Failed to write conversation error message.");
             }
         }
-    }
-
-    public Task StopConversation()
-    {
-        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
-        {
-            cts.Cancel();
-        }
-
-        return Task.CompletedTask;
     }
 
 #pragma warning disable MEAI001
@@ -923,7 +910,7 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
         string responseId = null;
 
         // Start TTS consumer that sends audio per sentence (text is sent immediately below).
-        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, itemId, sentenceChannel.Reader, voiceName, cancellationToken);
+        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, () => itemId, sentenceChannel.Reader, voiceName, cancellationToken);
 
         var sentenceBuffer = ZString.CreateStringBuilder();
 
@@ -1375,91 +1362,6 @@ public class ChatInteractionHub : Hub<IChatInteractionHubClient>
             {
                 _logger.LogWarning(writeEx, "Failed to write speech synthesis error message.");
             }
-        }
-    }
-
-    private async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string itemId,
-        string text,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        var speechText = SpeechTextSanitizer.Sanitize(text);
-
-        if (string.IsNullOrWhiteSpace(speechText))
-        {
-            await Clients.Caller.ReceiveAudioComplete(itemId);
-            return;
-        }
-
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-        {
-            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-            if (audioContent?.Data is not { Length: > 0 } audioData)
-            {
-                continue;
-            }
-
-            var base64Audio = Convert.ToBase64String(audioData.ToArray());
-            await Clients.Caller.ReceiveAudioChunk(itemId, base64Audio, audioContent.MediaType ?? "audio/mp3");
-        }
-
-        await Clients.Caller.ReceiveAudioComplete(itemId);
-    }
-
-    private async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string identifier,
-        ChannelReader<string> sentenceReader,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
-        {
-            var speechText = SpeechTextSanitizer.Sanitize(sentence);
-
-            if (string.IsNullOrWhiteSpace(speechText))
-            {
-                continue;
-            }
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
-            }
-
-            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-            {
-                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-                if (audioContent?.Data is not { Length: > 0 } audioData)
-                {
-                    continue;
-                }
-
-                var base64Audio = Convert.ToBase64String(audioData.ToArray());
-                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
-            }
-
-            // Signal that this sentence's audio is ready for playback immediately,
-            // so the client can start playing each sentence as it's synthesized
-            // rather than waiting for all sentences to finish.
-            await Clients.Caller.ReceiveAudioComplete(identifier);
         }
     }
 }
