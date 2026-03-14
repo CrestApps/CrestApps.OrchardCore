@@ -381,16 +381,12 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAITool<TransferToAgentFunction>(TransferToAgentFunction.TheName)
-            .WithTitle("Transfer to Live Agent")
-            .WithDescription("Transfers the user to a live support agent queue.")
-            .WithCategory("Live Agent")
-            .Selectable();
+        services.AddAITool<TransferToAgentFunction>(TransferToAgentFunction.TheName);
     }
 }
 ```
 
-Once registered, the tool appears in the **AI Profile → Tools** section where administrators can enable it for specific profiles.
+Once registered, the tool is automatically available to all AI profiles. Since it is not selectable, administrators do not need to manually enable it — it will be included whenever the AI model requires it.
 
 ### How It Works
 
