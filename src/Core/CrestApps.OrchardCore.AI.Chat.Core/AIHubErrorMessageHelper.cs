@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Localization;
 
-namespace CrestApps.OrchardCore.AI.Core;
+namespace CrestApps.OrchardCore.AI.Chat.Core;
 
 /// <summary>
 /// Provides shared error message formatting for AI chat hubs.

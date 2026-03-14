@@ -21,16 +21,19 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 {
     private readonly AIProviderOptions _providerOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
+    private readonly IChatResponseHandlerResolver _handlerResolver;
 
     internal readonly IStringLocalizer S;
 
     public ProfileTemplateDisplayDriver(
         IOptions<AIProviderOptions> providerOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
+        IChatResponseHandlerResolver handlerResolver,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)
     {
         _providerOptions = providerOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
+        _handlerResolver = handlerResolver;
         S = stringLocalizer;
     }
 
@@ -42,6 +45,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         {
             model.ConnectionName = metadata.ConnectionName;
             model.OrchestratorName = metadata.OrchestratorName;
+            model.InitialResponseHandlerName = metadata.InitialResponseHandlerName;
 
             model.ConnectionNames = _providerOptions.Providers
                 .SelectMany(p => p.Value.Connections)
@@ -55,6 +59,14 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
                 .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
                 .ToList();
+
+            var handlers = _handlerResolver.GetAll().ToList();
+            model.ResponseHandlers = handlers.Count > 1
+                ? handlers
+                    .Select(h => new SelectListItem(h.Name, h.Name))
+                    .OrderBy(x => x.Text)
+                    .ToList()
+                : [];
         }).Location("Content:2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
@@ -119,6 +131,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
         metadata.ConnectionName = connectionModel.ConnectionName;
         metadata.OrchestratorName = connectionModel.OrchestratorName;
+        metadata.InitialResponseHandlerName = connectionModel.InitialResponseHandlerName?.Trim();
 
         var profileFieldsModel = new AIProfileTemplateProfileFieldsViewModel();
         await context.Updater.TryUpdateModelAsync(profileFieldsModel, Prefix);

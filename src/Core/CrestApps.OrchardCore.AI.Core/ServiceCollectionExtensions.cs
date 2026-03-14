@@ -219,6 +219,10 @@ public static class ServiceCollectionExtensions
         // Register the resolver.
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
 
+        // Register the default AI chat response handler and resolver.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
+        services.AddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
+
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
             .WithTitle("Generate Image")

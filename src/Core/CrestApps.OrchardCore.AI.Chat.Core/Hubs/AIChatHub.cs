@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
-using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Chat.Core;
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
@@ -27,20 +28,16 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
-public partial class AIChatHub : Hub<IAIChatHubClient>
+public class AIChatHub : ChatHubBase<IAIChatHubClient>
 {
-    private const string _conversationCtsKey = "ConversationCts";
-
     private readonly ILogger<AIChatHub> _logger;
-
-    protected readonly IStringLocalizer S;
 
     public AIChatHub(
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
+        : base(logger, stringLocalizer)
     {
         _logger = logger;
-        S = stringLocalizer;
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
@@ -106,11 +103,15 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
 
+            // Join the SignalR group for this session so deferred responses
+            // (e.g., from an external agent via webhook) can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId));
+
             await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
         });
     }
 
-    public async Task StartSession(string profileId)
+    public async Task StartSession(string profileId, string initialResponseHandlerName = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
@@ -147,8 +148,18 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             }
 
             var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+
+            // Allow the caller to override the initial response handler set by the profile.
+            if (!string.IsNullOrWhiteSpace(initialResponseHandlerName))
+            {
+                chatSession.ResponseHandlerName = initialResponseHandlerName.Trim();
+            }
+
             await sessionManager.SaveAsync(chatSession);
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+
+            // Join the SignalR group for this session so deferred responses can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId));
 
             await Clients.Caller.LoadSession(CreateSessionPayload(chatSession, profile, prompts));
         });
@@ -406,8 +417,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
-        var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
-        var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+        var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
         var sessionHandlers = services.GetRequiredService<IEnumerable<IAIChatSessionHandler>>();
         var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
         var clock = services.GetRequiredService<IClock>();
@@ -461,6 +471,40 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             .Where(x => !x.IsGeneratedPrompt)
             .Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
 
+        // Resolve the chat response handler for this session.
+        // In conversation mode, always use the AI handler for TTS/STT integration.
+        var chatMode = profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
+            ? chatModeSettings.ChatMode
+            : ChatMode.TextInput;
+        var handler = handlerResolver.Resolve(chatSession.ResponseHandlerName, chatMode);
+
+        var handlerContext = new ChatResponseHandlerContext
+        {
+            Prompt = prompt,
+            ConnectionId = Context.ConnectionId,
+            SessionId = chatSession.SessionId,
+            ChatType = ChatContextType.AIChatSession,
+            ConversationHistory = conversationHistory,
+            Services = services,
+            Profile = profile,
+            ChatSession = chatSession,
+        };
+
+        var handlerResult = await handler.HandleAsync(handlerContext, cancellationToken);
+
+        if (handlerResult.IsDeferred)
+        {
+            // Deferred response: save the user prompt (already done above) and session state.
+            // The response will arrive later via webhook or external callback.
+            // Join the SignalR group so deferred responses can reach the client after reconnection.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId), cancellationToken);
+
+            await sessionManager.SaveAsync(chatSession);
+
+            return;
+        }
+
+        // Streaming response: enumerate the response stream with citation collection.
         var assistantMessage = new AIChatSessionPrompt
         {
             ItemId = IdGenerator.GenerateId(),
@@ -471,30 +515,17 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
 
         var builder = ZString.CreateStringBuilder();
 
-        // Build the orchestration context using the handler pipeline.
-        var orchestratorContext = await orchestrationContextBuilder.BuildAsync(profile, ctx =>
-        {
-            ctx.UserMessage = prompt;
-            ctx.ConversationHistory = conversationHistory;
-            ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
-        });
-
-        // Store the session in the invocation context so document tools can resolve session documents.
-        AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
-        AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-        // Resolve the orchestrator for this profile and execute the completion.
-        var orchestrator = orchestratorResolver.Resolve(profile.OrchestratorName);
-
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
         var stopwatch = Stopwatch.StartNew();
 
-        // Collect preemptive RAG references before streaming so the first chunk
-        // already contains any references from data sources and documents.
-        citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+        // Collect preemptive RAG references if the handler produced an OrchestrationContext.
+        if (handlerContext.Properties.TryGetValue("OrchestrationContext", out var ctxObj) && ctxObj is OrchestrationContext orchestratorContext)
+        {
+            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+        }
 
-        await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+        await foreach (var chunk in handlerResult.ResponseStream.WithCancellation(cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {
@@ -683,6 +714,13 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 
+    /// <summary>
+    /// Gets the SignalR group name for a chat session. Clients in this group
+    /// receive deferred responses delivered via webhook or external callback.
+    /// </summary>
+    public static string GetSessionGroupName(string sessionId)
+        => $"aichat-session-{sessionId}";
+
     public async Task StartConversation(string profileId, string sessionId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, string language = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
@@ -768,7 +806,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
                 using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                Context.Items[_conversationCtsKey] = conversationCts;
+                Context.Items[ConversationCtsKey] = conversationCts;
 
                 try
                 {
@@ -780,7 +818,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                 }
                 finally
                 {
-                    Context.Items.Remove(_conversationCtsKey);
+                    Context.Items.Remove(ConversationCtsKey);
                 }
             });
         }
@@ -803,16 +841,6 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                 _logger.LogWarning(writeEx, "Failed to write conversation error message.");
             }
         }
-    }
-
-    public Task StopConversation()
-    {
-        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
-        {
-            cts.Cancel();
-        }
-
-        return Task.CompletedTask;
     }
 
 #pragma warning disable MEAI001
@@ -1072,7 +1100,7 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
                     sentenceBuffer.Append(chunk.Content);
 
                     // Queue completed sentences for TTS synthesis.
-                    if (EndsWithSentenceBoundary(chunk.Content))
+                    if (SentenceBoundaryDetector.EndsWithSentenceBoundary(chunk.Content))
                     {
                         var sentence = sentenceBuffer.ToString().Trim();
 
@@ -1506,192 +1534,4 @@ public partial class AIChatHub : Hub<IAIChatHubClient>
             }
         }
     }
-
-    private async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string sessionId,
-        string text,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        var speechText = SanitizeForSpeech(text);
-
-        if (string.IsNullOrWhiteSpace(speechText))
-        {
-            await Clients.Caller.ReceiveAudioComplete(sessionId);
-            return;
-        }
-
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-        {
-            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-            if (audioContent?.Data is not { Length: > 0 } audioData)
-            {
-                continue;
-            }
-
-            var base64Audio = Convert.ToBase64String(audioData.ToArray());
-            await Clients.Caller.ReceiveAudioChunk(sessionId, base64Audio, audioContent.MediaType ?? "audio/mp3");
-        }
-
-        await Clients.Caller.ReceiveAudioComplete(sessionId);
-    }
-
-    private async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        Func<string> getIdentifier,
-        ChannelReader<string> sentenceReader,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
-        {
-            var identifier = getIdentifier();
-            var speechText = SanitizeForSpeech(sentence);
-
-            if (string.IsNullOrWhiteSpace(speechText))
-            {
-                continue;
-            }
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
-            }
-
-            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-            {
-                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-                if (audioContent?.Data is not { Length: > 0 } audioData)
-                {
-                    continue;
-                }
-
-                var base64Audio = Convert.ToBase64String(audioData.ToArray());
-                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
-            }
-
-            // Signal that this sentence's audio is ready for playback immediately,
-            // so the client can start playing each sentence as it's synthesized
-            // rather than waiting for all sentences to finish.
-            await Clients.Caller.ReceiveAudioComplete(identifier);
-        }
-    }
-
-    private static bool EndsWithSentenceBoundary(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        var trimmed = text.AsSpan().TrimEnd();
-
-        if (trimmed.IsEmpty)
-        {
-            return false;
-        }
-
-        var lastChar = trimmed[^1];
-
-        return lastChar is '.' or '!' or '?' or '\n';
-    }
-
-    private static string SanitizeForSpeech(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return text;
-        }
-
-        // Remove fenced code blocks (```...```).
-        text = FencedCodeBlockPattern().Replace(text, " ");
-
-        // Remove inline code (`code`).
-        text = InlineCodePattern().Replace(text, " ");
-
-        // Remove markdown images ![alt](url).
-        text = MarkdownImagePattern().Replace(text, " ");
-
-        // Convert markdown links [text](url) to just text.
-        text = MarkdownLinkPattern().Replace(text, "$1");
-
-        // Remove bold/italic markers (**, *, ___, __, _).
-        text = BoldItalicMarkerPattern().Replace(text, string.Empty);
-
-        // Remove heading markers (# through ######).
-        text = HeadingMarkerPattern().Replace(text, string.Empty);
-
-        // Remove horizontal rules (---, ***, ___).
-        text = HorizontalRulePattern().Replace(text, string.Empty);
-
-        // Remove list markers (- item, * item, + item).
-        text = UnorderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove numbered list markers (1. item, 2. item).
-        text = OrderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove emoji surrogate pairs (supplementary plane: 😀🎉🚀 etc.).
-        text = EmojiSurrogatePairPattern().Replace(text, string.Empty);
-
-        // Remove common BMP emoji/symbol characters.
-        text = BmpEmojiSymbolPattern().Replace(text, string.Empty);
-
-        // Collapse multiple whitespace into a single space.
-        text = MultipleWhitespacePattern().Replace(text, " ");
-
-        return text.Trim();
-    }
-
-    [GeneratedRegex(@"```[\s\S]*?```")]
-    private static partial Regex FencedCodeBlockPattern();
-
-    [GeneratedRegex(@"`[^`]+`")]
-    private static partial Regex InlineCodePattern();
-
-    [GeneratedRegex(@"!\[[^\]]*\]\([^\)]*\)")]
-    private static partial Regex MarkdownImagePattern();
-
-    [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
-    private static partial Regex MarkdownLinkPattern();
-
-    [GeneratedRegex(@"\*{1,3}|_{1,3}")]
-    private static partial Regex BoldItalicMarkerPattern();
-
-    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
-    private static partial Regex HeadingMarkerPattern();
-
-    [GeneratedRegex(@"^[-*_]{3,}\s*$", RegexOptions.Multiline)]
-    private static partial Regex HorizontalRulePattern();
-
-    [GeneratedRegex(@"^\s*[-*+]\s+", RegexOptions.Multiline)]
-    private static partial Regex UnorderedListMarkerPattern();
-
-    [GeneratedRegex(@"^\s*\d+\.\s+", RegexOptions.Multiline)]
-    private static partial Regex OrderedListMarkerPattern();
-
-    [GeneratedRegex(@"[\uD800-\uDBFF][\uDC00-\uDFFF]")]
-    private static partial Regex EmojiSurrogatePairPattern();
-
-    [GeneratedRegex(@"[\u2600-\u27BF\uFE00-\uFE0F\u200D]")]
-    private static partial Regex BmpEmojiSymbolPattern();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex MultipleWhitespacePattern();
-
 }

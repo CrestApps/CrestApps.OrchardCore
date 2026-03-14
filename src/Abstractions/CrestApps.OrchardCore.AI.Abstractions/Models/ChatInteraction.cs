@@ -108,6 +108,14 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public string OrchestratorName { get; set; }
 
     /// <summary>
+    /// Gets or sets the technical name of the <see cref="IChatResponseHandler"/> currently
+    /// handling prompts for this interaction. When <see langword="null"/> or empty, the default
+    /// AI handler is used. This value can be changed mid-conversation (e.g., by an AI
+    /// function that transfers the chat to a live-agent platform).
+    /// </summary>
+    public string ResponseHandlerName { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of AI tool names to use.
     /// </summary>
     public IList<string> ToolNames { get; set; } = [];

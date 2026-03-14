@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Channels;
+using CrestApps.OrchardCore.AI.Chat.Core;
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Models;
@@ -27,20 +28,16 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
-public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
+public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 {
-    private const string _conversationCtsKey = "ConversationCts";
-
     private readonly ILogger<ChatInteractionHub> _logger;
-
-    protected readonly IStringLocalizer S;
 
     public ChatInteractionHub(
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
+        : base(logger, stringLocalizer)
     {
         _logger = logger;
-        S = stringLocalizer;
     }
 
     public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
@@ -96,6 +93,10 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var prompts = await promptStore.GetPromptsAsync(itemId);
 
+            // Join the SignalR group for this interaction so deferred responses
+            // (e.g., from an external agent via webhook) can reach this client.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetInteractionGroupName(interaction.ItemId));
+
             await Clients.Caller.LoadInteraction(new
             {
                 interaction.ItemId,
@@ -114,6 +115,13 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             });
         });
     }
+
+    /// <summary>
+    /// Gets the SignalR group name for a chat interaction. Clients in this group
+    /// receive deferred responses delivered via webhook or external callback.
+    /// </summary>
+    public static string GetInteractionGroupName(string itemId)
+        => $"chat-interaction-{itemId}";
 
     public async Task SaveSettings(string itemId, JsonElement settings)
     {
@@ -400,8 +408,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             prompt = prompt.Trim();
 
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
-            var orchestrationContextBuilder = services.GetRequiredService<IOrchestrationContextBuilder>();
-            var orchestratorResolver = services.GetRequiredService<IOrchestratorResolver>();
+            var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
             var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
             var clock = services.GetRequiredService<IClock>();
 
@@ -426,6 +433,46 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             // Load all prompts for building transcript
             var existingPrompts = await promptStore.GetPromptsAsync(itemId);
 
+            var conversationHistory = existingPrompts
+                .Where(x => !x.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Text))
+                .ToList();
+
+            // Resolve the chat response handler for this interaction.
+            // In conversation mode, always use the AI handler for TTS/STT integration.
+            var siteService = services.GetRequiredService<ISiteService>();
+            var site = await siteService.GetSiteSettingsAsync();
+            var chatMode = site.As<ChatInteractionChatModeSettings>().ChatMode;
+            var handler = handlerResolver.Resolve(interaction.ResponseHandlerName, chatMode);
+
+            var handlerContext = new ChatResponseHandlerContext
+            {
+                Prompt = prompt,
+                ConnectionId = Context.ConnectionId,
+                SessionId = interaction.ItemId,
+                ChatType = ChatContextType.ChatInteraction,
+                ConversationHistory = conversationHistory,
+                Services = services,
+                Interaction = interaction,
+            };
+
+            var handlerResult = await handler.HandleAsync(handlerContext, cancellationToken);
+
+            if (handlerResult.IsDeferred)
+            {
+                // Deferred response: save user prompt (already done) and update title.
+                // The response will arrive later via webhook or external callback.
+                await Groups.AddToGroupAsync(Context.ConnectionId, GetInteractionGroupName(interaction.ItemId), cancellationToken);
+
+                if (needsTitleUpdate)
+                {
+                    await interactionManager.UpdateAsync(interaction);
+                }
+
+                return;
+            }
+
+            // Streaming response: enumerate the response stream with citation collection.
             var assistantPrompt = new ChatInteractionPrompt
             {
                 ItemId = IdGenerator.GenerateId(),
@@ -436,29 +483,16 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
 
             var builder = ZString.CreateStringBuilder();
 
-            // Build the orchestration context using the handler pipeline.
-            var orchestratorContext = await orchestrationContextBuilder.BuildAsync(interaction, ctx =>
-            {
-                ctx.UserMessage = prompt;
-                ctx.ConversationHistory = existingPrompts
-                    .Where(x => !x.IsGeneratedPrompt)
-                    .Select(p => new ChatMessage(p.Role, p.Text))
-                    .ToList();
-            });
-
-            AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
-
-            // Resolve the orchestrator for this interaction and execute the completion.
-            var orchestrator = orchestratorResolver.Resolve(interaction.OrchestratorName);
-
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 
-            // Collect preemptive RAG references before streaming so the first chunk
-            // already contains any references from data sources and documents.
-            citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+            // Collect preemptive RAG references if the handler produced an OrchestrationContext.
+            if (handlerContext.Properties.TryGetValue("OrchestrationContext", out var ctxObj) && ctxObj is OrchestrationContext orchestratorContext)
+            {
+                citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
+            }
 
-            await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext, cancellationToken))
+            await foreach (var chunk in handlerResult.ResponseStream.WithCancellation(cancellationToken))
             {
                 if (string.IsNullOrEmpty(chunk.Text))
                 {
@@ -624,7 +658,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
                 using var conversationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                Context.Items[_conversationCtsKey] = conversationCts;
+                Context.Items[ConversationCtsKey] = conversationCts;
 
                 try
                 {
@@ -634,7 +668,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 }
                 finally
                 {
-                    Context.Items.Remove(_conversationCtsKey);
+                    Context.Items.Remove(ConversationCtsKey);
                 }
 
             });
@@ -658,16 +692,6 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
                 _logger.LogWarning(writeEx, "Failed to write conversation error message.");
             }
         }
-    }
-
-    public Task StopConversation()
-    {
-        if (Context.Items.TryGetValue(_conversationCtsKey, out var value) && value is CancellationTokenSource cts)
-        {
-            cts.Cancel();
-        }
-
-        return Task.CompletedTask;
     }
 
 #pragma warning disable MEAI001
@@ -887,7 +911,7 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
         string responseId = null;
 
         // Start TTS consumer that sends audio per sentence (text is sent immediately below).
-        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, itemId, sentenceChannel.Reader, voiceName, cancellationToken);
+        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, () => itemId, sentenceChannel.Reader, voiceName, cancellationToken);
 
         var sentenceBuffer = ZString.CreateStringBuilder();
 
@@ -1341,171 +1365,4 @@ public partial class ChatInteractionHub : Hub<IChatInteractionHubClient>
             }
         }
     }
-
-    private async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string itemId,
-        string text,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        var speechText = SanitizeForSpeech(text);
-
-        if (string.IsNullOrWhiteSpace(speechText))
-        {
-            await Clients.Caller.ReceiveAudioComplete(itemId);
-            return;
-        }
-
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-        {
-            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-            if (audioContent?.Data is not { Length: > 0 } audioData)
-            {
-                continue;
-            }
-
-            var base64Audio = Convert.ToBase64String(audioData.ToArray());
-            await Clients.Caller.ReceiveAudioChunk(itemId, base64Audio, audioContent.MediaType ?? "audio/mp3");
-        }
-
-        await Clients.Caller.ReceiveAudioComplete(itemId);
-    }
-
-    private async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string identifier,
-        ChannelReader<string> sentenceReader,
-        string voiceName,
-        CancellationToken cancellationToken)
-    {
-        var options = new TextToSpeechOptions();
-
-        if (!string.IsNullOrWhiteSpace(voiceName))
-        {
-            options.VoiceId = voiceName;
-        }
-
-        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
-        {
-            var speechText = SanitizeForSpeech(sentence);
-
-            if (string.IsNullOrWhiteSpace(speechText))
-            {
-                continue;
-            }
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
-            }
-
-            // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
-            {
-                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
-                if (audioContent?.Data is not { Length: > 0 } audioData)
-                {
-                    continue;
-                }
-
-                var base64Audio = Convert.ToBase64String(audioData.ToArray());
-                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
-            }
-
-            // Signal that this sentence's audio is ready for playback immediately,
-            // so the client can start playing each sentence as it's synthesized
-            // rather than waiting for all sentences to finish.
-            await Clients.Caller.ReceiveAudioComplete(identifier);
-        }
-    }
-
-    private static string SanitizeForSpeech(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return text;
-        }
-
-        // Remove fenced code blocks (```...```).
-        text = FencedCodeBlockPattern().Replace(text, " ");
-
-        // Remove inline code (`code`).
-        text = InlineCodePattern().Replace(text, " ");
-
-        // Remove markdown images ![alt](url).
-        text = MarkdownImagePattern().Replace(text, " ");
-
-        // Convert markdown links [text](url) to just text.
-        text = MarkdownLinkPattern().Replace(text, "$1");
-
-        // Remove bold/italic markers (**, *, ___, __, _).
-        text = BoldItalicMarkerPattern().Replace(text, string.Empty);
-
-        // Remove heading markers (# through ######).
-        text = HeadingMarkerPattern().Replace(text, string.Empty);
-
-        // Remove horizontal rules (---, ***, ___).
-        text = HorizontalRulePattern().Replace(text, string.Empty);
-
-        // Remove list markers (- item, * item, + item).
-        text = UnorderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove numbered list markers (1. item, 2. item).
-        text = OrderedListMarkerPattern().Replace(text, string.Empty);
-
-        // Remove emoji surrogate pairs (supplementary plane: 😀🎉🚀 etc.).
-        text = EmojiSurrogatePairPattern().Replace(text, string.Empty);
-
-        // Remove common BMP emoji/symbol characters.
-        text = BmpEmojiSymbolPattern().Replace(text, string.Empty);
-
-        // Collapse multiple whitespace into a single space.
-        text = MultipleWhitespacePattern().Replace(text, " ");
-
-        return text.Trim();
-    }
-
-    [GeneratedRegex(@"```[\s\S]*?```")]
-    private static partial Regex FencedCodeBlockPattern();
-
-    [GeneratedRegex(@"`[^`]+`")]
-    private static partial Regex InlineCodePattern();
-
-    [GeneratedRegex(@"!\[[^\]]*\]\([^\)]*\)")]
-    private static partial Regex MarkdownImagePattern();
-
-    [GeneratedRegex(@"\[([^\]]*)\]\([^\)]*\)")]
-    private static partial Regex MarkdownLinkPattern();
-
-    [GeneratedRegex(@"\*{1,3}|_{1,3}")]
-    private static partial Regex BoldItalicMarkerPattern();
-
-    [GeneratedRegex(@"^#{1,6}\s+", RegexOptions.Multiline)]
-    private static partial Regex HeadingMarkerPattern();
-
-    [GeneratedRegex(@"^[-*_]{3,}\s*$", RegexOptions.Multiline)]
-    private static partial Regex HorizontalRulePattern();
-
-    [GeneratedRegex(@"^\s*[-*+]\s+", RegexOptions.Multiline)]
-    private static partial Regex UnorderedListMarkerPattern();
-
-    [GeneratedRegex(@"^\s*\d+\.\s+", RegexOptions.Multiline)]
-    private static partial Regex OrderedListMarkerPattern();
-
-    [GeneratedRegex(@"[\uD800-\uDBFF][\uDC00-\uDFFF]")]
-    private static partial Regex EmojiSurrogatePairPattern();
-
-    [GeneratedRegex(@"[\u2600-\u27BF\uFE00-\uFE0F\u200D]")]
-    private static partial Regex BmpEmojiSymbolPattern();
-
-    [GeneratedRegex(@"\s+")]
-    private static partial Regex MultipleWhitespacePattern();
 }
