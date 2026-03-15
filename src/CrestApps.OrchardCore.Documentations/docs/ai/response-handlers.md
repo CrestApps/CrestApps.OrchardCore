@@ -475,3 +475,25 @@ The `IChatResponseHandlerResolver.Resolve()` method accepts an optional `ChatMod
 // Resolve with conversation mode awareness
 var handler = handlerResolver.Resolve(session.ResponseHandlerName, ChatMode.TextInput);
 ```
+
+## UI Notifications for Response Handlers
+
+When building deferred response handlers, you typically need to provide real-time feedback to users — typing indicators, transfer status, and session endings. The **[Chat UI Notifications](./chat-notifications.md)** system provides a C#-only API for this:
+
+```csharp
+// In your webhook that receives external events:
+var notifications = services.GetRequiredService<IChatNotificationSender>();
+
+// Show a typing indicator when the agent starts typing.
+await notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, "Mike");
+
+// Show a transfer indicator with wait time and cancel button.
+await notifications.ShowTransferAsync(sessionId, ChatContextType.AIChatSession,
+    estimatedWaitTime: "About 2 minutes",
+    cancellable: true);
+
+// End the session and notify the user.
+await notifications.ShowSessionEndedAsync(sessionId, ChatContextType.AIChatSession);
+```
+
+See [Chat UI Notifications](./chat-notifications.md) for full documentation and examples.

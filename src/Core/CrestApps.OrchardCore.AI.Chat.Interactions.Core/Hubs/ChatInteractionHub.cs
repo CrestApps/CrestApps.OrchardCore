@@ -40,6 +40,9 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         _logger = logger;
     }
 
+    protected override ChatContextType GetChatType()
+        => ChatContextType.ChatInteraction;
+
     public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();

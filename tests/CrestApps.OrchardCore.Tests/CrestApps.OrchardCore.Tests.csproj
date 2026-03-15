@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.OpenXml\CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Documents.Pdf\CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.A2A\CrestApps.OrchardCore.AI.A2A.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.OpenAI.Azure\CrestApps.OrchardCore.OpenAI.Azure.csproj" />
   </ItemGroup>

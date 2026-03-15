@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 
@@ -35,6 +37,63 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Handles a user-initiated action on a chat notification bubble.
+    /// Dispatches to registered <see cref="IChatNotificationActionHandler"/> implementations.
+    /// </summary>
+    public async Task HandleNotificationAction(string sessionId, string notificationId, string actionName)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(actionName))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            try
+            {
+                var handler = scope.ServiceProvider.GetKeyedService<IChatNotificationActionHandler>(actionName);
+
+                if (handler is null)
+                {
+                    Logger.LogWarning("No notification action handler found for action '{ActionName}'.", actionName);
+                    return;
+                }
+
+                var context = new ChatNotificationActionContext
+                {
+                    SessionId = sessionId,
+                    NotificationId = notificationId,
+                    ActionName = actionName,
+                    ChatType = GetChatType(),
+                    ConnectionId = Context.ConnectionId,
+                    Services = scope.ServiceProvider,
+                };
+
+                await handler.HandleAsync(context);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "An error occurred while handling notification action '{ActionName}'.", actionName);
+
+                try
+                {
+                    await Clients.Caller.ReceiveError(S["An error occurred while processing your action. Please try again."].Value);
+                }
+                catch
+                {
+                    // Best-effort error reporting.
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Gets the chat context type for this hub. Used by <see cref="HandleNotificationAction"/>
+    /// to build the action context.
+    /// </summary>
+    protected abstract ChatContextType GetChatType();
 
     /// <summary>
     /// Gets the key used to store the conversation cancellation token source in the hub context items.

@@ -31,6 +31,21 @@ window.chatInteractionManager = function () {
                         </div>
                     </div>
                 </div>
+                <div v-for="notification in notifications" :key="'notif-' + notification.id" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
+                    <div class="ai-chat-notification-content">
+                        <i v-if="notification.icon" :class="notification.icon" class="ai-chat-notification-icon"></i>
+                        <span class="ai-chat-notification-text">{{ notification.content }}</span>
+                        <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.id)" title="Dismiss">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div v-if="notification.actions && notification.actions.length" class="ai-chat-notification-actions">
+                        <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.id, action.name)">
+                            <i v-if="action.icon" :class="action.icon" class="me-1"></i>
+                            {{ action.label }}
+                        </button>
+                    </div>
+                </div>
             </div>
         `,
         indicatorTemplate: `
@@ -346,6 +361,7 @@ window.chatInteractionManager = function () {
                     conversationModeEnabled: config.chatMode === 'Conversation',
                     conversationButton: null,
                     isConversationMode: false,
+                    notifications: [],
                 };
             },
             computed: {
@@ -544,6 +560,18 @@ window.chatInteractionManager = function () {
                         if (clearHistoryBtn) {
                             clearHistoryBtn.classList.add('d-none');
                         }
+                    });
+
+                    this.connection.on("ReceiveNotification", (notification) => {
+                        this.receiveNotification(notification);
+                    });
+
+                    this.connection.on("UpdateNotification", (notification) => {
+                        this.updateNotification(notification);
+                    });
+
+                    this.connection.on("RemoveNotification", (notificationId) => {
+                        this.removeNotification(notificationId);
                     });
 
                     this.connection.onreconnecting(() => {
@@ -1006,6 +1034,9 @@ window.chatInteractionManager = function () {
                     this._conversationAssistantMessage = null;
                     this._conversationPartialMessage = null;
 
+                    // Remove any previous conversation ended notification.
+                    this.removeNotification('conversation-ended');
+
                     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
                         .then(stream => {
                             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
@@ -1138,6 +1169,15 @@ window.chatInteractionManager = function () {
                             this.messages[i].isStreaming = false;
                         }
                     }
+
+                    // Show a "conversation ended" notification bubble.
+                    this.receiveNotification({
+                        id: 'conversation-ended',
+                        type: 'ended',
+                        content: 'Conversation ended.',
+                        icon: 'fa-solid fa-circle-check',
+                        dismissible: true
+                    });
                 },
                 updateConversationButton() {
                     if (!this.conversationButton) {
@@ -1194,6 +1234,37 @@ window.chatInteractionManager = function () {
                 },
                 getItemId() {
                     return this.inputElement.getAttribute('data-interaction-id');
+                },
+                receiveNotification(notification) {
+                    // Replace existing notification with same ID, or add new one.
+                    var idx = this.notifications.findIndex(n => n.id === notification.id);
+                    if (idx >= 0) {
+                        this.notifications.splice(idx, 1, notification);
+                    } else {
+                        this.notifications.push(notification);
+                    }
+                    this.scrollToBottom();
+                },
+                updateNotification(notification) {
+                    var idx = this.notifications.findIndex(n => n.id === notification.id);
+                    if (idx >= 0) {
+                        this.notifications.splice(idx, 1, notification);
+                        this.scrollToBottom();
+                    }
+                },
+                removeNotification(notificationId) {
+                    this.notifications = this.notifications.filter(n => n.id !== notificationId);
+                },
+                dismissNotification(notificationId) {
+                    this.removeNotification(notificationId);
+                },
+                handleNotificationAction(notificationId, actionName) {
+                    if (!this.connection) {
+                        return;
+                    }
+                    var itemId = this.getItemId();
+                    this.connection.invoke('HandleNotificationAction', itemId, notificationId, actionName)
+                        .catch(err => console.error('Failed to handle notification action:', err));
                 },
                 setItemId(itemId) {
                     this.inputElement.setAttribute('data-interaction-id', itemId || '');

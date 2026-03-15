@@ -24,6 +24,7 @@ const sidebars = {
         'ai/agent',
         'ai/prompt-templates',
         'ai/response-handlers',
+        'ai/chat-notifications',
         'ai/migration-typed-deployments',
         {
           type: 'category',

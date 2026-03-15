@@ -66,6 +66,9 @@ public sealed class Startup : StartupBase
 
         services.AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>();
 
+        // Chat Interaction notification transport.
+        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
+
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
 
