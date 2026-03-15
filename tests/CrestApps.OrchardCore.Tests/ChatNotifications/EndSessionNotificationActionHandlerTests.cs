@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -152,6 +153,7 @@ public sealed class EndSessionNotificationActionHandlerTests
 
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassthroughStringLocalizer<>));
 
         if (sessionManager is not null)
         {
@@ -169,5 +171,17 @@ public sealed class EndSessionNotificationActionHandlerTests
         }
 
         return services.BuildServiceProvider();
+    }
+
+    private sealed class PassthroughStringLocalizer<T> : IStringLocalizer<T>
+    {
+        public LocalizedString this[string name]
+            => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments]
+            => new(name, string.Format(name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
     }
 }

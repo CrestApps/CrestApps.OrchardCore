@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -15,6 +16,7 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
     {
         var logger = context.Services.GetRequiredService<ILogger<EndSessionNotificationActionHandler>>();
         var notificationSender = context.Services.GetRequiredService<IChatNotificationSender>();
+        var localizer = context.Services.GetRequiredService<IStringLocalizer<EndSessionNotificationActionHandler>>();
 
         if (context.ChatType == ChatContextType.AIChatSession)
         {
@@ -42,6 +44,7 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
         // Show a "session ended" notification.
         await notificationSender.ShowSessionEndedAsync(
             context.SessionId,
-            context.ChatType);
+            context.ChatType,
+            localizer);
     }
 }

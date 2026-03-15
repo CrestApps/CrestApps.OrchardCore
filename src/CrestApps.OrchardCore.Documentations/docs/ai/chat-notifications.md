@@ -43,20 +43,25 @@ Inject `IChatNotificationSender` and call the extension methods:
 ```csharp
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Localization;
 
 public sealed class MyWebhookHandler
 {
     private readonly IChatNotificationSender _notifications;
+    private readonly IStringLocalizer _localizer;
 
-    public MyWebhookHandler(IChatNotificationSender notifications)
+    public MyWebhookHandler(
+        IChatNotificationSender notifications,
+        IStringLocalizer<MyWebhookHandler> localizer)
     {
         _notifications = notifications;
+        _localizer = localizer;
     }
 
     public async Task OnAgentTyping(string sessionId)
     {
         // Show a "Mike is typing..." bubble.
-        await _notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, "Mike");
+        await _notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, _localizer, "Mike");
     }
 
     public async Task OnAgentStoppedTyping(string sessionId)
@@ -133,15 +138,19 @@ Passed to `IChatNotificationActionHandler.HandleAsync`:
 
 `ChatNotificationSenderExtensions` provides convenient methods so you don't need to build `ChatNotification` objects manually:
 
+All extension methods that produce user-facing text accept an `IStringLocalizer` parameter to ensure messages are localized. Methods that only remove notifications (e.g., `HideTypingAsync`) do not require a localizer.
+
 | Method | Description |
 | --- | --- |
-| `ShowTypingAsync(sessionId, chatType, agentName?)` | Shows a typing indicator bubble. |
+| `ShowTypingAsync(sessionId, chatType, localizer, agentName?)` | Shows a typing indicator bubble. |
 | `HideTypingAsync(sessionId, chatType)` | Removes the typing indicator. |
-| `ShowTransferAsync(sessionId, chatType, message?, estimatedWaitTime?, cancellable?)` | Shows a transfer indicator with optional wait time and cancel button. |
-| `UpdateTransferAsync(sessionId, chatType, message?, estimatedWaitTime?, cancellable?)` | Updates the transfer indicator (e.g., with a new wait time). |
+| `ShowTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Shows a transfer indicator with optional wait time and cancel button. |
+| `UpdateTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Updates the transfer indicator (e.g., with a new wait time). |
 | `HideTransferAsync(sessionId, chatType)` | Removes the transfer indicator. |
-| `ShowConversationEndedAsync(sessionId, chatType, message?)` | Shows a "conversation ended" dismissible bubble. |
-| `ShowSessionEndedAsync(sessionId, chatType, message?)` | Shows a "session ended" dismissible bubble. |
+| `ShowAgentConnectedAsync(sessionId, chatType, localizer, agentName?, message?)` | Shows an "agent connected" bubble. |
+| `HideAgentConnectedAsync(sessionId, chatType)` | Removes the agent-connected notification. |
+| `ShowConversationEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "conversation ended" dismissible bubble. |
+| `ShowSessionEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "session ended" dismissible bubble. |
 
 ### Well-Known Constants
 
@@ -150,6 +159,7 @@ The extension class also exposes constants for built-in notification IDs and act
 ```csharp
 ChatNotificationSenderExtensions.NotificationIds.Typing          // "typing"
 ChatNotificationSenderExtensions.NotificationIds.Transfer        // "transfer"
+ChatNotificationSenderExtensions.NotificationIds.AgentConnected  // "agent-connected"
 ChatNotificationSenderExtensions.NotificationIds.ConversationEnded // "conversation-ended"
 ChatNotificationSenderExtensions.NotificationIds.SessionEnded    // "session-ended"
 
@@ -183,13 +193,15 @@ internal static class AgentTypingWebhook
 
     private static async Task<IResult> HandleAsync(
         AgentTypingPayload payload,
-        IChatNotificationSender notifications)
+        IChatNotificationSender notifications,
+        IStringLocalizer<AgentTypingWebhook> localizer)
     {
         if (payload.IsTyping)
         {
             await notifications.ShowTypingAsync(
                 payload.SessionId,
                 ChatContextType.AIChatSession,
+                localizer,
                 payload.AgentName);
         }
         else
@@ -221,14 +233,16 @@ internal static class TransferWebhook
 
     private static async Task<IResult> OnTransferStarted(
         TransferPayload payload,
-        IChatNotificationSender notifications)
+        IChatNotificationSender notifications,
+        IStringLocalizer<TransferWebhook> localizer)
     {
         // Show a transfer bubble with estimated wait time and a cancel button.
         await notifications.ShowTransferAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
-            message: "Transferring you to a live agent...",
-            estimatedWaitTime: "About 2 minutes",
+            localizer,
+            message: localizer["Transferring you to a live agent..."].Value,
+            estimatedWaitTime: localizer["About 2 minutes"].Value,
             cancellable: true);
 
         return TypedResults.Ok();
@@ -236,13 +250,15 @@ internal static class TransferWebhook
 
     private static async Task<IResult> OnTransferUpdate(
         TransferPayload payload,
-        IChatNotificationSender notifications)
+        IChatNotificationSender notifications,
+        IStringLocalizer<TransferWebhook> localizer)
     {
         // Update the wait time as the queue changes.
         await notifications.UpdateTransferAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
-            message: "Still waiting for an available agent...",
+            localizer,
+            message: localizer["Still waiting for an available agent..."].Value,
             estimatedWaitTime: payload.EstimatedWaitTime,
             cancellable: true);
 
@@ -251,16 +267,18 @@ internal static class TransferWebhook
 
     private static async Task<IResult> OnTransferCompleted(
         TransferPayload payload,
-        IChatNotificationSender notifications)
+        IChatNotificationSender notifications,
+        IStringLocalizer<TransferWebhook> localizer)
     {
-        // Agent connected — remove the transfer indicator and show typing.
+        // Agent connected — remove the transfer indicator and show connected notification.
         await notifications.HideTransferAsync(
             payload.SessionId,
             ChatContextType.AIChatSession);
 
-        await notifications.ShowTypingAsync(
+        await notifications.ShowAgentConnectedAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
+            localizer,
             payload.AgentName);
 
         return TypedResults.Ok();
@@ -280,10 +298,14 @@ End a chat session from server-side code and notify the user:
 public sealed class SessionTimeoutService
 {
     private readonly IChatNotificationSender _notifications;
+    private readonly IStringLocalizer _localizer;
 
-    public SessionTimeoutService(IChatNotificationSender notifications)
+    public SessionTimeoutService(
+        IChatNotificationSender notifications,
+        IStringLocalizer<SessionTimeoutService> localizer)
     {
         _notifications = notifications;
+        _localizer = localizer;
     }
 
     public async Task EndSessionDueToInactivity(string sessionId, ChatContextType chatType)
@@ -291,7 +313,8 @@ public sealed class SessionTimeoutService
         await _notifications.ShowSessionEndedAsync(
             sessionId,
             chatType,
-            "This session was ended due to inactivity.");
+            _localizer,
+            _localizer["This session was ended due to inactivity."].Value);
     }
 }
 ```
@@ -390,9 +413,10 @@ The UI applies the CSS class `ai-chat-notification-queue` (derived from the `Typ
 The notification system is designed to complement [Chat Response Handlers](./response-handlers.md). A typical integration pattern:
 
 1. **Transfer function** sets `ResponseHandlerName` on the session → calls `ShowTransferAsync()`.
-2. **External webhook** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
-3. **External webhook** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
-4. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
+2. **External webhook** receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
+3. **External webhook** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
+4. **External webhook** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
+5. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
 
 See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern.
 

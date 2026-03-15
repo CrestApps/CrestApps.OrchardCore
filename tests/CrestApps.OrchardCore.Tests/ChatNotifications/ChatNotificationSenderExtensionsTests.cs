@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Localization;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.ChatNotifications;
@@ -7,6 +8,7 @@ namespace CrestApps.OrchardCore.Tests.ChatNotifications;
 public sealed class ChatNotificationSenderExtensionsTests
 {
     private readonly Mock<IChatNotificationSender> _senderMock = new();
+    private readonly IStringLocalizer _localizer = new PassthroughStringLocalizer();
 
     // ───────────────────────────────────────────────────────────────
     // ShowTypingAsync
@@ -23,7 +25,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTypingAsync("session-1", chatType);
+        await _senderMock.Object.ShowTypingAsync("session-1", chatType, _localizer);
 
         Assert.NotNull(captured);
         Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.Typing, captured.Id);
@@ -41,7 +43,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTypingAsync("s1", ChatContextType.AIChatSession, "Mike");
+        await _senderMock.Object.ShowTypingAsync("s1", ChatContextType.AIChatSession, _localizer, "Mike");
 
         Assert.NotNull(captured);
         Assert.Equal("Mike is typing", captured.Content);
@@ -77,7 +79,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession);
+        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession, _localizer);
 
         Assert.NotNull(captured);
         Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.Transfer, captured.Id);
@@ -98,7 +100,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.ChatInteraction,
+        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.ChatInteraction, _localizer,
             estimatedWaitTime: "2 minutes");
 
         Assert.NotNull(captured);
@@ -116,7 +118,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession,
+        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession, _localizer,
             message: "Connecting you to support...");
 
         Assert.NotNull(captured);
@@ -132,7 +134,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession, cancellable: false);
+        await _senderMock.Object.ShowTransferAsync("s1", ChatContextType.AIChatSession, _localizer, cancellable: false);
 
         Assert.NotNull(captured);
         Assert.Null(captured.Actions);
@@ -156,6 +158,73 @@ public sealed class ChatNotificationSenderExtensionsTests
     }
 
     // ───────────────────────────────────────────────────────────────
+    // ShowAgentConnectedAsync
+    // ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ShowAgentConnectedAsync_WithoutAgentName_SendsDefaultContent()
+    {
+        ChatNotification captured = null;
+        _senderMock
+            .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
+            .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
+            .Returns(Task.CompletedTask);
+
+        await _senderMock.Object.ShowAgentConnectedAsync("s1", ChatContextType.AIChatSession, _localizer);
+
+        Assert.NotNull(captured);
+        Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.AgentConnected, captured.Id);
+        Assert.Equal("info", captured.Type);
+        Assert.Equal("You are now connected to a live agent.", captured.Content);
+        Assert.Equal("fa-solid fa-user-check", captured.Icon);
+        Assert.True(captured.Dismissible);
+    }
+
+    [Fact]
+    public async Task ShowAgentConnectedAsync_WithAgentName_IncludesNameInContent()
+    {
+        ChatNotification captured = null;
+        _senderMock
+            .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
+            .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
+            .Returns(Task.CompletedTask);
+
+        await _senderMock.Object.ShowAgentConnectedAsync("s1", ChatContextType.AIChatSession, _localizer, agentName: "Sarah");
+
+        Assert.NotNull(captured);
+        Assert.Equal("You are now connected to Sarah.", captured.Content);
+    }
+
+    [Fact]
+    public async Task ShowAgentConnectedAsync_WithCustomMessage_UsesCustomMessage()
+    {
+        ChatNotification captured = null;
+        _senderMock
+            .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
+            .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
+            .Returns(Task.CompletedTask);
+
+        await _senderMock.Object.ShowAgentConnectedAsync("s1", ChatContextType.AIChatSession, _localizer,
+            message: "Agent Mike has joined the chat.");
+
+        Assert.NotNull(captured);
+        Assert.Equal("Agent Mike has joined the chat.", captured.Content);
+    }
+
+    [Fact]
+    public async Task HideAgentConnectedAsync_CallsRemoveWithAgentConnectedId()
+    {
+        _senderMock
+            .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.AgentConnected))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        await _senderMock.Object.HideAgentConnectedAsync("s1", ChatContextType.AIChatSession);
+
+        _senderMock.Verify();
+    }
+
+    // ───────────────────────────────────────────────────────────────
     // ShowConversationEndedAsync
     // ───────────────────────────────────────────────────────────────
 
@@ -168,7 +237,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowConversationEndedAsync("s1", ChatContextType.AIChatSession);
+        await _senderMock.Object.ShowConversationEndedAsync("s1", ChatContextType.AIChatSession, _localizer);
 
         Assert.NotNull(captured);
         Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.ConversationEnded, captured.Id);
@@ -186,7 +255,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowConversationEndedAsync("s1", ChatContextType.AIChatSession,
+        await _senderMock.Object.ShowConversationEndedAsync("s1", ChatContextType.AIChatSession, _localizer,
             "Your session is over.");
 
         Assert.NotNull(captured);
@@ -206,7 +275,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.ShowSessionEndedAsync("s1", ChatContextType.AIChatSession);
+        await _senderMock.Object.ShowSessionEndedAsync("s1", ChatContextType.AIChatSession, _localizer);
 
         Assert.NotNull(captured);
         Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.SessionEnded, captured.Id);
@@ -228,7 +297,7 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _senderMock.Object.UpdateTransferAsync("s1", ChatContextType.AIChatSession,
+        await _senderMock.Object.UpdateTransferAsync("s1", ChatContextType.AIChatSession, _localizer,
             message: "Still waiting...", estimatedWaitTime: "5 minutes");
 
         Assert.NotNull(captured);
@@ -246,6 +315,7 @@ public sealed class ChatNotificationSenderExtensionsTests
     {
         Assert.Equal("typing", ChatNotificationSenderExtensions.NotificationIds.Typing);
         Assert.Equal("transfer", ChatNotificationSenderExtensions.NotificationIds.Transfer);
+        Assert.Equal("agent-connected", ChatNotificationSenderExtensions.NotificationIds.AgentConnected);
         Assert.Equal("conversation-ended", ChatNotificationSenderExtensions.NotificationIds.ConversationEnded);
         Assert.Equal("session-ended", ChatNotificationSenderExtensions.NotificationIds.SessionEnded);
     }
@@ -255,5 +325,22 @@ public sealed class ChatNotificationSenderExtensionsTests
     {
         Assert.Equal("cancel-transfer", ChatNotificationSenderExtensions.ActionNames.CancelTransfer);
         Assert.Equal("end-session", ChatNotificationSenderExtensions.ActionNames.EndSession);
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    // Test helper: pass-through localizer that formats strings like
+    // IStringLocalizer does when no translation is found.
+    // ───────────────────────────────────────────────────────────────
+
+    private sealed class PassthroughStringLocalizer : IStringLocalizer
+    {
+        public LocalizedString this[string name]
+            => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments]
+            => new(name, string.Format(name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
     }
 }

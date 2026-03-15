@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI;
 
@@ -15,6 +16,7 @@ public static class ChatNotificationSenderExtensions
     {
         public const string Typing = "typing";
         public const string Transfer = "transfer";
+        public const string AgentConnected = "agent-connected";
         public const string ConversationEnded = "conversation-ended";
         public const string SessionEnded = "session-ended";
     }
@@ -29,21 +31,23 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a typing indicator bubble (e.g., "Mike is typing...").
+    /// Shows a typing indicator bubble (e.g., "Mike is typing…").
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
     /// <param name="agentName">Optional name of the agent who is typing.</param>
     public static Task ShowTypingAsync(
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
+        IStringLocalizer T,
         string agentName = null)
     {
         var content = string.IsNullOrEmpty(agentName)
-            ? "Agent is typing"
-            : $"{agentName} is typing";
+            ? T["Agent is typing"].Value
+            : T["{0} is typing", agentName].Value;
 
         return sender.SendAsync(sessionId, chatType, new ChatNotification
         {
@@ -74,22 +78,24 @@ public static class ChatNotificationSenderExtensions
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
-    /// <param name="message">The transfer message. Defaults to "Transferring you to a live agent...".</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="message">The transfer message. When <see langword="null"/>, a localized default is used.</param>
     /// <param name="estimatedWaitTime">Optional estimated wait time string (e.g., "2 minutes").</param>
     /// <param name="cancellable">Whether to show a cancel button. Defaults to <see langword="true"/>.</param>
     public static Task ShowTransferAsync(
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
+        IStringLocalizer T,
         string message = null,
         string estimatedWaitTime = null,
         bool cancellable = true)
     {
-        var content = message ?? "Transferring you to a live agent...";
+        var content = message ?? T["Transferring you to a live agent..."].Value;
 
         if (!string.IsNullOrEmpty(estimatedWaitTime))
         {
-            content += $" Estimated wait: {estimatedWaitTime}.";
+            content += " " + T["Estimated wait: {0}.", estimatedWaitTime].Value;
         }
 
         var notification = new ChatNotification
@@ -107,7 +113,7 @@ public static class ChatNotificationSenderExtensions
                 new ChatNotificationAction
                 {
                     Name = ActionNames.CancelTransfer,
-                    Label = "Cancel Transfer",
+                    Label = T["Cancel Transfer"].Value,
                     CssClass = "btn-outline-danger",
                     Icon = "fa-solid fa-xmark",
                 },
@@ -131,6 +137,7 @@ public static class ChatNotificationSenderExtensions
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
+    /// <param name="localizer">The string localizer for translating user-facing messages.</param>
     /// <param name="message">The updated transfer message.</param>
     /// <param name="estimatedWaitTime">Optional updated estimated wait time.</param>
     /// <param name="cancellable">Whether to show a cancel button.</param>
@@ -138,11 +145,12 @@ public static class ChatNotificationSenderExtensions
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
+        IStringLocalizer localizer,
         string message = null,
         string estimatedWaitTime = null,
         bool cancellable = true)
     {
-        return ShowTransferAsync(sender, sessionId, chatType, message, estimatedWaitTime, cancellable);
+        return ShowTransferAsync(sender, sessionId, chatType, localizer, message, estimatedWaitTime, cancellable);
     }
 
     /// <summary>
@@ -160,24 +168,72 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
+    /// Shows an "agent connected" bubble indicating a live agent has joined the session.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="agentName">Optional name of the connected agent.</param>
+    /// <param name="message">Optional custom message. When <see langword="null"/>, a localized default is used.</param>
+    public static Task ShowAgentConnectedAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType,
+        IStringLocalizer T,
+        string agentName = null,
+        string message = null)
+    {
+        var content = message
+            ?? (string.IsNullOrEmpty(agentName)
+                ? T["You are now connected to a live agent."].Value
+                : T["You are now connected to {0}.", agentName].Value);
+
+        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        {
+            Id = NotificationIds.AgentConnected,
+            Type = "info",
+            Content = content,
+            Icon = "fa-solid fa-user-check",
+            Dismissible = true,
+        });
+    }
+
+    /// <summary>
+    /// Hides a previously shown agent-connected notification.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    public static Task HideAgentConnectedAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType)
+    {
+        return sender.RemoveAsync(sessionId, chatType, NotificationIds.AgentConnected);
+    }
+
+    /// <summary>
     /// Shows a "conversation ended" bubble. The user can still send messages
     /// via text or audio input, but this indicates the conversation mode has ended.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
-    /// <param name="message">The message to display. Defaults to "Conversation ended.".</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="message">The message to display. When <see langword="null"/>, a localized default is used.</param>
     public static Task ShowConversationEndedAsync(
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
+        IStringLocalizer T,
         string message = null)
     {
         return sender.SendAsync(sessionId, chatType, new ChatNotification
         {
             Id = NotificationIds.ConversationEnded,
             Type = "ended",
-            Content = message ?? "Conversation ended.",
+            Content = message ?? T["Conversation ended."].Value,
             Icon = "fa-solid fa-circle-check",
             Dismissible = true,
         });
@@ -189,18 +245,20 @@ public static class ChatNotificationSenderExtensions
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
-    /// <param name="message">The message to display. Defaults to "This chat session has ended.".</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="message">The message to display. When <see langword="null"/>, a localized default is used.</param>
     public static Task ShowSessionEndedAsync(
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
+        IStringLocalizer T,
         string message = null)
     {
         return sender.SendAsync(sessionId, chatType, new ChatNotification
         {
             Id = NotificationIds.SessionEnded,
             Type = "ended",
-            Content = message ?? "This chat session has ended.",
+            Content = message ?? T["This chat session has ended."].Value,
             Icon = "fa-solid fa-circle-check",
             Dismissible = true,
         });
