@@ -1,67 +1,57 @@
-using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 /// <summary>
-/// Default implementation of <see cref="IChatNotificationSender"/> that sends
-/// notifications to chat clients via SignalR hub contexts.
+/// Default implementation of <see cref="IChatNotificationSender"/> that dispatches
+/// notifications to the appropriate <see cref="IChatNotificationTransport"/>
+/// resolved via keyed service lookup using <see cref="ChatContextType"/>.
 /// </summary>
 internal sealed class DefaultChatNotificationSender : IChatNotificationSender
 {
-    private readonly IHubContext<AIChatHub, IAIChatHubClient> _chatHubContext;
-    private readonly IHubContext<ChatInteractionHub, IChatInteractionHubClient> _interactionHubContext;
+    private readonly IServiceProvider _serviceProvider;
 
-    public DefaultChatNotificationSender(
-        IHubContext<AIChatHub, IAIChatHubClient> chatHubContext,
-        IHubContext<ChatInteractionHub, IChatInteractionHubClient> interactionHubContext)
+    public DefaultChatNotificationSender(IServiceProvider serviceProvider)
     {
-        _chatHubContext = chatHubContext;
-        _interactionHubContext = interactionHubContext;
+        _serviceProvider = serviceProvider;
     }
 
-    public async Task SendAsync(string sessionId, ChatContextType chatType, ChatNotification notification)
+    public Task SendAsync(string sessionId, ChatContextType chatType, ChatNotification notification)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentNullException.ThrowIfNull(notification);
 
-        var client = GetGroupClient(sessionId, chatType);
+        var transport = GetTransport(chatType);
 
-        await client.ReceiveNotification(notification);
+        return transport.SendNotificationAsync(sessionId, notification);
     }
 
-    public async Task UpdateAsync(string sessionId, ChatContextType chatType, ChatNotification notification)
+    public Task UpdateAsync(string sessionId, ChatContextType chatType, ChatNotification notification)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentNullException.ThrowIfNull(notification);
 
-        var client = GetGroupClient(sessionId, chatType);
+        var transport = GetTransport(chatType);
 
-        await client.UpdateNotification(notification);
+        return transport.UpdateNotificationAsync(sessionId, notification);
     }
 
-    public async Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationId)
+    public Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(notificationId);
 
-        var client = GetGroupClient(sessionId, chatType);
+        var transport = GetTransport(chatType);
 
-        await client.RemoveNotification(notificationId);
+        return transport.RemoveNotificationAsync(sessionId, notificationId);
     }
 
-    private IChatHubClient GetGroupClient(string sessionId, ChatContextType chatType)
+    private IChatNotificationTransport GetTransport(ChatContextType chatType)
     {
-        if (chatType == ChatContextType.AIChatSession)
-        {
-            var groupName = AIChatHub.GetSessionGroupName(sessionId);
-            return _chatHubContext.Clients.Group(groupName);
-        }
-
-        var interactionGroupName = ChatInteractionHub.GetInteractionGroupName(sessionId);
-        return _interactionHubContext.Clients.Group(interactionGroupName);
+        return _serviceProvider.GetKeyedService<IChatNotificationTransport>(chatType)
+            ?? throw new InvalidOperationException(
+                $"No {nameof(IChatNotificationTransport)} is registered for chat type '{chatType}'. " +
+                $"Ensure the module that provides this chat type is enabled and registers its transport.");
     }
 }

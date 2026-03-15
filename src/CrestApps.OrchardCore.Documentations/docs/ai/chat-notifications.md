@@ -26,12 +26,13 @@ Developers interact entirely through C# interfaces and extension methods — no 
 ```
 C# Code (webhook, handler, background task, etc.)
   → IChatNotificationSender.SendAsync(sessionId, chatType, notification)
-    → SignalR group broadcast → ReceiveNotification
-      → Chat UI renders the notification bubble
+    → IChatNotificationTransport (resolved by chatType key)
+      → SignalR group broadcast → ReceiveNotification
+        → Chat UI renders the notification bubble
 
 User clicks an action button on a notification
   → JS: connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName)
-    → Hub dispatches to matching IChatNotificationActionHandler
+    → Hub dispatches to matching IChatNotificationActionHandler (keyed service)
 ```
 
 Notifications are pushed to the SignalR group for the session, so **all connected clients** see the same notifications — including clients that reconnect.
@@ -175,6 +176,71 @@ Two action handlers are registered automatically when the AI Chat feature is ena
 | --- | --- |
 | `cancel-transfer` | Resets the session's `ResponseHandlerName` to `null` (returns to AI), removes the transfer notification. |
 | `end-session` | Closes the session (sets `Status = Closed`, `ClosedAtUtc = now`), shows a "session ended" notification. |
+
+## Extensible Transport Architecture
+
+The notification system uses a **transport provider** pattern so that each hub independently registers how notifications are delivered to its clients. The `IChatNotificationSender` resolves the correct `IChatNotificationTransport` by `ChatContextType` key — no hardcoded hub references.
+
+### How It Works
+
+1. **`IChatNotificationTransport`** — defines low-level delivery methods (`SendNotificationAsync`, `UpdateNotificationAsync`, `RemoveNotificationAsync`).
+2. Each hub module registers its transport as a **keyed service** using `ChatContextType` as the key.
+3. **`IChatNotificationSender`** (the high-level API you call) resolves the transport by key and delegates.
+
+### Built-In Transports
+
+| Chat Type | Transport | Registered By |
+| --- | --- | --- |
+| `ChatContextType.AIChatSession` | `AIChatNotificationTransport` | `CrestApps.OrchardCore.AI.Chat` |
+| `ChatContextType.ChatInteraction` | `ChatInteractionNotificationTransport` | `CrestApps.OrchardCore.AI.Chat.Interactions` |
+
+### Registering a Custom Transport
+
+If you create a custom chat hub that supports notification bubbles, implement `IChatNotificationTransport` and register it as a keyed service:
+
+```csharp
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Models;
+using Microsoft.AspNetCore.SignalR;
+
+internal sealed class MyCustomChatNotificationTransport : IChatNotificationTransport
+{
+    private readonly IHubContext<MyCustomHub, IMyCustomHubClient> _hubContext;
+
+    public MyCustomChatNotificationTransport(
+        IHubContext<MyCustomHub, IMyCustomHubClient> hubContext)
+    {
+        _hubContext = hubContext;
+    }
+
+    public Task SendNotificationAsync(string sessionId, ChatNotification notification)
+    {
+        var groupName = MyCustomHub.GetGroupName(sessionId);
+        return _hubContext.Clients.Group(groupName).ReceiveNotification(notification);
+    }
+
+    public Task UpdateNotificationAsync(string sessionId, ChatNotification notification)
+    {
+        var groupName = MyCustomHub.GetGroupName(sessionId);
+        return _hubContext.Clients.Group(groupName).UpdateNotification(notification);
+    }
+
+    public Task RemoveNotificationAsync(string sessionId, string notificationId)
+    {
+        var groupName = MyCustomHub.GetGroupName(sessionId);
+        return _hubContext.Clients.Group(groupName).RemoveNotification(notificationId);
+    }
+}
+```
+
+Register in your module's `Startup`:
+
+```csharp
+services.AddKeyedScoped<IChatNotificationTransport, MyCustomChatNotificationTransport>(
+    MyChatContextType);
+```
+
+Now any call to `IChatNotificationSender.SendAsync(sessionId, MyChatContextType, notification)` automatically routes to your transport.
 
 ## Scenarios & Examples
 

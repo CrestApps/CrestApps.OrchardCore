@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
@@ -48,6 +49,7 @@ public sealed class Startup : StartupBase
 
         // Chat notification services.
         services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
+        services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationSenderExtensions.ActionNames.CancelTransfer);
         services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationSenderExtensions.ActionNames.EndSession);
 

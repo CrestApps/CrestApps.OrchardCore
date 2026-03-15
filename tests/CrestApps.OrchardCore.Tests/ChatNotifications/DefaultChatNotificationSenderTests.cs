@@ -1,9 +1,7 @@
-using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Models;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.ChatNotifications;
@@ -15,55 +13,43 @@ public sealed class DefaultChatNotificationSenderTests
     // ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task SendAsync_AIChatSession_CallsReceiveNotificationOnCorrectGroup()
+    public async Task SendAsync_AIChatSession_DelegatesToTransport()
     {
         var notification = new ChatNotification { Id = "test", Type = "info", Content = "Hello" };
-        var clientMock = new Mock<IAIChatHubClient>();
-        clientMock
-            .Setup(c => c.ReceiveNotification(notification))
+        var transportMock = new Mock<IChatNotificationTransport>();
+        transportMock
+            .Setup(t => t.SendNotificationAsync("s1", notification))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
-        var chatHubContext = CreateChatHubContext(
-            AIChatHub.GetSessionGroupName("s1"),
-            clientMock.Object);
-
-        var interactionHubContext = CreateInteractionHubContext("unused", Mock.Of<IChatInteractionHubClient>());
-
-        var sender = new DefaultChatNotificationSender(chatHubContext, interactionHubContext);
+        var sender = CreateSender(ChatContextType.AIChatSession, transportMock.Object);
 
         await sender.SendAsync("s1", ChatContextType.AIChatSession, notification);
 
-        clientMock.Verify();
+        transportMock.Verify();
     }
 
     [Fact]
-    public async Task SendAsync_ChatInteraction_CallsReceiveNotificationOnCorrectGroup()
+    public async Task SendAsync_ChatInteraction_DelegatesToTransport()
     {
         var notification = new ChatNotification { Id = "test", Type = "info", Content = "Hello" };
-        var clientMock = new Mock<IChatInteractionHubClient>();
-        clientMock
-            .Setup(c => c.ReceiveNotification(notification))
+        var transportMock = new Mock<IChatNotificationTransport>();
+        transportMock
+            .Setup(t => t.SendNotificationAsync("i1", notification))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
-        var chatHubContext = CreateChatHubContext("unused", Mock.Of<IAIChatHubClient>());
-
-        var interactionHubContext = CreateInteractionHubContext(
-            ChatInteractionHub.GetInteractionGroupName("i1"),
-            clientMock.Object);
-
-        var sender = new DefaultChatNotificationSender(chatHubContext, interactionHubContext);
+        var sender = CreateSender(ChatContextType.ChatInteraction, transportMock.Object);
 
         await sender.SendAsync("i1", ChatContextType.ChatInteraction, notification);
 
-        clientMock.Verify();
+        transportMock.Verify();
     }
 
     [Fact]
     public async Task SendAsync_NullSessionId_ThrowsArgumentException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
             () => sender.SendAsync(null, ChatContextType.AIChatSession, new ChatNotification()));
@@ -72,7 +58,7 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task SendAsync_NullNotification_ThrowsArgumentNullException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => sender.SendAsync("s1", ChatContextType.AIChatSession, null));
@@ -83,32 +69,26 @@ public sealed class DefaultChatNotificationSenderTests
     // ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task UpdateAsync_AIChatSession_CallsUpdateNotificationOnCorrectGroup()
+    public async Task UpdateAsync_AIChatSession_DelegatesToTransport()
     {
         var notification = new ChatNotification { Id = "test", Type = "info", Content = "Updated" };
-        var clientMock = new Mock<IAIChatHubClient>();
-        clientMock
-            .Setup(c => c.UpdateNotification(notification))
+        var transportMock = new Mock<IChatNotificationTransport>();
+        transportMock
+            .Setup(t => t.UpdateNotificationAsync("s1", notification))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
-        var chatHubContext = CreateChatHubContext(
-            AIChatHub.GetSessionGroupName("s1"),
-            clientMock.Object);
-
-        var sender = new DefaultChatNotificationSender(
-            chatHubContext,
-            CreateInteractionHubContext("unused", Mock.Of<IChatInteractionHubClient>()));
+        var sender = CreateSender(ChatContextType.AIChatSession, transportMock.Object);
 
         await sender.UpdateAsync("s1", ChatContextType.AIChatSession, notification);
 
-        clientMock.Verify();
+        transportMock.Verify();
     }
 
     [Fact]
     public async Task UpdateAsync_NullSessionId_ThrowsArgumentException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
             () => sender.UpdateAsync(null, ChatContextType.AIChatSession, new ChatNotification()));
@@ -117,7 +97,7 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task UpdateAsync_NullNotification_ThrowsArgumentNullException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => sender.UpdateAsync("s1", ChatContextType.AIChatSession, null));
@@ -128,53 +108,41 @@ public sealed class DefaultChatNotificationSenderTests
     // ───────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RemoveAsync_AIChatSession_CallsRemoveNotificationOnCorrectGroup()
+    public async Task RemoveAsync_AIChatSession_DelegatesToTransport()
     {
-        var clientMock = new Mock<IAIChatHubClient>();
-        clientMock
-            .Setup(c => c.RemoveNotification("typing"))
+        var transportMock = new Mock<IChatNotificationTransport>();
+        transportMock
+            .Setup(t => t.RemoveNotificationAsync("s1", "typing"))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
-        var chatHubContext = CreateChatHubContext(
-            AIChatHub.GetSessionGroupName("s1"),
-            clientMock.Object);
-
-        var sender = new DefaultChatNotificationSender(
-            chatHubContext,
-            CreateInteractionHubContext("unused", Mock.Of<IChatInteractionHubClient>()));
+        var sender = CreateSender(ChatContextType.AIChatSession, transportMock.Object);
 
         await sender.RemoveAsync("s1", ChatContextType.AIChatSession, "typing");
 
-        clientMock.Verify();
+        transportMock.Verify();
     }
 
     [Fact]
-    public async Task RemoveAsync_ChatInteraction_CallsRemoveNotificationOnCorrectGroup()
+    public async Task RemoveAsync_ChatInteraction_DelegatesToTransport()
     {
-        var clientMock = new Mock<IChatInteractionHubClient>();
-        clientMock
-            .Setup(c => c.RemoveNotification("transfer"))
+        var transportMock = new Mock<IChatNotificationTransport>();
+        transportMock
+            .Setup(t => t.RemoveNotificationAsync("i1", "transfer"))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
-        var interactionHubContext = CreateInteractionHubContext(
-            ChatInteractionHub.GetInteractionGroupName("i1"),
-            clientMock.Object);
-
-        var sender = new DefaultChatNotificationSender(
-            CreateChatHubContext("unused", Mock.Of<IAIChatHubClient>()),
-            interactionHubContext);
+        var sender = CreateSender(ChatContextType.ChatInteraction, transportMock.Object);
 
         await sender.RemoveAsync("i1", ChatContextType.ChatInteraction, "transfer");
 
-        clientMock.Verify();
+        transportMock.Verify();
     }
 
     [Fact]
     public async Task RemoveAsync_NullSessionId_ThrowsArgumentException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
             () => sender.RemoveAsync(null, ChatContextType.AIChatSession, "typing"));
@@ -183,50 +151,47 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task RemoveAsync_EmptyNotificationId_ThrowsArgumentException()
     {
-        var sender = CreateSender();
+        var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
             () => sender.RemoveAsync("s1", ChatContextType.AIChatSession, ""));
     }
 
     // ───────────────────────────────────────────────────────────────
+    // Transport resolution
+    // ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SendAsync_NoTransportRegistered_ThrowsInvalidOperationException()
+    {
+        var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var sender = new DefaultChatNotificationSender(serviceProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sender.SendAsync("s1", ChatContextType.AIChatSession, new ChatNotification { Id = "t" }));
+    }
+
+    // ───────────────────────────────────────────────────────────────
     // Helpers
     // ───────────────────────────────────────────────────────────────
 
-    private static DefaultChatNotificationSender CreateSender()
+    private static DefaultChatNotificationSender CreateSender(
+        ChatContextType chatType,
+        IChatNotificationTransport transport)
     {
-        return new DefaultChatNotificationSender(
-            CreateChatHubContext("any", Mock.Of<IAIChatHubClient>()),
-            CreateInteractionHubContext("any", Mock.Of<IChatInteractionHubClient>()));
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton(chatType, transport);
+
+        return new DefaultChatNotificationSender(services.BuildServiceProvider());
     }
 
-    private static IHubContext<AIChatHub, IAIChatHubClient> CreateChatHubContext(
-        string expectedGroupName,
-        IAIChatHubClient client)
+    private static DefaultChatNotificationSender CreateSenderWithNoOpTransport()
     {
-        var hubClientsMock = new Mock<IHubClients<IAIChatHubClient>>();
-        hubClientsMock
-            .Setup(c => c.Group(expectedGroupName))
-            .Returns(client);
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton<IChatNotificationTransport>(
+            ChatContextType.AIChatSession,
+            Mock.Of<IChatNotificationTransport>());
 
-        var contextMock = new Mock<IHubContext<AIChatHub, IAIChatHubClient>>();
-        contextMock.Setup(c => c.Clients).Returns(hubClientsMock.Object);
-
-        return contextMock.Object;
-    }
-
-    private static IHubContext<ChatInteractionHub, IChatInteractionHubClient> CreateInteractionHubContext(
-        string expectedGroupName,
-        IChatInteractionHubClient client)
-    {
-        var hubClientsMock = new Mock<IHubClients<IChatInteractionHubClient>>();
-        hubClientsMock
-            .Setup(c => c.Group(expectedGroupName))
-            .Returns(client);
-
-        var contextMock = new Mock<IHubContext<ChatInteractionHub, IChatInteractionHubClient>>();
-        contextMock.Setup(c => c.Clients).Returns(hubClientsMock.Object);
-
-        return contextMock.Object;
+        return new DefaultChatNotificationSender(services.BuildServiceProvider());
     }
 }
