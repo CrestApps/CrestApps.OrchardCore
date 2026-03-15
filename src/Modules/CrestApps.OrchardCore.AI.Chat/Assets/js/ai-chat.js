@@ -17,7 +17,7 @@ window.openAIChatManager = function () {
         codeCopiedText: 'Copied!',
         messageTemplate: `
         <div class="ai-chat-messages">
-            <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
+            <div v-for="(message, index) in messages" :key="'msg-' + index" class="ai-chat-message-item">
                 <div>
                     <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
                     <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
@@ -43,6 +43,21 @@ window.openAIChatManager = function () {
                             </button>
                         </span>
                     </div>
+                </div>
+            </div>
+            <div v-for="notification in notifications" :key="'notif-' + notification.id" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
+                <div class="ai-chat-notification-content">
+                    <i v-if="notification.icon" :class="notification.icon" class="ai-chat-notification-icon"></i>
+                    <span class="ai-chat-notification-text">{{ notification.content }}</span>
+                    <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.id)" title="Dismiss">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div v-if="notification.actions && notification.actions.length" class="ai-chat-notification-actions">
+                    <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.id, action.name)">
+                        <i v-if="action.icon" :class="action.icon" class="me-1"></i>
+                        {{ action.label }}
+                    </button>
                 </div>
             </div>
         </div>
@@ -340,6 +355,7 @@ window.openAIChatManager = function () {
                     autoScroll: true,
                     stream: null,
                     messages: [],
+                    notifications: [],
                     prompt: '',
                     documents: config.existingDocuments || [],
                     isUploading: false,
@@ -834,6 +850,18 @@ window.openAIChatManager = function () {
 
                     this.connection.on("ReceiveAudioComplete", (sessionId) => {
                         this.playCollectedAudio();
+                    });
+
+                    this.connection.on("ReceiveNotification", (notification) => {
+                        this.receiveNotification(notification);
+                    });
+
+                    this.connection.on("UpdateNotification", (notification) => {
+                        this.updateNotification(notification);
+                    });
+
+                    this.connection.on("RemoveNotification", (notificationId) => {
+                        this.removeNotification(notificationId);
                     });
 
                     this.connection.onreconnecting(() => {
@@ -1417,6 +1445,9 @@ window.openAIChatManager = function () {
                     this._conversationAssistantMessage = null;
                     this._conversationPartialMessage = null;
 
+                    // Remove any previous conversation ended notification.
+                    this.removeNotification('conversation-ended');
+
                     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
                         .then(stream => {
                             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
@@ -1554,6 +1585,15 @@ window.openAIChatManager = function () {
                             this.messages[i].isStreaming = false;
                         }
                     }
+
+                    // Show a "conversation ended" notification bubble.
+                    this.receiveNotification({
+                        id: 'conversation-ended',
+                        type: 'ended',
+                        content: 'Conversation ended.',
+                        icon: 'fa-solid fa-circle-check',
+                        dismissible: true
+                    });
                 },
                 updateConversationButton() {
                     if (!this.conversationButton) {
@@ -1626,6 +1666,44 @@ window.openAIChatManager = function () {
                     this.messages = this.messages.filter(msg => msg.role !== 'indicator');
                     const removedCount = originalLength - this.messages.length;
                     return removedCount;
+                },
+                receiveNotification(notification) {
+                    if (!notification || !notification.id) {
+                        return;
+                    }
+                    var existingIndex = this.notifications.findIndex(n => n.id === notification.id);
+                    if (existingIndex >= 0) {
+                        this.notifications.splice(existingIndex, 1, notification);
+                    } else {
+                        this.notifications.push(notification);
+                    }
+                    this.$nextTick(() => {
+                        this.scrollToBottom();
+                    });
+                },
+                updateNotification(notification) {
+                    if (!notification || !notification.id) {
+                        return;
+                    }
+                    var existingIndex = this.notifications.findIndex(n => n.id === notification.id);
+                    if (existingIndex >= 0) {
+                        this.notifications.splice(existingIndex, 1, notification);
+                    }
+                },
+                removeNotification(notificationId) {
+                    this.notifications = this.notifications.filter(n => n.id !== notificationId);
+                },
+                dismissNotification(notificationId) {
+                    this.removeNotification(notificationId);
+                },
+                handleNotificationAction(notificationId, actionName) {
+                    if (!this.connection) {
+                        return;
+                    }
+                    var sessionId = this.getSessionId();
+                    this.connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName).catch(function (err) {
+                        console.error("Error handling notification action:", err);
+                    });
                 },
                 scrollToBottom() {
                     if (!this.autoScroll) {

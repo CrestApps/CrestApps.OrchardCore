@@ -30,7 +30,7 @@ window.chatInteractionManager = function () {
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.id\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.id)\" title=\"Dismiss\">\n                            <i class=\"fa-solid fa-xmark\"></i>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.id, action.name)\">\n                            <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
     indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
@@ -314,7 +314,8 @@ window.chatInteractionManager = function () {
           currentAudioElement: null,
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
-          isConversationMode: false
+          isConversationMode: false,
+          notifications: []
         };
       },
       computed: {
@@ -504,6 +505,15 @@ window.chatInteractionManager = function () {
                     if (clearHistoryBtn) {
                       clearHistoryBtn.classList.add('d-none');
                     }
+                  });
+                  _this.connection.on("ReceiveNotification", function (notification) {
+                    _this.receiveNotification(notification);
+                  });
+                  _this.connection.on("UpdateNotification", function (notification) {
+                    _this.updateNotification(notification);
+                  });
+                  _this.connection.on("RemoveNotification", function (notificationId) {
+                    _this.removeNotification(notificationId);
                   });
                   _this.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
@@ -1044,6 +1054,9 @@ window.chatInteractionManager = function () {
           this._conversationPartialTranscript = '';
           this._conversationAssistantMessage = null;
           this._conversationPartialMessage = null;
+
+          // Remove any previous conversation ended notification.
+          this.removeNotification('conversation-ended');
           navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -1182,6 +1195,15 @@ window.chatInteractionManager = function () {
               this.messages[i].isStreaming = false;
             }
           }
+
+          // Show a "conversation ended" notification bubble.
+          this.receiveNotification({
+            id: 'conversation-ended',
+            type: 'ended',
+            content: 'Conversation ended.',
+            icon: 'fa-solid fa-circle-check',
+            dismissible: true
+          });
         },
         updateConversationButton: function updateConversationButton() {
           if (!this.conversationButton) {
@@ -1244,6 +1266,44 @@ window.chatInteractionManager = function () {
         },
         getItemId: function getItemId() {
           return this.inputElement.getAttribute('data-interaction-id');
+        },
+        receiveNotification: function receiveNotification(notification) {
+          // Replace existing notification with same ID, or add new one.
+          var idx = this.notifications.findIndex(function (n) {
+            return n.id === notification.id;
+          });
+          if (idx >= 0) {
+            this.notifications.splice(idx, 1, notification);
+          } else {
+            this.notifications.push(notification);
+          }
+          this.scrollToBottom();
+        },
+        updateNotification: function updateNotification(notification) {
+          var idx = this.notifications.findIndex(function (n) {
+            return n.id === notification.id;
+          });
+          if (idx >= 0) {
+            this.notifications.splice(idx, 1, notification);
+            this.scrollToBottom();
+          }
+        },
+        removeNotification: function removeNotification(notificationId) {
+          this.notifications = this.notifications.filter(function (n) {
+            return n.id !== notificationId;
+          });
+        },
+        dismissNotification: function dismissNotification(notificationId) {
+          this.removeNotification(notificationId);
+        },
+        handleNotificationAction: function handleNotificationAction(notificationId, actionName) {
+          if (!this.connection) {
+            return;
+          }
+          var itemId = this.getItemId();
+          this.connection.invoke('HandleNotificationAction', itemId, notificationId, actionName)["catch"](function (err) {
+            return console.error('Failed to handle notification action:', err);
+          });
         },
         setItemId: function setItemId(itemId) {
           this.inputElement.setAttribute('data-interaction-id', itemId || '');

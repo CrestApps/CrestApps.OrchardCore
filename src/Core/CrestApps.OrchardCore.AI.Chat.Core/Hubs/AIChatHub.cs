@@ -40,6 +40,9 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         _logger = logger;
     }
 
+    protected override ChatContextType GetChatType()
+        => ChatContextType.AIChatSession;
+
     public ChannelReader<CompletionPartialMessage> SendMessage(string profileId, string prompt, string sessionId, string sessionProfileId, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();

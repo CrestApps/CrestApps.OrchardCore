@@ -35,7 +35,7 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.id\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.id)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.id, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
   };
 
@@ -300,6 +300,7 @@ window.openAIChatManager = function () {
           autoScroll: true,
           stream: null,
           messages: [],
+          notifications: [],
           prompt: '',
           documents: config.existingDocuments || [],
           isUploading: false,
@@ -840,6 +841,15 @@ window.openAIChatManager = function () {
                   });
                   _this3.connection.on("ReceiveAudioComplete", function (sessionId) {
                     _this3.playCollectedAudio();
+                  });
+                  _this3.connection.on("ReceiveNotification", function (notification) {
+                    _this3.receiveNotification(notification);
+                  });
+                  _this3.connection.on("UpdateNotification", function (notification) {
+                    _this3.updateNotification(notification);
+                  });
+                  _this3.connection.on("RemoveNotification", function (notificationId) {
+                    _this3.removeNotification(notificationId);
                   });
                   _this3.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
@@ -1484,6 +1494,9 @@ window.openAIChatManager = function () {
           this._conversationPartialTranscript = '';
           this._conversationAssistantMessage = null;
           this._conversationPartialMessage = null;
+
+          // Remove any previous conversation ended notification.
+          this.removeNotification('conversation-ended');
           navigator.mediaDevices.getUserMedia({
             audio: {
               echoCancellation: true,
@@ -1627,6 +1640,15 @@ window.openAIChatManager = function () {
               this.messages[i].isStreaming = false;
             }
           }
+
+          // Show a "conversation ended" notification bubble.
+          this.receiveNotification({
+            id: 'conversation-ended',
+            type: 'ended',
+            content: 'Conversation ended.',
+            icon: 'fa-solid fa-circle-check',
+            dismissible: true
+          });
         },
         updateConversationButton: function updateConversationButton() {
           if (!this.conversationButton) {
@@ -1698,13 +1720,58 @@ window.openAIChatManager = function () {
           var removedCount = originalLength - this.messages.length;
           return removedCount;
         },
-        scrollToBottom: function scrollToBottom() {
+        receiveNotification: function receiveNotification(notification) {
           var _this10 = this;
+          if (!notification || !notification.id) {
+            return;
+          }
+          var existingIndex = this.notifications.findIndex(function (n) {
+            return n.id === notification.id;
+          });
+          if (existingIndex >= 0) {
+            this.notifications.splice(existingIndex, 1, notification);
+          } else {
+            this.notifications.push(notification);
+          }
+          this.$nextTick(function () {
+            _this10.scrollToBottom();
+          });
+        },
+        updateNotification: function updateNotification(notification) {
+          if (!notification || !notification.id) {
+            return;
+          }
+          var existingIndex = this.notifications.findIndex(function (n) {
+            return n.id === notification.id;
+          });
+          if (existingIndex >= 0) {
+            this.notifications.splice(existingIndex, 1, notification);
+          }
+        },
+        removeNotification: function removeNotification(notificationId) {
+          this.notifications = this.notifications.filter(function (n) {
+            return n.id !== notificationId;
+          });
+        },
+        dismissNotification: function dismissNotification(notificationId) {
+          this.removeNotification(notificationId);
+        },
+        handleNotificationAction: function handleNotificationAction(notificationId, actionName) {
+          if (!this.connection) {
+            return;
+          }
+          var sessionId = this.getSessionId();
+          this.connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName)["catch"](function (err) {
+            console.error("Error handling notification action:", err);
+          });
+        },
+        scrollToBottom: function scrollToBottom() {
+          var _this11 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this10.chatContainer.scrollTop = _this10.chatContainer.scrollHeight - _this10.chatContainer.clientHeight;
+            _this11.chatContainer.scrollTop = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -1744,7 +1811,7 @@ window.openAIChatManager = function () {
           });
         },
         initializeApp: function initializeApp() {
-          var _this11 = this;
+          var _this12 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1774,7 +1841,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this11.handleFileInputChange(e);
+                return _this12.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -1782,13 +1849,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this11.handleDragOver(e);
+                  return _this12.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this11.handleDragLeave(e);
+                  return _this12.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this11.handleDrop(e);
+                  return _this12.handleDrop(e);
                 });
               }
             }
@@ -1796,55 +1863,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this11.stream) {
+            if (!_this12.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight - _this11.chatContainer.scrollTop <= threshold;
-            _this11.autoScroll = atBottom;
+            var atBottom = _this12.chatContainer.scrollHeight - _this12.chatContainer.clientHeight - _this12.chatContainer.scrollTop <= threshold;
+            _this12.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this11.stream != null) {
+            if (_this12.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this11.buttonElement.click();
+              _this12.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this11.handleUserInput(e);
+            _this12.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this11.buttonElement.removeAttribute('disabled');
+              _this12.buttonElement.removeAttribute('disabled');
             } else {
-              _this11.buttonElement.setAttribute('disabled', true);
+              _this12.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this11.stream != null) {
-              _this11.stream.dispose();
-              _this11.stream = null;
-              _this11.streamingFinished();
-              _this11.hideTypingIndicator();
+            if (_this12.stream != null) {
+              _this12.stream.dispose();
+              _this12.stream = null;
+              _this12.streamingFinished();
+              _this12.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this11.messages.length > 0) {
-                var lastMsg = _this11.messages[_this11.messages.length - 1];
+              if (_this12.messages.length > 0) {
+                var lastMsg = _this12.messages[_this12.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this11.messages.pop();
+                  _this12.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this11.sendMessage();
+            _this12.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this11.generatePrompt(e.target);
+              _this12.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -1856,8 +1923,8 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this11.loadSession(sessionId);
-              _this11.showChatScreen();
+              _this12.loadSession(sessionId);
+              _this12.showChatScreen();
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1866,7 +1933,7 @@ window.openAIChatManager = function () {
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this11.refreshAllFeedbackIcons();
+            _this12.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -1898,7 +1965,7 @@ window.openAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this11.toggleRecording();
+                _this12.toggleRecording();
               });
             }
           }
@@ -1908,7 +1975,7 @@ window.openAIChatManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this11.toggleConversationMode();
+                _this12.toggleConversationMode();
               });
             }
           }
@@ -1940,7 +2007,7 @@ window.openAIChatManager = function () {
           }
         },
         initializeWidget: function initializeWidget() {
-          var _this12 = this;
+          var _this13 = this;
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
@@ -1969,14 +2036,14 @@ window.openAIChatManager = function () {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {
               showHistoryButton.addEventListener('click', function () {
-                _this12.chatHistorySection.classList.toggle('show');
+                _this13.chatHistorySection.classList.toggle('show');
               });
             }
             if (config.widget.closeHistoryButton) {
               var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
               if (closeHistoryButton) {
                 closeHistoryButton.addEventListener('click', function () {
-                  _this12.showChatScreen();
+                  _this13.showChatScreen();
                 });
               }
             }
@@ -1985,8 +2052,8 @@ window.openAIChatManager = function () {
             var newChatButton = document.querySelector(config.widget.newChatButton);
             if (newChatButton) {
               newChatButton.addEventListener('click', function () {
-                _this12.resetSession();
-                _this12.showChatScreen();
+                _this13.resetSession();
+                _this13.showChatScreen();
               });
             }
           }
@@ -2122,17 +2189,17 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this13 = this;
+        var _this14 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
           return _regenerator().w(function (_context6) {
             while (1) switch (_context6.n) {
               case 0:
                 _context6.n = 1;
-                return _this13.startConnection();
+                return _this14.startConnection();
               case 1:
-                _this13.initializeApp();
+                _this14.initializeApp();
                 if (config.widget) {
-                  _this13.initializeWidget();
+                  _this14.initializeWidget();
                 }
               case 2:
                 return _context6.a(2);
