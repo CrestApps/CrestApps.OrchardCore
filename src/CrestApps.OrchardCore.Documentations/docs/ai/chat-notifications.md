@@ -479,12 +479,44 @@ The UI applies the CSS class `ai-chat-notification-queue` (derived from the `Typ
 The notification system is designed to complement [Chat Response Handlers](./response-handlers.md). A typical integration pattern:
 
 1. **Transfer function** sets `ResponseHandlerName` on the session → calls `ShowTransferAsync()`.
-2. **External webhook** receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
-3. **External webhook** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
-4. **External webhook** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
+2. **External webhook or WebSocket** receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
+3. **External webhook or WebSocket** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
+4. **External webhook or WebSocket** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
 5. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
 
-See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern.
+### Agent Connected Notification Example
+
+When the external platform signals that an agent has joined, use `ShowAgentConnectedAsync()` to display a notification:
+
+```csharp
+// In your webhook endpoint or WebSocket event handler:
+var notifications = services.GetRequiredService<IChatNotificationSender>();
+var localizer = services.GetRequiredService<IStringLocalizer<MyHandler>>();
+
+// First, hide the transfer indicator.
+await notifications.HideTransferAsync(sessionId, ChatContextType.AIChatSession);
+
+// Then, show the agent-connected notification with the agent's name.
+await notifications.ShowAgentConnectedAsync(
+    sessionId,
+    ChatContextType.AIChatSession,
+    localizer,
+    agentName: "Sarah");
+// Result: "You are now connected to Sarah." with a dismissible info bubble.
+```
+
+When using the **WebSocket relay** infrastructure, agent-connected events are routed automatically by the `IExternalChatRelayEventHandler`:
+
+```csharp
+// The relay receives a JSON event like:
+// { "type": "agent_connected", "agent_name": "Sarah" }
+//
+// The default IExternalChatRelayEventHandler automatically:
+// 1. Calls HideTransferAsync() to remove the transfer indicator.
+// 2. Calls ShowAgentConnectedAsync() with the agent's name.
+```
+
+See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and WebSocket integration examples.
 
 ## Built-In Notification Types (CSS)
 

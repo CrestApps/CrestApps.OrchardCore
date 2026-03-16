@@ -48,7 +48,8 @@ User sends prompt
 | Type | Description | Example |
 | --- | --- | --- |
 | **Streaming** | Returns an `IAsyncEnumerable<StreamingChatCompletionUpdate>` immediately. The hub enumerates the stream and sends chunks to the client in real time. | AI handler (default) |
-| **Deferred** | Returns `IsDeferred = true`. The hub saves the user prompt and completes without an assistant message. The response arrives later via webhook or external callback. | Live agent platforms |
+| **Deferred (Webhook)** | Returns `IsDeferred = true`. The hub saves the user prompt and completes without an assistant message. The response arrives later via webhook or external callback. | Live agent platforms (one-way HTTP) |
+| **Deferred (WebSocket)** | Returns `IsDeferred = true`. The handler opens a persistent WebSocket connection to the external system. Events flow back in real time and are routed to notifications and messages automatically. | Live agent platforms (bidirectional) |
 
 ### Key Interfaces
 
@@ -56,6 +57,9 @@ User sends prompt
 - **`IChatResponseHandlerResolver`** — Resolves handler instances by name.
 - **`ChatResponseHandlerContext`** — Context passed to handlers (prompt, connection ID, session, conversation history, etc.).
 - **`ChatResponseHandlerResult`** — Result with `IsDeferred` flag and optional `ResponseStream`.
+- **`IExternalChatRelay`** — Persistent relay connection for real-time communication with a third-party system.
+- **`IExternalChatRelayManager`** — Singleton that manages relay connection lifecycles by session ID.
+- **`IExternalChatRelayEventHandler`** — Routes events received from an external relay to notifications and messages.
 
 ## Creating a Custom Handler
 
@@ -233,6 +237,399 @@ Register the endpoint in your module's `Startup.cs`:
 public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
 {
     routes.AddGenesysWebhookEndpoint();
+}
+```
+
+### Step 4: Real-Time Communication via WebSocket (Alternative to Webhook)
+
+While webhooks work well for many integration scenarios, some third-party platforms support **WebSocket connections** for real-time bidirectional communication. WebSockets keep a persistent connection open, enabling instant delivery of events like typing indicators, agent-connected notifications, wait-time updates, and messages — without polling or callback endpoints.
+
+:::tip
+The WebSocket relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`** library. The key services are:
+
+- **`IExternalChatRelayManager`** — Singleton that manages relay connections per session.
+- **`IExternalChatRelay`** — Interface for a persistent relay connection to an external system.
+- **`IExternalChatRelayEventHandler`** — Routes incoming relay events to notifications and messages.
+:::
+
+#### When to Use WebSocket vs. Webhook
+
+| Aspect | Webhook | WebSocket |
+| --- | --- | --- |
+| **Connection** | External system calls your endpoint | You maintain a persistent connection |
+| **Latency** | Higher (HTTP round-trip per event) | Lower (persistent connection) |
+| **Typing indicators** | Require frequent HTTP calls | Native real-time delivery |
+| **Complexity** | Simpler (stateless endpoints) | More complex (connection lifecycle management) |
+| **Firewall** | Requires inbound endpoint access | Outbound connection only |
+
+#### Implementing a WebSocket Chat Relay
+
+Create a class that implements `IExternalChatRelay`. This class manages the `ClientWebSocket` connection to the third-party platform and routes incoming events back through the notification and message pipelines.
+
+```csharp
+using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Chat.Hubs;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Support;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+public sealed class GenesysWebSocketRelay : IExternalChatRelay
+{
+    private readonly Uri _genesysUri;
+    private readonly ILogger _logger;
+
+    private ClientWebSocket _webSocket;
+    private CancellationTokenSource _listenerCts;
+    private string _sessionId;
+    private ChatContextType _chatType;
+    private IServiceProvider _services;
+
+    public GenesysWebSocketRelay(Uri genesysUri, ILogger<GenesysWebSocketRelay> logger)
+    {
+        _genesysUri = genesysUri;
+        _logger = logger;
+    }
+
+    public bool IsConnected => _webSocket?.State == WebSocketState.Open;
+
+    public async Task ConnectAsync(
+        ExternalChatRelayContext context,
+        CancellationToken cancellationToken = default)
+    {
+        _sessionId = context.SessionId;
+        _chatType = context.ChatType;
+        _services = context.Services;
+
+        _webSocket = new ClientWebSocket();
+        // Add authentication headers as required by the external platform.
+        _webSocket.Options.SetRequestHeader("Authorization", "Bearer <your-api-key>");
+
+        await _webSocket.ConnectAsync(_genesysUri, cancellationToken);
+
+        // Start a background listener for incoming messages from the external system.
+        _listenerCts = new CancellationTokenSource();
+        _ = Task.Run(() => ListenForEventsAsync(_listenerCts.Token), _listenerCts.Token);
+    }
+
+    public async Task SendPromptAsync(string text, CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            throw new InvalidOperationException("WebSocket is not connected.");
+        }
+
+        var message = JsonSerializer.Serialize(new { type = "message", content = text });
+        var bytes = Encoding.UTF8.GetBytes(message);
+        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
+    }
+
+    public async Task SendSignalAsync(
+        string signalName,
+        IDictionary<string, string> data = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            return;
+        }
+
+        var message = JsonSerializer.Serialize(new { type = "signal", signal = signalName, data });
+        var bytes = Encoding.UTF8.GetBytes(message);
+        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
+    }
+
+    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+    {
+        if (_listenerCts is not null)
+        {
+            await _listenerCts.CancelAsync();
+        }
+
+        if (_webSocket?.State == WebSocketState.Open)
+        {
+            await _webSocket.CloseAsync(
+                WebSocketCloseStatus.NormalClosure, "Session ended", cancellationToken);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _listenerCts?.Dispose();
+        _webSocket?.Dispose();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task ListenForEventsAsync(CancellationToken cancellationToken)
+    {
+        var buffer = new byte[4096];
+
+        try
+        {
+            while (_webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+            {
+                var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    break;
+                }
+
+                var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                var relayEvent = ParseEvent(json);
+
+                if (relayEvent is null)
+                {
+                    continue;
+                }
+
+                await DispatchEventAsync(relayEvent, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when disconnecting.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in WebSocket listener for session '{SessionId}'.", _sessionId);
+        }
+    }
+
+    private async Task DispatchEventAsync(
+        ExternalChatRelayEvent relayEvent,
+        CancellationToken cancellationToken)
+    {
+        // Route notification-type events (typing, connected, etc.) through the event handler.
+        var eventHandler = _services.GetRequiredService<IExternalChatRelayEventHandler>();
+        await eventHandler.HandleEventAsync(_sessionId, _chatType, relayEvent, cancellationToken);
+
+        // Handle message events separately — save to prompt store and notify via SignalR.
+        if (relayEvent.EventType == ExternalChatRelayEventType.Message)
+        {
+            await HandleMessageAsync(relayEvent);
+        }
+    }
+
+    private async Task HandleMessageAsync(ExternalChatRelayEvent relayEvent)
+    {
+        if (_chatType == ChatContextType.AIChatSession)
+        {
+            var sessionManager = _services.GetRequiredService<IAIChatSessionManager>();
+            var promptStore = _services.GetRequiredService<IAIChatSessionPromptStore>();
+            var hubContext = _services.GetRequiredService<IHubContext<AIChatHub>>();
+
+            var session = await sessionManager.FindByIdAsync(_sessionId);
+            if (session is null)
+            {
+                return;
+            }
+
+            var prompt = new AIChatSessionPrompt
+            {
+                ItemId = IdGenerator.GenerateId(),
+                SessionId = session.SessionId,
+                Role = ChatRole.Assistant,
+                Content = relayEvent.Content,
+            };
+            await promptStore.CreateAsync(prompt);
+
+            var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
+            await hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
+            {
+                sessionId = session.SessionId,
+                messageId = prompt.ItemId,
+                content = relayEvent.Content,
+                role = "assistant",
+            });
+        }
+        // For ChatInteraction, follow the same pattern with the interaction pipeline.
+    }
+
+    private static ExternalChatRelayEvent ParseEvent(string json)
+    {
+        // Parse the JSON payload from the external platform into a relay event.
+        // The actual structure depends on the third-party platform's protocol.
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("type", out var typeProp))
+        {
+            return null;
+        }
+
+        return typeProp.GetString() switch
+        {
+            "agent_typing" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.AgentTyping,
+                AgentName = root.TryGetProperty("agent_name", out var name)
+                    ? name.GetString() : null,
+            },
+            "agent_stopped_typing" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.AgentStoppedTyping,
+            },
+            "agent_connected" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.AgentConnected,
+                AgentName = root.TryGetProperty("agent_name", out var agentName)
+                    ? agentName.GetString() : null,
+            },
+            "message" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.Message,
+                Content = root.TryGetProperty("content", out var content)
+                    ? content.GetString() : string.Empty,
+                AgentName = root.TryGetProperty("agent_name", out var msgAgent)
+                    ? msgAgent.GetString() : null,
+            },
+            "wait_time" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.WaitTimeUpdated,
+                Content = root.TryGetProperty("estimated_wait", out var wait)
+                    ? wait.GetString() : null,
+            },
+            "session_ended" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.SessionEnded,
+                Content = root.TryGetProperty("reason", out var reason)
+                    ? reason.GetString() : null,
+            },
+            _ => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventType.Custom,
+                CustomEventName = typeProp.GetString(),
+                Content = json,
+            },
+        };
+    }
+}
+```
+
+#### Using the Relay in a Response Handler
+
+Modify your response handler to use the relay manager instead of (or alongside) a one-way API call:
+
+```csharp
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+public sealed class GenesysWebSocketResponseHandler : IChatResponseHandler
+{
+    public string Name => "GenesysWebSocket";
+
+    public async Task<ChatResponseHandlerResult> HandleAsync(
+        ChatResponseHandlerContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var relayManager = context.Services.GetRequiredService<IExternalChatRelayManager>();
+        var loggerFactory = context.Services.GetRequiredService<ILoggerFactory>();
+
+        // Get or create a persistent WebSocket relay for this session.
+        var relay = await relayManager.GetOrCreateAsync(
+            context.SessionId,
+            new ExternalChatRelayContext
+            {
+                SessionId = context.SessionId,
+                ChatType = context.ChatType,
+                Services = context.Services,
+            },
+            () => new GenesysWebSocketRelay(
+                new Uri("wss://api.genesys.example.com/chat"),
+                loggerFactory.CreateLogger<GenesysWebSocketRelay>()),
+            cancellationToken);
+
+        // Forward the user's prompt to the external system via the WebSocket.
+        await relay.SendPromptAsync(context.Prompt, cancellationToken);
+
+        // Return deferred — the response will come back via the WebSocket listener.
+        return ChatResponseHandlerResult.Deferred();
+    }
+}
+```
+
+#### Sending Signals Back to the External System
+
+Users can also send signals (e.g., thumbs up/down, feedback) to the external system via the relay. Create an `IChatNotificationActionHandler` that forwards these signals:
+
+```csharp
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.DependencyInjection;
+
+public sealed class ThumbsUpActionHandler : IChatNotificationActionHandler
+{
+    public async Task HandleAsync(
+        ChatNotificationActionContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var relayManager = context.Services.GetRequiredService<IExternalChatRelayManager>();
+        var relay = relayManager.Get(context.SessionId);
+
+        if (relay is not null && relay.IsConnected)
+        {
+            await relay.SendSignalAsync("thumbs-up", cancellationToken: cancellationToken);
+        }
+
+        var notifications = context.Services.GetRequiredService<IChatNotificationSender>();
+        await notifications.RemoveAsync(context.SessionId, context.ChatType, context.NotificationId);
+    }
+}
+```
+
+#### Registering WebSocket Handler Services
+
+Register everything in your module's `Startup.cs`:
+
+```csharp
+using CrestApps.OrchardCore.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Modules;
+
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Register the WebSocket-based response handler.
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IChatResponseHandler, GenesysWebSocketResponseHandler>());
+
+        // Register signal action handlers.
+        services.AddKeyedScoped<IChatNotificationActionHandler, ThumbsUpActionHandler>("thumbs-up");
+    }
+}
+```
+
+#### Cleaning Up WebSocket Connections
+
+Close the relay when the session ends. The built-in `end-session` action handler closes the session, but you should also close the relay. Override or extend the action handler:
+
+```csharp
+public sealed class GenesysEndSessionActionHandler : IChatNotificationActionHandler
+{
+    public async Task HandleAsync(
+        ChatNotificationActionContext context,
+        CancellationToken cancellationToken = default)
+    {
+        // Close the WebSocket relay for this session.
+        var relayManager = context.Services.GetRequiredService<IExternalChatRelayManager>();
+        await relayManager.CloseAsync(context.SessionId, cancellationToken);
+
+        // Show the session-ended notification.
+        var notifications = context.Services.GetRequiredService<IChatNotificationSender>();
+        var localizer = context.Services.GetRequiredService<IStringLocalizer<GenesysEndSessionActionHandler>>();
+        await notifications.ShowSessionEndedAsync(context.SessionId, context.ChatType, localizer);
+    }
 }
 ```
 
@@ -478,22 +875,27 @@ var handler = handlerResolver.Resolve(session.ResponseHandlerName, ChatMode.Text
 
 ## UI Notifications for Response Handlers
 
-When building deferred response handlers, you typically need to provide real-time feedback to users — typing indicators, transfer status, and session endings. The **[Chat UI Notifications](./chat-notifications.md)** system provides a C#-only API for this:
+When building deferred response handlers, you typically need to provide real-time feedback to users — typing indicators, transfer status, agent-connected notifications, and session endings. The **[Chat UI Notifications](./chat-notifications.md)** system provides a C#-only API for this:
 
 ```csharp
-// In your webhook that receives external events:
+// In your webhook or WebSocket handler that receives external events:
 var notifications = services.GetRequiredService<IChatNotificationSender>();
+var localizer = services.GetRequiredService<IStringLocalizer<MyHandler>>();
 
 // Show a typing indicator when the agent starts typing.
-await notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, "Mike");
+await notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, localizer, "Mike");
 
 // Show a transfer indicator with wait time and cancel button.
-await notifications.ShowTransferAsync(sessionId, ChatContextType.AIChatSession,
+await notifications.ShowTransferAsync(sessionId, ChatContextType.AIChatSession, localizer,
     estimatedWaitTime: "About 2 minutes",
     cancellable: true);
 
+// When the agent connects, hide the transfer indicator and show agent-connected.
+await notifications.HideTransferAsync(sessionId, ChatContextType.AIChatSession);
+await notifications.ShowAgentConnectedAsync(sessionId, ChatContextType.AIChatSession, localizer, "Mike");
+
 // End the session and notify the user.
-await notifications.ShowSessionEndedAsync(sessionId, ChatContextType.AIChatSession);
+await notifications.ShowSessionEndedAsync(sessionId, ChatContextType.AIChatSession, localizer);
 ```
 
 See [Chat UI Notifications](./chat-notifications.md) for full documentation and examples.
