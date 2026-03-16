@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 
@@ -6,22 +7,38 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IExternalChatRelayEventHandler"/> that routes
-/// relay events to the <see cref="IChatNotificationSender"/> for typing indicators,
-/// agent-connected notifications, wait-time updates, connection-status indicators,
-/// and session-ended system messages.
+/// relay events through keyed <see cref="IExternalChatRelayNotificationBuilder"/> services
+/// and <see cref="IExternalChatRelayNotificationHandler"/> for extensible notification handling.
 /// </summary>
+/// <remarks>
+/// <para>
+/// For each event, this handler resolves an <see cref="IExternalChatRelayNotificationBuilder"/>
+/// keyed by <see cref="ExternalChatRelayEvent.EventType"/>. If a builder is found, it builds an
+/// <see cref="ExternalChatRelayNotificationResult"/> which is then processed by the
+/// <see cref="IExternalChatRelayNotificationHandler"/> to remove and/or send notifications.
+/// </para>
+/// <para>
+/// To handle custom event types, register a keyed builder:
+/// <code>
+/// services.AddKeyedScoped&lt;IExternalChatRelayNotificationBuilder, MyBuilder&gt;("my-event-type");
+/// </code>
+/// </para>
+/// </remarks>
 internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayEventHandler
 {
-    private readonly IChatNotificationSender _notifications;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IExternalChatRelayNotificationHandler _notificationHandler;
     private readonly IStringLocalizer _localizer;
     private readonly ILogger _logger;
 
     public DefaultExternalChatRelayEventHandler(
-        IChatNotificationSender notifications,
+        IServiceProvider serviceProvider,
+        IExternalChatRelayNotificationHandler notificationHandler,
         IStringLocalizer<DefaultExternalChatRelayEventHandler> localizer,
         ILogger<DefaultExternalChatRelayEventHandler> logger)
     {
-        _notifications = notifications;
+        _serviceProvider = serviceProvider;
+        _notificationHandler = notificationHandler;
         _localizer = localizer;
         _logger = logger;
     }
@@ -35,70 +52,22 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         ArgumentNullException.ThrowIfNull(relayEvent);
 
-        switch (relayEvent.EventType)
+        var builder = _serviceProvider.GetKeyedService<IExternalChatRelayNotificationBuilder>(relayEvent.EventType);
+
+        if (builder != null)
         {
-            case ExternalChatRelayEventTypes.AgentTyping:
-                await _notifications.ShowTypingAsync(sessionId, chatType, _localizer, relayEvent.AgentName);
-                break;
-
-            case ExternalChatRelayEventTypes.AgentStoppedTyping:
-                await _notifications.HideTypingAsync(sessionId, chatType);
-                break;
-
-            case ExternalChatRelayEventTypes.AgentConnected:
-                await _notifications.HideTransferAsync(sessionId, chatType);
-                await _notifications.ShowAgentConnectedAsync(
-                    sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
-                break;
-
-            case ExternalChatRelayEventTypes.AgentDisconnected:
-                await _notifications.HideAgentConnectedAsync(sessionId, chatType);
-                break;
-
-            case ExternalChatRelayEventTypes.AgentReconnecting:
-                await _notifications.ShowAgentReconnectingAsync(sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
-                break;
-
-            case ExternalChatRelayEventTypes.ConnectionLost:
-                await _notifications.ShowConnectionLostAsync(sessionId, chatType, _localizer, relayEvent.Content);
-                break;
-
-            case ExternalChatRelayEventTypes.ConnectionRestored:
-                await _notifications.HideConnectionLostAsync(sessionId, chatType);
-                break;
-
-            case ExternalChatRelayEventTypes.WaitTimeUpdated:
-                await _notifications.UpdateTransferAsync(
-                    sessionId, chatType, _localizer, estimatedWaitTime: relayEvent.Content);
-                break;
-
-            case ExternalChatRelayEventTypes.SessionEnded:
-                await _notifications.ShowSessionEndedAsync(sessionId, chatType, _localizer, relayEvent.Content);
-                break;
-
-            case ExternalChatRelayEventTypes.Message:
-                // Message events are not handled by the notification sender.
-                // They must be handled by the relay implementation directly using
-                // IHubContext to write the message and notify the SignalR group.
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Message event for session '{SessionId}' should be handled by the relay implementation.",
-                        sessionId);
-                }
-
-                break;
-
-            default:
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Unrecognized event type '{EventType}' for session '{SessionId}' is not handled by the default handler.",
-                        relayEvent.EventType,
-                        sessionId);
-                }
-
-                break;
+            var result = builder.Build(relayEvent, _localizer);
+            await _notificationHandler.HandleAsync(sessionId, chatType, result, cancellationToken);
+        }
+        else
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "No notification builder registered for event type '{EventType}' in session '{SessionId}'.",
+                    relayEvent.EventType,
+                    sessionId);
+            }
         }
     }
 }

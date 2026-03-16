@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 using CrestApps.OrchardCore.AI.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -10,14 +12,41 @@ namespace CrestApps.OrchardCore.Tests.ChatNotifications;
 public sealed class DefaultExternalChatRelayEventHandlerTests
 {
     private readonly Mock<IChatNotificationSender> _senderMock = new();
-    private readonly DefaultExternalChatRelayEventHandler _handler;
 
-    public DefaultExternalChatRelayEventHandlerTests()
+    private DefaultExternalChatRelayEventHandler CreateHandler(IServiceProvider serviceProvider)
     {
-        _handler = new DefaultExternalChatRelayEventHandler(
-            _senderMock.Object,
+        return new DefaultExternalChatRelayEventHandler(
+            serviceProvider,
+            new DefaultExternalChatRelayNotificationHandler(_senderMock.Object),
             new PassthroughStringLocalizer<DefaultExternalChatRelayEventHandler>(),
             NullLogger<DefaultExternalChatRelayEventHandler>.Instance);
+    }
+
+    private static ServiceProvider BuildServiceProvider(params (string eventType, IExternalChatRelayNotificationBuilder builder)[] builders)
+    {
+        var services = new ServiceCollection();
+        foreach (var (eventType, builder) in builders)
+        {
+            services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder>(eventType, builder);
+        }
+
+        return services.BuildServiceProvider();
+    }
+
+    private static ServiceProvider BuildServiceProviderWithBuiltInBuilders()
+    {
+        var services = new ServiceCollection();
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, AgentTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentTyping);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, AgentStoppedTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentStoppedTyping);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, AgentConnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentConnected);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, AgentDisconnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentDisconnected);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, AgentReconnectingNotificationBuilder>(ExternalChatRelayEventTypes.AgentReconnecting);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, ConnectionLostNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionLost);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, ConnectionRestoredNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionRestored);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, WaitTimeUpdatedNotificationBuilder>(ExternalChatRelayEventTypes.WaitTimeUpdated);
+        services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder, SessionEndedNotificationBuilder>(ExternalChatRelayEventTypes.SessionEnded);
+
+        return services.BuildServiceProvider();
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -27,11 +56,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentTyping_CallsShowTyping()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentTyping,
             AgentName = "Mike",
@@ -46,11 +78,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentTyping_WithoutName_CallsShowTyping()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentTyping,
         }, TestContext.Current.CancellationToken);
@@ -68,11 +103,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentStoppedTyping_CallsHideTyping()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.Typing))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentStoppedTyping,
         }, TestContext.Current.CancellationToken);
@@ -89,6 +127,9 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentConnected_HidesTransferAndShowsConnected()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.Transfer))
             .Returns(Task.CompletedTask);
@@ -96,7 +137,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentConnected,
             AgentName = "Sarah",
@@ -114,6 +155,9 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentConnected_WithCustomMessage_UsesCustomContent()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         ChatNotification captured = null;
         _senderMock
             .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, It.IsAny<string>()))
@@ -123,7 +167,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentConnected,
             AgentName = "Mike",
@@ -141,11 +185,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentDisconnected_HidesAgentConnected()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.AgentConnected))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentDisconnected,
         }, TestContext.Current.CancellationToken);
@@ -162,11 +209,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_AgentReconnecting_ShowsReconnectingNotification()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentReconnecting,
             AgentName = "Sarah",
@@ -185,11 +235,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_ConnectionLost_ShowsConnectionLostNotification()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.ConnectionLost,
         }, TestContext.Current.CancellationToken);
@@ -207,11 +260,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_ConnectionRestored_HidesConnectionLostNotification()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.ConnectionLost))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.ConnectionRestored,
         }, TestContext.Current.CancellationToken);
@@ -228,11 +284,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_WaitTimeUpdated_UpdatesTransfer()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.WaitTimeUpdated,
             Content = "3 minutes",
@@ -253,11 +312,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_SessionEnded_ShowsSessionEnded()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.SessionEnded,
             Content = "The agent has ended the session.",
@@ -273,11 +335,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [Fact]
     public async Task HandleEventAsync_SessionEnded_DefaultMessage()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.SessionEnded,
         }, TestContext.Current.CancellationToken);
@@ -289,13 +354,16 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     }
 
     // ───────────────────────────────────────────────────────────────
-    // Message (not handled by notification sender)
+    // No builder registered (unrecognized event types)
     // ───────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task HandleEventAsync_Message_DoesNotCallNotificationSender()
     {
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.Message,
             Content = "Hello from agent",
@@ -309,14 +377,13 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
             Times.Never);
     }
 
-    // ───────────────────────────────────────────────────────────────
-    // Custom / unrecognized events (not handled by default)
-    // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleEventAsync_CustomEventType_DoesNotCallNotificationSender()
     {
-        await _handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
         {
             EventType = "thumbs-up",
         }, TestContext.Current.CancellationToken);
@@ -327,22 +394,54 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     }
 
     // ───────────────────────────────────────────────────────────────
+    // Custom keyed builder
+    // ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task HandleEventAsync_CustomBuilder_IsResolvedAndUsed()
+    {
+        var customBuilder = new TestCustomNotificationBuilder();
+        using var sp = BuildServiceProvider(("supervisor-joined", customBuilder));
+        var handler = CreateHandler(sp);
+
+        _senderMock
+            .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
+            .Returns(Task.CompletedTask);
+
+        await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
+        {
+            EventType = "supervisor-joined",
+        }, TestContext.Current.CancellationToken);
+
+        _senderMock.Verify(
+            s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
+                n => n.Id == "supervisor-joined" && n.Type == "info")),
+            Times.Once);
+    }
+
+    // ───────────────────────────────────────────────────────────────
     // Validation
     // ───────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task HandleEventAsync_NullSessionId_ThrowsArgumentException()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => _handler.HandleEventAsync(
+            () => handler.HandleEventAsync(
                 null, ChatContextType.AIChatSession, new ExternalChatRelayEvent(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task HandleEventAsync_NullEvent_ThrowsArgumentNullException()
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _handler.HandleEventAsync(
+            () => handler.HandleEventAsync(
                 "s1", ChatContextType.AIChatSession, null, TestContext.Current.CancellationToken));
     }
 
@@ -355,11 +454,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     [InlineData(ChatContextType.ChatInteraction)]
     public async Task HandleEventAsync_AgentTyping_WorksWithBothChatTypes(ChatContextType chatType)
     {
+        using var sp = BuildServiceProviderWithBuiltInBuilders();
+        var handler = CreateHandler(sp);
+
         _senderMock
             .Setup(s => s.SendAsync("s1", chatType, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
-        await _handler.HandleEventAsync("s1", chatType, new ExternalChatRelayEvent
+        await handler.HandleEventAsync("s1", chatType, new ExternalChatRelayEvent
         {
             EventType = ExternalChatRelayEventTypes.AgentTyping,
             AgentName = "Agent",
@@ -372,8 +474,26 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
     }
 
     // ───────────────────────────────────────────────────────────────
-    // Test helpers: pass-through localizers
+    // Test helpers
     // ───────────────────────────────────────────────────────────────
+
+    private sealed class TestCustomNotificationBuilder : IExternalChatRelayNotificationBuilder
+    {
+        public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+        {
+            return new ExternalChatRelayNotificationResult
+            {
+                Notification = new ChatNotification
+                {
+                    Id = "supervisor-joined",
+                    Type = "info",
+                    Content = "A supervisor has joined.",
+                    Icon = "fa-solid fa-user-shield",
+                    Dismissible = true,
+                },
+            };
+        }
+    }
 
     private sealed class PassthroughStringLocalizer : IStringLocalizer
     {

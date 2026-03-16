@@ -249,7 +249,9 @@ The relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`**
 
 - **`IExternalChatRelayManager`** — Singleton that manages relay connections per session.
 - **`IExternalChatRelay`** — Protocol-agnostic interface for a persistent relay connection to an external system.
-- **`IExternalChatRelayEventHandler`** — Routes incoming relay events to notifications and messages.
+- **`IExternalChatRelayEventHandler`** — Routes incoming relay events through keyed builders and handlers.
+- **`IExternalChatRelayNotificationBuilder`** — Keyed builder (per event type) that builds the notification result.
+- **`IExternalChatRelayNotificationHandler`** — Handles sending/removing notifications from the builder's result.
 :::
 
 #### Message Flow: Which Interface Does What
@@ -264,72 +266,69 @@ Understanding which interface handles each direction of communication is key:
 | **External App → User** (messages) | Your `IExternalChatRelay` implementation | Receives message events from the external system and writes them to the prompt store via `IAIChatSessionPromptStore`, then notifies the SignalR group via `IHubContext<AIChatHub>`. This is handled directly in your relay implementation's `DispatchEventAsync` method. |
 
 :::note
-`ExternalChatRelayEvent.EventType` is a **string**, not an enum. Well-known event types are defined as constants in `ExternalChatRelayEventTypes` (e.g., `ExternalChatRelayEventTypes.AgentTyping`). You can use **any custom string** for platform-specific events — the default handler will log and skip unrecognized types, and custom `IExternalChatRelayEventHandler` implementations can handle them.
+`ExternalChatRelayEvent.EventType` is a **string**, not an enum. Well-known event types are defined as constants in `ExternalChatRelayEventTypes` (e.g., `ExternalChatRelayEventTypes.AgentTyping`). You can use **any custom string** for platform-specific events — just register a keyed `IExternalChatRelayNotificationBuilder` for your event type.
 :::
 
 #### Extending with Custom Event Types
 
-The relay event system is fully extensible. The `DefaultExternalChatRelayEventHandler` handles built-in event types. To handle custom events (or override built-in behavior), register your own `IExternalChatRelayEventHandler` implementation **before** the framework's default:
+The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. If a builder is found, it produces an `ExternalChatRelayNotificationResult` (which notifications to remove and/or send), which is then processed by the `IExternalChatRelayNotificationHandler`.
+
+To handle a custom event type, register a keyed builder in your module's `Startup.cs`:
 
 ```csharp
-// In your module's Startup.cs, register your handler before the default is registered.
-// The default uses TryAddScoped, so your registration wins.
-services.AddScoped<IExternalChatRelayEventHandler, MyCustomRelayEventHandler>();
+// In your module's Startup.cs:
+services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
 ```
 
-Your custom handler can handle platform-specific events and delegate built-in events:
+Then implement the builder:
 
 ```csharp
-public sealed class MyCustomRelayEventHandler : IExternalChatRelayEventHandler
+public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
 {
-    private readonly IChatNotificationSender _notifications;
-    private readonly IStringLocalizer _localizer;
-
-    public MyCustomRelayEventHandler(
-        IChatNotificationSender notifications,
-        IStringLocalizer<MyCustomRelayEventHandler> localizer)
-    {
-        _notifications = notifications;
-        _localizer = localizer;
-    }
-
-    public async Task HandleEventAsync(
-        string sessionId,
-        ChatContextType chatType,
+    public ExternalChatRelayNotificationResult Build(
         ExternalChatRelayEvent relayEvent,
-        CancellationToken cancellationToken = default)
+        IStringLocalizer localizer)
     {
-        switch (relayEvent.EventType)
+        return new ExternalChatRelayNotificationResult
         {
-            // Handle a custom platform-specific event.
-            case "supervisor-joined":
-                await _notifications.SendAsync(sessionId, chatType, new ChatNotification
-                {
-                    Id = "supervisor-joined",
-                    Type = "info",
-                    Content = _localizer["A supervisor has joined the conversation."].Value,
-                    Icon = "fa-solid fa-user-shield",
-                    Dismissible = true,
-                });
-                break;
+            Notification = new ChatNotification
+            {
+                Id = "supervisor-joined",
+                Type = "info",
+                Content = localizer["A supervisor has joined the conversation."].Value,
+                Icon = "fa-solid fa-user-shield",
+                Dismissible = true,
+            },
+        };
+    }
+}
+```
 
-            // Handle built-in event types as needed.
-            case ExternalChatRelayEventTypes.AgentTyping:
-                await _notifications.ShowTypingAsync(sessionId, chatType, _localizer, relayEvent.AgentName);
-                break;
+The `ExternalChatRelayNotificationResult` supports both adding and removing notifications:
 
-            case ExternalChatRelayEventTypes.AgentStoppedTyping:
-                await _notifications.HideTypingAsync(sessionId, chatType);
-                break;
+```csharp
+public sealed class AgentReplacedBuilder : IExternalChatRelayNotificationBuilder
+{
+    public ExternalChatRelayNotificationResult Build(
+        ExternalChatRelayEvent relayEvent,
+        IStringLocalizer localizer)
+    {
+        var result = new ExternalChatRelayNotificationResult
+        {
+            // Send a new notification.
+            Notification = new ChatNotification
+            {
+                Id = "agent-replaced",
+                Type = "info",
+                Content = localizer["A new agent has taken over the conversation."].Value,
+            },
+        };
 
-            case ExternalChatRelayEventTypes.AgentConnected:
-                await _notifications.HideTransferAsync(sessionId, chatType);
-                await _notifications.ShowAgentConnectedAsync(
-                    sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
-                break;
+        // Remove the previous agent-connected notification first.
+        result.RemoveNotificationIds.Add(
+            ChatNotificationSenderExtensions.NotificationIds.AgentConnected);
 
-            // ... handle other built-in events as needed.
-        }
+        return result;
     }
 }
 ```

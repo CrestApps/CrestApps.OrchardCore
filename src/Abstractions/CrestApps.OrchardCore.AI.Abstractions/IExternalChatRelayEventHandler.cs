@@ -7,10 +7,13 @@ namespace CrestApps.OrchardCore.AI;
 /// map relay events to chat notifications, message writes, and other actions.
 /// </summary>
 /// <remarks>
-/// The default implementation (<c>DefaultExternalChatRelayEventHandler</c>) routes events
-/// to the <see cref="IChatNotificationSender"/> for typing indicators, agent-connected
-/// notifications, and session-ended system messages, and writes messages to the prompt store
-/// via the appropriate hub context.
+/// The default implementation resolves a keyed <see cref="IExternalChatRelayNotificationBuilder"/>
+/// by <see cref="ExternalChatRelayEvent.EventType"/> and delegates to
+/// <see cref="IExternalChatRelayNotificationHandler"/> to send/remove notifications.
+/// To handle custom event types, register a keyed builder:
+/// <code>
+/// services.AddKeyedScoped&lt;IExternalChatRelayNotificationBuilder, MyBuilder&gt;("my-event-type");
+/// </code>
 /// </remarks>
 public interface IExternalChatRelayEventHandler
 {
