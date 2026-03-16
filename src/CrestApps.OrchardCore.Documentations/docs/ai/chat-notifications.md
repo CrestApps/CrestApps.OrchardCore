@@ -539,6 +539,5 @@ The chat UI ships with styles for these notification types:
 | `info` | Cyan/info-tinted |
 | `warning` | Yellow/amber-tinted (used for agent-reconnecting) |
 | `error` | Red/danger-tinted (used for connection-lost) |
-| `warning` | Yellow/warning-tinted |
 
 Custom types receive the base `.ai-chat-notification` styling. Add your own CSS for custom types using `.ai-chat-notification-{type}`.
