@@ -16,29 +16,36 @@ public interface IOrchardAdminPlaywrightService
 
     Task<PlaywrightContentItemOpenResult> OpenContentItemEditorAsync(IPlaywrightSession session, string title, CancellationToken cancellationToken = default);
 
+    Task<PlaywrightEditorTargetResult> OpenEditorTabAsync(
+        IPlaywrightSession session,
+        string tabName,
+        bool exact = false,
+        CancellationToken cancellationToken = default);
+
     Task<PlaywrightObservation> SetContentTitleAsync(IPlaywrightSession session, string title, CancellationToken cancellationToken = default);
+
+    Task<PlaywrightFieldEditResult> SetFieldValueAsync(
+        IPlaywrightSession session,
+        string label,
+        string value,
+        string fieldType = "auto",
+        bool exact = false,
+        CancellationToken cancellationToken = default);
+
+    Task<PlaywrightFieldEditResult> SetBodyFieldAsync(
+        IPlaywrightSession session,
+        string label,
+        string value,
+        string writeMode = "append",
+        bool exact = false,
+        CancellationToken cancellationToken = default);
 
     Task<PlaywrightObservation> SaveDraftAsync(IPlaywrightSession session, CancellationToken cancellationToken = default);
 
     Task<PlaywrightObservation> PublishContentAsync(IPlaywrightSession session, CancellationToken cancellationToken = default);
 
-    Task<PlaywrightObservation> ClickByRoleAsync(
+    Task<PlaywrightPublishVerificationResult> PublishAndVerifyAsync(
         IPlaywrightSession session,
-        string role,
-        string name,
-        bool exact = false,
-        CancellationToken cancellationToken = default);
-
-    Task<PlaywrightObservation> FillByLabelAsync(
-        IPlaywrightSession session,
-        string label,
-        string value,
-        bool exact = false,
-        CancellationToken cancellationToken = default);
-
-    Task<PlaywrightObservation> WaitForUrlAsync(
-        IPlaywrightSession session,
-        string urlPattern,
-        int timeoutMs = 15000,
+        string expectedStatus = "Published",
         CancellationToken cancellationToken = default);
 }

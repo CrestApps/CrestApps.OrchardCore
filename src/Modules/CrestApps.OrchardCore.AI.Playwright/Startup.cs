@@ -14,8 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Modules;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Playwright;
 
@@ -30,6 +30,7 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IPlaywrightSessionRequestResolver, PlaywrightSessionRequestResolver>();
         services.AddSingleton<IPlaywrightSessionManager, PlaywrightSessionManager>();
         services.AddSingleton<IOrchardAdminPlaywrightService, OrchardAdminPlaywrightService>();
+        services.AddSingleton<IOrchardEvidenceService, OrchardEvidenceService>();
         services.AddSingleton<IBackgroundTask, PlaywrightSessionCleanupBackgroundTask>();
 
         services.AddScoped<IFeatureEventHandler, PlaywrightFeatureEventHandler>();
@@ -52,27 +53,26 @@ public sealed class Startup : StartupBase
         services.AddCoreAITool<ListContentItemsTool>(PlaywrightConstants.ToolNames.ListContentItems);
         services.AddCoreAITool<OpenContentItemEditorTool>(PlaywrightConstants.ToolNames.OpenContentItemEditor);
         services.AddCoreAITool<OpenNewContentItemTool>(PlaywrightConstants.ToolNames.OpenNewContentItem);
+        services.AddCoreAITool<OpenEditorTabTool>(PlaywrightConstants.ToolNames.OpenEditorTab);
         services.AddCoreAITool<SetContentTitleTool>(PlaywrightConstants.ToolNames.SetContentTitle);
+        services.AddCoreAITool<SetFieldValueTool>(PlaywrightConstants.ToolNames.SetFieldValue);
+        services.AddCoreAITool<SetBodyFieldTool>(PlaywrightConstants.ToolNames.SetBodyField);
         services.AddCoreAITool<SaveDraftTool>(PlaywrightConstants.ToolNames.SaveDraft);
         services.AddCoreAITool<PublishContentTool>(PlaywrightConstants.ToolNames.PublishContent);
-        services.AddCoreAITool<ClickByRoleTool>(PlaywrightConstants.ToolNames.ClickByRole);
-        services.AddCoreAITool<FillByLabelTool>(PlaywrightConstants.ToolNames.FillByLabel);
-        services.AddCoreAITool<WaitForUrlTool>(PlaywrightConstants.ToolNames.WaitForUrl);
+        services.AddCoreAITool<PublishAndVerifyTool>(PlaywrightConstants.ToolNames.PublishAndVerify);
         services.AddCoreAITool<GetPageContentTool>(PlaywrightConstants.ToolNames.InspectPageContent);
         services.AddCoreAITool<FindElementTool>(PlaywrightConstants.ToolNames.FindElement);
         services.AddCoreAITool<CheckElementExistsTool>(PlaywrightConstants.ToolNames.CheckElementExists);
         services.AddCoreAITool<GetVisibleWidgetsTool>(PlaywrightConstants.ToolNames.GetVisibleWidgets);
         services.AddCoreAITool<TakeScreenshotTool>(PlaywrightConstants.ToolNames.TakeScreenshot);
-
-        services.AddCoreAITool<BrowserNavigateTool>(PlaywrightConstants.ToolNames.Navigate);
-        services.AddCoreAITool<BrowserClickTool>(PlaywrightConstants.ToolNames.Click);
-        services.AddCoreAITool<BrowserFillTool>(PlaywrightConstants.ToolNames.Fill);
-        services.AddCoreAITool<BrowserSelectTool>(PlaywrightConstants.ToolNames.Select);
-        services.AddCoreAITool<BrowserGetPageContentTool>(PlaywrightConstants.ToolNames.GetPageContent);
-        services.AddCoreAITool<BrowserWaitForTool>(PlaywrightConstants.ToolNames.WaitFor);
+        services.AddCoreAITool<DiagnoseOrchardActionTool>(PlaywrightConstants.ToolNames.DiagnoseOrchardAction);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
     }
 }
+
+
+
+

@@ -227,70 +227,122 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
     public Task<PlaywrightObservation> PublishContentAsync(IPlaywrightSession session, CancellationToken cancellationToken = default)
         => ClickEditorActionAsync(session, ["Publish", "Publish Draft"], cancellationToken);
 
-    public async Task<PlaywrightObservation> ClickByRoleAsync(
+    public async Task<PlaywrightEditorTargetResult> OpenEditorTabAsync(
         IPlaywrightSession session,
-        string role,
-        string name,
+        string tabName,
         bool exact = false,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(role);
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tabName);
 
         var page = await GetActivePageAsync(session, cancellationToken);
-        if (await TryClickContentItemRowActionAsync(page, role, name, cancellationToken))
+        var target = await ResolveEditorTargetAsync(page, tabName, exact, cancellationToken);
+        if (target is null)
         {
-            return await CaptureAfterInteractionAsync(session, page, cancellationToken);
+            throw new TimeoutException($"Unable to locate an Orchard editor tab or section named '{tabName}'.");
         }
 
-        var locator = GetLocatorByRole(page, role, name, exact);
-        await ClickWithoutNavigationWaitAsync(page, locator, $"clicking {name}", cancellationToken);
+        if (!await IsEditorTargetExpandedAsync(target.Locator, cancellationToken))
+        {
+            await ClickWithoutNavigationWaitAsync(page, target.Locator, $"opening {target.MatchedText}", cancellationToken);
+        }
 
-        return await CaptureAfterInteractionAsync(session, page, cancellationToken);
+        var observation = await CaptureAfterInteractionAsync(session, page, cancellationToken);
+
+        return new PlaywrightEditorTargetResult
+        {
+            RequestedTarget = tabName,
+            MatchedTarget = target.MatchedText,
+            TargetKind = target.TargetKind,
+            Observation = observation,
+        };
     }
 
-    public async Task<PlaywrightObservation> FillByLabelAsync(
+    public async Task<PlaywrightFieldEditResult> SetFieldValueAsync(
         IPlaywrightSession session,
         string label,
         string value,
+        string fieldType = "auto",
         bool exact = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
 
+        var normalizedFieldType = NormalizeFieldType(fieldType);
         var page = await GetActivePageAsync(session, cancellationToken);
         var locator = await ResolveFieldLocatorAsync(page, label, exact, cancellationToken);
         await ShowFillIndicatorAsync(page, locator, label, cancellationToken);
-        var fillMode = await TryFillFieldAsync(locator, label, value ?? string.Empty, cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(fillMode))
+        var resolvedFieldType = await TrySetFieldValueAsync(locator, label, value ?? string.Empty, normalizedFieldType, append: false, cancellationToken);
+        if (string.IsNullOrWhiteSpace(resolvedFieldType))
         {
-            throw new TimeoutException($"Unable to fill the field labeled '{label}'. The field exists but no visible supported editor was available.");
+            throw new TimeoutException($"Unable to set the Orchard field '{label}' as '{normalizedFieldType}'.");
         }
 
-        if (_logger.IsEnabled(LogLevel.Debug))
+        return new PlaywrightFieldEditResult
         {
-            _logger.LogDebug("Filled Orchard field {Label} using {FillMode} mode.", label, fillMode);
-        }
-
-        return await _observationService.CaptureAsync(session, cancellationToken);
+            Label = label,
+            RequestedFieldType = normalizedFieldType,
+            RequestedEditMode = "replace",
+            ResolvedFieldType = resolvedFieldType,
+            Observation = await _observationService.CaptureAsync(session, cancellationToken),
+        };
     }
 
-    public async Task<PlaywrightObservation> WaitForUrlAsync(
+    public async Task<PlaywrightFieldEditResult> SetBodyFieldAsync(
         IPlaywrightSession session,
-        string urlPattern,
-        int timeoutMs = 15000,
+        string label,
+        string value,
+        string mode = "append",
+        bool exact = false,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(urlPattern);
+        ArgumentException.ThrowIfNullOrWhiteSpace(label);
 
+        var normalizedMode = NormalizeBodyEditMode(mode);
         var page = await GetActivePageAsync(session, cancellationToken);
+        var locator = await ResolveFieldLocatorAsync(page, label, exact, cancellationToken);
+        await ShowFillIndicatorAsync(page, locator, label, cancellationToken);
 
-        await page.WaitForURLAsync(
-            url => url.Contains(urlPattern, StringComparison.OrdinalIgnoreCase),
-            new PageWaitForURLOptions { Timeout = Math.Clamp(timeoutMs, 500, 60_000) }).WaitAsync(cancellationToken);
+        var resolvedFieldType = await TrySetFieldValueAsync(
+            locator,
+            label,
+            value ?? string.Empty,
+            requestedFieldType: "richtext",
+            append: normalizedMode.Equals("append", StringComparison.Ordinal),
+            cancellationToken);
 
-        return await _observationService.CaptureAsync(session, cancellationToken);
+        if (string.IsNullOrWhiteSpace(resolvedFieldType))
+        {
+            throw new TimeoutException($"Unable to edit the Orchard body field '{label}'.");
+        }
+
+        return new PlaywrightFieldEditResult
+        {
+            Label = label,
+            RequestedFieldType = "body",
+            RequestedEditMode = normalizedMode,
+            ResolvedFieldType = resolvedFieldType,
+            Observation = await _observationService.CaptureAsync(session, cancellationToken),
+        };
+    }
+
+    public async Task<PlaywrightPublishVerificationResult> PublishAndVerifyAsync(
+        IPlaywrightSession session,
+        string expectedStatus = "Published",
+        CancellationToken cancellationToken = default)
+    {
+        var observation = await PublishContentAsync(session, cancellationToken);
+        var verificationSignals = BuildPublishVerificationSignals(observation, expectedStatus);
+
+        return new PlaywrightPublishVerificationResult
+        {
+            Action = "publish",
+            ExpectedStatus = string.IsNullOrWhiteSpace(expectedStatus) ? "Published" : expectedStatus.Trim(),
+            Verified = verificationSignals.Count > 0,
+            VerificationSignals = verificationSignals,
+            Observation = observation,
+        };
     }
 
     private async Task<PlaywrightObservation> ClickEditorActionAsync(
@@ -555,6 +607,160 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
 
         return page.GetByText(contentType, new PageGetByTextOptions { Exact = false }).First;
     }
+
+    private static string NormalizeFieldType(string fieldType)
+        => (fieldType ?? "auto").Trim().ToLowerInvariant() switch
+        {
+            "" or "auto" => "auto",
+            "text" => "text",
+            "textarea" => "textarea",
+            "select" or "dropdown" => "select",
+            "checkbox" or "bool" or "boolean" => "checkbox",
+            "radio" => "radio",
+            "richtext" or "html" or "wysiwyg" => "richtext",
+            var unsupported => throw new InvalidOperationException($"Unsupported Orchard field type '{unsupported}'."),
+        };
+
+    private static string NormalizeBodyEditMode(string mode)
+        => (mode ?? "append").Trim().ToLowerInvariant() switch
+        {
+            "" or "append" => "append",
+            "replace" => "replace",
+            var unsupported => throw new InvalidOperationException($"Unsupported body edit mode '{unsupported}'. Use 'append' or 'replace'."),
+        };
+
+    private static IReadOnlyList<string> BuildPublishVerificationSignals(PlaywrightObservation observation, string expectedStatus)
+    {
+        var normalizedStatus = string.IsNullOrWhiteSpace(expectedStatus)
+            ? "published"
+            : expectedStatus.Trim().ToLowerInvariant();
+
+        var signals = new List<string>();
+        if (observation is null)
+        {
+            return signals;
+        }
+
+        if (!string.IsNullOrWhiteSpace(observation.ToastMessage)
+            && observation.ToastMessage.Contains(normalizedStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            signals.Add($"Toast confirmed {expectedStatus}.");
+        }
+
+        if (observation.VisibleButtons.Any(button => button.Contains("Unpublish", StringComparison.OrdinalIgnoreCase)))
+        {
+            signals.Add("Editor actions now include Unpublish.");
+        }
+
+        if (observation.VisibleButtons.Any(button => button.Contains("View", StringComparison.OrdinalIgnoreCase)
+            || button.Contains("Preview", StringComparison.OrdinalIgnoreCase)))
+        {
+            signals.Add("Editor actions now include view or preview.");
+        }
+
+        if (observation.ValidationMessages.Count > 0)
+        {
+            return [];
+        }
+
+        return signals
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static async Task<EditorTargetMatch> ResolveEditorTargetAsync(
+        IPage page,
+        string tabName,
+        bool exact,
+        CancellationToken cancellationToken)
+    {
+        foreach (var currentExact in exact ? new[] { true } : new[] { true, false })
+        {
+            foreach (var (kind, locator) in new[]
+            {
+                ("tab", page.GetByRole(AriaRole.Tab, new() { Name = tabName, Exact = currentExact }).First),
+                ("tab", page.Locator($".nav-tabs a:has-text(\"{EscapeHasTextSelector(tabName)}\"), .nav-tabs button:has-text(\"{EscapeHasTextSelector(tabName)}\"), .nav-pills a:has-text(\"{EscapeHasTextSelector(tabName)}\"), .nav-pills button:has-text(\"{EscapeHasTextSelector(tabName)}\"), [data-bs-toggle='tab']:has-text(\"{EscapeHasTextSelector(tabName)}\")").First),
+                ("accordion", page.Locator($".accordion-button:has-text(\"{EscapeHasTextSelector(tabName)}\"), [data-bs-toggle='collapse']:has-text(\"{EscapeHasTextSelector(tabName)}\")").First),
+                ("summary", page.Locator($"details > summary:has-text(\"{EscapeHasTextSelector(tabName)}\"), summary:has-text(\"{EscapeHasTextSelector(tabName)}\")").First),
+                ("section", page.Locator($".card-header button:has-text(\"{EscapeHasTextSelector(tabName)}\"), .card-header a:has-text(\"{EscapeHasTextSelector(tabName)}\"), fieldset > legend:has-text(\"{EscapeHasTextSelector(tabName)}\")").First),
+            })
+            {
+                if (await locator.CountAsync().WaitAsync(cancellationToken) == 0
+                    || !await locator.IsVisibleAsync().WaitAsync(cancellationToken))
+                {
+                    continue;
+                }
+
+                var matchedText = NormalizeTitle(await locator.InnerTextAsync().WaitAsync(cancellationToken))
+                    ?? tabName;
+
+                if (currentExact
+                    && !matchedText.Equals(tabName, StringComparison.OrdinalIgnoreCase)
+                    && !matchedText.Contains(tabName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                return new EditorTargetMatch
+                {
+                    Locator = locator,
+                    MatchedText = matchedText,
+                    TargetKind = kind,
+                };
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> IsEditorTargetExpandedAsync(ILocator locator, CancellationToken cancellationToken)
+    {
+        if (await locator.CountAsync().WaitAsync(cancellationToken) == 0)
+        {
+            return false;
+        }
+
+        return await locator.EvaluateAsync<bool>(
+            """
+            element => {
+              const ariaSelected = (element.getAttribute("aria-selected") || "").toLowerCase();
+              const ariaExpanded = (element.getAttribute("aria-expanded") || "").toLowerCase();
+              const className = (element.className || "").toString().toLowerCase();
+
+              if (ariaSelected === "true" || ariaExpanded === "true") {
+                return true;
+              }
+
+              if (className.includes("active") || className.includes("show")) {
+                return true;
+              }
+
+              const details = element.closest("details");
+              if (details?.open) {
+                return true;
+              }
+
+              const controls = element.getAttribute("aria-controls");
+              if (controls) {
+                const target = document.getElementById(controls);
+                if (target) {
+                  const targetClass = (target.className || "").toString().toLowerCase();
+                  const style = window.getComputedStyle(target);
+                  if (targetClass.includes("show") || style.display !== "none") {
+                    return true;
+                  }
+                }
+              }
+
+              return false;
+            }
+            """).WaitAsync(cancellationToken);
+    }
+
+    private static string EscapeHasTextSelector(string value)
+        => (value ?? string.Empty)
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal);
 
     private async Task<bool> TryClickNamedElementAsync(
         IPage page,
@@ -864,18 +1070,18 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
         return string.Join(" ", details);
     }
 
-    private static async Task<string> TryFillFieldAsync(
+    private static async Task<string> TrySetFieldValueAsync(
         ILocator locator,
         string label,
         string value,
+        string requestedFieldType,
+        bool append,
         CancellationToken cancellationToken)
     {
         if (await locator.CountAsync().WaitAsync(cancellationToken) == 0)
         {
             return null;
         }
-
-        var shouldAppend = ShouldAppendToField(label);
 
         return await locator.EvaluateAsync<string>(
             """
@@ -914,6 +1120,19 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
 
               const findFirstVisible = (candidates) => candidates.find((candidate) => isVisible(candidate));
 
+              const parseBoolean = (input) => {
+                const normalized = normalize(input).toLowerCase();
+                if (["true", "1", "yes", "y", "on", "checked", "check", "selected"].includes(normalized)) {
+                  return true;
+                }
+
+                if (["false", "0", "no", "n", "off", "unchecked", "uncheck", "clear"].includes(normalized)) {
+                  return false;
+                }
+
+                return null;
+              };
+
               const setStandardValue = (candidate, append) => {
                 if (!(candidate instanceof HTMLInputElement) && !(candidate instanceof HTMLTextAreaElement)) {
                   return null;
@@ -933,6 +1152,56 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
                 }
 
                 return "input";
+              };
+
+              const setSelectValue = (candidate) => {
+                if (!(candidate instanceof HTMLSelectElement) || !isVisible(candidate)) {
+                  return null;
+                }
+
+                const requestedValue = normalize(payload.value).toLowerCase();
+                const options = Array.from(candidate.options || []);
+                const matched = options.find((option) => {
+                  return normalize(option.value).toLowerCase() === requestedValue
+                    || normalize(option.label).toLowerCase() === requestedValue
+                    || normalize(option.text).toLowerCase() === requestedValue;
+                }) || options.find((option) => {
+                  return normalize(option.value).toLowerCase().includes(requestedValue)
+                    || normalize(option.label).toLowerCase().includes(requestedValue)
+                    || normalize(option.text).toLowerCase().includes(requestedValue);
+                });
+
+                if (!matched) {
+                  return null;
+                }
+
+                candidate.value = matched.value;
+                dispatch(candidate);
+                return "select";
+              };
+
+              const setBooleanValue = (candidate) => {
+                if (!(candidate instanceof HTMLInputElement) || !isVisible(candidate)) {
+                  return null;
+                }
+
+                if (candidate.type !== "checkbox" && candidate.type !== "radio") {
+                  return null;
+                }
+
+                const nextValue = parseBoolean(payload.value);
+                if (nextValue === null) {
+                  return null;
+                }
+
+                if (candidate.type === "radio" && nextValue === false) {
+                  return null;
+                }
+
+                candidate.focus();
+                candidate.checked = nextValue;
+                dispatch(candidate);
+                return candidate.type;
               };
 
               const escapeHtml = (input) => {
@@ -999,12 +1268,18 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
                 || element.parentElement
                 || document.body;
 
+              const requestedKind = normalize(payload.requestedFieldType).toLowerCase();
               const preferAppend = Boolean(payload.append);
-              const directMode = setStandardValue(
-                element,
-                preferAppend || element instanceof HTMLTextAreaElement || Number.parseInt(element.getAttribute?.("rows") || "0", 10) > 1);
+              const preferRichText = requestedKind === "richtext";
+              const preferSelect = requestedKind === "select";
+              const preferCheckbox = requestedKind === "checkbox" || requestedKind === "radio" || requestedKind === "boolean";
+              const directMode = setBooleanValue(element)
+                || setSelectValue(element)
+                || setStandardValue(
+                  element,
+                  preferAppend || element instanceof HTMLTextAreaElement || Number.parseInt(element.getAttribute?.("rows") || "0", 10) > 1);
 
-              if (directMode) {
+              if (directMode && (!preferSelect || directMode === "select") && (!preferCheckbox || directMode === requestedKind || directMode === "checkbox")) {
                 return directMode;
               }
 
@@ -1025,8 +1300,8 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
               }
 
               const standardCandidates = [
-                ...container.querySelectorAll("textarea, input"),
-                ...document.querySelectorAll("textarea, input"),
+                ...container.querySelectorAll("textarea, input, select"),
+                ...document.querySelectorAll("textarea, input, select"),
               ];
 
               for (const candidate of standardCandidates) {
@@ -1038,9 +1313,19 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
                   continue;
                 }
 
-                const mode = setStandardValue(
-                  candidate,
-                  preferAppend || candidate instanceof HTMLTextAreaElement || Number.parseInt(candidate.getAttribute("rows") || "0", 10) > 1);
+                const mode = setBooleanValue(candidate)
+                  || setSelectValue(candidate)
+                  || setStandardValue(
+                    candidate,
+                    preferAppend || candidate instanceof HTMLTextAreaElement || Number.parseInt(candidate.getAttribute("rows") || "0", 10) > 1);
+
+                if (preferSelect && mode !== "select") {
+                  continue;
+                }
+
+                if (preferCheckbox && mode !== requestedKind && mode !== "checkbox") {
+                  continue;
+                }
 
                 if (mode) {
                   syncSourceField(candidate.value ?? "");
@@ -1054,7 +1339,7 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
               ];
 
               const editable = findFirstVisible(editableCandidates.filter((candidate) => matchesField(candidate) || container.contains(candidate)));
-              if (editable) {
+              if (editable && !preferSelect && !preferCheckbox) {
                 const updatedHtml = appendRichText(editable, payload.value, preferAppend || normalize(editable.innerText).length > 0);
                 syncSourceField(updatedHtml);
                 return "contenteditable";
@@ -1084,6 +1369,10 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
                 }
               }
 
+              if (preferRichText) {
+                return null;
+              }
+
               return null;
             }
             """,
@@ -1091,7 +1380,8 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
             {
                 label,
                 value,
-                append = shouldAppend,
+                append,
+                requestedFieldType,
             }).WaitAsync(cancellationToken);
     }
 
@@ -1465,6 +1755,15 @@ public sealed class OrchardAdminPlaywrightService : IOrchardAdminPlaywrightServi
         public string MatchMode { get; init; }
 
         public int Score { get; init; }
+    }
+
+    private sealed class EditorTargetMatch
+    {
+        public ILocator Locator { get; init; }
+
+        public string MatchedText { get; init; }
+
+        public string TargetKind { get; init; }
     }
 
     private static async Task WaitForEditorAsync(IPage page, CancellationToken cancellationToken)

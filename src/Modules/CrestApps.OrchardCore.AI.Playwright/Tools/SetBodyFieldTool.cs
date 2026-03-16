@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.AI.Playwright.Tools;
 
-public sealed class FillByLabelTool : PlaywrightToolBase
+public sealed class SetBodyFieldTool : PlaywrightToolBase
 {
     private static readonly JsonElement _schema = JsonSerializer.Deserialize<JsonElement>("""
         {
@@ -14,11 +14,16 @@ public sealed class FillByLabelTool : PlaywrightToolBase
           "properties": {
             "label": {
               "type": "string",
-              "description": "Field label to target."
+              "description": "Visible Orchard body-like field label to target, such as HtmlBody or Body."
             },
             "value": {
               "type": "string",
-              "description": "Value to fill."
+              "description": "Value to write into the body field."
+            },
+            "mode": {
+              "type": "string",
+              "description": "Whether to append to existing content or replace it.",
+              "enum": ["append", "replace"]
             },
             "exact": {
               "type": "boolean",
@@ -29,25 +34,30 @@ public sealed class FillByLabelTool : PlaywrightToolBase
         }
         """);
 
-    public override string Name => PlaywrightConstants.ToolNames.FillByLabel;
-    public override string Description => "Fills a field by label text instead of using a raw selector. This edits the field only and does not save or publish.";
+    public override string Name => PlaywrightConstants.ToolNames.SetBodyField;
+    public override string Description => "Sets a body-like Orchard field such as HtmlBody using append or replace behavior and rich-editor detection.";
     public override JsonElement JsonSchema => _schema;
 
     protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         var label = arguments["label"]?.ToString();
         var value = arguments["value"]?.ToString() ?? string.Empty;
+        var mode = arguments["mode"]?.ToString() ?? "append";
         var exactMatch = arguments.TryGetValue("exact", out var exactValue) && exactValue is bool exact && exact;
+        var append = !mode.Equals("replace", StringComparison.OrdinalIgnoreCase);
 
         if (string.IsNullOrWhiteSpace(label))
         {
             return new ValueTask<object?>("Parameter 'label' is required.");
         }
 
-        return ExecuteObservationStepAsync(
-            arguments,
-            cancellationToken,
-            $"fill_by_label:{label}",
-            (session, token) => arguments.Services.GetRequiredService<IOrchardAdminPlaywrightService>().FillByLabelAsync(session, label, value, exactMatch, token));
+        return ExecuteSessionStepAsync(arguments, cancellationToken, async (session, token) =>
+        {
+            var result = await arguments.Services.GetRequiredService<IOrchardAdminPlaywrightService>()
+                .SetBodyFieldAsync(session, label, value, mode, exactMatch, token);
+
+            return Serialize(result);
+        });
     }
 }
+
