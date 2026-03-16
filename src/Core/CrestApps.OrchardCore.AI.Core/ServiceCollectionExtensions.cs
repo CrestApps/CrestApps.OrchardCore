@@ -223,6 +223,10 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
         services.AddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
 
+        // Register the external chat relay infrastructure for WebSocket-based 3rd-party integration.
+        services.AddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
+        services.AddScoped<IExternalChatRelayEventHandler, DefaultExternalChatRelayEventHandler>();
+
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
             .WithTitle("Generate Image")
