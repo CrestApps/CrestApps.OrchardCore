@@ -22,7 +22,7 @@ public interface IChatHubClient
     Task ReceiveConversationAssistantComplete(string identifier, string messageId);
 
     /// <summary>
-    /// Sends a notification bubble to the client. If a notification with the same ID
+    /// Sends a notification system message to the client. If a notification with the same ID
     /// already exists, it is replaced.
     /// </summary>
     Task ReceiveNotification(ChatNotification notification);

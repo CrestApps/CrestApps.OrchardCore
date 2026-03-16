@@ -33,7 +33,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a typing indicator bubble (e.g., "Mike is typing…").
+    /// Shows a typing indicator system message (e.g., "Mike is typing…").
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -75,7 +75,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a transfer indicator bubble with optional wait time and cancel button.
+    /// Shows a transfer indicator system message with optional wait time and cancel button.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -170,7 +170,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows an "agent connected" bubble indicating a live agent has joined the session.
+    /// Shows an "agent connected" system message indicating a live agent has joined the session.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -216,7 +216,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows an "agent reconnecting" bubble indicating the agent is reconnecting after a disruption.
+    /// Shows an "agent reconnecting" system message indicating the agent is reconnecting after a disruption.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -261,7 +261,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a "connection lost" bubble indicating the relay connection has been lost.
+    /// Shows a "connection lost" system message indicating the relay connection has been lost.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -299,7 +299,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a "conversation ended" bubble. The user can still send messages
+    /// Shows a "conversation ended" system message. The user can still send messages
     /// via text or audio input, but this indicates the conversation mode has ended.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
@@ -325,7 +325,7 @@ public static class ChatNotificationSenderExtensions
     }
 
     /// <summary>
-    /// Shows a "session ended" bubble and optionally allows ending the session programmatically.
+    /// Shows a "session ended" system message and optionally allows ending the session programmatically.
     /// </summary>
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>

@@ -9,9 +9,15 @@ namespace CrestApps.OrchardCore.AI;
 /// <remarks>
 /// <para>
 /// Unlike the webhook pattern where the external system calls back into your application,
-/// an <see cref="IExternalChatRelay"/> maintains a persistent connection (typically a WebSocket)
-/// so that events such as typing indicators, agent-connected notifications, wait-time updates,
+/// an <see cref="IExternalChatRelay"/> maintains a persistent connection so that events
+/// such as typing indicators, agent-connected notifications, wait-time updates,
 /// and chat messages flow in real time without polling.
+/// </para>
+/// <para>
+/// This interface is protocol-agnostic. Implementations can use any transport:
+/// WebSocket, SSE (Server-Sent Events), gRPC streaming, message queues, event buses,
+/// or any other protocol. The relay infrastructure manages connection lifecycles
+/// and event routing regardless of the underlying transport.
 /// </para>
 /// <para>
 /// Implementations should handle reconnection logic and graceful shutdown. The relay is

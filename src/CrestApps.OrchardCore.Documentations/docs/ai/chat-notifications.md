@@ -2,7 +2,7 @@
 sidebar_label: Chat Notifications
 sidebar_position: 14
 title: Chat UI Notifications
-description: Send transient notification bubbles (typing indicators, transfer status, session endings, and custom notifications) to the chat UI from C# — no JavaScript required.
+description: Send transient notification system messages (typing indicators, transfer status, session endings, and custom notifications) to the chat UI from C# — no JavaScript required.
 ---
 
 | | |
@@ -12,7 +12,7 @@ description: Send transient notification bubbles (typing indicators, transfer st
 
 ## Overview
 
-The **Chat Notification** system lets server-side C# code send transient UI notifications (bubbles) to the chat interface in real time via SignalR. Notifications are separate from chat history — they provide visual feedback about system state changes such as:
+The **Chat Notification** system lets server-side C# code send transient UI notifications (system messages) to the chat interface in real time via SignalR. Notifications are separate from chat history — they provide visual feedback about system state changes such as:
 
 - **Typing indicators** ("Mike is typing…")
 - **Transfer status** with estimated wait times and a cancel button
@@ -28,7 +28,7 @@ C# Code (webhook, handler, background task, etc.)
   → IChatNotificationSender.SendAsync(sessionId, chatType, notification)
     → IChatNotificationTransport (resolved by chatType key)
       → SignalR group broadcast → ReceiveNotification
-        → Chat UI renders the notification bubble
+        → Chat UI renders the notification as a system message
 
 User clicks an action button on a notification
   → JS: connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName)
@@ -61,7 +61,7 @@ public sealed class MyWebhookHandler
 
     public async Task OnAgentTyping(string sessionId)
     {
-        // Show a "Mike is typing..." bubble.
+        // Show a "Mike is typing..." system message.
         await _notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, _localizer, "Mike");
     }
 
@@ -87,7 +87,7 @@ The primary service for sending, updating, and removing notifications:
 
 ### `IChatNotificationActionHandler`
 
-Handles user-initiated actions on notification bubbles (e.g., clicking "Cancel Transfer"). Handlers are registered as **keyed services** where the key is the action name:
+Handles user-initiated actions on notification system messages (e.g., clicking "Cancel Transfer"). Handlers are registered as **keyed services** where the key is the action name:
 
 ```csharp
 public interface IChatNotificationActionHandler
@@ -143,15 +143,15 @@ All extension methods that produce user-facing text accept an `IStringLocalizer`
 
 | Method | Description |
 | --- | --- |
-| `ShowTypingAsync(sessionId, chatType, localizer, agentName?)` | Shows a typing indicator bubble. |
+| `ShowTypingAsync(sessionId, chatType, localizer, agentName?)` | Shows a typing indicator system message. |
 | `HideTypingAsync(sessionId, chatType)` | Removes the typing indicator. |
 | `ShowTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Shows a transfer indicator with optional wait time and cancel button. |
 | `UpdateTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Updates the transfer indicator (e.g., with a new wait time). |
 | `HideTransferAsync(sessionId, chatType)` | Removes the transfer indicator. |
-| `ShowAgentConnectedAsync(sessionId, chatType, localizer, agentName?, message?)` | Shows an "agent connected" bubble. |
+| `ShowAgentConnectedAsync(sessionId, chatType, localizer, agentName?, message?)` | Shows an "agent connected" system message. |
 | `HideAgentConnectedAsync(sessionId, chatType)` | Removes the agent-connected notification. |
-| `ShowConversationEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "conversation ended" dismissible bubble. |
-| `ShowSessionEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "session ended" dismissible bubble. |
+| `ShowConversationEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "conversation ended" dismissible system message. |
+| `ShowSessionEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "session ended" dismissible system message. |
 
 ### Well-Known Constants
 
@@ -196,7 +196,7 @@ The notification system uses a **transport provider** pattern so that each hub i
 
 ### Registering a Custom Transport
 
-If you create a custom chat hub that supports notification bubbles, implement `IChatNotificationTransport` and register it as a keyed service:
+If you create a custom chat hub that supports notification system messages, implement `IChatNotificationTransport` and register it as a keyed service:
 
 ```csharp
 using CrestApps.OrchardCore.AI;
@@ -302,7 +302,7 @@ internal static class TransferWebhook
         IChatNotificationSender notifications,
         IStringLocalizer<TransferWebhook> localizer)
     {
-        // Show a transfer bubble with estimated wait time and a cancel button.
+        // Show a transfer system message with estimated wait time and a cancel button.
         await notifications.ShowTransferAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
@@ -502,7 +502,7 @@ await notifications.ShowAgentConnectedAsync(
     ChatContextType.AIChatSession,
     localizer,
     agentName: "Sarah");
-// Result: "You are now connected to Sarah." with a dismissible info bubble.
+// Result: "You are now connected to Sarah." with a dismissible info system message.
 ```
 
 When using the **WebSocket relay** infrastructure, agent-connected events are routed automatically by the `IExternalChatRelayEventHandler`:

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI;
 /// <remarks>
 /// The default implementation (<c>DefaultExternalChatRelayEventHandler</c>) routes events
 /// to the <see cref="IChatNotificationSender"/> for typing indicators, agent-connected
-/// notifications, and session-ended bubbles, and writes messages to the prompt store
+/// notifications, and session-ended system messages, and writes messages to the prompt store
 /// via the appropriate hub context.
 /// </remarks>
 public interface IExternalChatRelayEventHandler

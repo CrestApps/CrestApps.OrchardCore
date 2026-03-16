@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
-/// Handles user-initiated actions on chat notification bubbles.
+/// Handles user-initiated actions on chat system messages.
 /// When a user clicks an action button on a notification (e.g., "Cancel Transfer"),
 /// the hub resolves a keyed service whose key matches the action name.
 /// Register implementations using <c>services.AddKeyedScoped&lt;IChatNotificationActionHandler, YourHandler&gt;("your-action-name")</c>.

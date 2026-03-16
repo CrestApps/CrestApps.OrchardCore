@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
-/// Represents a transient UI notification (bubble) displayed in the chat interface.
+/// Represents a transient UI notification displayed as a system message in the chat interface.
 /// Notifications provide visual feedback to users about system state changes such as
 /// typing indicators, agent transfers, or session endings. They are separate from
 /// chat history and can be dynamically added, updated, or removed via SignalR.

@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
 /// Sends transient UI notifications to chat clients via SignalR.
-/// Notifications appear as visual bubbles in the chat interface and are separate
+/// Notifications appear as system messages in the chat interface and are separate
 /// from chat history. Use this service from webhooks, background tasks, or response
 /// handlers to provide real-time feedback to users.
 /// </summary>

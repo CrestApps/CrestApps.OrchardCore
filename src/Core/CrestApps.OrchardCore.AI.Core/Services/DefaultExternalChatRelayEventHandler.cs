@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// Default implementation of <see cref="IExternalChatRelayEventHandler"/> that routes
 /// relay events to the <see cref="IChatNotificationSender"/> for typing indicators,
 /// agent-connected notifications, wait-time updates, connection-status indicators,
-/// and session-ended bubbles.
+/// and session-ended system messages.
 /// </summary>
 internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayEventHandler
 {

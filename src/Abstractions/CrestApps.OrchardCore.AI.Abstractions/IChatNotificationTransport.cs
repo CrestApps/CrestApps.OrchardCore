@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each hub that supports notification bubbles should provide its own implementation
+/// Each hub that supports notification system messages should provide its own implementation
 /// and register it as a keyed service:
 /// </para>
 /// <code>

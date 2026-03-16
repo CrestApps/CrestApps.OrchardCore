@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Provides context to an <see cref="IChatNotificationActionHandler"/> when the user
-/// clicks an action button on a chat notification bubble.
+/// clicks an action button on a chat notification system message.
 /// </summary>
 public sealed class ChatNotificationActionContext
 {

@@ -39,7 +39,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     }
 
     /// <summary>
-    /// Handles a user-initiated action on a chat notification bubble.
+    /// Handles a user-initiated action on a chat notification system message.
     /// Dispatches to registered <see cref="IChatNotificationActionHandler"/> implementations.
     /// </summary>
     public async Task HandleNotificationAction(string sessionId, string notificationId, string actionName)
