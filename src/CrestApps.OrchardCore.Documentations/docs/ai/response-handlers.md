@@ -358,12 +358,12 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _listenerCts?.Dispose();
         _webSocket?.Dispose();
 
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     private async Task ListenForEventsAsync(CancellationToken cancellationToken)
