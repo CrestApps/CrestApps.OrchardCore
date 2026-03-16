@@ -15,9 +15,9 @@ namespace CrestApps.OrchardCore.AI;
 /// </para>
 /// <para>
 /// This interface is protocol-agnostic. Implementations can use any transport:
-/// WebSocket, SSE (Server-Sent Events), gRPC streaming, message queues, event buses,
-/// or any other protocol. The relay infrastructure manages connection lifecycles
-/// and event routing regardless of the underlying transport.
+/// WebSocket, SSE (Server-Sent Events), gRPC streaming, WebRTC data channels,
+/// message queues, event buses, or any other protocol. The relay infrastructure
+/// manages connection lifecycles and event routing regardless of the underlying transport.
 /// </para>
 /// <para>
 /// Implementations should handle reconnection logic and graceful shutdown. The relay is

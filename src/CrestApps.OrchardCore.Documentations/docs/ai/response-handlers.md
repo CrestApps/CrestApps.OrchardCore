@@ -49,7 +49,7 @@ User sends prompt
 | --- | --- | --- |
 | **Streaming** | Returns an `IAsyncEnumerable<StreamingChatCompletionUpdate>` immediately. The hub enumerates the stream and sends chunks to the client in real time. | AI handler (default) |
 | **Deferred (Webhook)** | Returns `IsDeferred = true`. The hub saves the user prompt and completes without an assistant message. The response arrives later via webhook or external callback. | Live agent platforms (one-way HTTP) |
-| **Deferred (WebSocket)** | Returns `IsDeferred = true`. The handler opens a persistent connection (WebSocket, SSE, gRPC, or other transport) to the external system. Events flow back in real time and are routed to notifications and messages automatically. | Live agent platforms (bidirectional) |
+| **Deferred (Persistent Relay)** | Returns `IsDeferred = true`. The handler opens a persistent connection (WebSocket, SSE, gRPC, WebRTC, or other transport) to the external system. Events flow back in real time and are routed to notifications and messages automatically. | Live agent platforms (bidirectional) |
 
 ### Key Interfaces
 
@@ -245,7 +245,7 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 While webhooks work well for many integration scenarios, some third-party platforms support persistent connections for real-time bidirectional communication. The external chat relay infrastructure keeps a connection open, enabling instant delivery of events like typing indicators, agent-connected notifications, wait-time updates, and messages — without polling or callback endpoints.
 
 :::tip
-The relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`** library and is protocol-agnostic — you can implement it with WebSocket, SSE, gRPC streaming, message queues, event buses, or any other transport. The key services are:
+The relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`** library and is protocol-agnostic — you can implement it with WebSocket, SSE, gRPC streaming, WebRTC data channels, message queues, event buses, or any other transport. The key services are:
 
 - **`IExternalChatRelayManager`** — Singleton that manages relay connections per session.
 - **`IExternalChatRelay`** — Protocol-agnostic interface for a persistent relay connection to an external system.
@@ -267,6 +267,75 @@ Understanding which interface handles each direction of communication is key:
 `ExternalChatRelayEvent.EventType` is a **string**, not an enum. Well-known event types are defined as constants in `ExternalChatRelayEventTypes` (e.g., `ExternalChatRelayEventTypes.AgentTyping`). You can use **any custom string** for platform-specific events — the default handler will log and skip unrecognized types, and custom `IExternalChatRelayEventHandler` implementations can handle them.
 :::
 
+#### Extending with Custom Event Types
+
+The relay event system is fully extensible. The `DefaultExternalChatRelayEventHandler` handles built-in event types. To handle custom events (or override built-in behavior), register your own `IExternalChatRelayEventHandler` implementation **before** the framework's default:
+
+```csharp
+// In your module's Startup.cs, register your handler before the default is registered.
+// The default uses TryAddScoped, so your registration wins.
+services.AddScoped<IExternalChatRelayEventHandler, MyCustomRelayEventHandler>();
+```
+
+Your custom handler can handle platform-specific events and delegate built-in events:
+
+```csharp
+public sealed class MyCustomRelayEventHandler : IExternalChatRelayEventHandler
+{
+    private readonly IChatNotificationSender _notifications;
+    private readonly IStringLocalizer _localizer;
+
+    public MyCustomRelayEventHandler(
+        IChatNotificationSender notifications,
+        IStringLocalizer<MyCustomRelayEventHandler> localizer)
+    {
+        _notifications = notifications;
+        _localizer = localizer;
+    }
+
+    public async Task HandleEventAsync(
+        string sessionId,
+        ChatContextType chatType,
+        ExternalChatRelayEvent relayEvent,
+        CancellationToken cancellationToken = default)
+    {
+        switch (relayEvent.EventType)
+        {
+            // Handle a custom platform-specific event.
+            case "supervisor-joined":
+                await _notifications.SendAsync(sessionId, chatType, new ChatNotification
+                {
+                    Id = "supervisor-joined",
+                    Type = "info",
+                    Content = _localizer["A supervisor has joined the conversation."].Value,
+                    Icon = "fa-solid fa-user-shield",
+                    Dismissible = true,
+                });
+                break;
+
+            // Handle built-in event types as needed.
+            case ExternalChatRelayEventTypes.AgentTyping:
+                await _notifications.ShowTypingAsync(sessionId, chatType, _localizer, relayEvent.AgentName);
+                break;
+
+            case ExternalChatRelayEventTypes.AgentStoppedTyping:
+                await _notifications.HideTypingAsync(sessionId, chatType);
+                break;
+
+            case ExternalChatRelayEventTypes.AgentConnected:
+                await _notifications.HideTransferAsync(sessionId, chatType);
+                await _notifications.ShowAgentConnectedAsync(
+                    sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
+                break;
+
+            // ... handle other built-in events as needed.
+        }
+    }
+}
+```
+
+Since event types are strings, you can define any custom events your platform requires without modifying the framework.
+
 #### When to Use a Persistent Relay vs. Webhook
 
 | Aspect | Webhook | Persistent Relay |
@@ -276,11 +345,11 @@ Understanding which interface handles each direction of communication is key:
 | **Typing indicators** | Require frequent HTTP calls | Native real-time delivery |
 | **Complexity** | Simpler (stateless endpoints) | More complex (connection lifecycle management) |
 | **Firewall** | Requires inbound endpoint access | Outbound connection only |
-| **Protocols** | HTTP | WebSocket, SSE, gRPC, message queues, event buses, etc. |
+| **Protocols** | HTTP | WebSocket, SSE, gRPC, WebRTC, message queues, event buses, etc. |
 
 #### Example: Implementing a WebSocket Chat Relay
 
-The following example demonstrates `IExternalChatRelay` using WebSocket as the transport. The same interface can be implemented with any protocol (SSE, gRPC, message queue, etc.) — only the transport layer changes.
+The following example demonstrates `IExternalChatRelay` using WebSocket as the transport. The same interface can be implemented with any protocol (SSE, gRPC, WebRTC data channels, message queues, event buses, etc.) — only the transport layer changes.
 
 Create a class that implements `IExternalChatRelay`. This class manages the `ClientWebSocket` connection to the third-party platform and routes incoming events back through the notification and message pipelines.
 

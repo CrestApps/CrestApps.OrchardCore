@@ -21,6 +21,18 @@ The **Chat Notification** system lets server-side C# code send transient UI noti
 
 Developers interact entirely through C# interfaces and extension methods — no JavaScript changes are required.
 
+### What Is a System Message?
+
+A **system message** is a transient, non-persistent notification displayed in the chat UI to communicate system-level state changes to the user. Unlike chat messages (which are part of the conversation history), system messages:
+
+- **Are not stored** in the chat history or prompt store — they exist only while the notification is active.
+- **Provide visual feedback** about background operations: agent typing, transfer in progress, connection status, session lifecycle events.
+- **Can include action buttons** (e.g., "Cancel Transfer") that trigger server-side callbacks.
+- **Are styled per type** — built-in CSS classes distinguish typing, transfer, info, warning, error, and ended notifications.
+- **Can be dismissed** by the user or removed programmatically from server-side code.
+
+System messages are the recommended way to communicate any non-conversational state to the user within the chat interface.
+
 ## Architecture
 
 ```
@@ -479,9 +491,9 @@ The UI applies the CSS class `ai-chat-notification-queue` (derived from the `Typ
 The notification system is designed to complement [Chat Response Handlers](./response-handlers.md). A typical integration pattern:
 
 1. **Transfer function** sets `ResponseHandlerName` on the session → calls `ShowTransferAsync()`.
-2. **External webhook or WebSocket** receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
-3. **External webhook or WebSocket** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
-4. **External webhook or WebSocket** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
+2. **External system** (via webhook, WebSocket, or any protocol) receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
+3. **External system** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
+4. **External system** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
 5. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
 
 ### Agent Connected Notification Example
@@ -489,7 +501,7 @@ The notification system is designed to complement [Chat Response Handlers](./res
 When the external platform signals that an agent has joined, use `ShowAgentConnectedAsync()` to display a notification:
 
 ```csharp
-// In your webhook endpoint or WebSocket event handler:
+// In your webhook endpoint, relay event handler, or any external protocol callback:
 var notifications = services.GetRequiredService<IChatNotificationSender>();
 var localizer = services.GetRequiredService<IStringLocalizer<MyHandler>>();
 
@@ -505,7 +517,7 @@ await notifications.ShowAgentConnectedAsync(
 // Result: "You are now connected to Sarah." with a dismissible info system message.
 ```
 
-When using the **WebSocket relay** infrastructure, agent-connected events are routed automatically by the `IExternalChatRelayEventHandler`:
+When using the **external chat relay** infrastructure, agent-connected events are routed automatically by the `IExternalChatRelayEventHandler`:
 
 ```csharp
 // The relay receives a JSON event like:
@@ -525,7 +537,7 @@ When using the **WebSocket relay** infrastructure, agent-connected events are ro
 // so custom event types are also supported.
 ```
 
-See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and WebSocket integration examples.
+See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and persistent relay integration examples.
 
 ## Built-In Notification Types (CSS)
 
