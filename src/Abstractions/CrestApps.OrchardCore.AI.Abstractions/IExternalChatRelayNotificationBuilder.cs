@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI;
 /// <remarks>
 /// <para>
 /// The <c>DefaultExternalChatRelayEventHandler</c> resolves the builder by event type key. If a builder
-/// is found, it calls <see cref="BuildAsync"/> to produce a <see cref="ExternalChatRelayNotificationResult"/>,
+/// is found, it calls <see cref="Build"/> to produce a <see cref="ExternalChatRelayNotificationResult"/>,
 /// then delegates to <see cref="IExternalChatRelayNotificationHandler"/> to send/remove notifications.
 /// </para>
 /// <para>
