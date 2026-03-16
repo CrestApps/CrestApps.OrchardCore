@@ -7,7 +7,8 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// <summary>
 /// Default implementation of <see cref="IExternalChatRelayEventHandler"/> that routes
 /// relay events to the <see cref="IChatNotificationSender"/> for typing indicators,
-/// agent-connected notifications, wait-time updates, and session-ended bubbles.
+/// agent-connected notifications, wait-time updates, connection-status indicators,
+/// and session-ended bubbles.
 /// </summary>
 internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayEventHandler
 {
@@ -36,34 +37,46 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
 
         switch (relayEvent.EventType)
         {
-            case ExternalChatRelayEventType.AgentTyping:
+            case ExternalChatRelayEventTypes.AgentTyping:
                 await _notifications.ShowTypingAsync(sessionId, chatType, _localizer, relayEvent.AgentName);
                 break;
 
-            case ExternalChatRelayEventType.AgentStoppedTyping:
+            case ExternalChatRelayEventTypes.AgentStoppedTyping:
                 await _notifications.HideTypingAsync(sessionId, chatType);
                 break;
 
-            case ExternalChatRelayEventType.AgentConnected:
+            case ExternalChatRelayEventTypes.AgentConnected:
                 await _notifications.HideTransferAsync(sessionId, chatType);
                 await _notifications.ShowAgentConnectedAsync(
                     sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
                 break;
 
-            case ExternalChatRelayEventType.AgentDisconnected:
+            case ExternalChatRelayEventTypes.AgentDisconnected:
                 await _notifications.HideAgentConnectedAsync(sessionId, chatType);
                 break;
 
-            case ExternalChatRelayEventType.WaitTimeUpdated:
+            case ExternalChatRelayEventTypes.AgentReconnecting:
+                await _notifications.ShowAgentReconnectingAsync(sessionId, chatType, _localizer, relayEvent.AgentName, relayEvent.Content);
+                break;
+
+            case ExternalChatRelayEventTypes.ConnectionLost:
+                await _notifications.ShowConnectionLostAsync(sessionId, chatType, _localizer, relayEvent.Content);
+                break;
+
+            case ExternalChatRelayEventTypes.ConnectionRestored:
+                await _notifications.HideConnectionLostAsync(sessionId, chatType);
+                break;
+
+            case ExternalChatRelayEventTypes.WaitTimeUpdated:
                 await _notifications.UpdateTransferAsync(
                     sessionId, chatType, _localizer, estimatedWaitTime: relayEvent.Content);
                 break;
 
-            case ExternalChatRelayEventType.SessionEnded:
+            case ExternalChatRelayEventTypes.SessionEnded:
                 await _notifications.ShowSessionEndedAsync(sessionId, chatType, _localizer, relayEvent.Content);
                 break;
 
-            case ExternalChatRelayEventType.Message:
+            case ExternalChatRelayEventTypes.Message:
                 // Message events are not handled by the notification sender.
                 // They must be handled by the relay implementation directly using
                 // IHubContext to write the message and notify the SignalR group.
@@ -76,12 +89,12 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
 
                 break;
 
-            case ExternalChatRelayEventType.Custom:
+            default:
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     _logger.LogDebug(
-                        "Custom event '{EventName}' for session '{SessionId}' is not handled by the default handler.",
-                        relayEvent.CustomEventName,
+                        "Unrecognized event type '{EventType}' for session '{SessionId}' is not handled by the default handler.",
+                        relayEvent.EventType,
                         sessionId);
                 }
 

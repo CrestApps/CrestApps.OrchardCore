@@ -514,6 +514,15 @@ When using the **WebSocket relay** infrastructure, agent-connected events are ro
 // The default IExternalChatRelayEventHandler automatically:
 // 1. Calls HideTransferAsync() to remove the transfer indicator.
 // 2. Calls ShowAgentConnectedAsync() with the agent's name.
+//
+// Other built-in event types that are automatically routed:
+// - "agent-reconnecting" → ShowAgentReconnectingAsync()
+// - "connection-lost"    → ShowConnectionLostAsync()
+// - "connection-restored"→ HideConnectionLostAsync()
+// - "session-ended"      → ShowSessionEndedAsync()
+//
+// Event types are strings (ExternalChatRelayEventTypes constants),
+// so custom event types are also supported.
 ```
 
 See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and WebSocket integration examples.
@@ -528,6 +537,8 @@ The chat UI ships with styles for these notification types:
 | `transfer` | Yellow/warning-tinted, scaling pulse animation |
 | `ended` | Gray/secondary-tinted, static |
 | `info` | Cyan/info-tinted |
+| `warning` | Yellow/amber-tinted (used for agent-reconnecting) |
+| `error` | Red/danger-tinted (used for connection-lost) |
 | `warning` | Yellow/warning-tinted |
 
 Custom types receive the base `.ai-chat-notification` styling. Add your own CSS for custom types using `.ai-chat-notification-{type}`.

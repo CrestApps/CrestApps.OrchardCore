@@ -17,6 +17,8 @@ public static class ChatNotificationSenderExtensions
         public const string Typing = "typing";
         public const string Transfer = "transfer";
         public const string AgentConnected = "agent-connected";
+        public const string AgentReconnecting = "agent-reconnecting";
+        public const string ConnectionLost = "connection-lost";
         public const string ConversationEnded = "conversation-ended";
         public const string SessionEnded = "session-ended";
     }
@@ -211,6 +213,89 @@ public static class ChatNotificationSenderExtensions
         ChatContextType chatType)
     {
         return sender.RemoveAsync(sessionId, chatType, NotificationIds.AgentConnected);
+    }
+
+    /// <summary>
+    /// Shows an "agent reconnecting" bubble indicating the agent is reconnecting after a disruption.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="agentName">Optional name of the reconnecting agent.</param>
+    /// <param name="message">Optional custom message. When <see langword="null"/>, a localized default is used.</param>
+    public static Task ShowAgentReconnectingAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType,
+        IStringLocalizer T,
+        string agentName = null,
+        string message = null)
+    {
+        var content = message
+            ?? (string.IsNullOrEmpty(agentName)
+                ? T["Agent is reconnecting..."].Value
+                : T["{0} is reconnecting...", agentName].Value);
+
+        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        {
+            Id = NotificationIds.AgentReconnecting,
+            Type = "warning",
+            Content = content,
+            Icon = "fa-solid fa-rotate",
+        });
+    }
+
+    /// <summary>
+    /// Hides a previously shown agent-reconnecting notification.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    public static Task HideAgentReconnectingAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType)
+    {
+        return sender.RemoveAsync(sessionId, chatType, NotificationIds.AgentReconnecting);
+    }
+
+    /// <summary>
+    /// Shows a "connection lost" bubble indicating the relay connection has been lost.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
+    /// <param name="message">Optional custom message. When <see langword="null"/>, a localized default is used.</param>
+    public static Task ShowConnectionLostAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType,
+        IStringLocalizer T,
+        string message = null)
+    {
+        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        {
+            Id = NotificationIds.ConnectionLost,
+            Type = "error",
+            Content = message ?? T["Connection lost. Attempting to reconnect..."].Value,
+            Icon = "fa-solid fa-plug-circle-xmark",
+        });
+    }
+
+    /// <summary>
+    /// Hides a previously shown connection-lost notification.
+    /// </summary>
+    /// <param name="sender">The notification sender.</param>
+    /// <param name="sessionId">The session or interaction identifier.</param>
+    /// <param name="chatType">The type of chat context.</param>
+    public static Task HideConnectionLostAsync(
+        this IChatNotificationSender sender,
+        string sessionId,
+        ChatContextType chatType)
+    {
+        return sender.RemoveAsync(sessionId, chatType, NotificationIds.ConnectionLost);
     }
 
     /// <summary>

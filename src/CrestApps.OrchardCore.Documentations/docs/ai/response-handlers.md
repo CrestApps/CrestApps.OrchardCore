@@ -252,6 +252,21 @@ The WebSocket relay infrastructure is available in the **`CrestApps.OrchardCore.
 - **`IExternalChatRelayEventHandler`** — Routes incoming relay events to notifications and messages.
 :::
 
+#### Message Flow: Which Interface Does What
+
+Understanding which interface handles each direction of communication is key:
+
+| Direction | Interface | Responsibility |
+| --- | --- | --- |
+| **User → External App** | `IExternalChatRelay.SendPromptAsync()` | Sends the user's chat message text to the external system via the relay connection. Called by the response handler when it receives a prompt. |
+| **User → External App** (signals) | `IExternalChatRelay.SendSignalAsync()` | Sends user signals (e.g., thumbs up/down, user typing, feedback) to the external system. Called by `IChatNotificationActionHandler` implementations. |
+| **External App → User** (notifications) | `IExternalChatRelayEventHandler.HandleEventAsync()` | Receives events from the relay's background listener and routes them to `IChatNotificationSender` for UI notifications (typing indicators, agent connected, wait times, connection status, session ended). |
+| **External App → User** (messages) | Your `IExternalChatRelay` implementation | Receives message events from the external system and writes them to the prompt store via `IAIChatSessionPromptStore`, then notifies the SignalR group via `IHubContext<AIChatHub>`. This is handled directly in your relay implementation's `DispatchEventAsync` method. |
+
+:::note
+`ExternalChatRelayEvent.EventType` is a **string**, not an enum. Well-known event types are defined as constants in `ExternalChatRelayEventTypes` (e.g., `ExternalChatRelayEventTypes.AgentTyping`). You can use **any custom string** for platform-specific events — the default handler will log and skip unrecognized types, and custom `IExternalChatRelayEventHandler` implementations can handle them.
+:::
+
 #### When to Use WebSocket vs. Webhook
 
 | Aspect | Webhook | WebSocket |
@@ -411,7 +426,7 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         await eventHandler.HandleEventAsync(_sessionId, _chatType, relayEvent, cancellationToken);
 
         // Handle message events separately — save to prompt store and notify via SignalR.
-        if (relayEvent.EventType == ExternalChatRelayEventType.Message)
+        if (relayEvent.EventType == ExternalChatRelayEventTypes.Message)
         {
             await HandleMessageAsync(relayEvent);
         }
@@ -468,23 +483,37 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         {
             "agent_typing" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.AgentTyping,
+                EventType = ExternalChatRelayEventTypes.AgentTyping,
                 AgentName = root.TryGetProperty("agent_name", out var name)
                     ? name.GetString() : null,
             },
             "agent_stopped_typing" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.AgentStoppedTyping,
+                EventType = ExternalChatRelayEventTypes.AgentStoppedTyping,
             },
             "agent_connected" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.AgentConnected,
+                EventType = ExternalChatRelayEventTypes.AgentConnected,
                 AgentName = root.TryGetProperty("agent_name", out var agentName)
                     ? agentName.GetString() : null,
             },
+            "agent_reconnecting" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventTypes.AgentReconnecting,
+                AgentName = root.TryGetProperty("agent_name", out var reconnAgent)
+                    ? reconnAgent.GetString() : null,
+            },
+            "connection_lost" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventTypes.ConnectionLost,
+            },
+            "connection_restored" => new ExternalChatRelayEvent
+            {
+                EventType = ExternalChatRelayEventTypes.ConnectionRestored,
+            },
             "message" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.Message,
+                EventType = ExternalChatRelayEventTypes.Message,
                 Content = root.TryGetProperty("content", out var content)
                     ? content.GetString() : string.Empty,
                 AgentName = root.TryGetProperty("agent_name", out var msgAgent)
@@ -492,20 +521,22 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
             },
             "wait_time" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.WaitTimeUpdated,
+                EventType = ExternalChatRelayEventTypes.WaitTimeUpdated,
                 Content = root.TryGetProperty("estimated_wait", out var wait)
                     ? wait.GetString() : null,
             },
             "session_ended" => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.SessionEnded,
+                EventType = ExternalChatRelayEventTypes.SessionEnded,
                 Content = root.TryGetProperty("reason", out var reason)
                     ? reason.GetString() : null,
             },
+            // Any unrecognized event type is passed through as-is.
+            // The default IExternalChatRelayEventHandler logs it and skips.
+            // Custom IExternalChatRelayEventHandler implementations can handle it.
             _ => new ExternalChatRelayEvent
             {
-                EventType = ExternalChatRelayEventType.Custom,
-                CustomEventName = typeProp.GetString(),
+                EventType = typeProp.GetString(),
                 Content = json,
             },
         };
