@@ -250,8 +250,8 @@ The relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`**
 - **`IExternalChatRelayManager`** — Singleton that manages relay connections per session.
 - **`IExternalChatRelay`** — Protocol-agnostic interface for a persistent relay connection to an external system.
 - **`IExternalChatRelayEventHandler`** — Routes incoming relay events through keyed builders and handlers.
-- **`IExternalChatRelayNotificationBuilder`** — Keyed builder (per event type) that populates a notification and result.
-- **`IExternalChatRelayNotificationHandler`** — Handles sending/removing notifications from the builder's result.
+- **`IExternalChatRelayNotificationBuilder`** — Keyed builder (per event type) that declares a `NotificationType` and populates a pre-created notification and result.
+- **`IExternalChatRelayNotificationHandler`** — Handles sending, updating, and removing notifications from the builder's result.
 :::
 
 #### Message Flow: Which Interface Does What
@@ -271,7 +271,7 @@ Understanding which interface handles each direction of communication is key:
 
 #### Extending with Custom Event Types
 
-The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` creates a `ChatNotification` and `ExternalChatRelayNotificationResult`, then resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. The builder populates the notification properties and configures which notifications to remove. The result is then processed by the `IExternalChatRelayNotificationHandler`.
+The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. It creates a `ChatNotification` with `Type` set from the builder's `NotificationType` property, then calls the builder's `Build` method to populate remaining properties. The result is then processed by the `IExternalChatRelayNotificationHandler`.
 
 To handle a custom event type, register a keyed builder in your module's `Startup.cs`:
 
@@ -280,11 +280,13 @@ To handle a custom event type, register a keyed builder in your module's `Startu
 services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
 ```
 
-Then implement the builder. Builders receive a pre-created `ChatNotification` object and populate its properties:
+Then implement the builder. The `NotificationType` property declares the notification type (set via constructor by the handler). The `Build` method populates other properties — it should **not** set `notification.Type`:
 
 ```csharp
 public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "info";
+
     public void Build(
         ExternalChatRelayEvent relayEvent,
         ChatNotification notification,
@@ -292,7 +294,6 @@ public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuil
         IStringLocalizer T)
     {
         notification.Id = "supervisor-joined";
-        notification.Type = "info";
         notification.Content = T["A supervisor has joined the conversation."].Value;
         notification.Icon = "fa-solid fa-user-shield";
         notification.Dismissible = true;
@@ -300,11 +301,13 @@ public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuil
 }
 ```
 
-The `ExternalChatRelayNotificationResult` supports both adding and removing notifications:
+The `ExternalChatRelayNotificationResult` supports adding, removing, and updating notifications. Set `result.IsUpdate = true` to update an existing notification instead of sending a new one:
 
 ```csharp
 public sealed class AgentReplacedBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "info";
+
     public void Build(
         ExternalChatRelayEvent relayEvent,
         ChatNotification notification,
@@ -313,7 +316,6 @@ public sealed class AgentReplacedBuilder : IExternalChatRelayNotificationBuilder
     {
         // Populate the notification.
         notification.Id = "agent-replaced";
-        notification.Type = "info";
         notification.Content = T["A new agent has taken over the conversation."].Value;
 
         // Remove the previous agent-connected notification first.
@@ -372,7 +374,8 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         _logger = logger;
     }
 
-    public bool IsConnected => _webSocket?.State == WebSocketState.Open;
+    public Task<bool> IsConnectedAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(_webSocket?.State == WebSocketState.Open);
 
     public async Task ConnectAsync(
         ExternalChatRelayContext context,
@@ -395,7 +398,7 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
 
     public async Task SendPromptAsync(string text, CancellationToken cancellationToken = default)
     {
-        if (!IsConnected)
+        if (!await IsConnectedAsync(cancellationToken))
         {
             throw new InvalidOperationException("WebSocket is not connected.");
         }
@@ -410,7 +413,7 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         IDictionary<string, string> data = null,
         CancellationToken cancellationToken = default)
     {
-        if (!IsConnected)
+        if (!await IsConnectedAsync(cancellationToken))
         {
             return;
         }
@@ -666,7 +669,7 @@ public sealed class ThumbsUpActionHandler : IChatNotificationActionHandler
         var relayManager = context.Services.GetRequiredService<IExternalChatRelayManager>();
         var relay = relayManager.Get(context.SessionId);
 
-        if (relay is not null && relay.IsConnected)
+        if (relay is not null && await relay.IsConnectedAsync(cancellationToken))
         {
             await relay.SendSignalAsync("thumbs-up", cancellationToken: cancellationToken);
         }

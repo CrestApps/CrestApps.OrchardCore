@@ -11,10 +11,11 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <c>DefaultExternalChatRelayEventHandler</c> creates the <see cref="ChatNotification"/>
-/// and <see cref="ExternalChatRelayNotificationResult"/>, then resolves the builder by event type key.
-/// The builder populates the notification properties and configures the result (e.g., which notifications
-/// to remove). This pattern allows multiple builders to contribute to the same notification if needed.
+/// The <c>DefaultExternalChatRelayEventHandler</c> resolves the builder by event type key,
+/// creates the <see cref="ChatNotification"/> with <see cref="ChatNotification.Type"/> set from
+/// <see cref="NotificationType"/>, and then calls <see cref="Build"/> to populate remaining properties.
+/// Builders should not modify <see cref="ChatNotification.Type"/> — this allows the handler to control
+/// the type and enables multiple builders to contribute without overriding each other.
 /// </para>
 /// <para>
 /// To handle a custom event type, register a keyed builder:
@@ -26,10 +27,21 @@ namespace CrestApps.OrchardCore.AI;
 public interface IExternalChatRelayNotificationBuilder
 {
     /// <summary>
+    /// Gets the notification type that this builder produces (e.g., <c>"typing"</c>, <c>"info"</c>,
+    /// <c>"warning"</c>, <c>"error"</c>, <c>"transfer"</c>, <c>"ended"</c>).
+    /// This value is used by the handler to create the <see cref="ChatNotification"/> with its
+    /// <see cref="ChatNotification.Type"/> pre-set. Builders should not modify the type in
+    /// <see cref="Build"/>.
+    /// </summary>
+    string NotificationType { get; }
+
+    /// <summary>
     /// Populates the notification and result for the given relay event.
+    /// The <see cref="ChatNotification.Type"/> is already set by the handler via
+    /// <see cref="NotificationType"/> — do not override it in this method.
     /// </summary>
     /// <param name="relayEvent">The event received from the external system.</param>
-    /// <param name="notification">The notification object to populate with content, icon, type, etc.</param>
+    /// <param name="notification">The notification object to populate with content, icon, etc.</param>
     /// <param name="result">The result to configure with notification IDs to remove.</param>
     /// <param name="T">The string localizer for translating user-facing messages.</param>
     void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T);

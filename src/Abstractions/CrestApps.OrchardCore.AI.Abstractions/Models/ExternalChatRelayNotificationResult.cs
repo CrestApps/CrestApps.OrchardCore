@@ -18,4 +18,13 @@ public sealed class ExternalChatRelayNotificationResult
     /// only removes existing notifications (e.g., "agent stopped typing" removes the typing indicator).
     /// </summary>
     public ChatNotification Notification { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the notification should be sent as an update
+    /// (using <see cref="IChatNotificationSender.UpdateAsync"/>) instead of a new send
+    /// (using <see cref="IChatNotificationSender.SendAsync"/>).
+    /// When <see langword="true"/>, the notification replaces an existing notification with the same ID
+    /// only if it exists on the client. When <see langword="false"/> (default), the notification is always sent.
+    /// </summary>
+    public bool IsUpdate { get; set; }
 }

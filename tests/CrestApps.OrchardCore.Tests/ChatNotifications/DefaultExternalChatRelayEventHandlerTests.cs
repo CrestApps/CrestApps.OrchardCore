@@ -288,7 +288,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
         var handler = CreateHandler(sp);
 
         _senderMock
-            .Setup(s => s.SendAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
+            .Setup(s => s.UpdateAsync("s1", ChatContextType.AIChatSession, It.IsAny<ChatNotification>()))
             .Returns(Task.CompletedTask);
 
         await handler.HandleEventAsync("s1", ChatContextType.AIChatSession, new ExternalChatRelayEvent
@@ -298,7 +298,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
         }, TestContext.Current.CancellationToken);
 
         _senderMock.Verify(
-            s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
+            s => s.UpdateAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
                 n => n.Id == ChatNotificationSenderExtensions.NotificationIds.Transfer
                     && n.Metadata != null
                     && n.Metadata.ContainsKey("estimatedWaitTime"))),
@@ -479,10 +479,11 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
     private sealed class TestCustomNotificationBuilder : IExternalChatRelayNotificationBuilder
     {
+        public string NotificationType => "info";
+
         public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
         {
             notification.Id = "supervisor-joined";
-            notification.Type = "info";
             notification.Content = "A supervisor has joined.";
             notification.Icon = "fa-solid fa-user-shield";
             notification.Dismissible = true;

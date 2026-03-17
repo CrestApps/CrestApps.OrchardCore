@@ -25,7 +25,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task GetOrCreateAsync_CreatesAndConnectsRelay()
     {
         var relayMock = new Mock<IExternalChatRelay>();
-        relayMock.Setup(r => r.IsConnected).Returns(true);
+        relayMock.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -42,7 +42,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task GetOrCreateAsync_ReturnsCachedRelayWhenConnected()
     {
         var relayMock = new Mock<IExternalChatRelay>();
-        relayMock.Setup(r => r.IsConnected).Returns(true);
+        relayMock.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -103,7 +103,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task Get_ReturnsRelayWhenExists()
     {
         var relayMock = new Mock<IExternalChatRelay>();
-        relayMock.Setup(r => r.IsConnected).Returns(true);
+        relayMock.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -137,7 +137,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task CloseAsync_DisconnectsAndDisposesRelay()
     {
         var relayMock = new Mock<IExternalChatRelay>();
-        relayMock.Setup(r => r.IsConnected).Returns(true);
+        relayMock.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -172,7 +172,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task CloseAsync_DisconnectThrows_StillDisposes()
     {
         var relayMock = new Mock<IExternalChatRelay>();
-        relayMock.Setup(r => r.IsConnected).Returns(true);
+        relayMock.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
@@ -199,13 +199,13 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public async Task DisposeAsync_DisconnectsAndDisposesAllRelays()
     {
         var relay1 = new Mock<IExternalChatRelay>();
-        relay1.Setup(r => r.IsConnected).Returns(true);
+        relay1.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relay1.Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay1.Setup(r => r.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay1.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
 
         var relay2 = new Mock<IExternalChatRelay>();
-        relay2.Setup(r => r.IsConnected).Returns(true);
+        relay2.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relay2.Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay2.Setup(r => r.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay2.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);

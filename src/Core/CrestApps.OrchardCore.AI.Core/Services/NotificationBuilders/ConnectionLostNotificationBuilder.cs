@@ -9,10 +9,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class ConnectionLostNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "error";
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Id = ChatNotificationSenderExtensions.NotificationIds.ConnectionLost;
-        notification.Type = "error";
         notification.Content = relayEvent.Content ?? T["Connection lost. Attempting to reconnect..."].Value;
         notification.Icon = "fa-solid fa-plug-circle-xmark";
     }

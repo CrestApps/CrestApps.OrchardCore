@@ -9,10 +9,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class WaitTimeUpdatedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "transfer";
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Id = ChatNotificationSenderExtensions.NotificationIds.Transfer;
-        notification.Type = "transfer";
         notification.Icon = "fa-solid fa-headset";
 
         if (!string.IsNullOrEmpty(relayEvent.Content))
@@ -38,5 +39,7 @@ internal sealed class WaitTimeUpdatedNotificationBuilder : IExternalChatRelayNot
                 Icon = "fa-solid fa-xmark",
             },
         ];
+
+        result.IsUpdate = true;
     }
 }

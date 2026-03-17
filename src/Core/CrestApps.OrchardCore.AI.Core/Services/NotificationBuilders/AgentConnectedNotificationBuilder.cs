@@ -9,10 +9,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class AgentConnectedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "info";
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Id = ChatNotificationSenderExtensions.NotificationIds.AgentConnected;
-        notification.Type = "info";
         notification.Content = relayEvent.Content
             ?? (string.IsNullOrEmpty(relayEvent.AgentName)
                 ? T["You are now connected to a live agent."].Value

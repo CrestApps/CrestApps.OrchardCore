@@ -29,7 +29,7 @@ internal sealed class ExternalChatRelayConnectionManager : IExternalChatRelayMan
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(factory);
 
-        if (_relays.TryGetValue(sessionId, out var existing) && existing.IsConnected)
+        if (_relays.TryGetValue(sessionId, out var existing) && await existing.IsConnectedAsync(cancellationToken))
         {
             return existing;
         }

@@ -28,9 +28,12 @@ namespace CrestApps.OrchardCore.AI;
 public interface IExternalChatRelay : IAsyncDisposable
 {
     /// <summary>
-    /// Gets a value indicating whether the relay is currently connected to the external system.
+    /// Determines whether the relay is currently connected to the external system.
+    /// Implementations may perform a network request to verify the connection status.
     /// </summary>
-    bool IsConnected { get; }
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns><see langword="true"/> if the relay is connected; otherwise, <see langword="false"/>.</returns>
+    Task<bool> IsConnectedAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Establishes the connection to the external system for the given session.

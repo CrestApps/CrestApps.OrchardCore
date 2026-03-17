@@ -8,10 +8,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class SessionEndedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
+    public string NotificationType => "ended";
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Id = ChatNotificationSenderExtensions.NotificationIds.SessionEnded;
-        notification.Type = "ended";
         notification.Content = relayEvent.Content ?? T["This chat session has ended."].Value;
         notification.Icon = "fa-solid fa-circle-check";
         notification.Dismissible = true;

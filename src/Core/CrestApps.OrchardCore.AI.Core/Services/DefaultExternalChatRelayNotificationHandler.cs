@@ -5,8 +5,10 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// <summary>
 /// Default implementation of <see cref="IExternalChatRelayNotificationHandler"/> that
 /// processes an <see cref="ExternalChatRelayNotificationResult"/> by removing specified
-/// notifications and then sending the new notification (if any) via
-/// <see cref="IChatNotificationSender"/>.
+/// notifications and then sending or updating the notification (if any) via
+/// <see cref="IChatNotificationSender"/>. When <see cref="ExternalChatRelayNotificationResult.IsUpdate"/>
+/// is <see langword="true"/>, <see cref="IChatNotificationSender.UpdateAsync"/> is used instead
+/// of <see cref="IChatNotificationSender.SendAsync"/>.
 /// </summary>
 internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalChatRelayNotificationHandler
 {
@@ -32,7 +34,14 @@ internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalCha
 
         if (result.Notification != null)
         {
-            await _sender.SendAsync(sessionId, chatType, result.Notification);
+            if (result.IsUpdate)
+            {
+                await _sender.UpdateAsync(sessionId, chatType, result.Notification);
+            }
+            else
+            {
+                await _sender.SendAsync(sessionId, chatType, result.Notification);
+            }
         }
     }
 }

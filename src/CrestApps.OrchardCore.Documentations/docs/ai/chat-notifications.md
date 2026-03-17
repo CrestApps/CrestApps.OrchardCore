@@ -491,17 +491,17 @@ The UI applies the CSS class `ai-chat-notification-queue` (derived from the `Typ
 The notification system is designed to complement [Chat Response Handlers](./response-handlers.md). A typical integration pattern:
 
 1. **Transfer function** sets `ResponseHandlerName` on the session → calls `ShowTransferAsync()`.
-2. **External system** (via webhook, WebSocket, or any protocol) receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
-3. **External system** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
-4. **External system** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
+2. **External system** (via webhook, WebSocket, or any protocol) receives agent connected event → removes transfer notification + sends agent-connected notification.
+3. **External system** receives typing events → sends/removes typing notifications.
+4. **External system** receives agent response → removes typing notification + writes message via `IHubContext`.
 5. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
 
 ### Agent Connected Notification Example
 
-When the external platform signals that an agent has joined, use `ShowAgentConnectedAsync()` to display a notification:
+When the external platform signals that an agent has joined, you can send the notification directly using `IChatNotificationSender`:
 
 ```csharp
-// In your webhook endpoint, relay event handler, or any external protocol callback:
+// In your webhook endpoint or any external protocol callback:
 var notifications = services.GetRequiredService<IChatNotificationSender>();
 var localizer = services.GetRequiredService<IStringLocalizer<MyHandler>>();
 
@@ -517,24 +517,60 @@ await notifications.ShowAgentConnectedAsync(
 // Result: "You are now connected to Sarah." with a dismissible info system message.
 ```
 
-When using the **external chat relay** infrastructure, agent-connected events are routed automatically by the `IExternalChatRelayEventHandler`:
+When using the **external chat relay** infrastructure, events are routed automatically through the keyed builder/handler pattern. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by event type, creates a `ChatNotification` with the builder's `NotificationType`, and delegates to `IExternalChatRelayNotificationHandler` for sending/removing notifications:
 
 ```csharp
 // The relay receives a JSON event like:
 // { "type": "agent_connected", "agent_name": "Sarah" }
 //
-// The default IExternalChatRelayEventHandler automatically:
-// 1. Calls HideTransferAsync() to remove the transfer indicator.
-// 2. Calls ShowAgentConnectedAsync() with the agent's name.
+// The DefaultExternalChatRelayEventHandler automatically:
+// 1. Resolves the AgentConnectedNotificationBuilder (keyed by "agent-connected").
+// 2. Creates a ChatNotification with Type = "info" (from builder.NotificationType).
+// 3. The builder populates Content, Icon, Dismissible, and removes the transfer notification.
+// 4. The IExternalChatRelayNotificationHandler processes the result (remove + send).
 //
-// Other built-in event types that are automatically routed:
-// - "agent-reconnecting" → ShowAgentReconnectingAsync()
-// - "connection-lost"    → ShowConnectionLostAsync()
-// - "connection-restored"→ HideConnectionLostAsync()
-// - "session-ended"      → ShowSessionEndedAsync()
+// Built-in event types with registered builders:
+// - ExternalChatRelayEventTypes.AgentTyping        → typing indicator
+// - ExternalChatRelayEventTypes.AgentStoppedTyping  → removes typing indicator
+// - ExternalChatRelayEventTypes.AgentConnected      → agent-connected info notification
+// - ExternalChatRelayEventTypes.AgentDisconnected   → removes agent-connected notification
+// - ExternalChatRelayEventTypes.AgentReconnecting   → reconnecting warning notification
+// - ExternalChatRelayEventTypes.ConnectionLost      → connection-lost error notification
+// - ExternalChatRelayEventTypes.ConnectionRestored  → removes connection-lost notification
+// - ExternalChatRelayEventTypes.WaitTimeUpdated     → updates transfer notification
+// - ExternalChatRelayEventTypes.SessionEnded        → session-ended notification
 //
-// Event types are strings (ExternalChatRelayEventTypes constants),
-// so custom event types are also supported.
+// Custom event types: register a keyed IExternalChatRelayNotificationBuilder.
+```
+
+### Adding Custom Relay Events
+
+To handle custom event types from your external platform, register a keyed builder:
+
+```csharp
+// In your module's Startup.cs:
+services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
+```
+
+Implement the builder. The `NotificationType` property declares the notification type, and `Build` populates other properties:
+
+```csharp
+public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
+{
+    public string NotificationType => "info";
+
+    public void Build(
+        ExternalChatRelayEvent relayEvent,
+        ChatNotification notification,
+        ExternalChatRelayNotificationResult result,
+        IStringLocalizer T)
+    {
+        notification.Id = "supervisor-joined";
+        notification.Content = T["A supervisor has joined the conversation."].Value;
+        notification.Icon = "fa-solid fa-user-shield";
+        notification.Dismissible = true;
+    }
+}
 ```
 
 See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and persistent relay integration examples.
