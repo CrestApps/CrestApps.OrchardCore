@@ -32,16 +32,17 @@ internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalCha
             await _sender.RemoveAsync(sessionId, chatType, notificationId);
         }
 
-        if (result.Notification != null)
+        if (result.Notification == null)
         {
-            if (result.IsUpdate)
-            {
-                await _sender.UpdateAsync(sessionId, chatType, result.Notification);
-            }
-            else
-            {
-                await _sender.SendAsync(sessionId, chatType, result.Notification);
-            }
+            return;
         }
+
+        if (result.IsUpdate)
+        {
+            await _sender.UpdateAsync(sessionId, chatType, result.Notification);
+            return;
+        }
+
+        await _sender.SendAsync(sessionId, chatType, result.Notification);
     }
 }

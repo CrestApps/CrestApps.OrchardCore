@@ -70,10 +70,7 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
             return;
         }
 
-        var notification = new ChatNotification
-        {
-            Type = builder.NotificationType,
-        };
+        var notification = new ChatNotification(builder.NotificationType);
         var result = new ExternalChatRelayNotificationResult
         {
             Notification = notification,

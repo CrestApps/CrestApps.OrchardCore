@@ -51,10 +51,9 @@ public static class ChatNotificationSenderExtensions
             ? T["Agent is typing"].Value
             : T["{0} is typing", agentName].Value;
 
-        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        return sender.SendAsync(sessionId, chatType, new ChatNotification("typing")
         {
             Id = NotificationIds.Typing,
-            Type = "typing",
             Content = content,
             Icon = "fa-solid fa-ellipsis",
         });
@@ -98,10 +97,9 @@ public static class ChatNotificationSenderExtensions
                 ? T["Transferring you to a live agent... Estimated wait: {0}.", estimatedWaitTime].Value
                 : T["Transferring you to a live agent..."].Value);
 
-        var notification = new ChatNotification
+        var notification = new ChatNotification("transfer")
         {
             Id = NotificationIds.Transfer,
-            Type = "transfer",
             Content = content,
             Icon = "fa-solid fa-headset",
         };
@@ -189,10 +187,9 @@ public static class ChatNotificationSenderExtensions
                 ? T["You are now connected to a live agent."].Value
                 : T["You are now connected to {0}.", agentName].Value);
 
-        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        return sender.SendAsync(sessionId, chatType, new ChatNotification("info")
         {
             Id = NotificationIds.AgentConnected,
-            Type = "info",
             Content = content,
             Icon = "fa-solid fa-user-check",
             Dismissible = true,
@@ -229,10 +226,9 @@ public static class ChatNotificationSenderExtensions
         IStringLocalizer T,
         string message = null)
     {
-        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        return sender.SendAsync(sessionId, chatType, new ChatNotification("ended")
         {
             Id = NotificationIds.ConversationEnded,
-            Type = "ended",
             Content = message ?? T["Conversation ended."].Value,
             Icon = "fa-solid fa-circle-check",
             Dismissible = true,
@@ -254,10 +250,9 @@ public static class ChatNotificationSenderExtensions
         IStringLocalizer T,
         string message = null)
     {
-        return sender.SendAsync(sessionId, chatType, new ChatNotification
+        return sender.SendAsync(sessionId, chatType, new ChatNotification("ended")
         {
             Id = NotificationIds.SessionEnded,
-            Type = "ended",
             Content = message ?? T["This chat session has ended."].Value,
             Icon = "fa-solid fa-circle-check",
             Dismissible = true,

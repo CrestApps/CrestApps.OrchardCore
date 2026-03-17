@@ -271,7 +271,7 @@ Understanding which interface handles each direction of communication is key:
 
 #### Extending with Custom Event Types
 
-The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. It creates a `ChatNotification` with `Type` set from the builder's `NotificationType` property, then calls the builder's `Build` method to populate remaining properties. The result is then processed by the `IExternalChatRelayNotificationHandler`.
+The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. It creates a `ChatNotification(type)` using the builder's `NotificationType` property, then calls the builder's `Build` method to populate remaining properties. The result is then processed by the `IExternalChatRelayNotificationHandler`.
 
 To handle a custom event type, register a keyed builder in your module's `Startup.cs`:
 

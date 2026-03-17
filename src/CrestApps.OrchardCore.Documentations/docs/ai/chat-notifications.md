@@ -114,10 +114,12 @@ The hub resolves the handler by looking up the keyed service matching the action
 
 ### `ChatNotification`
 
+The `Type` is required and must be set via the constructor: `new ChatNotification("info")`. The setter is private.
+
 | Property | Type | Description |
 | --- | --- | --- |
 | `Id` | `string` | Unique identifier. Used for update/remove targeting. |
-| `Type` | `string` | Visual type: `"typing"`, `"transfer"`, `"ended"`, `"info"`, `"warning"`, or any custom value. Maps to CSS class `ai-chat-notification-{type}`. |
+| `Type` | `string` | Visual type (set via constructor): `"typing"`, `"transfer"`, `"ended"`, `"info"`, `"warning"`, or any custom value. Maps to CSS class `ai-chat-notification-{type}`. |
 | `Content` | `string` | Display text. |
 | `Icon` | `string` | FontAwesome class (e.g., `"fa-solid fa-headset"`). |
 | `CssClass` | `string` | Additional CSS class on the container. |
@@ -403,10 +405,9 @@ Create a completely custom notification with your own action buttons and handler
 
 ```csharp
 // Send a custom notification with two action buttons.
-await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification
+await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification("info")
 {
     Id = "feedback-request",
-    Type = "info",
     Content = "Was this conversation helpful?",
     Icon = "fa-solid fa-star",
     Dismissible = true,
@@ -467,10 +468,9 @@ public sealed class Startup : StartupBase
 Define a custom notification type and add CSS in your theme or module:
 
 ```csharp
-await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification
+await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification("queue")
 {
     Id = "queue-position",
-    Type = "queue",  // custom type
     Content = "You are #3 in the queue.",
     Icon = "fa-solid fa-users",
     CssClass = "my-custom-queue-notification",
@@ -498,26 +498,16 @@ The notification system is designed to complement [Chat Response Handlers](./res
 
 ### Agent Connected Notification Example
 
-When the external platform signals that an agent has joined, you can send the notification directly using `IChatNotificationSender`:
+When the external platform signals that an agent has joined, the notification can be sent through two approaches:
 
-```csharp
-// In your webhook endpoint or any external protocol callback:
-var notifications = services.GetRequiredService<IChatNotificationSender>();
-var localizer = services.GetRequiredService<IStringLocalizer<MyHandler>>();
+**Approach 1: Using the External Chat Relay (recommended for persistent connections)**
 
-// First, hide the transfer indicator.
-await notifications.HideTransferAsync(sessionId, ChatContextType.AIChatSession);
+When using the **external chat relay** infrastructure, events are routed automatically through the keyed builder/handler pattern. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by event type, creates a `ChatNotification(type)` using the builder's `NotificationType`, calls `Build` to populate the remaining properties, and then delegates to `IExternalChatRelayNotificationHandler` for processing.
 
-// Then, show the agent-connected notification with the agent's name.
-await notifications.ShowAgentConnectedAsync(
-    sessionId,
-    ChatContextType.AIChatSession,
-    localizer,
-    agentName: "Sarah");
-// Result: "You are now connected to Sarah." with a dismissible info system message.
-```
-
-When using the **external chat relay** infrastructure, events are routed automatically through the keyed builder/handler pattern. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by event type, creates a `ChatNotification` with the builder's `NotificationType`, and delegates to `IExternalChatRelayNotificationHandler` for sending/removing notifications:
+The handler supports three operations:
+- **Remove**: removes notification IDs listed in `result.RemoveNotificationIds`
+- **Send**: sends `result.Notification` as a new notification when `result.IsUpdate` is `false`
+- **Update**: updates an existing notification when `result.IsUpdate` is `true` (e.g., wait time changes)
 
 ```csharp
 // The relay receives a JSON event like:
@@ -525,9 +515,11 @@ When using the **external chat relay** infrastructure, events are routed automat
 //
 // The DefaultExternalChatRelayEventHandler automatically:
 // 1. Resolves the AgentConnectedNotificationBuilder (keyed by "agent-connected").
-// 2. Creates a ChatNotification with Type = "info" (from builder.NotificationType).
-// 3. The builder populates Content, Icon, Dismissible, and removes the transfer notification.
-// 4. The IExternalChatRelayNotificationHandler processes the result (remove + send).
+// 2. Creates a ChatNotification("info") using the builder's NotificationType.
+// 3. Calls builder.Build() which populates Content, Icon, Dismissible,
+//    and adds the transfer notification ID to RemoveNotificationIds.
+// 4. Passes the result to IExternalChatRelayNotificationHandler which
+//    removes the transfer notification, then sends the agent-connected notification.
 //
 // Built-in event types with registered builders:
 // - ExternalChatRelayEventTypes.AgentTyping        → typing indicator
@@ -537,22 +529,33 @@ When using the **external chat relay** infrastructure, events are routed automat
 // - ExternalChatRelayEventTypes.AgentReconnecting   → reconnecting warning notification
 // - ExternalChatRelayEventTypes.ConnectionLost      → connection-lost error notification
 // - ExternalChatRelayEventTypes.ConnectionRestored  → removes connection-lost notification
-// - ExternalChatRelayEventTypes.WaitTimeUpdated     → updates transfer notification
+// - ExternalChatRelayEventTypes.WaitTimeUpdated     → updates transfer notification (IsUpdate = true)
 // - ExternalChatRelayEventTypes.SessionEnded        → session-ended notification
-//
-// Custom event types: register a keyed IExternalChatRelayNotificationBuilder.
+```
+
+**Approach 2: Using `IChatNotificationSender` directly (for webhooks or one-off calls)**
+
+For webhook endpoints or one-off notifications, use the extension methods on `IChatNotificationSender` directly:
+
+```csharp
+// In your webhook endpoint:
+var notifications = services.GetRequiredService<IChatNotificationSender>();
+var T = services.GetRequiredService<IStringLocalizer<MyHandler>>();
+
+await notifications.HideTransferAsync(sessionId, ChatContextType.AIChatSession);
+await notifications.ShowAgentConnectedAsync(sessionId, ChatContextType.AIChatSession, T, agentName: "Sarah");
 ```
 
 ### Adding Custom Relay Events
 
-To handle custom event types from your external platform, register a keyed builder:
+To handle custom event types from your external platform, register a keyed `IExternalChatRelayNotificationBuilder`:
 
 ```csharp
 // In your module's Startup.cs:
 services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
 ```
 
-Implement the builder. The `NotificationType` property declares the notification type, and `Build` populates other properties:
+Implement the builder. The `NotificationType` property declares the notification type (used by the handler to create the `ChatNotification`), and `Build` populates the remaining properties:
 
 ```csharp
 public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
@@ -572,6 +575,8 @@ public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuil
     }
 }
 ```
+
+The `DefaultExternalChatRelayEventHandler` automatically resolves your builder when an event with type `"supervisor-joined"` arrives. The `IExternalChatRelayNotificationHandler` then processes the result — removing any notification IDs in `RemoveNotificationIds`, then sending (or updating, if `IsUpdate` is `true`) the notification.
 
 See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and persistent relay integration examples.
 

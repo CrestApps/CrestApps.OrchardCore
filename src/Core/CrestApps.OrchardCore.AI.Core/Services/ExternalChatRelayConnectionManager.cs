@@ -74,25 +74,27 @@ internal sealed class ExternalChatRelayConnectionManager : IExternalChatRelayMan
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
-        if (_relays.TryRemove(sessionId, out var relay))
+        if (!_relays.TryRemove(sessionId, out var relay))
         {
-            try
-            {
-                await relay.DisconnectAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error disconnecting external chat relay for session '{SessionId}'.", sessionId);
-            }
-            finally
-            {
-                await relay.DisposeAsync();
-            }
+            return;
+        }
 
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("External chat relay closed for session '{SessionId}'.", sessionId);
-            }
+        try
+        {
+            await relay.DisconnectAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error disconnecting external chat relay for session '{SessionId}'.", sessionId);
+        }
+        finally
+        {
+            await relay.DisposeAsync();
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("External chat relay closed for session '{SessionId}'.", sessionId);
         }
     }
 

@@ -15,7 +15,7 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task SendAsync_AIChatSession_DelegatesToTransport()
     {
-        var notification = new ChatNotification { Id = "test", Type = "info", Content = "Hello" };
+        var notification = new ChatNotification("info") { Id = "test", Content = "Hello" };
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.SendNotificationAsync("s1", notification))
@@ -32,7 +32,7 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task SendAsync_ChatInteraction_DelegatesToTransport()
     {
-        var notification = new ChatNotification { Id = "test", Type = "info", Content = "Hello" };
+        var notification = new ChatNotification("info") { Id = "test", Content = "Hello" };
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.SendNotificationAsync("i1", notification))
@@ -52,7 +52,7 @@ public sealed class DefaultChatNotificationSenderTests
         var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => sender.SendAsync(null, ChatContextType.AIChatSession, new ChatNotification()));
+            () => sender.SendAsync(null, ChatContextType.AIChatSession, new ChatNotification("info")));
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class DefaultChatNotificationSenderTests
     [Fact]
     public async Task UpdateAsync_AIChatSession_DelegatesToTransport()
     {
-        var notification = new ChatNotification { Id = "test", Type = "info", Content = "Updated" };
+        var notification = new ChatNotification("info") { Id = "test", Content = "Updated" };
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.UpdateNotificationAsync("s1", notification))
@@ -91,7 +91,7 @@ public sealed class DefaultChatNotificationSenderTests
         var sender = CreateSenderWithNoOpTransport();
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => sender.UpdateAsync(null, ChatContextType.AIChatSession, new ChatNotification()));
+            () => sender.UpdateAsync(null, ChatContextType.AIChatSession, new ChatNotification("info")));
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class DefaultChatNotificationSenderTests
         var sender = new DefaultChatNotificationSender(serviceProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => sender.SendAsync("s1", ChatContextType.AIChatSession, new ChatNotification { Id = "t" }));
+            () => sender.SendAsync("s1", ChatContextType.AIChatSession, new ChatNotification("info") { Id = "t" }));
     }
 
     // ───────────────────────────────────────────────────────────────
