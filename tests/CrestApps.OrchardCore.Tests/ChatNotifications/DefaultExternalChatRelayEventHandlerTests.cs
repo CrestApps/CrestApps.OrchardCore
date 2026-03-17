@@ -479,19 +479,13 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
     private sealed class TestCustomNotificationBuilder : IExternalChatRelayNotificationBuilder
     {
-        public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+        public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
         {
-            return new ExternalChatRelayNotificationResult
-            {
-                Notification = new ChatNotification
-                {
-                    Id = "supervisor-joined",
-                    Type = "info",
-                    Content = "A supervisor has joined.",
-                    Icon = "fa-solid fa-user-shield",
-                    Dismissible = true,
-                },
-            };
+            notification.Id = "supervisor-joined";
+            notification.Type = "info";
+            notification.Content = "A supervisor has joined.";
+            notification.Icon = "fa-solid fa-user-shield";
+            notification.Dismissible = true;
         }
     }
 

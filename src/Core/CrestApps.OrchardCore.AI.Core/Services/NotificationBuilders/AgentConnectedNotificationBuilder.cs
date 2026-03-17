@@ -9,27 +9,17 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class AgentConnectedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+    public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
-        var content = relayEvent.Content
+        notification.Id = ChatNotificationSenderExtensions.NotificationIds.AgentConnected;
+        notification.Type = "info";
+        notification.Content = relayEvent.Content
             ?? (string.IsNullOrEmpty(relayEvent.AgentName)
-                ? localizer["You are now connected to a live agent."].Value
-                : localizer["You are now connected to {0}.", relayEvent.AgentName].Value);
-
-        var result = new ExternalChatRelayNotificationResult
-        {
-            Notification = new ChatNotification
-            {
-                Id = ChatNotificationSenderExtensions.NotificationIds.AgentConnected,
-                Type = "info",
-                Content = content,
-                Icon = "fa-solid fa-user-check",
-                Dismissible = true,
-            },
-        };
+                ? T["You are now connected to a live agent."].Value
+                : T["You are now connected to {0}.", relayEvent.AgentName].Value);
+        notification.Icon = "fa-solid fa-user-check";
+        notification.Dismissible = true;
 
         result.RemoveNotificationIds.Add(ChatNotificationSenderExtensions.NotificationIds.Transfer);
-
-        return result;
     }
 }

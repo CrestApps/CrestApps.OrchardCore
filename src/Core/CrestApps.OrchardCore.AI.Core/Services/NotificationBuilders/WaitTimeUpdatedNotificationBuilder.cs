@@ -9,44 +9,34 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class WaitTimeUpdatedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+    public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
-        var content = localizer["Transferring you to a live agent..."].Value;
+        notification.Id = ChatNotificationSenderExtensions.NotificationIds.Transfer;
+        notification.Type = "transfer";
+        notification.Icon = "fa-solid fa-headset";
 
         if (!string.IsNullOrEmpty(relayEvent.Content))
         {
-            content += " " + localizer["Estimated wait: {0}.", relayEvent.Content].Value;
-        }
-
-        var notification = new ChatNotification
-        {
-            Id = ChatNotificationSenderExtensions.NotificationIds.Transfer,
-            Type = "transfer",
-            Content = content,
-            Icon = "fa-solid fa-headset",
-            Actions =
-            [
-                new ChatNotificationAction
-                {
-                    Name = ChatNotificationSenderExtensions.ActionNames.CancelTransfer,
-                    Label = localizer["Cancel Transfer"].Value,
-                    CssClass = "btn-outline-danger",
-                    Icon = "fa-solid fa-xmark",
-                },
-            ],
-        };
-
-        if (!string.IsNullOrEmpty(relayEvent.Content))
-        {
+            notification.Content = T["Transferring you to a live agent... Estimated wait: {0}.", relayEvent.Content].Value;
             notification.Metadata = new Dictionary<string, string>
             {
                 ["estimatedWaitTime"] = relayEvent.Content,
             };
         }
-
-        return new ExternalChatRelayNotificationResult
+        else
         {
-            Notification = notification,
-        };
+            notification.Content = T["Transferring you to a live agent..."].Value;
+        }
+
+        notification.Actions =
+        [
+            new ChatNotificationAction
+            {
+                Name = ChatNotificationSenderExtensions.ActionNames.CancelTransfer,
+                Label = T["Cancel Transfer"].Value,
+                CssClass = "btn-outline-danger",
+                Icon = "fa-solid fa-xmark",
+            },
+        ];
     }
 }

@@ -9,22 +9,14 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class AgentReconnectingNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+    public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
-        var content = relayEvent.Content
+        notification.Id = ChatNotificationSenderExtensions.NotificationIds.AgentReconnecting;
+        notification.Type = "warning";
+        notification.Content = relayEvent.Content
             ?? (string.IsNullOrEmpty(relayEvent.AgentName)
-                ? localizer["Agent is reconnecting..."].Value
-                : localizer["{0} is reconnecting...", relayEvent.AgentName].Value);
-
-        return new ExternalChatRelayNotificationResult
-        {
-            Notification = new ChatNotification
-            {
-                Id = ChatNotificationSenderExtensions.NotificationIds.AgentReconnecting,
-                Type = "warning",
-                Content = content,
-                Icon = "fa-solid fa-rotate",
-            },
-        };
+                ? T["Agent is reconnecting..."].Value
+                : T["{0} is reconnecting...", relayEvent.AgentName].Value);
+        notification.Icon = "fa-solid fa-rotate";
     }
 }

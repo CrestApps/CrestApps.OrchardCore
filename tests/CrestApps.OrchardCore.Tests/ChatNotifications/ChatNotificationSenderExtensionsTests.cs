@@ -298,12 +298,12 @@ public sealed class ChatNotificationSenderExtensionsTests
             .Returns(Task.CompletedTask);
 
         await _senderMock.Object.UpdateTransferAsync("s1", ChatContextType.AIChatSession, _localizer,
-            message: "Still waiting...", estimatedWaitTime: "5 minutes");
+            estimatedWaitTime: "5 minutes");
 
         Assert.NotNull(captured);
         Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.Transfer, captured.Id);
-        Assert.Contains("Still waiting...", captured.Content);
         Assert.Contains("Estimated wait: 5 minutes.", captured.Content);
+        Assert.Contains("Transferring you to a live agent...", captured.Content);
     }
 
     // ───────────────────────────────────────────────────────────────

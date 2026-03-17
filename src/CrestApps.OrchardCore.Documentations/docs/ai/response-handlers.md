@@ -250,7 +250,7 @@ The relay infrastructure is available in the **`CrestApps.OrchardCore.AI.Core`**
 - **`IExternalChatRelayManager`** — Singleton that manages relay connections per session.
 - **`IExternalChatRelay`** — Protocol-agnostic interface for a persistent relay connection to an external system.
 - **`IExternalChatRelayEventHandler`** — Routes incoming relay events through keyed builders and handlers.
-- **`IExternalChatRelayNotificationBuilder`** — Keyed builder (per event type) that builds the notification result.
+- **`IExternalChatRelayNotificationBuilder`** — Keyed builder (per event type) that populates a notification and result.
 - **`IExternalChatRelayNotificationHandler`** — Handles sending/removing notifications from the builder's result.
 :::
 
@@ -271,7 +271,7 @@ Understanding which interface handles each direction of communication is key:
 
 #### Extending with Custom Event Types
 
-The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. If a builder is found, it produces an `ExternalChatRelayNotificationResult` (which notifications to remove and/or send), which is then processed by the `IExternalChatRelayNotificationHandler`.
+The relay event system uses a **keyed builder/handler** pattern for extensibility. The `DefaultExternalChatRelayEventHandler` creates a `ChatNotification` and `ExternalChatRelayNotificationResult`, then resolves an `IExternalChatRelayNotificationBuilder` keyed by the event type string. The builder populates the notification properties and configures which notifications to remove. The result is then processed by the `IExternalChatRelayNotificationHandler`.
 
 To handle a custom event type, register a keyed builder in your module's `Startup.cs`:
 
@@ -280,26 +280,22 @@ To handle a custom event type, register a keyed builder in your module's `Startu
 services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
 ```
 
-Then implement the builder:
+Then implement the builder. Builders receive a pre-created `ChatNotification` object and populate its properties:
 
 ```csharp
 public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(
+    public void Build(
         ExternalChatRelayEvent relayEvent,
-        IStringLocalizer localizer)
+        ChatNotification notification,
+        ExternalChatRelayNotificationResult result,
+        IStringLocalizer T)
     {
-        return new ExternalChatRelayNotificationResult
-        {
-            Notification = new ChatNotification
-            {
-                Id = "supervisor-joined",
-                Type = "info",
-                Content = localizer["A supervisor has joined the conversation."].Value,
-                Icon = "fa-solid fa-user-shield",
-                Dismissible = true,
-            },
-        };
+        notification.Id = "supervisor-joined";
+        notification.Type = "info";
+        notification.Content = T["A supervisor has joined the conversation."].Value;
+        notification.Icon = "fa-solid fa-user-shield";
+        notification.Dismissible = true;
     }
 }
 ```
@@ -309,26 +305,20 @@ The `ExternalChatRelayNotificationResult` supports both adding and removing noti
 ```csharp
 public sealed class AgentReplacedBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(
+    public void Build(
         ExternalChatRelayEvent relayEvent,
-        IStringLocalizer localizer)
+        ChatNotification notification,
+        ExternalChatRelayNotificationResult result,
+        IStringLocalizer T)
     {
-        var result = new ExternalChatRelayNotificationResult
-        {
-            // Send a new notification.
-            Notification = new ChatNotification
-            {
-                Id = "agent-replaced",
-                Type = "info",
-                Content = localizer["A new agent has taken over the conversation."].Value,
-            },
-        };
+        // Populate the notification.
+        notification.Id = "agent-replaced";
+        notification.Type = "info";
+        notification.Content = T["A new agent has taken over the conversation."].Value;
 
         // Remove the previous agent-connected notification first.
         result.RemoveNotificationIds.Add(
             ChatNotificationSenderExtensions.NotificationIds.AgentConnected);
-
-        return result;
     }
 }
 ```
@@ -643,7 +633,6 @@ public sealed class GenesysWebSocketResponseHandler : IChatResponseHandler
             {
                 SessionId = context.SessionId,
                 ChatType = context.ChatType,
-                Services = context.Services,
             },
             () => new GenesysWebSocketRelay(
                 new Uri("wss://api.genesys.example.com/chat"),

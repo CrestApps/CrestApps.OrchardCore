@@ -12,9 +12,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// For each event, this handler resolves an <see cref="IExternalChatRelayNotificationBuilder"/>
-/// keyed by <see cref="ExternalChatRelayEvent.EventType"/>. If a builder is found, it builds an
-/// <see cref="ExternalChatRelayNotificationResult"/> which is then processed by the
+/// For each event, this handler creates a <see cref="ChatNotification"/> and
+/// <see cref="ExternalChatRelayNotificationResult"/>, then resolves an
+/// <see cref="IExternalChatRelayNotificationBuilder"/> keyed by
+/// <see cref="ExternalChatRelayEvent.EventType"/>. If a builder is found, it populates the
+/// notification properties and configures the result. The result is then processed by the
 /// <see cref="IExternalChatRelayNotificationHandler"/> to remove and/or send notifications.
 /// </para>
 /// <para>
@@ -28,18 +30,18 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IExternalChatRelayNotificationHandler _notificationHandler;
-    private readonly IStringLocalizer _localizer;
+    private readonly IStringLocalizer _T;
     private readonly ILogger _logger;
 
     public DefaultExternalChatRelayEventHandler(
         IServiceProvider serviceProvider,
         IExternalChatRelayNotificationHandler notificationHandler,
-        IStringLocalizer<DefaultExternalChatRelayEventHandler> localizer,
+        IStringLocalizer<DefaultExternalChatRelayEventHandler> T,
         ILogger<DefaultExternalChatRelayEventHandler> logger)
     {
         _serviceProvider = serviceProvider;
         _notificationHandler = notificationHandler;
-        _localizer = localizer;
+        _T = T;
         _logger = logger;
     }
 
@@ -54,12 +56,7 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
 
         var builder = _serviceProvider.GetKeyedService<IExternalChatRelayNotificationBuilder>(relayEvent.EventType);
 
-        if (builder != null)
-        {
-            var result = builder.Build(relayEvent, _localizer);
-            await _notificationHandler.HandleAsync(sessionId, chatType, result, cancellationToken);
-        }
-        else
+        if (builder == null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -68,6 +65,17 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
                     relayEvent.EventType,
                     sessionId);
             }
+
+            return;
         }
+
+        var notification = new ChatNotification();
+        var result = new ExternalChatRelayNotificationResult
+        {
+            Notification = notification,
+        };
+
+        builder.Build(relayEvent, notification, result, _T);
+        await _notificationHandler.HandleAsync(sessionId, chatType, result, cancellationToken);
     }
 }

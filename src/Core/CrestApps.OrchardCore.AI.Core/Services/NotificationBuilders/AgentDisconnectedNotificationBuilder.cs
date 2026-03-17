@@ -9,11 +9,9 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 /// </summary>
 internal sealed class AgentDisconnectedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
-    public ExternalChatRelayNotificationResult Build(ExternalChatRelayEvent relayEvent, IStringLocalizer localizer)
+    public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
-        var result = new ExternalChatRelayNotificationResult();
         result.RemoveNotificationIds.Add(ChatNotificationSenderExtensions.NotificationIds.AgentConnected);
-
-        return result;
+        result.Notification = null;
     }
 }

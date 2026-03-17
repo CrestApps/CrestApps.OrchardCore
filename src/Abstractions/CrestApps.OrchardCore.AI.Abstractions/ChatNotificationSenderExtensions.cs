@@ -93,12 +93,10 @@ public static class ChatNotificationSenderExtensions
         string estimatedWaitTime = null,
         bool cancellable = true)
     {
-        var content = message ?? T["Transferring you to a live agent..."].Value;
-
-        if (!string.IsNullOrEmpty(estimatedWaitTime))
-        {
-            content += " " + T["Estimated wait: {0}.", estimatedWaitTime].Value;
-        }
+        var content = message
+            ?? (!string.IsNullOrEmpty(estimatedWaitTime)
+                ? T["Transferring you to a live agent... Estimated wait: {0}.", estimatedWaitTime].Value
+                : T["Transferring you to a live agent..."].Value);
 
         var notification = new ChatNotification
         {
@@ -139,7 +137,7 @@ public static class ChatNotificationSenderExtensions
     /// <param name="sender">The notification sender.</param>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
-    /// <param name="localizer">The string localizer for translating user-facing messages.</param>
+    /// <param name="T">The string localizer for translating user-facing messages.</param>
     /// <param name="message">The updated transfer message.</param>
     /// <param name="estimatedWaitTime">Optional updated estimated wait time.</param>
     /// <param name="cancellable">Whether to show a cancel button.</param>
@@ -147,12 +145,12 @@ public static class ChatNotificationSenderExtensions
         this IChatNotificationSender sender,
         string sessionId,
         ChatContextType chatType,
-        IStringLocalizer localizer,
+        IStringLocalizer T,
         string message = null,
         string estimatedWaitTime = null,
         bool cancellable = true)
     {
-        return ShowTransferAsync(sender, sessionId, chatType, localizer, message, estimatedWaitTime, cancellable);
+        return ShowTransferAsync(sender, sessionId, chatType, T, message, estimatedWaitTime, cancellable);
     }
 
     /// <summary>

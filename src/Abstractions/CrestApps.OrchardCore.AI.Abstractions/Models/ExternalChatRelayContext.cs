@@ -2,7 +2,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
 /// Provides context for establishing a connection to an external chat relay.
-/// Contains the session identity, chat type, and service provider for resolving dependencies.
+/// Contains the session identity and chat type.
 /// </summary>
 public sealed class ExternalChatRelayContext
 {
@@ -17,9 +17,4 @@ public sealed class ExternalChatRelayContext
     /// Gets the type of chat context.
     /// </summary>
     public required ChatContextType ChatType { get; init; }
-
-    /// <summary>
-    /// Gets the scoped service provider for resolving services.
-    /// </summary>
-    public required IServiceProvider Services { get; init; }
 }

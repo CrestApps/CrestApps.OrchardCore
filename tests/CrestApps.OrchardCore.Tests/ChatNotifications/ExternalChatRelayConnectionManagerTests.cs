@@ -231,7 +231,6 @@ public sealed class ExternalChatRelayConnectionManagerTests
         {
             SessionId = sessionId,
             ChatType = ChatContextType.AIChatSession,
-            Services = new Mock<IServiceProvider>().Object,
         };
     }
 }
