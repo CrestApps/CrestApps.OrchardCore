@@ -1759,7 +1759,10 @@ window.openAIChatManager = function () {
                         this.renderHandlerSelector();
                     }
 
-                    if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+                    const sessionId = this.getSessionId();
+                    if (!config.widget && sessionId) {
+                        this.loadSession(sessionId);
+                    } else if (config.autoCreateSession && !config.widget && !sessionId) {
                         this.startNewSession();
                     }
 

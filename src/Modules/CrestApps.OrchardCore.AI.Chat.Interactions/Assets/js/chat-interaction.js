@@ -1280,6 +1280,11 @@ window.chatInteractionManager = function () {
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
+                    const itemId = this.getItemId();
+                    if (itemId) {
+                        this.loadInteraction(itemId);
+                    }
+
                     // Pause auto-scroll when the user manually scrolls up during streaming.
                     this.chatContainer.addEventListener('scroll', () => {
                         if (!this.stream) {
