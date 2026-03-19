@@ -39,10 +39,10 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     }
 
     /// <summary>
-    /// Handles a user-initiated action on a chat notification bubble.
+    /// Handles a user-initiated action on a chat notification system message.
     /// Dispatches to registered <see cref="IChatNotificationActionHandler"/> implementations.
     /// </summary>
-    public async Task HandleNotificationAction(string sessionId, string notificationId, string actionName)
+    public async Task HandleNotificationAction(string sessionId, string notificationType, string actionName)
     {
         if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(actionName))
         {
@@ -64,7 +64,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
                 var context = new ChatNotificationActionContext
                 {
                     SessionId = sessionId,
-                    NotificationId = notificationId,
+                    NotificationType = notificationType,
                     ActionName = actionName,
                     ChatType = GetChatType(),
                     ConnectionId = Context.ConnectionId,

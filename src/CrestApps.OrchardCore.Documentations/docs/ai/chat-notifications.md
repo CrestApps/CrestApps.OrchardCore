@@ -2,7 +2,7 @@
 sidebar_label: Chat Notifications
 sidebar_position: 14
 title: Chat UI Notifications
-description: Send transient notification bubbles (typing indicators, transfer status, session endings, and custom notifications) to the chat UI from C# — no JavaScript required.
+description: Send transient notification system messages (typing indicators, transfer status, session endings, and custom notifications) to the chat UI from C# — no JavaScript required.
 ---
 
 | | |
@@ -12,7 +12,7 @@ description: Send transient notification bubbles (typing indicators, transfer st
 
 ## Overview
 
-The **Chat Notification** system lets server-side C# code send transient UI notifications (bubbles) to the chat interface in real time via SignalR. Notifications are separate from chat history — they provide visual feedback about system state changes such as:
+The **Chat Notification** system lets server-side C# code send transient UI notifications (system messages) to the chat interface in real time via SignalR. Notifications are separate from chat history — they provide visual feedback about system state changes such as:
 
 - **Typing indicators** ("Mike is typing…")
 - **Transfer status** with estimated wait times and a cancel button
@@ -21,6 +21,18 @@ The **Chat Notification** system lets server-side C# code send transient UI noti
 
 Developers interact entirely through C# interfaces and extension methods — no JavaScript changes are required.
 
+### What Is a System Message?
+
+A **system message** is a transient, non-persistent notification displayed in the chat UI to communicate system-level state changes to the user. Unlike chat messages (which are part of the conversation history), system messages:
+
+- **Are not stored** in the chat history or prompt store — they exist only while the notification is active.
+- **Provide visual feedback** about background operations: agent typing, transfer in progress, connection status, session lifecycle events.
+- **Can include action buttons** (e.g., "Cancel Transfer") that trigger server-side callbacks.
+- **Are styled per type** — built-in CSS classes distinguish typing, transfer, info, warning, error, and ended notifications.
+- **Can be dismissed** by the user or removed programmatically from server-side code.
+
+System messages are the recommended way to communicate any non-conversational state to the user within the chat interface.
+
 ## Architecture
 
 ```
@@ -28,10 +40,10 @@ C# Code (webhook, handler, background task, etc.)
   → IChatNotificationSender.SendAsync(sessionId, chatType, notification)
     → IChatNotificationTransport (resolved by chatType key)
       → SignalR group broadcast → ReceiveNotification
-        → Chat UI renders the notification bubble
+        → Chat UI renders the notification as a system message
 
 User clicks an action button on a notification
-  → JS: connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName)
+  → JS: connection.invoke("HandleNotificationAction", sessionId, notificationType, actionName)
     → Hub dispatches to matching IChatNotificationActionHandler (keyed service)
 ```
 
@@ -49,26 +61,30 @@ using Microsoft.Extensions.Localization;
 public sealed class MyWebhookHandler
 {
     private readonly IChatNotificationSender _notifications;
-    private readonly IStringLocalizer _localizer;
+    private readonly IStringLocalizer T;
 
     public MyWebhookHandler(
         IChatNotificationSender notifications,
         IStringLocalizer<MyWebhookHandler> localizer)
     {
         _notifications = notifications;
-        _localizer = localizer;
+        T = localizer;
     }
 
     public async Task OnAgentTyping(string sessionId)
     {
-        // Show a "Mike is typing..." bubble.
-        await _notifications.ShowTypingAsync(sessionId, ChatContextType.AIChatSession, _localizer, "Mike");
+        // Show a "Mike is typing..." system message.
+        await _notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification(ChatNotificationTypes.Typing)
+        {
+            Content = T["{0} is typing", "Mike"].Value,
+            Icon = "fa-solid fa-ellipsis",
+        });
     }
 
     public async Task OnAgentStoppedTyping(string sessionId)
     {
         // Remove the typing indicator.
-        await _notifications.HideTypingAsync(sessionId, ChatContextType.AIChatSession);
+        await _notifications.RemoveAsync(sessionId, ChatContextType.AIChatSession, ChatNotificationTypes.Typing);
     }
 }
 ```
@@ -81,13 +97,13 @@ The primary service for sending, updating, and removing notifications:
 
 | Method | Description |
 | --- | --- |
-| `SendAsync(sessionId, chatType, notification)` | Sends a notification to all clients. Replaces any existing notification with the same `Id`. |
-| `UpdateAsync(sessionId, chatType, notification)` | Updates an existing notification by `Id`. |
-| `RemoveAsync(sessionId, chatType, notificationId)` | Removes a notification by its `Id`. |
+| `SendAsync(sessionId, chatType, notification)` | Sends a notification to all clients. Replaces any existing notification with the same `Type`. |
+| `UpdateAsync(sessionId, chatType, notification)` | Updates an existing notification by `Type`. |
+| `RemoveAsync(sessionId, chatType, notificationType)` | Removes a notification by its `Type`. |
 
 ### `IChatNotificationActionHandler`
 
-Handles user-initiated actions on notification bubbles (e.g., clicking "Cancel Transfer"). Handlers are registered as **keyed services** where the key is the action name:
+Handles user-initiated actions on notification system messages (e.g., clicking "Cancel Transfer"). Handlers are registered as **keyed services** where the key is the action name:
 
 ```csharp
 public interface IChatNotificationActionHandler
@@ -102,10 +118,12 @@ The hub resolves the handler by looking up the keyed service matching the action
 
 ### `ChatNotification`
 
+The `Type` is required and must be set via the constructor: `new ChatNotification("info")`. The setter is private.
+
 | Property | Type | Description |
 | --- | --- | --- |
 | `Id` | `string` | Unique identifier. Used for update/remove targeting. |
-| `Type` | `string` | Visual type: `"typing"`, `"transfer"`, `"ended"`, `"info"`, `"warning"`, or any custom value. Maps to CSS class `ai-chat-notification-{type}`. |
+| `Type` | `string` | Visual type (set via constructor): `"typing"`, `"transfer"`, `"ended"`, `"info"`, `"warning"`, or any custom value. Maps to CSS class `ai-chat-notification-{type}`. |
 | `Content` | `string` | Display text. |
 | `Icon` | `string` | FontAwesome class (e.g., `"fa-solid fa-headset"`). |
 | `CssClass` | `string` | Additional CSS class on the container. |
@@ -129,43 +147,79 @@ Passed to `IChatNotificationActionHandler.HandleAsync`:
 | Property | Type | Description |
 | --- | --- | --- |
 | `SessionId` | `string` | Session or interaction ID. |
-| `NotificationId` | `string` | The notification that contains the action. |
+| `NotificationType` | `string` | The notification that contains the action. |
 | `ActionName` | `string` | The action the user clicked. |
 | `ChatType` | `ChatContextType` | `AIChatSession` or `ChatInteraction`. |
 | `ConnectionId` | `string` | SignalR connection ID of the client. |
 | `Services` | `IServiceProvider` | Scoped service provider. |
 
-## Extension Methods
+## Sending Notifications
 
-`ChatNotificationSenderExtensions` provides convenient methods so you don't need to build `ChatNotification` objects manually:
+To send a notification, create a `ChatNotification` object and call `IChatNotificationSender.SendAsync`:
 
-All extension methods that produce user-facing text accept an `IStringLocalizer` parameter to ensure messages are localized. Methods that only remove notifications (e.g., `HideTypingAsync`) do not require a localizer.
+```csharp
+var sender = serviceProvider.GetRequiredService<IChatNotificationSender>();
 
-| Method | Description |
-| --- | --- |
-| `ShowTypingAsync(sessionId, chatType, localizer, agentName?)` | Shows a typing indicator bubble. |
-| `HideTypingAsync(sessionId, chatType)` | Removes the typing indicator. |
-| `ShowTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Shows a transfer indicator with optional wait time and cancel button. |
-| `UpdateTransferAsync(sessionId, chatType, localizer, message?, estimatedWaitTime?, cancellable?)` | Updates the transfer indicator (e.g., with a new wait time). |
-| `HideTransferAsync(sessionId, chatType)` | Removes the transfer indicator. |
-| `ShowAgentConnectedAsync(sessionId, chatType, localizer, agentName?, message?)` | Shows an "agent connected" bubble. |
-| `HideAgentConnectedAsync(sessionId, chatType)` | Removes the agent-connected notification. |
-| `ShowConversationEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "conversation ended" dismissible bubble. |
-| `ShowSessionEndedAsync(sessionId, chatType, localizer, message?)` | Shows a "session ended" dismissible bubble. |
+// Show a typing indicator.
+await sender.SendAsync(sessionId, chatType, new ChatNotification(ChatNotificationTypes.Typing)
+{
+    Content = T["{0} is typing", agentName].Value,
+    Icon = "fa-solid fa-ellipsis",
+});
+
+// Show a transfer indicator with a cancel button.
+await sender.SendAsync(sessionId, chatType, new ChatNotification(ChatNotificationTypes.Transfer)
+{
+    Content = T["Transferring you to a live agent..."].Value,
+    Icon = "fa-solid fa-headset",
+    Actions =
+    [
+        new ChatNotificationAction
+        {
+            Name = ChatNotificationActionNames.CancelTransfer,
+            Label = T["Cancel Transfer"].Value,
+            CssClass = "btn-outline-danger",
+            Icon = "fa-solid fa-xmark",
+        },
+    ],
+});
+
+// Remove a notification.
+await sender.RemoveAsync(sessionId, chatType, ChatNotificationTypes.Typing);
+
+// Update an existing notification.
+await sender.UpdateAsync(sessionId, chatType, new ChatNotification(ChatNotificationTypes.Transfer)
+{
+    Content = T["Transferring... Estimated wait: {0}.", estimatedWaitTime].Value,
+    Icon = "fa-solid fa-headset",
+});
+
+// Show a session-ended notification.
+await sender.SendAsync(sessionId, chatType, new ChatNotification(ChatNotificationTypes.SessionEnded)
+{
+    Content = T["This chat session has ended."].Value,
+    Icon = "fa-solid fa-circle-check",
+    Dismissible = true,
+});
+```
+
+All user-facing strings should accept `IStringLocalizer` (named `T` per Orchard Core convention) to ensure messages are localized.
 
 ### Well-Known Constants
 
-The extension class also exposes constants for built-in notification IDs and action names:
+The framework provides constants for built-in notification types and action names:
 
 ```csharp
-ChatNotificationSenderExtensions.NotificationIds.Typing          // "typing"
-ChatNotificationSenderExtensions.NotificationIds.Transfer        // "transfer"
-ChatNotificationSenderExtensions.NotificationIds.AgentConnected  // "agent-connected"
-ChatNotificationSenderExtensions.NotificationIds.ConversationEnded // "conversation-ended"
-ChatNotificationSenderExtensions.NotificationIds.SessionEnded    // "session-ended"
+ChatNotificationTypes.Typing              // "typing"
+ChatNotificationTypes.Transfer            // "transfer"
+ChatNotificationTypes.AgentConnected      // "agent-connected"
+ChatNotificationTypes.AgentReconnecting   // "agent-reconnecting"
+ChatNotificationTypes.ConnectionLost      // "connection-lost"
+ChatNotificationTypes.ConversationEnded   // "conversation-ended"
+ChatNotificationTypes.SessionEnded        // "session-ended"
 
-ChatNotificationSenderExtensions.ActionNames.CancelTransfer      // "cancel-transfer"
-ChatNotificationSenderExtensions.ActionNames.EndSession          // "end-session"
+ChatNotificationActionNames.CancelTransfer  // "cancel-transfer"
+ChatNotificationActionNames.EndSession      // "end-session"
 ```
 
 ## Built-In Action Handlers
@@ -196,7 +250,7 @@ The notification system uses a **transport provider** pattern so that each hub i
 
 ### Registering a Custom Transport
 
-If you create a custom chat hub that supports notification bubbles, implement `IChatNotificationTransport` and register it as a keyed service:
+If you create a custom chat hub that supports notification system messages, implement `IChatNotificationTransport` and register it as a keyed service:
 
 ```csharp
 using CrestApps.OrchardCore.AI;
@@ -225,10 +279,10 @@ internal sealed class MyCustomChatNotificationTransport : IChatNotificationTrans
         return _hubContext.Clients.Group(groupName).UpdateNotification(notification);
     }
 
-    public Task RemoveNotificationAsync(string sessionId, string notificationId)
+    public Task RemoveNotificationAsync(string sessionId, string notificationType)
     {
         var groupName = MyCustomHub.GetGroupName(sessionId);
-        return _hubContext.Clients.Group(groupName).RemoveNotification(notificationId);
+        return _hubContext.Clients.Group(groupName).RemoveNotification(notificationType);
     }
 }
 ```
@@ -260,21 +314,27 @@ internal static class AgentTypingWebhook
     private static async Task<IResult> HandleAsync(
         AgentTypingPayload payload,
         IChatNotificationSender notifications,
-        IStringLocalizer<AgentTypingWebhook> localizer)
+        IStringLocalizer<AgentTypingWebhook> T)
     {
         if (payload.IsTyping)
         {
-            await notifications.ShowTypingAsync(
+            await notifications.SendAsync(
                 payload.SessionId,
                 ChatContextType.AIChatSession,
-                localizer,
-                payload.AgentName);
+                new ChatNotification(ChatNotificationTypes.Typing)
+                {
+                    Content = string.IsNullOrEmpty(payload.AgentName)
+                        ? T["Agent is typing"].Value
+                        : T["{0} is typing", payload.AgentName].Value,
+                    Icon = "fa-solid fa-ellipsis",
+                });
         }
         else
         {
-            await notifications.HideTypingAsync(
+            await notifications.RemoveAsync(
                 payload.SessionId,
-                ChatContextType.AIChatSession);
+                ChatContextType.AIChatSession,
+                ChatNotificationTypes.Typing);
         }
 
         return TypedResults.Ok();
@@ -300,16 +360,29 @@ internal static class TransferWebhook
     private static async Task<IResult> OnTransferStarted(
         TransferPayload payload,
         IChatNotificationSender notifications,
-        IStringLocalizer<TransferWebhook> localizer)
+        IStringLocalizer<TransferWebhook> T)
     {
-        // Show a transfer bubble with estimated wait time and a cancel button.
-        await notifications.ShowTransferAsync(
+        // Show a transfer system message with estimated wait time and a cancel button.
+        await notifications.SendAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
-            localizer,
-            message: localizer["Transferring you to a live agent..."].Value,
-            estimatedWaitTime: localizer["About 2 minutes"].Value,
-            cancellable: true);
+            new ChatNotification(ChatNotificationTypes.Transfer)
+            {
+                Content = !string.IsNullOrEmpty(payload.EstimatedWaitTime)
+                    ? T["Transferring you to a live agent... Estimated wait: {0}.", payload.EstimatedWaitTime].Value
+                    : T["Transferring you to a live agent..."].Value,
+                Icon = "fa-solid fa-headset",
+                Actions =
+                [
+                    new ChatNotificationAction
+                    {
+                        Name = ChatNotificationActionNames.CancelTransfer,
+                        Label = T["Cancel Transfer"].Value,
+                        CssClass = "btn-outline-danger",
+                        Icon = "fa-solid fa-xmark",
+                    },
+                ],
+            });
 
         return TypedResults.Ok();
     }
@@ -317,16 +390,27 @@ internal static class TransferWebhook
     private static async Task<IResult> OnTransferUpdate(
         TransferPayload payload,
         IChatNotificationSender notifications,
-        IStringLocalizer<TransferWebhook> localizer)
+        IStringLocalizer<TransferWebhook> T)
     {
         // Update the wait time as the queue changes.
-        await notifications.UpdateTransferAsync(
+        await notifications.UpdateAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
-            localizer,
-            message: localizer["Still waiting for an available agent..."].Value,
-            estimatedWaitTime: payload.EstimatedWaitTime,
-            cancellable: true);
+            new ChatNotification(ChatNotificationTypes.Transfer)
+            {
+                Content = T["Still waiting for an available agent... Estimated wait: {0}.", payload.EstimatedWaitTime].Value,
+                Icon = "fa-solid fa-headset",
+                Actions =
+                [
+                    new ChatNotificationAction
+                    {
+                        Name = ChatNotificationActionNames.CancelTransfer,
+                        Label = T["Cancel Transfer"].Value,
+                        CssClass = "btn-outline-danger",
+                        Icon = "fa-solid fa-xmark",
+                    },
+                ],
+            });
 
         return TypedResults.Ok();
     }
@@ -334,18 +418,25 @@ internal static class TransferWebhook
     private static async Task<IResult> OnTransferCompleted(
         TransferPayload payload,
         IChatNotificationSender notifications,
-        IStringLocalizer<TransferWebhook> localizer)
+        IStringLocalizer<TransferWebhook> T)
     {
         // Agent connected — remove the transfer indicator and show connected notification.
-        await notifications.HideTransferAsync(
-            payload.SessionId,
-            ChatContextType.AIChatSession);
-
-        await notifications.ShowAgentConnectedAsync(
+        await notifications.RemoveAsync(
             payload.SessionId,
             ChatContextType.AIChatSession,
-            localizer,
-            payload.AgentName);
+            ChatNotificationTypes.Transfer);
+
+        await notifications.SendAsync(
+            payload.SessionId,
+            ChatContextType.AIChatSession,
+            new ChatNotification(ChatNotificationTypes.AgentConnected)
+            {
+                Content = string.IsNullOrEmpty(payload.AgentName)
+                    ? T["You are now connected to a live agent."].Value
+                    : T["You are now connected to {0}.", payload.AgentName].Value,
+                Icon = "fa-solid fa-user-check",
+                Dismissible = true,
+            });
 
         return TypedResults.Ok();
     }
@@ -364,23 +455,27 @@ End a chat session from server-side code and notify the user:
 public sealed class SessionTimeoutService
 {
     private readonly IChatNotificationSender _notifications;
-    private readonly IStringLocalizer _localizer;
+    private readonly IStringLocalizer T;
 
     public SessionTimeoutService(
         IChatNotificationSender notifications,
         IStringLocalizer<SessionTimeoutService> localizer)
     {
         _notifications = notifications;
-        _localizer = localizer;
+        T = localizer;
     }
 
     public async Task EndSessionDueToInactivity(string sessionId, ChatContextType chatType)
     {
-        await _notifications.ShowSessionEndedAsync(
+        await _notifications.SendAsync(
             sessionId,
             chatType,
-            _localizer,
-            _localizer["This session was ended due to inactivity."].Value);
+            new ChatNotification(ChatNotificationTypes.SessionEnded)
+            {
+                Content = T["This session was ended due to inactivity."].Value,
+                Icon = "fa-solid fa-circle-check",
+                Dismissible = true,
+            });
     }
 }
 ```
@@ -391,10 +486,8 @@ Create a completely custom notification with your own action buttons and handler
 
 ```csharp
 // Send a custom notification with two action buttons.
-await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification
+await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification("feedback-request")
 {
-    Id = "feedback-request",
-    Type = "info",
     Content = "Was this conversation helpful?",
     Icon = "fa-solid fa-star",
     Dismissible = true,
@@ -433,7 +526,7 @@ public sealed class FeedbackActionHandler : IChatNotificationActionHandler
 
         // Remove the feedback notification.
         var notifications = context.Services.GetRequiredService<IChatNotificationSender>();
-        await notifications.RemoveAsync(context.SessionId, context.ChatType, context.NotificationId);
+        await notifications.RemoveAsync(context.SessionId, context.ChatType, context.NotificationType);
     }
 }
 ```
@@ -455,10 +548,9 @@ public sealed class Startup : StartupBase
 Define a custom notification type and add CSS in your theme or module:
 
 ```csharp
-await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification
+await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification("queue")
 {
     Id = "queue-position",
-    Type = "queue",  // custom type
     Content = "You are #3 in the queue.",
     Icon = "fa-solid fa-users",
     CssClass = "my-custom-queue-notification",
@@ -478,13 +570,99 @@ The UI applies the CSS class `ai-chat-notification-queue` (derived from the `Typ
 
 The notification system is designed to complement [Chat Response Handlers](./response-handlers.md). A typical integration pattern:
 
-1. **Transfer function** sets `ResponseHandlerName` on the session → calls `ShowTransferAsync()`.
-2. **External webhook** receives agent connected event → calls `HideTransferAsync()` + `ShowAgentConnectedAsync()`.
-3. **External webhook** receives typing events → calls `ShowTypingAsync()` / `HideTypingAsync()`.
-4. **External webhook** receives agent response → calls `HideTypingAsync()` + writes message via `IHubContext`.
+1. **Transfer function** sets `ResponseHandlerName` on the session → sends a transfer notification.
+2. **External system** (via webhook, WebSocket, or any protocol) receives agent connected event → removes transfer notification + sends agent-connected notification.
+3. **External system** receives typing events → sends/removes typing notifications.
+4. **External system** receives agent response → removes typing notification + writes message via `IHubContext`.
 5. **User clicks Cancel Transfer** → built-in handler resets `ResponseHandlerName` to `null`.
 
-See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern.
+### Agent Connected Notification Example
+
+When the external platform signals that an agent has joined, the notification can be sent through two approaches:
+
+**Approach 1: Using the External Chat Relay (recommended for persistent connections)**
+
+When using the **external chat relay** infrastructure, events are routed automatically through the keyed builder/handler pattern. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by event type, creates a `ChatNotification(type)` using the builder's `NotificationType`, calls `Build` to populate the remaining properties, and then delegates to `IExternalChatRelayNotificationHandler` for processing.
+
+The handler supports three operations:
+- **Remove**: removes notification types listed in `result.RemoveNotificationTypes`
+- **Send**: sends `result.Notification` as a new notification when `result.IsUpdate` is `false`
+- **Update**: updates an existing notification when `result.IsUpdate` is `true` (e.g., wait time changes)
+
+```csharp
+// The relay receives a JSON event like:
+// { "type": "agent_connected", "agent_name": "Sarah" }
+//
+// The DefaultExternalChatRelayEventHandler automatically:
+// 1. Resolves the AgentConnectedNotificationBuilder (keyed by "agent-connected").
+// 2. Creates a ChatNotification("info") using the builder's NotificationType.
+// 3. Calls builder.Build() which populates Content, Icon, Dismissible,
+//    and adds the transfer notification type to RemoveNotificationTypes.
+// 4. Passes the result to IExternalChatRelayNotificationHandler which
+//    removes the transfer notification, then sends the agent-connected notification.
+//
+// Built-in event types with registered builders:
+// - ExternalChatRelayEventTypes.AgentTyping        → typing indicator
+// - ExternalChatRelayEventTypes.AgentStoppedTyping  → removes typing indicator
+// - ExternalChatRelayEventTypes.AgentConnected      → agent-connected info notification
+// - ExternalChatRelayEventTypes.AgentDisconnected   → removes agent-connected notification
+// - ExternalChatRelayEventTypes.AgentReconnecting   → reconnecting warning notification
+// - ExternalChatRelayEventTypes.ConnectionLost      → connection-lost error notification
+// - ExternalChatRelayEventTypes.ConnectionRestored  → removes connection-lost notification
+// - ExternalChatRelayEventTypes.WaitTimeUpdated     → updates transfer notification (IsUpdate = true)
+// - ExternalChatRelayEventTypes.SessionEnded        → session-ended notification
+```
+
+**Approach 2: Using `IChatNotificationSender` directly (for webhooks or one-off calls)**
+
+For webhook endpoints or one-off notifications, create `ChatNotification` objects directly:
+
+```csharp
+// In your webhook endpoint:
+var notifications = services.GetRequiredService<IChatNotificationSender>();
+var T = services.GetRequiredService<IStringLocalizer<MyHandler>>();
+
+await notifications.RemoveAsync(sessionId, ChatContextType.AIChatSession, ChatNotificationTypes.Transfer);
+await notifications.SendAsync(sessionId, ChatContextType.AIChatSession, new ChatNotification(ChatNotificationTypes.AgentConnected)
+{
+    Content = T["You are now connected to {0}.", "Sarah"].Value,
+    Icon = "fa-solid fa-user-check",
+    Dismissible = true,
+});
+```
+
+### Adding Custom Relay Events
+
+To handle custom event types from your external platform, register a keyed `IExternalChatRelayNotificationBuilder`:
+
+```csharp
+// In your module's Startup.cs:
+services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SupervisorJoinedBuilder>("supervisor-joined");
+```
+
+Implement the builder. The `NotificationType` property declares the notification type (used by the handler to create the `ChatNotification`), and `Build` populates the remaining properties:
+
+```csharp
+public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuilder
+{
+    public string NotificationType => "info";
+
+    public void Build(
+        ExternalChatRelayEvent relayEvent,
+        ChatNotification notification,
+        ExternalChatRelayNotificationResult result,
+        IStringLocalizer T)
+    {
+        notification.Content = T["A supervisor has joined the conversation."].Value;
+        notification.Icon = "fa-solid fa-user-shield";
+        notification.Dismissible = true;
+    }
+}
+```
+
+The `DefaultExternalChatRelayEventHandler` automatically resolves your builder when an event with type `"supervisor-joined"` arrives. The `IExternalChatRelayNotificationHandler` then processes the result — removing any notification types in `RemoveNotificationTypes`, then sending (or updating, if `IsUpdate` is `true`) the notification.
+
+See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and persistent relay integration examples.
 
 ## Built-In Notification Types (CSS)
 
@@ -496,6 +674,7 @@ The chat UI ships with styles for these notification types:
 | `transfer` | Yellow/warning-tinted, scaling pulse animation |
 | `ended` | Gray/secondary-tinted, static |
 | `info` | Cyan/info-tinted |
-| `warning` | Yellow/warning-tinted |
+| `warning` | Yellow/amber-tinted (used for agent-reconnecting) |
+| `error` | Red/danger-tinted (used for connection-lost) |
 
 Custom types receive the base `.ai-chat-notification` styling. Add your own CSS for custom types using `.ai-chat-notification-{type}`.

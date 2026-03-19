@@ -50,8 +50,8 @@ public sealed class Startup : StartupBase
         // Chat notification services.
         services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
-        services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationSenderExtensions.ActionNames.CancelTransfer);
-        services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationSenderExtensions.ActionNames.EndSession);
+        services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
+        services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {

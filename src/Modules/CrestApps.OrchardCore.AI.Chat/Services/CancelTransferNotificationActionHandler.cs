@@ -62,6 +62,6 @@ internal sealed class CancelTransferNotificationActionHandler : IChatNotificatio
         await notificationSender.RemoveAsync(
             context.SessionId,
             context.ChatType,
-            ChatNotificationSenderExtensions.NotificationIds.Transfer);
+            ChatNotificationTypes.Transfer);
     }
 }

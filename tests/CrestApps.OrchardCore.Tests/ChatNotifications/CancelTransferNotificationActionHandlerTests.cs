@@ -35,7 +35,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
 
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
-            .Setup(s => s.RemoveAsync("session-1", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.Transfer))
+            .Setup(s => s.RemoveAsync("session-1", ChatContextType.AIChatSession, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
@@ -67,7 +67,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
 
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
-            .Setup(s => s.RemoveAsync("missing", ChatContextType.AIChatSession, ChatNotificationSenderExtensions.NotificationIds.Transfer))
+            .Setup(s => s.RemoveAsync("missing", ChatContextType.AIChatSession, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask);
 
         var services = BuildServiceProvider(
@@ -108,7 +108,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
 
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
-            .Setup(s => s.RemoveAsync("interaction-1", ChatContextType.ChatInteraction, ChatNotificationSenderExtensions.NotificationIds.Transfer))
+            .Setup(s => s.RemoveAsync("interaction-1", ChatContextType.ChatInteraction, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask)
             .Verifiable();
 
@@ -140,7 +140,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
 
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
-            .Setup(s => s.RemoveAsync("missing", ChatContextType.ChatInteraction, ChatNotificationSenderExtensions.NotificationIds.Transfer))
+            .Setup(s => s.RemoveAsync("missing", ChatContextType.ChatInteraction, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask);
 
         var services = BuildServiceProvider(
@@ -200,8 +200,8 @@ public sealed class CancelTransferNotificationActionHandlerTests
         return new ChatNotificationActionContext
         {
             SessionId = sessionId,
-            NotificationId = ChatNotificationSenderExtensions.NotificationIds.Transfer,
-            ActionName = ChatNotificationSenderExtensions.ActionNames.CancelTransfer,
+            NotificationType = ChatNotificationTypes.Transfer,
+            ActionName = ChatNotificationActionNames.CancelTransfer,
             ChatType = chatType,
             ConnectionId = "conn-1",
             Services = services,

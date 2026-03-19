@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Each hub that supports notification bubbles should provide its own implementation
+/// Each hub that supports notification system messages should provide its own implementation
 /// and register it as a keyed service:
 /// </para>
 /// <code>
@@ -22,7 +22,7 @@ public interface IChatNotificationTransport
 {
     /// <summary>
     /// Sends a notification to all clients in the session group. If a notification
-    /// with the same <see cref="ChatNotification.Id"/> already exists on the client,
+    /// with the same <see cref="ChatNotification.Type"/> already exists on the client,
     /// it is replaced.
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -31,7 +31,7 @@ public interface IChatNotificationTransport
 
     /// <summary>
     /// Updates an existing notification on all connected clients in the session group.
-    /// Only replaces the notification if one with a matching <see cref="ChatNotification.Id"/> exists.
+    /// Only replaces the notification if one with a matching <see cref="ChatNotification.Type"/> exists.
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="notification">The updated notification.</param>
@@ -41,6 +41,6 @@ public interface IChatNotificationTransport
     /// Removes a notification from all connected clients in the session group.
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
-    /// <param name="notificationId">The identifier of the notification to remove.</param>
-    Task RemoveNotificationAsync(string sessionId, string notificationId);
+    /// <param name="notificationType">The type of the notification to remove.</param>
+    Task RemoveNotificationAsync(string sessionId, string notificationType);
 }

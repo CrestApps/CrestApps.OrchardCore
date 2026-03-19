@@ -16,7 +16,7 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
     {
         var logger = context.Services.GetRequiredService<ILogger<EndSessionNotificationActionHandler>>();
         var notificationSender = context.Services.GetRequiredService<IChatNotificationSender>();
-        var localizer = context.Services.GetRequiredService<IStringLocalizer<EndSessionNotificationActionHandler>>();
+        var T = context.Services.GetRequiredService<IStringLocalizer<EndSessionNotificationActionHandler>>();
 
         if (context.ChatType == ChatContextType.AIChatSession)
         {
@@ -42,9 +42,14 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
         }
 
         // Show a "session ended" notification.
-        await notificationSender.ShowSessionEndedAsync(
+        await notificationSender.SendAsync(
             context.SessionId,
             context.ChatType,
-            localizer);
+            new ChatNotification(ChatNotificationTypes.SessionEnded)
+            {
+                Content = T["This chat session has ended."].Value,
+                Icon = "fa-solid fa-circle-check",
+                Dismissible = true,
+            });
     }
 }

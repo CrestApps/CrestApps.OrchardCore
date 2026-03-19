@@ -37,14 +37,14 @@ internal sealed class DefaultChatNotificationSender : IChatNotificationSender
         return transport.UpdateNotificationAsync(sessionId, notification);
     }
 
-    public Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationId)
+    public Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationType)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(notificationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(notificationType);
 
         var transport = GetTransport(chatType);
 
-        return transport.RemoveNotificationAsync(sessionId, notificationId);
+        return transport.RemoveNotificationAsync(sessionId, notificationType);
     }
 
     private IChatNotificationTransport GetTransport(ChatContextType chatType)

@@ -31,16 +31,16 @@ window.chatInteractionManager = function () {
                         </div>
                     </div>
                 </div>
-                <div v-for="notification in notifications" :key="'notif-' + notification.id" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
+                <div v-for="notification in notifications" :key="'notif-' + notification.type" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
                     <div class="ai-chat-notification-content">
                         <i v-if="notification.icon" :class="notification.icon" class="ai-chat-notification-icon"></i>
                         <span class="ai-chat-notification-text">{{ notification.content }}</span>
-                        <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.id)" title="Dismiss">
+                        <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.type)" title="Dismiss">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
                     <div v-if="notification.actions && notification.actions.length" class="ai-chat-notification-actions">
-                        <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.id, action.name)">
+                        <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.type, action.name)">
                             <i v-if="action.icon" :class="action.icon" class="me-1"></i>
                             {{ action.label }}
                         </button>
@@ -570,8 +570,8 @@ window.chatInteractionManager = function () {
                         this.updateNotification(notification);
                     });
 
-                    this.connection.on("RemoveNotification", (notificationId) => {
-                        this.removeNotification(notificationId);
+                    this.connection.on("RemoveNotification", (notificationType) => {
+                        this.removeNotification(notificationType);
                     });
 
                     this.connection.onreconnecting(() => {
@@ -1170,10 +1170,9 @@ window.chatInteractionManager = function () {
                         }
                     }
 
-                    // Show a "conversation ended" notification bubble.
+                    // Show a "conversation ended" notification system message.
                     this.receiveNotification({
-                        id: 'conversation-ended',
-                        type: 'ended',
+                        type: 'conversation-ended',
                         content: 'Conversation ended.',
                         icon: 'fa-solid fa-circle-check',
                         dismissible: true
@@ -1236,8 +1235,8 @@ window.chatInteractionManager = function () {
                     return this.inputElement.getAttribute('data-interaction-id');
                 },
                 receiveNotification(notification) {
-                    // Replace existing notification with same ID, or add new one.
-                    var idx = this.notifications.findIndex(n => n.id === notification.id);
+                    // Replace existing notification with same type, or add new one.
+                    var idx = this.notifications.findIndex(n => n.type === notification.type);
                     if (idx >= 0) {
                         this.notifications.splice(idx, 1, notification);
                     } else {
@@ -1246,24 +1245,24 @@ window.chatInteractionManager = function () {
                     this.scrollToBottom();
                 },
                 updateNotification(notification) {
-                    var idx = this.notifications.findIndex(n => n.id === notification.id);
+                    var idx = this.notifications.findIndex(n => n.type === notification.type);
                     if (idx >= 0) {
                         this.notifications.splice(idx, 1, notification);
                         this.scrollToBottom();
                     }
                 },
-                removeNotification(notificationId) {
-                    this.notifications = this.notifications.filter(n => n.id !== notificationId);
+                removeNotification(notificationType) {
+                    this.notifications = this.notifications.filter(n => n.type !== notificationType);
                 },
-                dismissNotification(notificationId) {
-                    this.removeNotification(notificationId);
+                dismissNotification(notificationType) {
+                    this.removeNotification(notificationType);
                 },
-                handleNotificationAction(notificationId, actionName) {
+                handleNotificationAction(notificationType, actionName) {
                     if (!this.connection) {
                         return;
                     }
                     var itemId = this.getItemId();
-                    this.connection.invoke('HandleNotificationAction', itemId, notificationId, actionName)
+                    this.connection.invoke('HandleNotificationAction', itemId, notificationType, actionName)
                         .catch(err => console.error('Failed to handle notification action:', err));
                 },
                 setItemId(itemId) {

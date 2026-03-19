@@ -45,16 +45,16 @@ window.openAIChatManager = function () {
                     </div>
                 </div>
             </div>
-            <div v-for="notification in notifications" :key="'notif-' + notification.id" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
+            <div v-for="notification in notifications" :key="'notif-' + notification.type" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
                 <div class="ai-chat-notification-content">
                     <i v-if="notification.icon" :class="notification.icon" class="ai-chat-notification-icon"></i>
                     <span class="ai-chat-notification-text">{{ notification.content }}</span>
-                    <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.id)" title="Dismiss">
+                    <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.type)" title="Dismiss">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
                 <div v-if="notification.actions && notification.actions.length" class="ai-chat-notification-actions">
-                    <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.id, action.name)">
+                    <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.type, action.name)">
                         <i v-if="action.icon" :class="action.icon" class="me-1"></i>
                         {{ action.label }}
                     </button>
@@ -860,8 +860,8 @@ window.openAIChatManager = function () {
                         this.updateNotification(notification);
                     });
 
-                    this.connection.on("RemoveNotification", (notificationId) => {
-                        this.removeNotification(notificationId);
+                    this.connection.on("RemoveNotification", (notificationType) => {
+                        this.removeNotification(notificationType);
                     });
 
                     this.connection.onreconnecting(() => {
@@ -1447,7 +1447,6 @@ window.openAIChatManager = function () {
 
                     // Remove any previous conversation ended notification.
                     this.removeNotification('conversation-ended');
-
                     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
                         .then(stream => {
                             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
@@ -1586,10 +1585,9 @@ window.openAIChatManager = function () {
                         }
                     }
 
-                    // Show a "conversation ended" notification bubble.
+                    // Show a "conversation ended" notification system message.
                     this.receiveNotification({
-                        id: 'conversation-ended',
-                        type: 'ended',
+                        type: 'conversation-ended',
                         content: 'Conversation ended.',
                         icon: 'fa-solid fa-circle-check',
                         dismissible: true
@@ -1668,10 +1666,10 @@ window.openAIChatManager = function () {
                     return removedCount;
                 },
                 receiveNotification(notification) {
-                    if (!notification || !notification.id) {
+                    if (!notification || !notification.type) {
                         return;
                     }
-                    var existingIndex = this.notifications.findIndex(n => n.id === notification.id);
+                    var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
                     if (existingIndex >= 0) {
                         this.notifications.splice(existingIndex, 1, notification);
                     } else {
@@ -1682,26 +1680,26 @@ window.openAIChatManager = function () {
                     });
                 },
                 updateNotification(notification) {
-                    if (!notification || !notification.id) {
+                    if (!notification || !notification.type) {
                         return;
                     }
-                    var existingIndex = this.notifications.findIndex(n => n.id === notification.id);
+                    var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
                     if (existingIndex >= 0) {
                         this.notifications.splice(existingIndex, 1, notification);
                     }
                 },
-                removeNotification(notificationId) {
-                    this.notifications = this.notifications.filter(n => n.id !== notificationId);
+                removeNotification(notificationType) {
+                    this.notifications = this.notifications.filter(n => n.type !== notificationType);
                 },
-                dismissNotification(notificationId) {
-                    this.removeNotification(notificationId);
+                dismissNotification(notificationType) {
+                    this.removeNotification(notificationType);
                 },
-                handleNotificationAction(notificationId, actionName) {
+                handleNotificationAction(notificationType, actionName) {
                     if (!this.connection) {
                         return;
                     }
                     var sessionId = this.getSessionId();
-                    this.connection.invoke("HandleNotificationAction", sessionId, notificationId, actionName).catch(function (err) {
+                    this.connection.invoke("HandleNotificationAction", sessionId, notificationType, actionName).catch(function (err) {
                         console.error("Error handling notification action:", err);
                     });
                 },

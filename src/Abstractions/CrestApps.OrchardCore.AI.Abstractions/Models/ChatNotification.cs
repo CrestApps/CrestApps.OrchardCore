@@ -1,25 +1,34 @@
 namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
-/// Represents a transient UI notification (bubble) displayed in the chat interface.
+/// Represents a transient UI notification displayed as a system message in the chat interface.
 /// Notifications provide visual feedback to users about system state changes such as
 /// typing indicators, agent transfers, or session endings. They are separate from
 /// chat history and can be dynamically added, updated, or removed via SignalR.
 /// </summary>
-public class ChatNotification
+public sealed class ChatNotification
 {
     /// <summary>
-    /// Gets or sets the unique identifier for this notification.
-    /// Used to target specific notifications for update or removal.
+    /// Initializes a new instance of <see cref="ChatNotification"/> with the specified notification type.
     /// </summary>
-    public string Id { get; set; }
+    /// <param name="type">The notification type, which serves as both the unique identifier
+    /// and the CSS styling class. Built-in types are defined in <see cref="ChatNotificationTypes"/>.
+    /// Custom types are also supported.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="type"/> is null or whitespace.</exception>
+    public ChatNotification(string type)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(type);
+
+        Type = type;
+    }
 
     /// <summary>
-    /// Gets or sets the notification type, which determines visual styling.
-    /// Built-in types: <c>"typing"</c>, <c>"transfer"</c>, <c>"ended"</c>,
-    /// <c>"info"</c>, <c>"warning"</c>. Custom types are also supported.
+    /// Gets the notification type, which serves as both the unique identifier and the CSS
+    /// styling class for the notification. Only one notification of a given type can be
+    /// active at a time — sending a new notification with the same type replaces the
+    /// existing one. Built-in types are defined in <see cref="ChatNotificationTypes"/>.
     /// </summary>
-    public string Type { get; set; }
+    public string Type { get; private set; }
 
     /// <summary>
     /// Gets or sets the display content of the notification.
