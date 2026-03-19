@@ -174,7 +174,7 @@ Download and install [Docker Desktop](https://www.docker.com/products/docker-des
      ["run", "-i", "--rm", "mcp/time"]
      ```
 
-💡 These arguments are based on the official usage from the [`mcp/time` Docker Hub page](https://hub.docker.com/r/mcp/time).
+These arguments are based on the official usage from the [`mcp/time` Docker Hub page](https://hub.docker.com/r/mcp/time).
 
 ### Stdio Recipe-Based Setup
 

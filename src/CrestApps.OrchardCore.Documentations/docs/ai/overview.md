@@ -133,7 +133,7 @@ The following configuration format using `ChatDeploymentName`, `UtilityDeploymen
 
 #### Typed AI Deployments
 
-Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments are defined in the `Deployments` array on each connection.
+Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.
 
 | Property | Description | Required |
 |----------|-------------|----------|
@@ -189,6 +189,48 @@ Most AI deployments reference a shared **Provider Connection** (endpoint + crede
 - You want a **self-contained deployment** without creating a separate provider connection
 
 Currently, the **Azure Speech** provider is the built-in contained-connection provider. See the [Azure OpenAI documentation](./providers/azure-openai#azure-speech-deployments-contained-connection) for setup instructions.
+
+#### Configuring Contained-Connection Deployments via appsettings.json
+
+In addition to creating contained-connection deployments through the admin UI, you can define them in `appsettings.json` so they are automatically available across all tenants without per-tenant configuration.
+
+Non-connection deployments are defined in the `CrestApps_AI:Deployments` section as an array of deployment objects:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Deployments": [
+        {
+          "ProviderName": "AzureSpeech",
+          "Name": "my-speech-to-text",
+          "Type": "SpeechToText",
+          "IsDefault": true,
+          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+          "AuthenticationType": "ApiKey",
+          "ApiKey": "your-speech-service-api-key"
+        }
+      ]
+    }
+  }
+}
+```
+
+| Property | Description | Required |
+|----------|-------------|----------|
+| `ProviderName` | The contained-connection deployment provider (for example `AzureSpeech`) | Yes |
+| `Name` | A friendly name for the deployment | Yes |
+| `Type` | The deployment type (e.g., `SpeechToText`, `TextToSpeech`) | Yes |
+| `IsDefault` | Whether this is the default deployment for its type | No |
+| Provider-specific fields | Connection settings such as `Endpoint`, `AuthenticationType`, `ApiKey`, and `IdentityId` | Provider-specific |
+
+Deployments defined in configuration are **read-only** and **ephemeral** — they appear alongside database-managed deployments in dropdowns and API queries, but are not persisted to the database. Removing them from configuration removes them from the system.
+
+For providers that need more complex metadata objects, you can also use a nested `Properties` object. Flat top-level fields are recommended for contained-connection providers like `AzureSpeech`.
+
+:::tip
+Use this approach when you want to share deployments across all tenants without configuring each tenant individually. API keys in configuration should be secured using environment variables or user secrets.
+:::
 
 :::warning Deprecated Settings
 The following provider-level and connection-level settings are **deprecated** and will be auto-migrated:
