@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI;
 
 /// <summary>
 /// Sends transient UI notifications to chat clients via SignalR.
-/// Notifications appear as visual bubbles in the chat interface and are separate
+/// Notifications appear as system messages in the chat interface and are separate
 /// from chat history. Use this service from webhooks, background tasks, or response
 /// handlers to provide real-time feedback to users.
 /// </summary>
@@ -17,7 +17,7 @@ public interface IChatNotificationSender
 {
     /// <summary>
     /// Sends a notification to all clients connected to the specified session.
-    /// If a notification with the same <see cref="ChatNotification.Id"/> already exists
+    /// If a notification with the same <see cref="ChatNotification.Type"/> already exists
     /// on the client, it will be replaced.
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
@@ -27,7 +27,7 @@ public interface IChatNotificationSender
 
     /// <summary>
     /// Updates an existing notification on all connected clients.
-    /// Only replaces the notification if one with a matching <see cref="ChatNotification.Id"/> exists.
+    /// Only replaces the notification if one with a matching <see cref="ChatNotification.Type"/> exists.
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
@@ -39,6 +39,6 @@ public interface IChatNotificationSender
     /// </summary>
     /// <param name="sessionId">The session or interaction identifier.</param>
     /// <param name="chatType">The type of chat context.</param>
-    /// <param name="notificationId">The identifier of the notification to remove.</param>
-    Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationId);
+    /// <param name="notificationType">The type of the notification to remove.</param>
+    Task RemoveAsync(string sessionId, ChatContextType chatType, string notificationType);
 }

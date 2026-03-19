@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 using CrestApps.OrchardCore.AI.Core.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core;
@@ -222,6 +223,22 @@ public static class ServiceCollectionExtensions
         // Register the default AI chat response handler and resolver.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
         services.AddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
+
+        // Register the external chat relay infrastructure for protocol-agnostic 3rd-party integration.
+        services.AddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
+        services.AddScoped<IExternalChatRelayEventHandler, DefaultExternalChatRelayEventHandler>();
+        services.AddScoped<IExternalChatRelayNotificationHandler, DefaultExternalChatRelayNotificationHandler>();
+
+        // Register keyed notification builders for built-in relay event types.
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentTyping);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentStoppedTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentStoppedTyping);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentConnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentConnected);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentDisconnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentDisconnected);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentReconnectingNotificationBuilder>(ExternalChatRelayEventTypes.AgentReconnecting);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, ConnectionLostNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionLost);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, ConnectionRestoredNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionRestored);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, WaitTimeUpdatedNotificationBuilder>(ExternalChatRelayEventTypes.WaitTimeUpdated);
+        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SessionEndedNotificationBuilder>(ExternalChatRelayEventTypes.SessionEnded);
 
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)

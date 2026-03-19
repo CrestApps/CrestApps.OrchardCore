@@ -22,19 +22,19 @@ public interface IChatHubClient
     Task ReceiveConversationAssistantComplete(string identifier, string messageId);
 
     /// <summary>
-    /// Sends a notification bubble to the client. If a notification with the same ID
-    /// already exists, it is replaced.
+    /// Sends a notification system message to the client. If a notification with the same
+    /// type already exists, it is replaced.
     /// </summary>
     Task ReceiveNotification(ChatNotification notification);
 
     /// <summary>
     /// Updates an existing notification on the client. Only replaces the notification
-    /// if one with a matching ID exists.
+    /// if one with a matching type exists.
     /// </summary>
     Task UpdateNotification(ChatNotification notification);
 
     /// <summary>
-    /// Removes a notification from the client by its identifier.
+    /// Removes a notification from the client by its type.
     /// </summary>
-    Task RemoveNotification(string notificationId);
+    Task RemoveNotification(string notificationType);
 }

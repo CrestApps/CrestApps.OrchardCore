@@ -31,10 +31,10 @@ internal sealed class AIChatNotificationTransport : IChatNotificationTransport
         return _hubContext.Clients.Group(groupName).UpdateNotification(notification);
     }
 
-    public Task RemoveNotificationAsync(string sessionId, string notificationId)
+    public Task RemoveNotificationAsync(string sessionId, string notificationType)
     {
         var groupName = AIChatHub.GetSessionGroupName(sessionId);
 
-        return _hubContext.Clients.Group(groupName).RemoveNotification(notificationId);
+        return _hubContext.Clients.Group(groupName).RemoveNotification(notificationType);
     }
 }

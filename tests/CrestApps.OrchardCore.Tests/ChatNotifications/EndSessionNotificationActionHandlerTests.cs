@@ -61,8 +61,7 @@ public sealed class EndSessionNotificationActionHandlerTests
         sessionManagerMock.Verify();
 
         Assert.NotNull(captured);
-        Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.SessionEnded, captured.Id);
-        Assert.Equal("ended", captured.Type);
+        Assert.Equal(ChatNotificationTypes.SessionEnded, captured.Type);
         Assert.True(captured.Dismissible);
     }
 
@@ -120,8 +119,7 @@ public sealed class EndSessionNotificationActionHandlerTests
         await handler.HandleAsync(context, CancellationToken.None);
 
         Assert.NotNull(captured);
-        Assert.Equal(ChatNotificationSenderExtensions.NotificationIds.SessionEnded, captured.Id);
-        Assert.Equal("ended", captured.Type);
+        Assert.Equal(ChatNotificationTypes.SessionEnded, captured.Type);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -136,8 +134,8 @@ public sealed class EndSessionNotificationActionHandlerTests
         return new ChatNotificationActionContext
         {
             SessionId = sessionId,
-            NotificationId = ChatNotificationSenderExtensions.NotificationIds.SessionEnded,
-            ActionName = ChatNotificationSenderExtensions.ActionNames.EndSession,
+            NotificationType = ChatNotificationTypes.SessionEnded,
+            ActionName = ChatNotificationActionNames.EndSession,
             ChatType = chatType,
             ConnectionId = "conn-1",
             Services = services,
