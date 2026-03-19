@@ -46,17 +46,25 @@ dotnet add package CrestApps.OrchardCore.AI.Chat
    cd CrestApps.OrchardCore
    ```
 
-3. **Build the Solution:**
+3. **Install Frontend Dependencies and Rebuild Assets:**
+   ```bash
+   npm install
+   npm run rebuild
+   ```
+
+   The Gulp asset pipeline emits both the standard and minified frontend outputs into each module's `wwwroot` folder, such as `ai-chat.js` and `ai-chat.min.js`.
+
+4. **Build the Solution:**
    ```bash
    dotnet build
    ```
 
-4. **Launch the Application:**
+5. **Launch the Application:**
    ```bash
    dotnet run
    ```
 
-5. **Enable Modules:**
+6. **Enable Modules:**
    Access the **Orchard Core Admin Dashboard** to enable desired CrestApps modules.
 
 ## Package Feeds
