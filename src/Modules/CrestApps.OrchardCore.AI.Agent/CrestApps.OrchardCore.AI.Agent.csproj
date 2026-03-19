@@ -28,6 +28,7 @@
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Deployment.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="Microsoft.Playwright" />
   </ItemGroup>
 
   <ItemGroup>

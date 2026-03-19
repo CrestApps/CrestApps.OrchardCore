@@ -34,6 +34,54 @@ Once the feature is enabled:
 
 This allows you to tailor each agent's abilities to suit your specific site tasks and workflows.
 
+## Browser Automation Tools
+
+The AI Agent feature now includes a large **Playwright-powered browser automation** toolset so an AI chat can interact with your website through the real UI in a user-like way. These tools let the model open a browser session, navigate between pages, inspect the DOM, click buttons, fill forms, wait for UI state changes, capture screenshots, and gather troubleshooting diagnostics.
+
+### Tool Categories
+
+Browser tools are grouped in the **Capabilities** tab so you can enable the right level of browser access for each profile or chat interaction. The grouped tool picker already supports **Select All** globally and a per-category **Select All** toggle, so you can enable a whole browser logic group with one click.
+
+The browser capability labels are localized the same way as the rest of the AI Agent tool catalog, so category names appear consistently in Orchard Core language extraction and translation workflows.
+
+The browser automation set is organized into these categories:
+
+| Category | Purpose |
+| --- | --- |
+| **Browser Sessions** | Start/close sessions, list sessions, inspect sessions, and manage tabs. |
+| **Browser Navigation** | Navigate to URLs, go back/forward, reload, and scroll pages or elements. |
+| **Browser Inspection** | Read page state, content, links, forms, headings, buttons, and element details. |
+| **Browser Interaction** | Click, double-click, hover, and send keyboard input. |
+| **Browser Forms** | Fill inputs, clear fields, select options, check/uncheck controls, and upload files. |
+| **Browser Waiting** | Wait for selectors, URL changes, and load states. |
+| **Browser Troubleshooting** | Capture screenshots, inspect console output, inspect network activity, and diagnose broken pages. |
+
+### How Browser Sessions Work
+
+Browser automation tools are **stateful**. Start by calling `startBrowserSession`, then keep passing the returned `sessionId` to later browser tools. Session tools also return `pageId` values for tracked tabs so the model can switch tabs or target a specific page when needed.
+
+The tools are intentionally granular. A typical browser workflow looks like this:
+
+1. Start a browser session.
+2. Navigate to a page.
+3. Inspect the page state, links, forms, or specific elements.
+4. Click, type, select, upload, or wait for UI changes.
+5. Use troubleshooting tools when a page does not behave as expected.
+
+### Playwright Browser Installation
+
+The `Microsoft.Playwright` package is included with the AI Agent module, but the actual browser binaries must still be installed for the built application. After building your Orchard Core app, run the generated Playwright install script for the target output folder. For example:
+
+```powershell
+pwsh .\src\Modules\CrestApps.OrchardCore.AI.Agent\bin\Debug\net10.0\playwright.ps1 install
+```
+
+If the browsers are not installed, the browser tools return a descriptive Playwright error telling you to run the install script.
+
+### Browser Safety and Scope
+
+These tools expose powerful UI automation. Only enable the browser categories on profiles or chat interactions that truly need them. In most cases, it is best to create a dedicated profile for browser-driven tasks rather than making browser automation available everywhere.
+
 ---
 
 ## Agent Profile Type
