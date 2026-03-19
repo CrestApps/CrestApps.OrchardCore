@@ -250,6 +250,10 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 If you only want to notify the user about transfer state, typing, agent connection, or similar status, use `IChatNotificationSender`. If you want the external agent's reply to appear as a real assistant message in the transcript, save it to the prompt store and then either append it with `ReceiveConversationAssistantToken` / `ReceiveConversationAssistantComplete` or refresh the transcript with `LoadSession` / `LoadInteraction`.
 :::
 
+:::note
+The active SignalR connection must join the session or interaction group before deferred webhook messages can be delivered in real time. Built-in CrestApps clients now do this automatically on startup by calling `LoadSession(existingSessionId)` or `LoadInteraction(existingItemId)` when the page already has an existing identifier. If you build a custom client, make sure it explicitly calls `StartSession`, `LoadSession`, or `LoadInteraction` after connecting so the current connection joins the correct group.
+:::
+
 ### Step 4: Real-Time Communication via Persistent Relay (Alternative to Webhook)
 
 While webhooks work well for many integration scenarios, some third-party platforms support persistent connections for real-time bidirectional communication. The external chat relay infrastructure keeps a connection open, enabling instant delivery of events like typing indicators, agent-connected notifications, wait-time updates, and messages — without polling or callback endpoints.
