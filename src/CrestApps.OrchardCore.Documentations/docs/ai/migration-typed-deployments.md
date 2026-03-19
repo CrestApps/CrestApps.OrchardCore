@@ -131,6 +131,32 @@ After the automatic migration runs:
 Both formats are supported simultaneously. If both are present, the `Deployments` array takes precedence. We recommend migrating to the new format when convenient.
 :::
 
+### Non-Connection Deployments (New)
+
+Contained-connection deployments (e.g., Azure Speech) can also be defined in `appsettings.json` using the `CrestApps_AI:Deployments` section. These deployments embed their own connection parameters and do not reference a shared provider connection.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Deployments": [
+        {
+          "ProviderName": "AzureSpeech",
+          "Name": "my-speech-to-text",
+          "Type": "SpeechToText",
+          "IsDefault": true,
+          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+          "AuthenticationType": "ApiKey",
+          "ApiKey": "your-speech-service-api-key"
+        }
+      ]
+    }
+  }
+}
+```
+
+Deployments defined this way are read-only, ephemeral (exist only while in configuration), and appear alongside database-managed deployments in dropdown menus and API queries.
+
 ---
 
 ## Code Migration
@@ -140,11 +166,11 @@ Both formats are supported simultaneously. If both are present, the `Deployments
 If your code referenced deployment names from the connection:
 
 ```csharp
-// ❌ Old — deprecated
+// Old (deprecated)
 var chatDeployment = connection.ChatDeploymentName;
 var embeddingDeployment = connection.EmbeddingDeploymentName;
 
-// ✅ New — use IAIDeploymentManager
+// New (recommended) — use IAIDeploymentManager
 var chatDeployment = await deploymentManager.ResolveAsync(
     AIDeploymentType.Chat, connectionName: connectionName);
 var embeddingDeployment = await deploymentManager.ResolveAsync(
@@ -156,10 +182,10 @@ var embeddingDeployment = await deploymentManager.ResolveAsync(
 If your code referenced `DeploymentId` on AI Profiles:
 
 ```csharp
-// ❌ Old
+// Old (deprecated)
 var deploymentId = profile.DeploymentId;
 
-// ✅ New
+// New (recommended)
 var chatDeploymentId = profile.ChatDeploymentId;
 var utilityDeploymentId = profile.UtilityDeploymentId;
 ```
@@ -169,10 +195,10 @@ var utilityDeploymentId = profile.UtilityDeploymentId;
 If your code built or read `AICompletionContext`:
 
 ```csharp
-// ❌ Old
+// Old (deprecated)
 context.DeploymentId = "some-id";
 
-// ✅ New
+// New (recommended)
 context.ChatDeploymentId = "some-id";
 ```
 

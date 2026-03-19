@@ -266,23 +266,73 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         {
             foreach (var property in deployment.Properties)
             {
-                values[property.Key] = property.Value switch
-                {
-                    JsonValue jsonValue when jsonValue.TryGetValue<string>(out var s) => s,
-                    JsonValue jsonValue when jsonValue.TryGetValue<bool>(out var b) => b,
-                    JsonValue jsonValue when jsonValue.TryGetValue<int>(out var i) => i,
-                    _ => property.Value?.ToString(),
-                };
+                values[property.Key] = ConvertJsonNode(property.Value);
             }
         }
 
-        // Decrypt any protected fields (e.g. ApiKey) that were encrypted when saved.
-        if (values.TryGetValue("ApiKey", out var rawKey) && rawKey is string encryptedKey && !string.IsNullOrWhiteSpace(encryptedKey))
-        {
-            var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-            values["ApiKey"] = protector.Unprotect(encryptedKey);
-        }
+        UnprotectApiKeys(values);
 
         return new AIProviderConnectionEntry(values);
+    }
+
+    private object ConvertJsonNode(JsonNode node)
+    {
+        return node switch
+        {
+            JsonObject jsonObject => jsonObject.ToDictionary(
+                property => property.Key,
+                property => ConvertJsonNode(property.Value),
+                StringComparer.OrdinalIgnoreCase),
+            JsonArray jsonArray => jsonArray.Select(ConvertJsonNode).ToList(),
+            JsonValue jsonValue when jsonValue.TryGetValue<string>(out var s) => s,
+            JsonValue jsonValue when jsonValue.TryGetValue<bool>(out var b) => b,
+            JsonValue jsonValue when jsonValue.TryGetValue<int>(out var i) => i,
+            JsonValue jsonValue when jsonValue.TryGetValue<long>(out var l) => l,
+            JsonValue jsonValue when jsonValue.TryGetValue<double>(out var d) => d,
+            _ => node?.ToString(),
+        };
+    }
+
+    private void UnprotectApiKeys(IDictionary<string, object> values)
+    {
+        foreach (var (key, value) in values.ToList())
+        {
+            switch (value)
+            {
+                case IDictionary<string, object> nestedDictionary:
+                    UnprotectApiKeys(nestedDictionary);
+                    break;
+
+                case List<object> items:
+                    UnprotectApiKeys(items);
+                    break;
+
+                case string encryptedKey when
+                    string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(encryptedKey):
+                {
+                    var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+                    values[key] = protector.Unprotect(encryptedKey);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void UnprotectApiKeys(List<object> values)
+    {
+        foreach (var value in values)
+        {
+            switch (value)
+            {
+                case IDictionary<string, object> nestedDictionary:
+                    UnprotectApiKeys(nestedDictionary);
+                    break;
+
+                case List<object> nestedList:
+                    UnprotectApiKeys(nestedList);
+                    break;
+            }
+        }
     }
 }

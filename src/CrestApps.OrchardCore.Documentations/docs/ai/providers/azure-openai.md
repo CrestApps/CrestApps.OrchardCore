@@ -178,6 +178,32 @@ You can find your Speech Service endpoint and API key in the [Azure AI Foundry p
 
 After creating the deployment, go to **Configuration** → **Settings** → **AI** and select this deployment under **Default Speech-to-Text Deployment**. This enables the microphone button in AI Chat profiles and Chat Interactions that have speech-to-text enabled.
 
+### Configuring Azure Speech via appsettings.json
+
+Instead of creating Azure Speech deployments through the admin UI, you can define them in `appsettings.json`. This is useful for sharing speech-to-text deployments across all tenants without per-tenant configuration.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_AI": {
+      "Deployments": [
+        {
+          "ProviderName": "AzureSpeech",
+          "Name": "my-speech-to-text",
+          "Type": "SpeechToText",
+          "IsDefault": true,
+          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+          "AuthenticationType": "ApiKey",
+          "ApiKey": "your-speech-service-api-key"
+        }
+      ]
+    }
+  }
+}
+```
+
+Deployments defined in configuration are read-only and appear alongside database-managed deployments in the UI and API.
+
 ### GStreamer Requirement
 
 The Azure Speech SDK uses [GStreamer](https://gstreamer.freedesktop.org) to decode compressed audio formats (OGG/Opus, WebM/Opus, MP3, FLAC). Because browsers send compressed audio (typically WebM/Opus or OGG/Opus) via MediaRecorder, **GStreamer must be installed on every platform** where the application runs — including Windows, Linux, and macOS.
