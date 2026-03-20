@@ -128,6 +128,7 @@ The hub classes (`AIChatHub`, `ChatInteractionHub`) and their client interfaces 
 ```csharp
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Http;
@@ -152,10 +153,10 @@ internal static class GenesysWebhookEndpoint
         GenesysWebhookPayload payload,
         IAIChatSessionManager sessionManager,
         IAIChatSessionPromptStore promptStore,
-        IHubContext<AIChatHub> chatHubContext,
+        IHubContext<AIChatHub, IAIChatHubClient> chatHubContext,
         ISourceCatalogManager<ChatInteraction> interactionManager,
         IChatInteractionPromptStore interactionPromptStore,
-        IHubContext<ChatInteractionHub> interactionHubContext)
+        IHubContext<ChatInteractionHub, IChatInteractionHubClient> interactionHubContext)
     {
         // TODO: Validate the webhook payload signature to ensure it's authentic.
 
@@ -179,16 +180,15 @@ internal static class GenesysWebhookEndpoint
             };
             await promptStore.CreateAsync(prompt);
 
-            // Notify connected client(s) via the SignalR group.
+            // Push the new assistant message directly to connected client(s).
+            // There is no built-in "ReceiveMessage" client method for deferred webhook replies.
+            // The current UI appends assistant messages through the conversation events.
             var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
 
-            await chatHubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
-            {
-                sessionId = session.SessionId,
-                messageId = prompt.ItemId,
-                content = payload.AgentMessage,
-                role = "assistant",
-            });
+            await chatHubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantToken(session.SessionId, prompt.ItemId, payload.AgentMessage, prompt.ItemId);
+            await chatHubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantComplete(session.SessionId, prompt.ItemId);
         }
         else if (payload.ChatType == ChatContextType.ChatInteraction)
         {
@@ -210,16 +210,16 @@ internal static class GenesysWebhookEndpoint
             };
             await interactionPromptStore.CreateAsync(prompt);
 
-            // Notify connected client(s) via the SignalR group.
+            // Push the new assistant message directly to connected client(s).
+            // Deferred webhook replies are surfaced through the conversation events, not a
+            // nonexistent "ReceiveMessage" event.
             var groupName = ChatInteractionHub.GetInteractionGroupName(interaction.ItemId);
 
-            await interactionHubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
-            {
-                sessionId = interaction.ItemId,
-                messageId = prompt.ItemId,
-                content = payload.AgentMessage,
-                role = "assistant",
-            });
+            await interactionHubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantToken(interaction.ItemId, prompt.ItemId, payload.AgentMessage, prompt.ItemId);
+
+            await interactionHubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantComplete(interaction.ItemId, prompt.ItemId);
         }
         else
         {
@@ -239,6 +239,20 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
     routes.AddGenesysWebhookEndpoint();
 }
 ```
+
+:::important
+`ReceiveMessage` is **not** a built-in SignalR client method in the current chat UI, so calling `SendAsync("ReceiveMessage", ...)` will not update the browser. The built-in client methods are:
+
+- `ReceiveConversationAssistantToken` + `ReceiveConversationAssistantComplete` to append a new assistant message directly to the current UI.
+- `LoadSession` / `LoadInteraction` to reload the full transcript after you persist a deferred assistant message.
+- `ReceiveNotification`, `UpdateNotification`, and `RemoveNotification` for transient system messages sent through `IChatNotificationSender`.
+
+If you only want to notify the user about transfer state, typing, agent connection, or similar status, use `IChatNotificationSender`. If you want the external agent's reply to appear as a real assistant message in the transcript, save it to the prompt store and then either append it with `ReceiveConversationAssistantToken` / `ReceiveConversationAssistantComplete` or refresh the transcript with `LoadSession` / `LoadInteraction`.
+:::
+
+:::note
+The active SignalR connection must join the session or interaction group before deferred webhook messages can be delivered in real time. Built-in CrestApps clients now do this automatically on startup by calling `LoadSession(existingSessionId)` or `LoadInteraction(existingItemId)` when the page already has an existing identifier. If you build a custom client, make sure it explicitly calls `StartSession`, `LoadSession`, or `LoadInteraction` after connecting so the current connection joins the correct group.
+:::
 
 ### Step 4: Real-Time Communication via Persistent Relay (Alternative to Webhook)
 
@@ -263,7 +277,7 @@ Understanding which interface handles each direction of communication is key:
 | **User → External App** | `IExternalChatRelay.SendPromptAsync()` | Sends the user's chat message text to the external system via the relay connection. Called by the response handler when it receives a prompt. |
 | **User → External App** (signals) | `IExternalChatRelay.SendSignalAsync()` | Sends user signals (e.g., thumbs up/down, user typing, feedback) to the external system. Called by `IChatNotificationActionHandler` implementations. |
 | **External App → User** (notifications) | `IExternalChatRelayEventHandler.HandleEventAsync()` | Receives events from the relay's background listener and routes them to `IChatNotificationSender` for UI notifications (typing indicators, agent connected, wait times, connection status, session ended). |
-| **External App → User** (messages) | Your `IExternalChatRelay` implementation | Receives message events from the external system and writes them to the prompt store via `IAIChatSessionPromptStore`, then notifies the SignalR group via `IHubContext<AIChatHub>`. This is handled directly in your relay implementation's `DispatchEventAsync` method. |
+| **External App → User** (messages) | Your `IExternalChatRelay` implementation | Receives message events from the external system, writes them to the appropriate prompt store, then either appends the message with `ReceiveConversationAssistantToken` / `ReceiveConversationAssistantComplete` or reloads the transcript via `LoadSession` / `LoadInteraction`. |
 
 :::note
 `ExternalChatRelayEvent.EventType` is a **string**, not an enum. Well-known event types are defined as constants in `ExternalChatRelayEventTypes` (e.g., `ExternalChatRelayEventTypes.AgentTyping`). You can use **any custom string** for platform-specific events — just register a keyed `IExternalChatRelayNotificationBuilder` for your event type.
@@ -546,7 +560,7 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
         {
             var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
             var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
-            var hubContext = services.GetRequiredService<IHubContext<AIChatHub>>();
+            var hubContext = services.GetRequiredService<IHubContext<AIChatHub, IAIChatHubClient>>();
 
             var session = await sessionManager.FindByIdAsync(_sessionId);
             if (session is null)
@@ -564,13 +578,11 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
             await promptStore.CreateAsync(prompt);
 
             var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
-            await hubContext.Clients.Group(groupName).SendAsync("ReceiveMessage", new
-            {
-                sessionId = session.SessionId,
-                messageId = prompt.ItemId,
-                content = relayEvent.Content,
-                role = "assistant",
-            });
+            await hubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantToken(session.SessionId, prompt.ItemId, relayEvent.Content, prompt.ItemId);
+            
+            await hubContext.Clients.Group(groupName)
+                .ReceiveConversationAssistantComplete(session.SessionId, prompt.ItemId);
         }
         // For ChatInteraction, follow the same pattern with the interaction pipeline.
     }

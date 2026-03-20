@@ -1820,7 +1820,10 @@ window.openAIChatManager = function () {
           if (this.placeholder && this.responseHandlers.length > 0) {
             this.renderHandlerSelector();
           }
-          if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+          var sessionId = this.getSessionId();
+          if (!config.widget && sessionId) {
+            this.loadSession(sessionId);
+          } else if (config.autoCreateSession && !config.widget && !sessionId) {
             this.startNewSession();
           }
 
