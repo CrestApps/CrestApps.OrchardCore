@@ -43,15 +43,18 @@ public sealed class DefaultSpeechVoicePresenter
             var speechVoices = await _clientFactory.GetSpeechVoicesAsync(deployment);
 
             var supportedCultures = await _localizationService.GetSupportedCulturesAsync();
-            var supportedSet = new HashSet<string>(supportedCultures, StringComparer.OrdinalIgnoreCase);
+            var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
+                supportedCultures,
+                CultureInfo.CurrentCulture,
+                CultureInfo.CurrentUICulture);
 
             var voices = new List<SelectListItem>();
 
             foreach (var voiceGroup in speechVoices
-                .Where(v => string.IsNullOrEmpty(v.Language) || supportedSet.Contains(v.Language))
+                .Where(v => SpeechVoiceLocalizationHelper.IsLanguageAllowed(v.Language, supportedSet))
                 .OrderBy(v => v.Language)
                 .ThenBy(v => v.Name)
-                .GroupBy(v => GetCultureDisplayName(v.Language) ?? "Unknown"))
+                .GroupBy(v => SpeechVoiceLocalizationHelper.GetCultureDisplayName(v.Language) ?? "Unknown"))
             {
                 var group = new SelectListGroup { Name = voiceGroup.Key };
 
@@ -71,20 +74,4 @@ public sealed class DefaultSpeechVoicePresenter
         }
     }
 
-    private static string GetCultureDisplayName(string language)
-    {
-        if (string.IsNullOrEmpty(language))
-        {
-            return null;
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(language).DisplayName;
-        }
-        catch (CultureNotFoundException)
-        {
-            return language;
-        }
-    }
 }

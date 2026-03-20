@@ -389,32 +389,39 @@ public sealed class PostSessionProcessingService
             _logger.LogDebug(
                 "Post-session tools raw response for session '{SessionId}': '{ResponseText}'.",
                 sessionId,
-                responseText?.Length > 2000 ? responseText[..2000] + "..." : responseText ?? "(empty)");
+                CreateResponseLogPreview(responseText));
         }
 
-        if (string.IsNullOrEmpty(responseText))
+        if (!string.IsNullOrEmpty(responseText))
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            var result = TryParsePostSessionResponse(sessionId, responseText);
+
+            if (result?.Tasks != null && result.Tasks.Count > 0)
             {
-                _logger.LogDebug(
-                    "Post-session tools response for session '{SessionId}' has no final text content. Tools may have executed as side effects.",
-                    sessionId);
+                return ApplyResults(tasks, result.Tasks);
             }
-
-            return null;
         }
-
-        // Try to parse the response as structured JSON using multiple strategies.
-        var result = TryParsePostSessionResponse(sessionId, responseText);
-
-        if (result?.Tasks != null && result.Tasks.Count > 0)
+        else if (_logger.IsEnabled(LogLevel.Debug))
         {
-            return ApplyResults(tasks, result.Tasks);
+            _logger.LogDebug(
+                "Post-session tools response for session '{SessionId}' has no final text content. Attempting structured recovery from tool messages.",
+                sessionId);
         }
 
-        // Fallback: when the model produces text but no structured task results,
-        // use the response text as the value for semantic tasks.
-        return TryExtractFromResponseText(sessionId, tasks, responseText);
+        var recoveredResults = await TryRecoverStructuredToolsResponseAsync(
+            sessionId,
+            chatClient,
+            messages,
+            response.Messages,
+            tasks,
+            cancellationToken);
+
+        if (recoveredResults is not null && recoveredResults.Count > 0)
+        {
+            return recoveredResults;
+        }
+
+        return CreateFailedResults(sessionId, tasks, responseText);
     }
 
     /// <summary>
@@ -513,66 +520,134 @@ public sealed class PostSessionProcessingService
         return null;
     }
 
-    /// <summary>
-    /// Fallback: when the model returns text that cannot be parsed as structured JSON,
-    /// use the response text directly as the value for semantic tasks.
-    /// Only applies when all pending tasks are semantic type.
-    /// </summary>
-    private Dictionary<string, PostSessionResult> TryExtractFromResponseText(
+    private async Task<Dictionary<string, PostSessionResult>> TryRecoverStructuredToolsResponseAsync(
         string sessionId,
+        IChatClient chatClient,
+        List<ChatMessage> requestMessages,
+        IList<ChatMessage> responseMessages,
         List<PostSessionTask> tasks,
-        string responseText)
+        CancellationToken cancellationToken)
     {
-        var semanticTasks = tasks.Where(t => t.Type == PostSessionTaskType.Semantic).ToList();
+        var followUpMessages = new List<ChatMessage>(requestMessages);
+        var trailingAssistantText = responseMessages?
+            .LastOrDefault(message => message.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(message.Text));
 
-        if (semanticTasks.Count == 0)
+        if (responseMessages is not null)
+        {
+            foreach (var responseMessage in responseMessages)
+            {
+                if (ReferenceEquals(responseMessage, trailingAssistantText))
+                {
+                    continue;
+                }
+
+                followUpMessages.Add(responseMessage);
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Attempting structured recovery for post-session tool response on session '{SessionId}' using the original post-session analysis context. TaskCount={TaskCount}.",
+                sessionId,
+                tasks.Count);
+        }
+
+        var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(followUpMessages, new ChatOptions
+        {
+            Temperature = 0f,
+        }, null, cancellationToken);
+
+        var recoveryResponseText = response.Messages?
+            .LastOrDefault(message => message.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(message.Text))
+            ?.Text?.Trim();
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session structured recovery raw response for session '{SessionId}': '{ResponseText}'.",
+                sessionId,
+                CreateResponseLogPreview(recoveryResponseText));
+        }
+
+        PostSessionProcessingResponse result;
+
+        try
+        {
+            result = response.Result;
+        }
+        catch (InvalidOperationException)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Post-session response for session '{SessionId}' produced no structured results and has no semantic tasks for text fallback.",
+                    "Structured recovery for post-session tool response on session '{SessionId}' did not return JSON content.",
+                    sessionId);
+            }
+
+            return null;
+        }
+        catch (JsonException)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Structured recovery for post-session tool response on session '{SessionId}' returned invalid JSON content.",
                     sessionId);
             }
 
             return null;
         }
 
-        // For a single semantic task, use the entire response text as its value.
-        if (semanticTasks.Count == 1 && tasks.Count == 1)
+        if (result?.Tasks is null || result.Tasks.Count == 0)
         {
-            var task = semanticTasks[0];
-            var now = _clock.UtcNow;
-
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Post-session task '{TaskName}' for session '{SessionId}' using response text as fallback value (length={Length}).",
-                    task.Name,
-                    sessionId,
-                    responseText.Length);
+                    "Structured recovery for post-session tool response on session '{SessionId}' returned no task results.",
+                    sessionId);
             }
 
-            return new Dictionary<string, PostSessionResult>(StringComparer.OrdinalIgnoreCase)
-            {
-                [task.Name] = new PostSessionResult
-                {
-                    Name = task.Name,
-                    Value = responseText,
-                    Status = PostSessionTaskResultStatus.Succeeded,
-                    ProcessedAtUtc = now,
-                },
-            };
+            return null;
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
-                "Post-session response for session '{SessionId}' produced no structured results. Cannot apply text fallback to {TaskCount} tasks.",
+                "Structured recovery for post-session tool response on session '{SessionId}' succeeded with {TaskCount} task result(s).",
                 sessionId,
-                tasks.Count);
+                result.Tasks.Count);
         }
 
-        return null;
+        return ApplyResults(tasks, result.Tasks);
+    }
+
+    private Dictionary<string, PostSessionResult> CreateFailedResults(
+        string sessionId,
+        List<PostSessionTask> tasks,
+        string responseText)
+    {
+        var now = _clock.UtcNow;
+        var errorMessage = string.IsNullOrWhiteSpace(responseText)
+            ? "Tool execution completed, but the AI response did not contain the required structured JSON results."
+            : "The AI response could not be parsed as structured JSON after tool execution.";
+
+        _logger.LogWarning(
+            "Post-session tool response for session '{SessionId}' failed structured parsing. Marking {TaskCount} task(s) as failed. ResponseLength={ResponseLength}.",
+            sessionId,
+            tasks.Count,
+            responseText?.Length ?? 0);
+
+        return tasks.ToDictionary(
+            task => task.Name,
+            task => new PostSessionResult
+            {
+                Name = task.Name,
+                Status = PostSessionTaskResultStatus.Failed,
+                ErrorMessage = errorMessage,
+                ProcessedAtUtc = now,
+            },
+            StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -605,6 +680,20 @@ public sealed class PostSessionProcessingService
         }
 
         return text[start..(end + 1)];
+    }
+
+    private static string CreateResponseLogPreview(string responseText)
+    {
+        if (string.IsNullOrEmpty(responseText))
+        {
+            return "(empty)";
+        }
+
+        var normalized = responseText
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
+        return normalized.Length > 2000 ? normalized[..2000] + "..." : normalized;
     }
 
     private Dictionary<string, PostSessionResult> ApplyResults(

@@ -690,6 +690,7 @@ window.chatInteractionManager = function () {
 
                     this.connection.onreconnected(() => {
                         console.info("SignalR: reconnected.");
+                        this.reloadCurrentInteraction();
                     });
 
                     this.connection.onclose((error) => {
@@ -1627,6 +1628,12 @@ window.chatInteractionManager = function () {
                 },
                 loadInteraction(itemId) {
                     this.connection.invoke("LoadInteraction", itemId).catch(err => console.error(err));
+                },
+                reloadCurrentInteraction() {
+                    const itemId = this.getItemId();
+                    if (itemId) {
+                        this.loadInteraction(itemId);
+                    }
                 },
                 clearHistory(itemId) {
                     const self = this;

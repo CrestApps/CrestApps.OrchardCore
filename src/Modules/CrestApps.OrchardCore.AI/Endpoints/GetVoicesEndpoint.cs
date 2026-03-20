@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -51,10 +52,13 @@ internal static class GetVoicesEndpoint
             var allVoices = await clientFactory.GetSpeechVoicesAsync(deployment);
 
             var supportedCultures = await localizationService.GetSupportedCulturesAsync();
-            var supportedSet = new HashSet<string>(supportedCultures, StringComparer.OrdinalIgnoreCase);
+            var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
+                supportedCultures,
+                CultureInfo.CurrentCulture,
+                CultureInfo.CurrentUICulture);
 
             var voices = allVoices
-                .Where(v => string.IsNullOrEmpty(v.Language) || supportedSet.Contains(v.Language))
+                .Where(v => SpeechVoiceLocalizationHelper.IsLanguageAllowed(v.Language, supportedSet))
                 .OrderBy(v => v.Language)
                 .ThenBy(v => v.Name)
                 .Select(v => new
@@ -62,7 +66,7 @@ internal static class GetVoicesEndpoint
                     v.Id,
                     v.Name,
                     v.Language,
-                    LanguageDisplayName = GetCultureDisplayName(v.Language),
+                    LanguageDisplayName = SpeechVoiceLocalizationHelper.GetCultureDisplayName(v.Language),
                     Gender = v.Gender.ToString(),
                 });
 
@@ -71,23 +75,6 @@ internal static class GetVoicesEndpoint
         catch
         {
             return TypedResults.Ok(new { voices = Array.Empty<object>() });
-        }
-    }
-
-    private static string GetCultureDisplayName(string language)
-    {
-        if (string.IsNullOrEmpty(language))
-        {
-            return null;
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(language).DisplayName;
-        }
-        catch (CultureNotFoundException)
-        {
-            return language;
         }
     }
 }

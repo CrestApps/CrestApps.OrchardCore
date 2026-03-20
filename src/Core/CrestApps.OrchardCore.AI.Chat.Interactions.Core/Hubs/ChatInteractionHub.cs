@@ -411,6 +411,10 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
             prompt = prompt.Trim();
 
+            // Ensure the caller joins the interaction group before any deferred webhook
+            // notifications or live-agent messages are delivered.
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetInteractionGroupName(interaction.ItemId), cancellationToken);
+
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
             var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
             var citationCollector = services.GetRequiredService<CitationReferenceCollector>();

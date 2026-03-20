@@ -427,6 +427,10 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         (var chatSession, var isNew) = await GetSessionAsync(services, sessionId, profile, prompt);
 
+        // Ensure the caller joins the session group as soon as the effective session is known,
+        // even when the session was created implicitly by SendMessage streaming.
+        await Groups.AddToGroupAsync(Context.ConnectionId, GetSessionGroupName(chatSession.SessionId), cancellationToken);
+
         var utcNow = clock.UtcNow;
 
         // Handle session reopen if closed.

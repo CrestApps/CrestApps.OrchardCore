@@ -411,10 +411,12 @@ Post-session processing runs after a chat session is closed and performs AI-powe
 5. Configure the task:
    - **Name**: A unique identifier (alphanumeric + underscores only).
    - **Type**: Choose **Predefined Options** or **Semantic**.
-   - **Instructions**: Guidance for the AI model on how to process this task.
+   - **Instructions**: Guidance for the AI model on how to process this task. This field uses a Markdown editor in the admin UI.
    - For **Predefined Options**: Add options with values and optional descriptions.
 6. Optionally, switch to the **Capabilities** tab to select AI tools that should be available during post-session processing.
 7. Save the profile.
+
+For data extraction entries on the same **Data Processing & Metrics** tab, entry descriptions use multiline textareas so longer extraction guidance is easier to author and review.
 
 ### Tool Capabilities
 
@@ -442,6 +444,6 @@ A typical disposition task classifies the outcome of a conversation:
 
 ### Retry Behavior
 
-Each post-session task is attempted up to **3 times** before being permanently marked as failed. If a task produces no result on a given attempt (for example, the AI model returns non-structured output or does not call the expected tools), the task remains pending and is retried on the next background processing cycle. The `Attempts` counter on each task result tracks how many times processing has been attempted.
+Each post-session task is attempted up to **3 times** before being permanently marked as failed. If a task attempt errors or the AI model returns malformed or truncated structured output (for example, only `{` or other non-parseable JSON after tool execution), that attempt is recorded as `Failed` with an error message and retried on the next background processing cycle. The `Attempts` counter on each task result tracks how many times processing has been attempted.
 
 Tasks are considered fully processed when they are either **Succeeded** or **Failed** (after exhausting all retry attempts). Once every configured task reaches a terminal state, the session's post-session processing is marked as complete and the **AI Chat Session Post-Processed** workflow event is triggered.

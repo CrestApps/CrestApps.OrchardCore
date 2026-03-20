@@ -9,6 +9,12 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 public sealed class DefaultAIDeploymentSettings
 {
     /// <summary>
+    /// Gets or sets the default chat deployment identifier.
+    /// Used globally for chat sessions and chat interactions when no specific chat deployment is configured.
+    /// </summary>
+    public string DefaultChatDeploymentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the default utility deployment identifier.
     /// Used globally for auxiliary tasks such as planning, intent detection,
     /// query rewriting, and chart generation when no specific utility deployment is configured.

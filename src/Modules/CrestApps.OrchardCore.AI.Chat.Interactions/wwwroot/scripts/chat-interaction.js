@@ -610,6 +610,7 @@ window.chatInteractionManager = function () {
                   });
                   _this.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
+                    _this.reloadCurrentInteraction();
                   });
                   _this.connection.onclose(function (error) {
                     if (_this.isNavigatingAway) {
@@ -1622,6 +1623,12 @@ window.chatInteractionManager = function () {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
             return console.error(err);
           });
+        },
+        reloadCurrentInteraction: function reloadCurrentInteraction() {
+          var itemId = this.getItemId();
+          if (itemId) {
+            this.loadInteraction(itemId);
+          }
         },
         clearHistory: function clearHistory(itemId) {
           var self = this;
