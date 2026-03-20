@@ -251,7 +251,7 @@ If you only want to notify the user about transfer state, typing, agent connecti
 :::
 
 :::note
-The active SignalR connection must join the session or interaction group before deferred webhook messages can be delivered in real time. Built-in CrestApps clients now do this automatically on startup by calling `LoadSession(existingSessionId)` or `LoadInteraction(existingItemId)` when the page already has an existing identifier. If you build a custom client, make sure it explicitly calls `StartSession`, `LoadSession`, or `LoadInteraction` after connecting so the current connection joins the correct group.
+The active SignalR connection must join the session or interaction group before deferred webhook messages can be delivered in real time. Built-in CrestApps clients do this automatically when they start or reload an existing conversation, and the hubs also add the caller to the correct group as soon as a prompt is processed. That means even a brand-new session or interaction created implicitly by the first `SendMessage` call is ready to receive webhook-driven notifications and live-agent updates immediately. If you build a custom client, make sure it explicitly calls `StartSession`, `LoadSession`, or `LoadInteraction` after connecting so the current connection joins the correct group.
 :::
 
 ### Step 4: Real-Time Communication via Persistent Relay (Alternative to Webhook)
@@ -988,7 +988,7 @@ When multiple response handlers are registered, the chat UI displays a **Respons
 
 ## SignalR Groups for Deferred Responses
 
-When a deferred handler is used, clients are automatically added to a SignalR group for the session. This allows external systems to send messages to all clients connected to a specific session, even after reconnection.
+When a deferred handler is used, clients are automatically added to a SignalR group for the session or interaction. The built-in hubs also join the current connection to that group as soon as a prompt is processed, so external systems can deliver typing indicators, transfer notifications, and live-agent updates immediately — even when the conversation was first created by the current prompt.
 
 | Chat Type | Group Name Pattern |
 | --- | --- |

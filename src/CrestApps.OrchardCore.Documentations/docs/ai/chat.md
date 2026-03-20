@@ -44,6 +44,7 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 - **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
+- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions now fall back to **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
 
 #### Configuring Chat Mode
 

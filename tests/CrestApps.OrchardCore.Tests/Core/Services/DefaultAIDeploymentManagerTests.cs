@@ -178,6 +178,25 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
+    public async Task ResolveAsync_ChatWithNoConnectionDefault_FallsBackToGlobalChatDefault()
+    {
+        _settings.DefaultChatDeploymentId = "dep-chat-global";
+
+        var globalDeployment = CreateDeployment("dep-chat-global", "gpt-4.1", AIDeploymentType.Chat);
+
+        _storeMock.Setup(m => m.FindByIdAsync("dep-chat-global"))
+            .ReturnsAsync(globalDeployment);
+
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync([]);
+
+        var result = await _manager.ResolveAsync(AIDeploymentType.Chat);
+
+        Assert.NotNull(result);
+        Assert.Equal("dep-chat-global", result.ItemId);
+    }
+
+    [Fact]
     public async Task ResolveAsync_UtilityFallsBackToChat_WhenNoUtilityFound()
     {
         // No utility deployment exists, but a chat deployment does.

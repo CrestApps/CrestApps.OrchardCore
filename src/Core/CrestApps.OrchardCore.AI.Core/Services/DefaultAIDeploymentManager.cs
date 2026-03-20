@@ -124,10 +124,12 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
 
         return type switch
         {
+            AIDeploymentType.Chat => settings.DefaultChatDeploymentId,
             AIDeploymentType.Utility => settings.DefaultUtilityDeploymentId,
             AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentId,
             AIDeploymentType.Image => settings.DefaultImageDeploymentId,
             AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentId,
+            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentId,
             _ => null,
         };
     }

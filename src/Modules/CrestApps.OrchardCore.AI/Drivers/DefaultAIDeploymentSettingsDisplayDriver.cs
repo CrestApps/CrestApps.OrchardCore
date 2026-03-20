@@ -34,12 +34,16 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
     {
         return Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAIDeploymentSettings_Edit", async model =>
         {
+            model.DefaultChatDeploymentId = settings.DefaultChatDeploymentId;
             model.DefaultUtilityDeploymentId = settings.DefaultUtilityDeploymentId;
             model.DefaultEmbeddingDeploymentId = settings.DefaultEmbeddingDeploymentId;
             model.DefaultImageDeploymentId = settings.DefaultImageDeploymentId;
             model.DefaultSpeechToTextDeploymentId = settings.DefaultSpeechToTextDeploymentId;
             model.DefaultTextToSpeechDeploymentId = settings.DefaultTextToSpeechDeploymentId;
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
+
+            model.ChatDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
@@ -71,6 +75,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        settings.DefaultChatDeploymentId = model.DefaultChatDeploymentId;
         settings.DefaultUtilityDeploymentId = model.DefaultUtilityDeploymentId;
         settings.DefaultEmbeddingDeploymentId = model.DefaultEmbeddingDeploymentId;
         settings.DefaultImageDeploymentId = model.DefaultImageDeploymentId;
