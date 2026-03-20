@@ -14,7 +14,7 @@ Tasks to process:
 - {{ task.Name }} (type: {{ task.Type }}){% if task.Instructions %}: {{ task.Instructions }}{% endif %}{% if task.Type == "PredefinedOptions" and task.Options.size > 0 %}{% if task.AllowMultipleValues %} [allowMultiple=true]{% endif %} Options: [{% for option in task.Options %}{% if forloop.index0 > 0 %}, {% endif %}{{ option.Value }}{% if option.Description %} ({{ option.Description }}){% endif %}{% endfor %}]{% endif %}
 {% endfor %}
 
-Conversation transcript:
+[Conversation transcript]
 {% for prompt in prompts %}
-{{ prompt.Role }}: {{ prompt.Content }}
+{{ prompt.Role }}: {{ prompt.Content | strip }}
 {% endfor %}

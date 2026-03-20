@@ -54,7 +54,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">@T["Description"]</label>
-                                <input type="text" class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" value="@Model.Entries[i].Description" placeholder="@T["What to extract"]" />
+                                <textarea class="form-control" name="@Html.NameFor(m => m.Entries[i].Description)" rows="3" placeholder="@T["What to extract"]">@Model.Entries[i].Description</textarea>
                                 <span class="hint">@T["Describes what data to extract from the conversation. The AI model uses this to understand what to look for."]</span>
                             </div>
                             <div class="form-check mb-2">
@@ -107,7 +107,7 @@
                     '<div id="' + collapseId + '" class="collapse show">' +
                         '<div class="card-body">' +
                             '<div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control entry-name-input" name="' + prefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" /><span class="hint">A unique identifier for this field. Only alphanumeric characters and underscores are allowed.</span></div>' +
-                            '<div class="mb-3"><label class="form-label">Description</label><input type="text" class="form-control" name="' + prefix + '[' + index + '].Description" placeholder="What to extract" /><span class="hint">Describes what data to extract from the conversation. The AI model uses this to understand what to look for.</span></div>' +
+                            '<div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" name="' + prefix + '[' + index + '].Description" rows="3" placeholder="What to extract"></textarea><span class="hint">Describes what data to extract from the conversation. The AI model uses this to understand what to look for.</span></div>' +
                             '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">Allow Multiple Values</label><span class="hint dashed">When enabled, the field can accumulate multiple extracted values across messages.</span></div>' +
                             '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="' + prefix + '[' + index + '].IsUpdatable" value="true" /><label class="form-check-label">Updatable</label><span class="hint dashed">When enabled, the extracted value can be replaced if the user provides updated information.</span></div>' +
                         '</div>' +

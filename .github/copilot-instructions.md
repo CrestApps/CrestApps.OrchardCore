@@ -51,6 +51,8 @@ gulp rebuild
 dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
 ```
 
+**Important for Copilot skills**: In a fresh environment, build the project early and then check for newly generated skills under `.agents\skills`. One of the packages can create `.agents\skills` on the first build, and those generated skills may contain important, up-to-date capabilities that are not visible before the build runs.
+
 **If build fails with NU1301 errors** about `nuget.cloudsmith.io`, this is expected in restricted environments. Document this limitation rather than attempting workarounds.
 
 #### Unit Tests (Requires Successful Build)
@@ -201,6 +203,7 @@ tests/
 - **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
 - **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
 - **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
+- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `AITemplates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `IAITemplateService`.
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
@@ -279,6 +282,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
 - **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 
