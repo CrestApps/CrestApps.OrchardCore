@@ -58,7 +58,7 @@ public static class SpeechVoiceLocalizationHelper
         }
     }
 
-    private static void AddCultureHierarchy(ISet<string> allowedCultures, string cultureName)
+    private static void AddCultureHierarchy(HashSet<string> allowedCultures, string cultureName)
     {
         if (string.IsNullOrWhiteSpace(cultureName))
         {
