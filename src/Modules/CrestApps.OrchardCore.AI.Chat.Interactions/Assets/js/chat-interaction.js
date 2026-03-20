@@ -79,6 +79,112 @@ window.chatInteractionManager = function () {
         return span.innerHTML;
     }
 
+    function getSameOriginNavigationTarget(url) {
+        if (!url) return null;
+
+        var targetUrl = new URL(url, window.location.href);
+        if (targetUrl.origin !== window.location.origin) {
+            return null;
+        }
+
+        return targetUrl;
+    }
+
+    function navigateLivePage(url) {
+        var targetUrl = getSameOriginNavigationTarget(url);
+        if (!targetUrl) {
+            console.warn('Ignored live navigation to a non same-origin URL.', url);
+            return;
+        }
+
+        window.setTimeout(function () {
+            window.location.assign(targetUrl.toString());
+        }, 150);
+    }
+
+    function getBridgeWindow() {
+        if (window.parent && window.parent !== window) {
+            try {
+                if (window.parent.location && window.parent.document) {
+                    return window.parent;
+                }
+            } catch {
+            }
+        }
+
+        return window;
+    }
+
+    function getBridgeDocument() {
+        return getBridgeWindow().document;
+    }
+
+    function normalizeContextText(text, maxLength) {
+        if (!text) return '';
+
+        var normalized = text.replace(/\s+/g, ' ').trim();
+        return normalized.length > maxLength ? normalized.substring(0, maxLength) : normalized;
+    }
+
+    function isVisibleBridgeElement(element, bridgeWindow) {
+        if (!element) return false;
+        if (element.closest('.ai-chat-app, .ai-admin-widget, .chat-interaction-app, .chat-interaction')) return false;
+
+        var style = bridgeWindow.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+        var rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    }
+
+    function captureLivePageContext() {
+        var bridgeWindow = getBridgeWindow();
+        var bridgeDocument = getBridgeDocument();
+        var links = [];
+        var buttons = [];
+        var headings = [];
+        var url = bridgeWindow.location.href;
+
+        bridgeDocument.querySelectorAll('h1, h2, h3').forEach(function (element) {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || headings.length >= 12) return;
+
+            var text = normalizeContextText(element.innerText || element.textContent, 120);
+            if (text) headings.push(text);
+        });
+
+        bridgeDocument.querySelectorAll('a[href]').forEach(function (element) {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || links.length >= 40) return;
+
+            var text = normalizeContextText(element.innerText || element.textContent || element.getAttribute('aria-label'), 120);
+            var href = element.href ? new URL(element.href, url).toString() : '';
+            var container = element.closest('tr, li, article, section, .card, .list-group-item, .content-item');
+            var context = normalizeContextText((container || element).innerText || (container || element).textContent, 160);
+
+            if (!text && !href) return;
+
+            links.push({ text: text, href: href, context: context });
+        });
+
+        bridgeDocument.querySelectorAll('button, input[type="submit"], input[type="button"], [role="button"]').forEach(function (element) {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || buttons.length >= 20) return;
+
+            var text = normalizeContextText(element.innerText || element.textContent || element.value || element.getAttribute('aria-label'), 120);
+            if (text) buttons.push({ text: text });
+        });
+
+        var textPreview = normalizeContextText((bridgeDocument.body && bridgeDocument.body.innerText) || '', 1500);
+
+        return JSON.stringify({
+            url: url,
+            title: bridgeDocument.title || '',
+            isParentContext: bridgeWindow !== window,
+            headings: headings,
+            links: links,
+            buttons: buttons,
+            textPreview: textPreview
+        });
+    }
+
     const renderer = new marked.Renderer();
 
     // Modify the link rendering to open in a new tab
@@ -415,6 +521,10 @@ window.chatInteractionManager = function () {
                         }
                     });
 
+                    this.connection.on("NavigateTo", (url) => {
+                        navigateLivePage(url);
+                    });
+
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
 
@@ -730,8 +840,9 @@ window.chatInteractionManager = function () {
 
                     var messageIndex = this.messages.length;
                     var currentItemId = this.getItemId();
+                    var livePageContextJson = captureLivePageContext();
 
-                    this.stream = this.connection.stream("SendMessage", currentItemId, trimmedPrompt)
+                    this.stream = this.connection.stream("SendMessage", currentItemId, trimmedPrompt, livePageContextJson)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];

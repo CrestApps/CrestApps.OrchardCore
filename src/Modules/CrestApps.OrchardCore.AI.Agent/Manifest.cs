@@ -16,3 +16,14 @@ using OrchardCore.Modules.Manifest;
         "CrestApps.OrchardCore.Recipes",
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.OrchardCoreAIAgentBrowserAutomation,
+    Name = "AI Agent Browser Automation",
+    Description = "Provides optional Playwright-powered browser automation tools for the AI Agent so tenants can enable browser control separately from the core AI Agent tools.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.OrchardCoreAIAgent,
+    ]
+)]

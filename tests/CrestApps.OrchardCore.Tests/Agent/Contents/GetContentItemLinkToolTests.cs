@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Agent.Contents;
+using CrestApps.OrchardCore.AI.Agent.Tools.Contents;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;

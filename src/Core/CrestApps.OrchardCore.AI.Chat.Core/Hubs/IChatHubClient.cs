@@ -7,6 +7,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 /// </summary>
 public interface IChatHubClient
 {
+    Task NavigateTo(string url);
+
     Task ReceiveError(string error);
 
     Task ReceiveTranscript(string identifier, string text, bool isFinal);

@@ -11,6 +11,7 @@ window.aiChatAdminWidget = function () {
   var STATE_STORAGE_KEY_SUFFIX = '-ai-admin-widget-state';
   var SESSION_STORAGE_KEY_SUFFIX = '-ai-admin-widget-session';
   var RESIZED_KEY_SUFFIX = '-ai-admin-widget-resized';
+  var NAVIGATION_MESSAGE_TYPE = 'crestapps-ai-chat:navigate';
   function initialize(config) {
     if (!config || !config.containerSelector || !config.toggleSelector) {
       console.error('aiChatAdminWidget: containerSelector and toggleSelector are required.');
@@ -94,6 +95,31 @@ window.aiChatAdminWidget = function () {
       };
       window.openAIChatManager.initialize(config.chatConfig);
     }
+    registerNavigationRelay();
+  }
+  function registerNavigationRelay() {
+    if (window._aiChatNavigationRelayRegistered) {
+      return;
+    }
+    window._aiChatNavigationRelayRegistered = true;
+    window.addEventListener('message', function (event) {
+      if (!event || !event.data || event.data.type !== NAVIGATION_MESSAGE_TYPE) {
+        return;
+      }
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+      var targetUrl;
+      try {
+        targetUrl = new URL(event.data.url, window.location.href);
+      } catch (_unused) {
+        return;
+      }
+      if (targetUrl.origin !== window.location.origin) {
+        return;
+      }
+      window.location.assign(targetUrl.toString());
+    });
   }
   function setupAutoGrow(textarea) {
     var lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
