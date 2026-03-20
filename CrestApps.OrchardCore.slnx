@@ -36,7 +36,6 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
-    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Playwright/CrestApps.OrchardCore.AI.Playwright.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
@@ -48,6 +47,9 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp/CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp/CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Playwright/CrestApps.OrchardCore.AI.Playwright.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" />
