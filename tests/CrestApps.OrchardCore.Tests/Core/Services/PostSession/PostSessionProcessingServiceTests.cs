@@ -780,9 +780,9 @@ public sealed class PostSessionProcessingServiceTests
     }
 
     [Fact]
-    public async Task ProcessAsync_WithTools_WhenSingleSemanticTaskAndNonJsonResponse_ShouldUseFallbackText()
+    public async Task ProcessAsync_WithTools_WhenResponseIsTruncatedJson_ShouldRecoverWithStructuredRetry()
     {
-        // Arrange: model returns plain text instead of JSON for a single semantic task.
+        // Arrange: tool execution succeeds but the final assistant response is truncated.
         var profile = CreateProfile();
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
         {
@@ -808,14 +808,15 @@ public sealed class PostSessionProcessingServiceTests
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
-        var responseText = "The customer asked about pricing options and was provided with three tiers.";
         var mockChatClient = new Mock<IChatClient>();
         mockChatClient
-            .Setup(c => c.GetResponseAsync(
+            .SetupSequence(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
                 It.IsAny<ChatOptions>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "{")))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+                "{\"tasks\":[{\"name\":\"summary\",\"value\":\"The user requested fence information and follow-up was initiated.\"}]}")));
 
         var mockTemplateService = new Mock<IAITemplateService>();
         mockTemplateService
@@ -830,17 +831,23 @@ public sealed class PostSessionProcessingServiceTests
         // Act
         var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
 
-        // Assert: the response text should be used as the task value.
+        // Assert: the recovery pass should return a structured success result.
         Assert.NotNull(result);
         Assert.True(result.ContainsKey("summary"));
-        Assert.Equal(responseText, result["summary"].Value);
+        Assert.Equal("The user requested fence information and follow-up was initiated.", result["summary"].Value);
         Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
+        mockChatClient.Verify(
+            c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]
-    public async Task ProcessAsync_WithTools_WhenMultipleTasksAndNonJsonResponse_ShouldReturnNull()
+    public async Task ProcessAsync_WithTools_WhenSingleSemanticTaskAndNonJsonResponse_ShouldReturnFailedResult()
     {
-        // Arrange: model returns plain text but there are multiple tasks — fallback cannot apply.
+        // Arrange: model never returns valid structured JSON, even after recovery.
         var profile = CreateProfile();
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
         {
@@ -852,16 +859,6 @@ public sealed class PostSessionProcessingServiceTests
                     Name = "summary",
                     Type = PostSessionTaskType.Semantic,
                     Instructions = "Summarize the conversation.",
-                },
-                new PostSessionTask
-                {
-                    Name = "disposition",
-                    Type = PostSessionTaskType.PredefinedOptions,
-                    Instructions = "Determine the disposition.",
-                    Options =
-                    [
-                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
-                    ],
                 },
             ];
             s.ToolNames = ["sendEmail"];
@@ -898,12 +895,85 @@ public sealed class PostSessionProcessingServiceTests
         // Act
         var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
 
-        // Assert: cannot use text fallback for multiple tasks.
-        Assert.Null(result);
+        // Assert: malformed/non-structured output should fail the task instead of succeeding.
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("summary"));
+        Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
+        Assert.NotNull(result["summary"].ErrorMessage);
+        Assert.Equal(string.Empty, result["summary"].Value ?? string.Empty);
     }
 
     [Fact]
-    public async Task ProcessAsync_WithTools_WhenResponseIsEmpty_ShouldReturnNull()
+    public async Task ProcessAsync_WithTools_WhenMultipleTasksAndNonJsonResponse_ShouldReturnFailedResults()
+    {
+        // Arrange: model returns plain text but there are multiple tasks and no structured payload.
+        var profile = CreateProfile();
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = true;
+            s.PostSessionTasks =
+            [
+                new PostSessionTask
+                {
+                    Name = "summary",
+                    Type = PostSessionTaskType.Semantic,
+                    Instructions = "Summarize the conversation.",
+                },
+                new PostSessionTask
+                {
+                    Name = "disposition",
+                    Type = PostSessionTaskType.PredefinedOptions,
+                    Instructions = "Determine the disposition.",
+                    Options =
+                    [
+                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+                    ],
+                },
+            ];
+            s.ToolNames = ["sendEmail"];
+        });
+
+        var session = CreateSession();
+        var prompts = CreatePrompts();
+
+        var mockTool = new TestAIFunction("sendEmail");
+        var mockToolsService = new Mock<IAIToolsService>();
+        mockToolsService
+            .Setup(t => t.GetByNameAsync("sendEmail"))
+            .ReturnsAsync(mockTool);
+
+        var mockChatClient = new Mock<IChatClient>();
+        mockChatClient
+            .Setup(c => c.GetResponseAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Still not JSON.")));
+
+        var mockTemplateService = new Mock<IAITemplateService>();
+        mockTemplateService
+            .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+            .ReturnsAsync("Rendered prompt");
+
+        var service = CreateService(
+            chatClient: mockChatClient.Object,
+            toolsService: mockToolsService.Object,
+            templateService: mockTemplateService.Object);
+
+        // Act
+        var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
+
+        // Assert: every pending task should be marked failed when structured output never materializes.
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
+        Assert.Equal(PostSessionTaskResultStatus.Failed, result["disposition"].Status);
+        Assert.NotNull(result["summary"].ErrorMessage);
+        Assert.NotNull(result["disposition"].ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTools_WhenResponseIsEmpty_ShouldReturnFailedResult()
     {
         // Arrange: model returns empty response — tools may have executed as side effects.
         var profile = CreateProfile();
@@ -952,8 +1022,11 @@ public sealed class PostSessionProcessingServiceTests
         // Act
         var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
 
-        // Assert: empty response should return null.
-        Assert.Null(result);
+        // Assert: empty response should fail the task instead of being treated as success.
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("summary"));
+        Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
+        Assert.NotNull(result["summary"].ErrorMessage);
     }
 
     #endregion

@@ -56,7 +56,7 @@ After migration, review the auto-created deployments at **Artificial Intelligenc
 After the automatic migration runs:
 
 1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct types and default flags.
-2. **Set global defaults** — Go to **Settings > Artificial Intelligence > Default Deployments** and configure global defaults for Utility, Embedding, and Image deployment types. These serve as fallbacks when a profile doesn't specify a deployment.
+2. **Set global defaults** — Go to **Settings > Artificial Intelligence > Default Deployments** and configure global defaults for Chat, Utility, Embedding, Image, and voice-related deployment types as needed. These serve as fallbacks when a profile or interaction doesn't specify a deployment.
 3. **Update profiles (optional)** — Existing profiles continue to work. However, you can now set separate `ChatDeploymentId` and `UtilityDeploymentId` on each profile for more granular control.
 
 ---

@@ -5,6 +5,8 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class DefaultAIDeploymentSettingsViewModel
 {
+    public string DefaultChatDeploymentId { get; set; }
+
     public string DefaultUtilityDeploymentId { get; set; }
 
     public string DefaultEmbeddingDeploymentId { get; set; }
@@ -16,6 +18,9 @@ public class DefaultAIDeploymentSettingsViewModel
     public string DefaultTextToSpeechDeploymentId { get; set; }
 
     public string DefaultTextToSpeechVoiceId { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> ChatDeployments { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> UtilityDeployments { get; set; }

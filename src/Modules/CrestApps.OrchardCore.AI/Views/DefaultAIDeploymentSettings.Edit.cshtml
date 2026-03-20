@@ -6,6 +6,16 @@
 @model DefaultAIDeploymentSettingsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DefaultChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Chat Deployment"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DefaultChatDeploymentId" asp-items="Model.ChatDeployments" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The default model used for chat sessions and chat interactions when the selected model is set to default."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
     <label asp-for="DefaultUtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default Utility Deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="DefaultUtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
