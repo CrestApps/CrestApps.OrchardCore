@@ -1,21 +1,21 @@
-name: Validate Prompt Templates
+name: Validate AI Templates
 on: 
   pull_request:
     branches: [ main, release/** ]
     paths:
-      - '**/AITemplates/Prompts/**/*.md'
+      - '**/AITemplates/**/*.md'
 permissions:
   contents: read
 concurrency:
-  group: validate-prompts-${{ github.head_ref || github.run_id }}
+  group: validate-ai-templates-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 jobs:
-  validate_prompts:
+  validate_templates:
     runs-on: ubuntu-latest
-    name: Validate AI Prompt Templates
+    name: Validate AI Templates
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-dotnet@v5
@@ -25,13 +25,13 @@ jobs:
     - name: Build prompt validation tool
       run: |
         dotnet build -c Release src/Common/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj /p:NuGetAudit=false
-    - name: Validate prompt template syntax
+    - name: Validate template file structure
       shell: bash
       run: |
         EXIT_CODE=0
         shopt -s globstar nullglob
 
-        for file in src/**/AITemplates/Prompts/**/*.md; do
+        for file in src/**/AITemplates/**/*.md; do
           [ -f "$file" ] || continue
 
           # Check for valid front matter structure
@@ -46,7 +46,7 @@ jobs:
 
           # Check that file is not empty
           if [ ! -s "$file" ]; then
-            echo "::error file=$file::Prompt template file is empty"
+            echo "::error file=$file::Template file is empty"
             EXIT_CODE=1
           fi
 
@@ -55,10 +55,55 @@ jobs:
 
         if [ $EXIT_CODE -ne 0 ]; then
           echo ""
-          echo "::error::One or more prompt template files have syntax issues"
+          echo "::error::One or more AI template files have structural issues"
         fi
 
         exit $EXIT_CODE
+    - name: Validate YAML front matter
+      shell: python3 {0}
+      run: |
+        import glob, re, sys, yaml
+
+        exit_code = 0
+
+        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Only check files with front matter
+            stripped_content = content.lstrip()
+            if not stripped_content.startswith('---'):
+                continue
+
+            # Extract front matter between --- delimiters
+            parts = stripped_content.split('---', 2)
+            if len(parts) < 3:
+                continue
+
+            front_matter = parts[1]
+
+            # Check for tab characters (YAML forbids tabs for indentation)
+            for i, line in enumerate(front_matter.split('\n'), start=2):
+                if '\t' in line:
+                    print(f"::error file={path},line={i}::YAML front matter contains "
+                          f"tab character(s). YAML requires spaces for indentation.")
+                    exit_code = 1
+                    break
+
+            # Validate YAML syntax
+            try:
+                yaml.safe_load(front_matter)
+            except yaml.YAMLError as e:
+                line_num = 1
+                if hasattr(e, 'problem_mark') and e.problem_mark:
+                    line_num = e.problem_mark.line + 2  # +2 for 0-based and --- line
+                print(f"::error file={path},line={line_num}::Invalid YAML in front matter: {e}")
+                exit_code = 1
+
+        if exit_code == 0:
+            print("✓ All YAML front matter is valid")
+
+        sys.exit(exit_code)
     - name: Validate JSON in fenced code blocks
       shell: python3 {0}
       run: |
@@ -71,7 +116,7 @@ jobs:
 
         exit_code = 0
 
-        for path in sorted(glob.glob('src/**/AITemplates/Prompts/**/*.md', recursive=True)):
+        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -105,7 +150,7 @@ jobs:
 
         exit_code = 0
 
-        for path in sorted(glob.glob('src/**/AITemplates/Prompts/**/*.md', recursive=True)):
+        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 

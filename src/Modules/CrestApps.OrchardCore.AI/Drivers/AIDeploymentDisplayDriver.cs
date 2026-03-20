@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
@@ -14,6 +15,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 {
     private readonly AIProviderOptions _providerOptions;
+    private readonly AIOptions _aiOptions;
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
@@ -21,9 +23,11 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
     public AIDeploymentDisplayDriver(
         INamedCatalog<AIDeployment> deploymentCatalog,
         IOptions<AIProviderOptions> providerOptions,
+        IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentDisplayDriver> stringLocalizer)
     {
         _providerOptions = providerOptions.Value;
+        _aiOptions = aiOptions.Value;
         _deploymentsCatalog = deploymentCatalog;
         S = stringLocalizer;
     }
@@ -47,12 +51,14 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.Type = deployment.Type;
             model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
+            model.HasContainedConnection = HasContainedConnection(deployment.ProviderName);
 
             model.Types = Enum.GetValues<AIDeploymentType>()
                 .Select(t => new SelectListItem(t.ToString(), t.ToString()))
                 .ToList();
 
-            if (_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
+            if (!model.HasContainedConnection &&
+                _providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
             {
                 model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Value.GetValue<string>("ConnectionNameAlias") ?? x.Key, x.Key)).ToArray();
 
@@ -85,7 +91,14 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         deployment.Type = model.Type;
         deployment.IsDefault = model.IsDefault;
 
-        if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
+        if (HasContainedConnection(deployment.ProviderName))
+        {
+            // Contained-connection providers manage their own connection parameters
+            // in the deployment's Properties via their own display driver.
+            deployment.ConnectionName = null;
+            deployment.ConnectionNameAlias = null;
+        }
+        else if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the provider: {0}.", deployment.ProviderName]);
         }
@@ -123,4 +136,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
         return Edit(deployment, context);
     }
+
+    private bool HasContainedConnection(string providerName)
+        => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.SupportsContainedConnection;
 }

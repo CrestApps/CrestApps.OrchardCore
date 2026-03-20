@@ -89,6 +89,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                     CreatedUtc = _clock.UtcNow,
                 });
             }
+
+            // Set the initial response handler from profile settings.
+            var handlerSettings = profile.GetSettings<ResponseHandlerProfileSettings>();
+
+            if (!string.IsNullOrEmpty(handlerSettings.InitialResponseHandlerName))
+            {
+                chatSession.ResponseHandlerName = handlerSettings.InitialResponseHandlerName;
+            }
         }
 
         return chatSession;

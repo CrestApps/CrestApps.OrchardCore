@@ -100,4 +100,11 @@ public sealed class ProfileTemplateMetadata
     /// or only when matched by relevance scoring.
     /// </summary>
     public AgentAvailability? AgentAvailability { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the initial <see cref="IChatResponseHandler"/>
+    /// for new sessions created from profiles based on this template.
+    /// When <see langword="null"/> or empty, the default AI handler is used.
+    /// </summary>
+    public string InitialResponseHandlerName { get; set; }
 }

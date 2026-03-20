@@ -12,6 +12,8 @@ public class AzureOpenAIConnectionViewModel
 
     public string ApiKey { get; set; }
 
+    public string IdentityId { get; set; }
+
     public bool EnableLogging { get; set; }
 
     [BindNever]

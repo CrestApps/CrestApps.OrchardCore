@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.AI.Chat.Interactions.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />

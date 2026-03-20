@@ -71,12 +71,13 @@ Add the following to your `appsettings.json` to get started with OpenAI:
       "Providers": {
         "OpenAI": {
           "DefaultConnectionName": "my-connection",
-          "DefaultChatDeploymentName": "gpt-4o-mini",
           "Connections": {
             "my-connection": {
               "Endpoint": "https://api.openai.com/v1/",
               "ApiKey": "<your-openai-api-key>",
-              "ChatDeploymentName": "gpt-4o-mini",
+              "Deployments": [
+                { "Name": "gpt-4o-mini", "Type": "Chat", "IsDefault": true }
+              ]
             }
           }
         }

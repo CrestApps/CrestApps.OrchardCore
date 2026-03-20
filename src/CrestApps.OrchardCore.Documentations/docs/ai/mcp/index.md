@@ -24,10 +24,10 @@ The MCP implementation supports the following capabilities:
 
 | Capability | Client | Server | Description |
 |-----------|--------|--------|-------------|
-| **Tools** | ✅ | ✅ | Discover and invoke AI tools |
-| **Prompts** | ✅ | ✅ | List and invoke prompts. Can be managed via the admin UI. |
-| **Resources** | ✅ | ✅ | Access various data sources. Can be managed via the admin UI. |
-| **Templated Resources** | ✅ | ✅ | Resources with URI variable placeholders that resolve dynamically |
+| **Tools** | Yes | Yes | Discover and invoke AI tools |
+| **Prompts** | Yes | Yes | List and invoke prompts. Can be managed via the admin UI. |
+| **Resources** | Yes | Yes | Access various data sources. Can be managed via the admin UI. |
+| **Templated Resources** | Yes | Yes | Resources with URI variable placeholders that resolve dynamically |
 
 ## Resource Type Modules
 

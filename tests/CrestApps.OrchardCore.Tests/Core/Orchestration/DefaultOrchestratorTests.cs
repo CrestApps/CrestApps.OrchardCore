@@ -477,7 +477,19 @@ public sealed class DefaultOrchestratorTests
 
         public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ISpeechToTextClient)null);
+
+        public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
+            => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
+
+        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((ITextToSpeechClient)null);
+
+        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((ITextToSpeechClient)null);
+
+        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
+            => Task.FromResult(Array.Empty<SpeechVoice>());
     }
 
     /// <summary>

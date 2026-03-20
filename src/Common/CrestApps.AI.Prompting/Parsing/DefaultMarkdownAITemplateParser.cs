@@ -175,7 +175,9 @@ public sealed class DefaultMarkdownAITemplateParser : IAITemplateParser
             // Continuation line: starts with whitespace and we have a current key.
             if (currentKey != null && (line.Length > 0 && (line[0] == ' ' || line[0] == '\t')))
             {
-                currentValue = currentValue + "\n" + trimmedLine.ToString();
+                currentValue = string.IsNullOrEmpty(currentValue)
+                    ? trimmedLine.ToString()
+                    : currentValue + "\n" + trimmedLine.ToString();
                 continue;
             }
 
@@ -195,6 +197,13 @@ public sealed class DefaultMarkdownAITemplateParser : IAITemplateParser
 
             currentKey = trimmedLine[..colonIndex].Trim().ToString();
             currentValue = trimmedLine[(colonIndex + 1)..].Trim().ToString();
+
+            // Support YAML literal block scalar indicator (e.g., "Key: |").
+            // The pipe signals that the following indented lines are the value.
+            if (currentValue == "|")
+            {
+                currentValue = string.Empty;
+            }
         }
 
         // Flush the last key-value pair.

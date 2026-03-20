@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -41,7 +43,15 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDataExtractionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
+
+        // Chat notification services.
+        services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
+        services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
+        services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
+        services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
 
         services.Configure<HubOptions<AIChatHub>>(options =>
         {
@@ -49,6 +59,9 @@ public sealed class Startup : StartupBase
             // without the server dropping the connection prematurely.
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+            // Allow larger messages for audio transcription payloads.
+            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
     }
 

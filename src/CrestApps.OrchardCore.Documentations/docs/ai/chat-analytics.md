@@ -51,7 +51,7 @@ Click **Generate Report** to run the query and display results.
 
 ## Metrics Reference
 
-### 🤖 Conversation & Usage Metrics
+### Conversation and Usage Metrics
 
 These metrics provide an overview of how your chatbot is being used.
 
@@ -100,7 +100,7 @@ Breakdown of chat sessions by user authentication status.
 
 A stacked progress bar shows the **authenticated vs. anonymous split** as a percentage.
 
-### ⚙️ Model & System Performance
+### Model and System Performance
 
 Metrics about AI model response speed and resource consumption. These are captured automatically when the AI provider returns token usage and latency data.
 
@@ -118,7 +118,7 @@ Metrics about AI model response speed and resource consumption. These are captur
 Performance metrics are only available when the AI provider reports token usage. Not all providers return this data for streaming responses.
 :::
 
-### 🎯 Resolution & Conversion Metrics
+### Resolution and Conversion Metrics
 
 These metrics are powered by AI-based post-session analysis.
 
