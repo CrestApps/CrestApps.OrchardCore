@@ -49,6 +49,7 @@ The suite also includes rich management capabilities in Orchard Core, such as AI
 | [AI Chat](chat) | Admin and frontend chat interfaces |
 | [AI Chat Interactions](chat-interactions) | Ad-hoc chat with configurable parameters and document upload |
 | [AI Prompt Templates](prompt-templates) | Centralized prompt management with Liquid templates and file-based discovery |
+| [AI Playwright Browser Automation](playwright) | Persistent browser workflows and live page observation for Orchard Core admin |
 | [Consuming AI Services](consuming-ai-services) | Using AI services programmatically via code |
 | [Copilot Integration](copilot) | GitHub Copilot SDK-based orchestration |
 | [Data Sources](data-sources/) | Retrieval-augmented generation (RAG) / knowledge base indexing and vector search |

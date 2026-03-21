@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Playwright Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Enables the AI Chat Admin Widget agent to drive a real browser via Playwright,
+      allowing admins to watch, stop, and interact with browser automation tasks.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Playwright</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ensure this module directly depends on the required packages so that when someone installs it,
+      they won't need to manually include the AI and Chat packages.
+    -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Chat\CrestApps.OrchardCore.AI.Chat.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
