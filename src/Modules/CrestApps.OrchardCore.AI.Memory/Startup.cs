@@ -49,26 +49,22 @@ public sealed class Startup : StartupBase
         services.AddAITool<SearchUserMemoriesTool>(SearchUserMemoriesTool.TheName)
             .WithTitle("Search User Memories")
             .WithDescription("Search the current authenticated user's long-term memory for relevant durable preferences, identity details, and background facts that were saved from prior conversations.")
-            .WithPurpose(AIToolPurposes.Memory)
-            .AlwaysAvailable();
+            .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<ListUserMemoriesTool>(ListUserMemoriesTool.TheName)
             .WithTitle("List User Memories")
             .WithDescription("List the current authenticated user's saved long-term memories when you need to review what durable non-sensitive facts are already known about them.")
-            .WithPurpose(AIToolPurposes.Memory)
-            .AlwaysAvailable();
+            .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<SaveUserMemoryTool>(SaveUserMemoryTool.TheName)
             .WithTitle("Save User Memory")
             .WithDescription("Create or update a long-term memory for the current authenticated user when they reveal a durable, non-sensitive fact that should persist across future conversations, even if they did not explicitly ask to save it.")
-            .WithPurpose(AIToolPurposes.Memory)
-            .AlwaysAvailable();
+            .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<RemoveUserMemoryTool>(RemoveUserMemoryTool.TheName)
             .WithTitle("Remove User Memory")
             .WithDescription("Remove a previously saved long-term memory for the current authenticated user when the user asks to forget it or when the memory should no longer be retained.")
-            .WithPurpose(AIToolPurposes.Memory)
-            .AlwaysAvailable();
+            .WithPurpose(AIToolPurposes.Memory);
     }
 }
 

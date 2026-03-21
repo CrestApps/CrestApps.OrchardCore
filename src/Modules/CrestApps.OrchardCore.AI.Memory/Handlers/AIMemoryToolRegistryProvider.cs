@@ -49,8 +49,6 @@ internal sealed class AIMemoryToolRegistryProvider : IToolRegistryProvider
                 Id = name,
                 Name = name,
                 Description = entry.Description ?? entry.Title ?? name,
-                Purpose = entry.Purpose,
-                IsAlwaysAvailable = entry.IsAlwaysAvailable,
                 Source = ToolRegistryEntrySource.System,
                 CreateAsync = sp => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });

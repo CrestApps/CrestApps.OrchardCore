@@ -246,11 +246,15 @@ public sealed class DefaultOrchestrator : IOrchestrator
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
     {
-        var alwaysAvailableEntries = allTools
-            .Where(tool => tool.IsAlwaysAvailable)
+        var mustIncludeToolNames = context.MustIncludeTools
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
+        var mustIncludeEntries = allTools
+            .Where(tool => mustIncludeToolNames.Contains(tool.Name))
             .ToList();
         var scopedCandidates = allTools
-            .Where(tool => !tool.IsAlwaysAvailable)
+            .Where(tool => !mustIncludeToolNames.Contains(tool.Name))
             .ToList();
 
         // All tools are subject to relevance scoring when the total count
@@ -269,7 +273,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
                 scopedCandidates
                     .Take(Math.Max(budget, _options.MaxToolCount))
-                    .Concat(alwaysAvailableEntries)
+                    .Concat(mustIncludeEntries)
                     .ToList());
         }
 
@@ -280,7 +284,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
                 scopedCandidates
                     .Take(budget)
-                    .Concat(alwaysAvailableEntries)
+                    .Concat(mustIncludeEntries)
                     .ToList());
         }
 
@@ -341,14 +345,14 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 .ToList();
         }
 
-        foreach (var alwaysAvailableEntry in alwaysAvailableEntries)
+        foreach (var mustIncludeEntry in mustIncludeEntries)
         {
-            if (scopedEntries.Any(entry => string.Equals(entry.Id, alwaysAvailableEntry.Id, StringComparison.Ordinal)))
+            if (scopedEntries.Any(entry => string.Equals(entry.Id, mustIncludeEntry.Id, StringComparison.Ordinal)))
             {
                 continue;
             }
 
-            scopedEntries.Add(alwaysAvailableEntry);
+            scopedEntries.Add(mustIncludeEntry);
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))

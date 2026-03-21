@@ -62,6 +62,8 @@ The feature adds four built-in system tools for the current authenticated user:
 
 The orchestration prompt instructs the model to call **Save User Memory** in the same turn before it claims it will remember durable facts such as the user's name, role, or stable preferences. When the user later asks about stable remembered details, the model is instructed to search or list memory before saying the information is unknown.
 
+Memory tools are only force-included for requests where user memory is enabled for the current authenticated user. This keeps memory tools available when needed without making them global for unrelated orchestration requests.
+
 Each memory is stored as a single record in the configured master index. The index stores the memory ID, `userId`, a stable memory `name`, a semantic `description`, content, timestamp, and embedding vector.
 
 Use short stable names for durable facts so the system can update and locate the same memory later. For example, store a remembered preferred name using a key like `preferred_name`.

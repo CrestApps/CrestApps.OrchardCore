@@ -68,8 +68,6 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
                 Id = name,
                 Name = name,
                 Description = definition.Description ?? definition.Title ?? name,
-                Purpose = definition.Purpose,
-                IsAlwaysAvailable = definition.IsAlwaysAvailable,
                 Source = ToolRegistryEntrySource.Local,
                 CreateAsync = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });

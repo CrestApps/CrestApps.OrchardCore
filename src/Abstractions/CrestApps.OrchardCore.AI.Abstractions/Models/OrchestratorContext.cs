@@ -57,6 +57,12 @@ public sealed class OrchestrationContext
     public bool DisableTools { get; set; }
 
     /// <summary>
+    /// Gets the tool names that must be included for the current orchestration request
+    /// even when relevance scoping is applied.
+    /// </summary>
+    public List<string> MustIncludeTools { get; } = [];
+
+    /// <summary>
     /// Gets a shared <see cref="StringBuilder"/> that orchestration handlers can append to
     /// in order to build the final system message. The accumulated content is flushed to
     /// <see cref="AICompletionContext.SystemMessage"/> after all handlers have run.

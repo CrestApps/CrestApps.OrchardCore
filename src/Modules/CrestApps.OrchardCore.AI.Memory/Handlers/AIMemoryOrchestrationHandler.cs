@@ -84,6 +84,8 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
             .Select(t => t.Value)
             .ToList();
 
+        context.OrchestrationContext.MustIncludeTools.AddRange(memoryTools.Select(tool => tool.Name));
+
         var header = await _templateService.RenderAsync(
             MemoryConstants.TemplateIds.MemoryAvailability,
             new Dictionary<string, object>
