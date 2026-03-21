@@ -33,7 +33,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         IAIToolsService aIToolsService,
         ILiquidTemplateManager liquidTemplateManager,
         ILoggerFactory loggerFactory,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
         _aiProviderOptions = aiProviderOptions.Value;
@@ -42,7 +42,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         _aIToolsService = aIToolsService;
         _liquidTemplateManager = liquidTemplateManager;
         _loggerFactory = loggerFactory;
-        _defaultOptions = defaultOptions.Value;
+        _defaultOptions = defaultOptions;
         _logger = _loggerFactory.CreateLogger<AICompletionWithConfigTask>();
         S = stringLocalizer;
     }

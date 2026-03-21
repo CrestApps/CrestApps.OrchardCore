@@ -37,8 +37,26 @@ internal sealed class AIMemorySearchService
         string query,
         int? requestedTopN,
         CancellationToken cancellationToken = default)
+        => await SearchAsync(userId, [query], requestedTopN, cancellationToken);
+
+    public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
+        string userId,
+        IEnumerable<string> queries,
+        int? requestedTopN,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(query))
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return [];
+        }
+
+        var normalizedQueries = queries?
+            .Where(query => !string.IsNullOrWhiteSpace(query))
+            .Select(query => query.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalizedQueries is not { Length: > 0 })
         {
             return [];
         }
@@ -71,26 +89,50 @@ internal sealed class AIMemorySearchService
             return [];
         }
 
-        var embeddings = await embeddingGenerator.GenerateAsync([query], cancellationToken: cancellationToken);
+        var embeddings = await embeddingGenerator.GenerateAsync(normalizedQueries, cancellationToken: cancellationToken);
 
-        if (embeddings is null || embeddings.Count == 0 || embeddings[0]?.Vector is null)
+        if (embeddings is null || embeddings.Count == 0)
         {
             return [];
         }
 
         var topN = requestedTopN.GetValueOrDefault(settings.TopN);
+        topN = topN > 0 ? topN : settings.TopN;
+        topN = topN > 0 ? topN : 5;
 
-        if (topN <= 0)
+        var aggregatedResults = new Dictionary<string, AIMemorySearchResult>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var embedding in embeddings)
         {
-            topN = settings.TopN;
+            if (embedding?.Vector is null)
+            {
+                continue;
+            }
+
+            var results = await searchService.SearchAsync(indexProfile, embedding.Vector.ToArray(), userId, topN, cancellationToken);
+
+            if (results == null)
+            {
+                continue;
+            }
+
+            foreach (var result in results)
+            {
+                var key = !string.IsNullOrWhiteSpace(result.MemoryId)
+                    ? result.MemoryId
+                    : $"{result.Name}|{result.Description}|{result.Content}";
+
+                if (!aggregatedResults.TryGetValue(key, out var existing) || result.Score > existing.Score)
+                {
+                    aggregatedResults[key] = result;
+                }
+            }
         }
 
-        if (topN <= 0)
-        {
-            topN = 5;
-        }
-
-        return await searchService.SearchAsync(indexProfile, embeddings[0].Vector.ToArray(), userId, topN, cancellationToken);
+        return aggregatedResults.Values
+            .OrderByDescending(result => result.Score)
+            .Take(topN)
+            .ToList();
     }
 
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(IndexProfile indexProfile)

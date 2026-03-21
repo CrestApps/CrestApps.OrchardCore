@@ -34,5 +34,6 @@ public static class MemoryConstants
     public static class TemplateIds
     {
         public const string MemoryAvailability = "memory-availability";
+        public const string MemoryContextHeader = "memory-context-header";
     }
 }

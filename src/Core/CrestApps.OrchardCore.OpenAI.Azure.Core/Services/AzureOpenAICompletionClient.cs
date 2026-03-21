@@ -33,7 +33,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         IAITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
         : base(providerOptions.Value, aiTemplateService, deploymentManager)
@@ -41,7 +41,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
         _completionServiceHandlers = completionServiceHandlers;
-        _defaultOptions = defaultOptions.Value;
+        _defaultOptions = defaultOptions;
         _logger = loggerFactory.CreateLogger<AzureOpenAICompletionClient>();
     }
 

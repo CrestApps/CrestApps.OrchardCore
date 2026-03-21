@@ -33,7 +33,7 @@ public sealed class PostSessionProcessingService
         IAIToolsService toolsService,
         IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         IServiceProvider serviceProvider,
         IClock clock,
         ILoggerFactory loggerFactory)
@@ -44,7 +44,7 @@ public sealed class PostSessionProcessingService
         _serviceProvider = serviceProvider;
         _clock = clock;
         _providerOptions = providerOptions.Value;
-        _defaultOptions = defaultOptions.Value;
+        _defaultOptions = defaultOptions;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PostSessionProcessingService>();
     }

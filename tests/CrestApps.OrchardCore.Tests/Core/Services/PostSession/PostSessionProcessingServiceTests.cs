@@ -632,7 +632,7 @@ public sealed class PostSessionProcessingServiceTests
             toolsService ?? mockToolsService.Object,
             templateService ?? mockTemplateService.Object,
             Options.Create(providerOptions),
-            Options.Create(defaultOptions),
+            defaultOptions,
             new Mock<IServiceProvider>().Object,
             clock.Object,
             NullLoggerFactory.Instance);

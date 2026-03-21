@@ -44,6 +44,7 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProfileHandler<AIMemoryIndexProfileHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIMemoryOrchestrationHandler>());
+        services.AddScoped<IPreemptiveRagHandler, AIMemoryPreemptiveRagHandler>();
 
         services.AddAITool<SearchUserMemoriesTool>(SearchUserMemoriesTool.TheName)
             .WithTitle("Search User Memories")

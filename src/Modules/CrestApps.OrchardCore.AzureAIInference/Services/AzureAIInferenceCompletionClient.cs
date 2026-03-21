@@ -19,7 +19,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IServiceProvider serviceProvider,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IAITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager
@@ -30,7 +30,7 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             loggerFactory,
             serviceProvider,
             providerOptions.Value,
-            defaultOptions.Value,
+            defaultOptions,
             handlers,
             deploymentStore,
             aiTemplateService,

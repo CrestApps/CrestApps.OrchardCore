@@ -23,6 +23,8 @@ public sealed class DefaultAIMemorySafetyServiceTests
     [InlineData("secret", "The user's API key.", "The user's API key is sk-1234567890abcdef")]
     [InlineData("payment", "The user's payment card.", "Credit card: 4111 1111 1111 1111")]
     [InlineData("identity", "The user's SSN.", "SSN 123-45-6789")]
+    [InlineData("date_of_birth", "The user's date of birth.", "January 1, 1990")]
+    [InlineData("birthday", "The user's birthday.", "1990-01-01")]
     [InlineData("preferred_name", "The user's API key is sk-1234567890abcdef", "Mike")]
     public void TryValidate_WhenMemoryLooksSensitive_ShouldReturnFalse(string name, string description, string content)
     {

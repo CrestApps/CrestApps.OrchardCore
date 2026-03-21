@@ -24,6 +24,8 @@ Provider-specific indexing support is split into separate modules:
 
 The AI Memory module adds a private memory layer for the currently signed-in user. Memories are stored as first-class records in the tenant and indexed into a dedicated **master memory index** so the AI can search or list them later.
 
+When preemptive RAG is enabled, Orchard Core also performs an upfront semantic search across the authenticated user's memory before the model answers. Matching memories are injected into the system prompt as private background context, similar to the existing document and data-source preemptive retrieval flow. The `search_user_memories` tool remains available for follow-up lookups when the initial memory context is not enough.
+
 Every memory is scoped to a single `userId`. Searches and updates are always filtered to the current authenticated user, which prevents memories from leaking between users.
 
 ## What AI Memory Is For
@@ -49,7 +51,7 @@ AI Memory should never store:
 - private keys
 - connection strings
 
-The built-in memory save tool rejects obvious sensitive patterns, and the orchestration guidance also instructs the model not to save confidential data.
+The built-in memory save tool rejects obvious sensitive patterns, and the orchestration guidance also instructs the model not to save confidential data. This includes sensitive identity details such as a user's date of birth or birthday.
 
 ## How It Works
 
@@ -60,7 +62,7 @@ The feature adds four built-in system tools for the current authenticated user:
 - **Save User Memory** — create or update a named memory entry
 - **Remove User Memory** — remove a saved memory entry when it should be forgotten
 
-The orchestration prompt instructs the model to call **Save User Memory** in the same turn before it claims it will remember durable facts such as the user's name, role, or stable preferences. When the user later asks about stable remembered details, the model is instructed to search or list memory before saying the information is unknown.
+The orchestration prompt instructs the model to call **Save User Memory** in the same turn before it claims it will remember durable facts such as the user's name, role, or stable preferences. When the user later asks about stable remembered details, the system first attempts preemptive memory retrieval when that tenant-level setting is enabled and still instructs the model to search or list memory before saying the information is unknown if more lookup is needed.
 
 Memory tools are only force-included for requests where user memory is enabled for the current authenticated user. This keeps memory tools available when needed without making them global for unrelated orchestration requests.
 
@@ -104,6 +106,8 @@ Navigate to **Settings → Artificial Intelligence → Memory** and configure:
 
 - **Index profile** — the master memory index used for storing memories
 - **Default top N** — the default number of matching memories returned by searches
+
+Preemptive memory retrieval itself is controlled separately under **Settings → Artificial Intelligence → General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning
 After you start storing production memory data, avoid changing the configured master index unless you plan a full re-index.

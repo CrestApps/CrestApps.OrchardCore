@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.OrchardCore.AI.Memory.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -46,9 +46,9 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
             return;
         }
 
-        var user = _httpContextAccessor.HttpContext?.User;
+        var userId = AIMemoryOrchestrationContextHelper.GetAuthenticatedUserId(_httpContextAccessor);
 
-        if (user?.Identity?.IsAuthenticated != true)
+        if (string.IsNullOrEmpty(userId))
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -58,18 +58,15 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
             return;
         }
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var isEnabled = await AIMemoryOrchestrationContextHelper.IsEnabledAsync(context.Resource, _siteService);
 
-        var isEnabled = !string.IsNullOrEmpty(userId) && await IsEnabledAsync(context);
-
-        if (string.IsNullOrEmpty(userId) || !isEnabled)
+        if (!isEnabled)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Skipping memory orchestration for {ResourceType}: userId present={HasUserId}, enabled={IsEnabled}.",
+                    "Skipping memory orchestration for {ResourceType}: enabled={IsEnabled}.",
                     context.Resource.GetType().Name,
-                    !string.IsNullOrEmpty(userId),
                     isEnabled);
             }
 
@@ -91,6 +88,10 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
             new Dictionary<string, object>
             {
                 ["tools"] = memoryTools,
+                ["searchToolName"] = SearchUserMemoriesTool.TheName,
+                ["listToolName"] = ListUserMemoriesTool.TheName,
+                ["saveToolName"] = SaveUserMemoryTool.TheName,
+                ["removeToolName"] = RemoveUserMemoryTool.TheName,
             });
 
         if (!string.IsNullOrEmpty(header))
@@ -106,20 +107,5 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
                 context.Resource.GetType().Name,
                 string.Join(", ", memoryTools.Select(tool => tool.Name)));
         }
-    }
-
-    private async Task<bool> IsEnabledAsync(OrchestrationContextBuiltContext context)
-    {
-        if (context.Resource is AIProfile profile)
-        {
-            return profile.GetSettings<AIProfileMemorySettings>().EnableUserMemory;
-        }
-
-        if (context.Resource is ChatInteraction)
-        {
-            return (await _siteService.GetSettingsAsync<ChatInteractionMemorySettings>()).EnableUserMemory;
-        }
-
-        return false;
     }
 }

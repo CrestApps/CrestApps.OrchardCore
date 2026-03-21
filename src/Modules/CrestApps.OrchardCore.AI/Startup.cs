@@ -37,6 +37,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -73,6 +74,14 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
+            .AddScoped(sp =>
+            {
+                var defaultOptions = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>().Value;
+                var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
+
+                return defaultOptions.ApplySiteOverrides(site.As<GeneralAISettings>());
+            })
+            .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
         services

@@ -59,18 +59,19 @@ Below is an example configuration:
 ```json
 {
   "OrchardCore": {
-    "CrestApps_AI": {
-      "DefaultParameters": {
-        "Temperature": 0,
-        "MaxOutputTokens": 800,
-        "TopP": 1,
-        "FrequencyPenalty": 0,
-        "PresencePenalty": 0,
-        "PastMessagesCount": 10,
-        "MaximumIterationsPerRequest": 10,
-        "EnableOpenTelemetry": false,
-        "EnableDistributedCaching": true
-      },
+      "CrestApps_AI": {
+        "DefaultParameters": {
+          "Temperature": 0,
+          "MaxOutputTokens": 800,
+          "TopP": 1,
+          "FrequencyPenalty": 0,
+          "PresencePenalty": 0,
+          "PastMessagesCount": 10,
+          "MaximumIterationsPerRequest": 10,
+          "AbsoluteMaximumIterationsPerRequest": 100,
+          "EnableOpenTelemetry": false,
+          "EnableDistributedCaching": true
+        },
       "Providers": {
         "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
           "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
@@ -128,8 +129,22 @@ The following configuration format using `ChatDeploymentName`, `UtilityDeploymen
 | `PresencePenalty` | Encourages the model to explore new topics. | `0` |
 | `PastMessagesCount` | Number of previous messages included as conversation context. | `10` |
 | `MaximumIterationsPerRequest` | Maximum number of tool-call round-trips the model can make per request. Set to a higher value (e.g., `10`) to enable agentic behavior where the model can call tools, evaluate results, and call additional tools as needed. A value of `1` limits the model to a single tool call with no follow-up. | `10` |
+| `AbsoluteMaximumIterationsPerRequest` | Hard upper bound for `MaximumIterationsPerRequest`. This value is controlled by configuration providers such as `appsettings.json` and is not editable from the site settings UI. The effective maximum iterations value is always clamped to this ceiling. | `100` |
 | `EnableOpenTelemetry` | Enables OpenTelemetry tracing for AI requests. | `false` |
 | `EnableDistributedCaching` | Enables distributed caching for AI responses. | `true` |
+
+### Site-level General AI overrides
+
+In addition to `appsettings.json`, administrators can override selected AI defaults per tenant from **Settings → Artificial Intelligence → General**.
+
+The **General** card currently supports:
+
+- enabling or disabling **Preemptive Memory Retrieval**
+- overriding `MaximumIterationsPerRequest`
+- overriding `EnableDistributedCaching`
+- overriding `EnableOpenTelemetry`
+
+The appsettings-based `DefaultParameters` still provide the base values. Site settings only replace a value when the matching override toggle is enabled. `AbsoluteMaximumIterationsPerRequest` always stays configuration-owned and the effective `MaximumIterationsPerRequest` is always `Math.Min(MaximumIterationsPerRequest, AbsoluteMaximumIterationsPerRequest)`.
 
 #### Typed AI Deployments
 

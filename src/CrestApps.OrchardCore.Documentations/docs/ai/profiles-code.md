@@ -243,13 +243,13 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
            IDistributedCache distributedCache,
            IOptions<AIProviderOptions> providerOptions,
            IEnumerable<IAICompletionServiceHandler> handlers,
-           IOptions<DefaultAIOptions> defaultOptions
+           DefaultAIOptions defaultOptions
            ) : base(
                CustomProfileSource.ImplementationName,
                aIClientFactory, distributedCache,
                loggerFactory,
                providerOptions.Value,
-               defaultOptions.Value,
+               defaultOptions,
                handlers)
     {
     }

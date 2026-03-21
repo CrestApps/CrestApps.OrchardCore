@@ -1,11 +1,7 @@
-@using CrestApps.OrchardCore.AI.Core.Models
 @using CrestApps.OrchardCore.AI.ViewModels
-@using Microsoft.Extensions.Options
 @using OrchardCore
 
 @model ProfileMetadataViewModel
-
-@inject IOptions<DefaultAIOptions> DefaultAIOptions
 
 <div class="@Orchard.GetWrapperClasses()" data-ci-system-message-wrapper>
     <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System instructions"]</label>

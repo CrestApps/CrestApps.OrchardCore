@@ -27,13 +27,13 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
     public AICompletionWithConfigTaskDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IOptions<AIProviderOptions> aiProviderOptions,
-        IOptions<DefaultAIOptions> defaultAIOptions,
+        DefaultAIOptions defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _aiProviderOptions = aiProviderOptions.Value;
-        _defaultAIOptions = defaultAIOptions.Value;
+        _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
