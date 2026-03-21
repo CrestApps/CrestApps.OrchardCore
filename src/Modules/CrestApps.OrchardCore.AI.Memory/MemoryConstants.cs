@@ -12,7 +12,6 @@ public static class MemoryConstants
 
     public static class CompletionContextKeys
     {
-        public const string HasMemory = "HasMemory";
         public const string UserId = "AIMemoryUserId";
     }
 

@@ -76,7 +76,7 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
             return;
         }
 
-        context.OrchestrationContext.CompletionContext.AdditionalProperties[MemoryConstants.CompletionContextKeys.HasMemory] = true;
+        context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasMemory] = true;
         AIInvocationScope.Current?.Items.TryAdd(MemoryConstants.CompletionContextKeys.UserId, userId);
 
         var memoryTools = _toolDefinitions.Tools
