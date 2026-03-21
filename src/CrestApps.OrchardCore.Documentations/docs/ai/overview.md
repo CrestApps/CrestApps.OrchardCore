@@ -3,7 +3,7 @@ sidebar_label: AI Services and Configuration
 sidebar_position: 1
 slug: /ai/overview
 title: AI Services
-description: Foundational infrastructure for interacting with AI models through configurable profiles and service integrations in Orchard Core.
+description: Foundational infrastructure for the CrestApps AI Suite in Orchard Core, covering AI integration, management, profiles, orchestration, providers, deployments, MCP, Agent-to-Agent, and site-level settings.
 ---
 
 | | |
@@ -11,15 +11,15 @@ description: Foundational infrastructure for interacting with AI models through 
 | **Feature Name** | AI Services |
 | **Feature ID** | `CrestApps.OrchardCore.AI` |
 
-Provides AI services. (`EnabledByDependencyOnly = true`)
+Provides the core AI services and management infrastructure. (`EnabledByDependencyOnly = true`)
 
 ## AI Services Feature
 
-The **AI Services** feature provides the foundational infrastructure for interacting with AI models through configurable profiles and service integrations.
+The **AI Services** feature provides the foundational infrastructure for the broader CrestApps AI Suite in Orchard Core. It covers configurable profiles, orchestration, provider integrations, connection and deployment management, prompt and tool infrastructure, and site-level AI administration.
 
-Once enabled, a new **Artificial Intelligence** menu item appears in the admin dashboard, allowing administrators to create and manage **AI Profiles**.
+Once enabled, a new **Artificial Intelligence** menu item appears in the admin dashboard, allowing administrators to create and manage **AI Profiles**, provider connections, deployments, templates, and related AI settings.
 
-An **AI Profile** defines how the AI system interacts with users — including its welcome message, system message, and response behavior.
+An **AI Profile** defines how the AI system interacts with users — including its welcome message, system message, response behavior, deployments, and selected tools or knowledge capabilities.
 
 :::note
 This feature does **not** include any AI completion client implementations such as **OpenAI**. It only provides the **user interface** and **core services** for managing AI profiles. You must install and configure a compatible provider module (e.g., `OpenAI`, `Azure`, `AzureAIInference`, or `Ollama`) separately.
