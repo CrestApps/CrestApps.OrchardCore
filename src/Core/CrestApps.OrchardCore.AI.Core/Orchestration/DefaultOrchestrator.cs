@@ -246,6 +246,17 @@ public sealed class DefaultOrchestrator : IOrchestrator
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
     {
+        var mustIncludeToolNames = context.MustIncludeTools
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
+        var mustIncludeEntries = allTools
+            .Where(tool => mustIncludeToolNames.Contains(tool.Name))
+            .ToList();
+        var scopedCandidates = allTools
+            .Where(tool => !mustIncludeToolNames.Contains(tool.Name))
+            .ToList();
+
         // All tools are subject to relevance scoring when the total count
         // exceeds the scoping threshold. No source gets special treatment.
         var budget = _options.InitialToolCount;
@@ -260,7 +271,10 @@ public sealed class DefaultOrchestrator : IOrchestrator
         {
             // No scoring text available; return capped tools by original order.
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(Math.Max(budget, _options.MaxToolCount)).ToList());
+                scopedCandidates
+                    .Take(Math.Max(budget, _options.MaxToolCount))
+                    .Concat(mustIncludeEntries)
+                    .ToList());
         }
 
         var scoringTokens = _tokenizer.Tokenize(scoringText);
@@ -268,13 +282,16 @@ public sealed class DefaultOrchestrator : IOrchestrator
         if (scoringTokens.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(budget).ToList());
+                scopedCandidates
+                    .Take(budget)
+                    .Concat(mustIncludeEntries)
+                    .ToList());
         }
 
         // Score all tools uniformly by relevance.
         var scored = new List<(ToolRegistryEntry Entry, double Score)>();
 
-        foreach (var tool in allTools)
+        foreach (var tool in scopedCandidates)
         {
             var title = tool.Name;
 
@@ -323,9 +340,19 @@ public sealed class DefaultOrchestrator : IOrchestrator
         // If no tools matched, fill budget by original order as fallback.
         if (scopedEntries.Count == 0 && budget > 0)
         {
-            scopedEntries = allTools
+            scopedEntries = scopedCandidates
                 .Take(budget)
                 .ToList();
+        }
+
+        foreach (var mustIncludeEntry in mustIncludeEntries)
+        {
+            if (scopedEntries.Any(entry => string.Equals(entry.Id, mustIncludeEntry.Id, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            scopedEntries.Add(mustIncludeEntry);
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))

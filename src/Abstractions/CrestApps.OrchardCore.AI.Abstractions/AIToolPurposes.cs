@@ -21,4 +21,9 @@ public static class AIToolPurposes
     /// Tools that search data source embeddings for RAG (Retrieval-Augmented Generation).
     /// </summary>
     public const string DataSourceSearch = "data_source_search";
+
+    /// <summary>
+    /// Tools that recall, list, or store authenticated user memory.
+    /// </summary>
+    public const string Memory = "memory";
 }

@@ -35,7 +35,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AIOptions> aiOptions,
         IOptions<AIProviderOptions> connectionOptions,
-        IOptions<DefaultAIOptions> defaultAIOptions,
+        DefaultAIOptions defaultAIOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
@@ -46,7 +46,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _aiOptions = aiOptions.Value;
-        _defaultAIOptions = defaultAIOptions.Value;
+        _defaultAIOptions = defaultAIOptions;
         _connectionOptions = connectionOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;

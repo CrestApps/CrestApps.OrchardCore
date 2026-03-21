@@ -19,16 +19,21 @@ CrestApps provides a collection of open-source modules designed to enhance **[Or
 
 ### Artificial Intelligence Suite
 
+The CrestApps AI Suite is a comprehensive and extensible AI ecosystem built on Orchard Core, designed to unify and streamline AI integration and management. It combines provider integrations, flexible deployment and connection management, AI profiles, and advanced orchestration into a cohesive platform.
+
+The suite enables highly customizable chat experiences, along with robust prompt and tool management, retrieval workflows, and long-term memory capabilities. It also supports MCP and Agent-to-Agent integrations, delivering a powerful foundation for building intelligent, interconnected systems—all seamlessly managed within the Orchard Core admin experience.
+
 Integrate most AI providers like **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and more into your Orchard Core website. The AI suite includes:
 
-- **[Overview](ai/)** – Introduction to the AI Suite
-- **[AI](ai/overview)** – Foundation for all AI modules with profile and connection management
+- **[Overview](ai/)** – Introduction to the AI integrations and solutions ecosystem
+- **[AI](ai/overview)** – Foundation for the AI ecosystem with profiles, orchestration, connection management, deployment management, and settings
 - **[AI Chat](ai/chat)** – Chat interfaces for interacting with AI models
 - **[AI Chat Interactions](ai/chat-interactions)** – Ad-hoc chat with configurable parameters and document upload
 - **[Consuming AI Services](ai/consuming-ai-services)** – Using AI services programmatically via code
 - **[Copilot Integration](ai/copilot)** – GitHub Copilot SDK-based orchestration
 - **[Data Sources](ai/data-sources/)** – Retrieval-augmented generation (RAG) / knowledge base indexing and vector search
 - **[Documents](ai/documents/)** – Document upload, text extraction, and embedding
+- **[AI Memory](ai/memory)** – Durable private memory for preferences, projects, topics, interests, and reusable background context
 - **[MCP](ai/mcp/)** – Model Context Protocol client and server support
 - **[Orchard Core Agent](ai/agent)** – Intelligent agents that perform tasks on your site
 - **[AI Providers](ai/providers/)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more

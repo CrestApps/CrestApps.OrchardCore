@@ -18,7 +18,7 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
            IServiceProvider serviceProvider,
            IOptions<AIProviderOptions> providerOptions,
            IEnumerable<IAICompletionServiceHandler> handlers,
-           IOptions<DefaultAIOptions> defaultOptions,
+           DefaultAIOptions defaultOptions,
            IAITemplateService aiTemplateService,
            IAIDeploymentManager deploymentManager
            ) : base(
@@ -27,7 +27,7 @@ internal sealed class OllamaAIChatCompletionClient : NamedAICompletionClient
                loggerFactory,
                serviceProvider,
                providerOptions.Value,
-               defaultOptions.Value,
+               defaultOptions,
                handlers,
                aiTemplateService,
                deploymentManager)

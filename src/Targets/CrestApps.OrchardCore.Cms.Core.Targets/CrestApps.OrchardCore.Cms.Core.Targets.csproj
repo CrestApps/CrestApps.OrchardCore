@@ -45,6 +45,9 @@
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Documents.Elasticsearch\CrestApps.OrchardCore.AI.Documents.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Documents.OpenXml\CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Documents.Pdf\CrestApps.OrchardCore.AI.Documents.Pdf.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Memory.AzureAI\CrestApps.OrchardCore.AI.Memory.AzureAI.csproj" PrivateAssets="none" />
+    <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Memory.Elasticsearch\CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.A2A\CrestApps.OrchardCore.AI.A2A.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
     <ProjectReference Include="..\..\Modules\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp\CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.csproj" PrivateAssets="none" />

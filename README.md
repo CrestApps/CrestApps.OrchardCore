@@ -1,6 +1,6 @@
 # CrestApps - Orchard Core
 
-CrestApps provides a collection of open-source modules designed to enhance **Orchard Core**, a powerful application framework built on **ASP.NET Core**.  
+CrestApps provides a collection of open-source modules designed to enhance **Orchard Core**, a powerful application framework built on **ASP.NET Core**.
 
 ## 📖 Documentation
 
@@ -8,7 +8,7 @@ For detailed guides, tutorials, and API references, visit the **[CrestApps Orcha
 
 The documentation covers:
 - **[Getting Started](https://orchardcore.crestapps.com/docs/getting-started)** — Installation and setup
-- **[AI Suite](https://orchardcore.crestapps.com/docs/ai/overview)** — AI modules, profiles, tools, and orchestration
+- **[AI Suite](https://orchardcore.crestapps.com/docs/ai/overview)** — One place for AI integrations and solutions across chat, orchestration, management, RAG, MCP, A2A, and automation
 - **[AI Providers](https://orchardcore.crestapps.com/docs/providers/overview)** — Configuring OpenAI, Azure, Ollama, and more
 - **[Consuming AI Services](https://orchardcore.crestapps.com/docs/ai/consuming-ai-services)** — Programmatic usage via code
 - **[MCP](https://orchardcore.crestapps.com/docs/ai/mcp/)** — Model Context Protocol client and server support
@@ -91,8 +91,12 @@ You can install individual modules into your web project as needed, or install t
 
 ### Artificial Intelligence Suite
 
+The CrestApps AI Suite is a comprehensive and extensible AI ecosystem built on Orchard Core, designed to unify and streamline AI integration and management. It combines provider integrations, flexible deployment and connection management, AI profiles, and advanced orchestration into a cohesive platform.
+
+The suite enables highly customizable chat experiences, along with robust prompt and tool management, retrieval workflows, and long-term memory capabilities. It also supports MCP and Agent-to-Agent integrations, delivering a powerful foundation for building intelligent, interconnected systems—all seamlessly managed within the Orchard Core admin experience.
+
 #### AI Module
-Provides services for all AI modules and provide the interface for managing AI profiles and AI Deployments. See the [AI Services documentation](https://orchardcore.crestapps.com/docs/ai/ai-services) for more details.  
+Provides the foundation for the AI ecosystem, including shared AI services, orchestration infrastructure, profile management, connection and deployment management, and site-level AI settings. See the [AI Services documentation](https://orchardcore.crestapps.com/docs/ai/ai-services) for more details.  
 
 #### AI Chat Module
 Provides interface for interacting with AI chat models like **ChatGPT** and others. See the [AI Chat documentation](https://orchardcore.crestapps.com/docs/ai/ai-chat) for more details.  

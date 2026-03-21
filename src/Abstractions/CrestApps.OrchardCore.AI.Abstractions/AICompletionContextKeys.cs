@@ -14,4 +14,11 @@ public static class AICompletionContextKeys
     /// to be included in the tool registry.
     /// </summary>
     public const string HasDocuments = "HasDocuments";
+
+    /// <summary>
+    /// When set to <see langword="true"/> in <see cref="Models.AICompletionContext.AdditionalProperties"/>,
+    /// indicates that authenticated user memory is available for the current request. This enables
+    /// memory-related system tools to be included in the tool registry.
+    /// </summary>
+    public const string HasMemory = "HasMemory";
 }
