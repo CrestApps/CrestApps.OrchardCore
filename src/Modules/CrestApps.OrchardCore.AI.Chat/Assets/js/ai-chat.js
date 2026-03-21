@@ -306,6 +306,190 @@ window.openAIChatManager = function () {
         return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
     }
 
+    function tryGetParentPageUrl() {
+        if (!window.parent || window.parent === window) {
+            return null;
+        }
+
+        try {
+            return window.parent.location.href || null;
+        } catch {
+            return document.referrer || null;
+        }
+    }
+
+    function buildHubUrlWithBrowserContext(hubUrl) {
+        const url = new URL(hubUrl, window.location.href);
+        const pageUrl = window.location.href;
+        const parentPageUrl = tryGetParentPageUrl();
+
+        if (pageUrl) {
+            url.searchParams.set('browserPageUrl', pageUrl);
+        }
+
+        if (parentPageUrl) {
+            url.searchParams.set('browserParentPageUrl', parentPageUrl);
+        }
+
+        return url.toString();
+    }
+
+    function getSameOriginNavigationTarget(url) {
+        if (!url) {
+            return null;
+        }
+
+        const targetUrl = new URL(url, window.location.href);
+        if (targetUrl.origin !== window.location.origin) {
+            return null;
+        }
+
+        return targetUrl;
+    }
+
+    function requestParentNavigation(url) {
+        if (!window.parent || window.parent === window) {
+            return false;
+        }
+
+        const targetUrl = getSameOriginNavigationTarget(url);
+        if (!targetUrl) {
+            return false;
+        }
+
+        try {
+            window.parent.location.assign(targetUrl.toString());
+            return true;
+        } catch {
+            window.parent.postMessage({
+                type: 'crestapps-ai-chat:navigate',
+                url: targetUrl.toString()
+            }, window.location.origin);
+
+            return true;
+        }
+    }
+
+    function navigateLivePage(url) {
+        const targetUrl = getSameOriginNavigationTarget(url);
+        if (!targetUrl) {
+            console.warn('Ignored live navigation to a non same-origin URL.', url);
+            return;
+        }
+
+        window.setTimeout(() => {
+            if (requestParentNavigation(targetUrl.toString())) {
+                return;
+            }
+
+            window.location.assign(targetUrl.toString());
+        }, 150);
+    }
+
+    function getBridgeWindow() {
+        if (window.parent && window.parent !== window) {
+            try {
+                if (window.parent.location && window.parent.document) {
+                    return window.parent;
+                }
+            } catch {
+            }
+        }
+
+        return window;
+    }
+
+    function getBridgeDocument() {
+        return getBridgeWindow().document;
+    }
+
+    function normalizeContextText(text, maxLength) {
+        if (!text) {
+            return '';
+        }
+
+        const normalized = text.replace(/\s+/g, ' ').trim();
+        return normalized.length > maxLength ? normalized.substring(0, maxLength) : normalized;
+    }
+
+    function isVisibleBridgeElement(element, bridgeWindow) {
+        if (!element) {
+            return false;
+        }
+
+        if (element.closest('.ai-chat-app, .ai-admin-widget, .chat-interaction-app, .chat-interaction')) {
+            return false;
+        }
+
+        const style = bridgeWindow.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+    }
+
+    function captureLivePageContext() {
+        const bridgeWindow = getBridgeWindow();
+        const bridgeDocument = getBridgeDocument();
+        const links = [];
+        const buttons = [];
+        const headings = [];
+        const url = bridgeWindow.location.href;
+
+        bridgeDocument.querySelectorAll('h1, h2, h3').forEach((element) => {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || headings.length >= 12) {
+                return;
+            }
+
+            const text = normalizeContextText(element.innerText || element.textContent, 120);
+            if (text) {
+                headings.push(text);
+            }
+        });
+
+        bridgeDocument.querySelectorAll('a[href]').forEach((element) => {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || links.length >= 40) {
+                return;
+            }
+
+            const text = normalizeContextText(element.innerText || element.textContent || element.getAttribute('aria-label'), 120);
+            const href = element.href ? new URL(element.href, url).toString() : '';
+            const container = element.closest('tr, li, article, section, .card, .list-group-item, .content-item');
+            const context = normalizeContextText((container || element).innerText || (container || element).textContent, 160);
+
+            if (!text && !href) {
+                return;
+            }
+
+            links.push({ text, href, context });
+        });
+
+        bridgeDocument.querySelectorAll('button, input[type="submit"], input[type="button"], [role="button"]').forEach((element) => {
+            if (!isVisibleBridgeElement(element, bridgeWindow) || buttons.length >= 20) {
+                return;
+            }
+
+            const text = normalizeContextText(element.innerText || element.textContent || element.value || element.getAttribute('aria-label'), 120);
+            if (text) {
+                buttons.push({ text });
+            }
+        });
+
+        const textPreview = normalizeContextText((bridgeDocument.body && bridgeDocument.body.innerText) || '', 1500);
+
+        return JSON.stringify({
+            url,
+            title: bridgeDocument.title || '',
+            isParentContext: bridgeWindow !== window,
+            headings,
+            links,
+            buttons,
+            textPreview
+        });
+    }
+
     const initialize = (instanceConfig) => {
 
         const config = Object.assign({}, defaultConfig, instanceConfig);
@@ -666,7 +850,7 @@ window.openAIChatManager = function () {
                 },
                 async startConnection() {
                     this.connection = new signalR.HubConnectionBuilder()
-                        .withUrl(config.signalRHubUrl)
+                        .withUrl(buildHubUrlWithBrowserContext(config.signalRHubUrl))
                         .withAutomaticReconnect()
                         .build();
 
@@ -699,6 +883,10 @@ window.openAIChatManager = function () {
                             this.prompt = config.initialPrompt;
                             this.sendMessage();
                         }
+                    });
+
+                    this.connection.on("NavigateTo", (url) => {
+                        navigateLivePage(url);
                     });
 
                     this.connection.on("ReceiveError", (error) => {
@@ -1118,8 +1306,9 @@ window.openAIChatManager = function () {
                     // Get the index after showing typing indicator.
                     var messageIndex = this.messages.length;
                     var currentSessionId = this.getSessionId();
+                    var livePageContextJson = captureLivePageContext();
 
-                    this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId)
+                    this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId, livePageContextJson)
                         .subscribe({
                             next: (chunk) => {
                                 let message = this.messages[messageIndex];

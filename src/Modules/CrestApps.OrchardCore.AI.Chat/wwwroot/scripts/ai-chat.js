@@ -258,6 +258,159 @@ window.openAIChatManager = function () {
       ADD_ATTR: ['target']
     });
   }
+  function tryGetParentPageUrl() {
+    if (!window.parent || window.parent === window) {
+      return null;
+    }
+    try {
+      return window.parent.location.href || null;
+    } catch (_unused) {
+      return document.referrer || null;
+    }
+  }
+  function buildHubUrlWithBrowserContext(hubUrl) {
+    var url = new URL(hubUrl, window.location.href);
+    var pageUrl = window.location.href;
+    var parentPageUrl = tryGetParentPageUrl();
+    if (pageUrl) {
+      url.searchParams.set('browserPageUrl', pageUrl);
+    }
+    if (parentPageUrl) {
+      url.searchParams.set('browserParentPageUrl', parentPageUrl);
+    }
+    return url.toString();
+  }
+  function getSameOriginNavigationTarget(url) {
+    if (!url) {
+      return null;
+    }
+    var targetUrl = new URL(url, window.location.href);
+    if (targetUrl.origin !== window.location.origin) {
+      return null;
+    }
+    return targetUrl;
+  }
+  function requestParentNavigation(url) {
+    if (!window.parent || window.parent === window) {
+      return false;
+    }
+    var targetUrl = getSameOriginNavigationTarget(url);
+    if (!targetUrl) {
+      return false;
+    }
+    try {
+      window.parent.location.assign(targetUrl.toString());
+      return true;
+    } catch (_unused2) {
+      window.parent.postMessage({
+        type: 'crestapps-ai-chat:navigate',
+        url: targetUrl.toString()
+      }, window.location.origin);
+      return true;
+    }
+  }
+  function navigateLivePage(url) {
+    var targetUrl = getSameOriginNavigationTarget(url);
+    if (!targetUrl) {
+      console.warn('Ignored live navigation to a non same-origin URL.', url);
+      return;
+    }
+    window.setTimeout(function () {
+      if (requestParentNavigation(targetUrl.toString())) {
+        return;
+      }
+      window.location.assign(targetUrl.toString());
+    }, 150);
+  }
+  function getBridgeWindow() {
+    if (window.parent && window.parent !== window) {
+      try {
+        if (window.parent.location && window.parent.document) {
+          return window.parent;
+        }
+      } catch (_unused3) {}
+    }
+    return window;
+  }
+  function getBridgeDocument() {
+    return getBridgeWindow().document;
+  }
+  function normalizeContextText(text, maxLength) {
+    if (!text) {
+      return '';
+    }
+    var normalized = text.replace(/\s+/g, ' ').trim();
+    return normalized.length > maxLength ? normalized.substring(0, maxLength) : normalized;
+  }
+  function isVisibleBridgeElement(element, bridgeWindow) {
+    if (!element) {
+      return false;
+    }
+    if (element.closest('.ai-chat-app, .ai-admin-widget, .chat-interaction-app, .chat-interaction')) {
+      return false;
+    }
+    var style = bridgeWindow.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden') {
+      return false;
+    }
+    var rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+  function captureLivePageContext() {
+    var bridgeWindow = getBridgeWindow();
+    var bridgeDocument = getBridgeDocument();
+    var links = [];
+    var buttons = [];
+    var headings = [];
+    var url = bridgeWindow.location.href;
+    bridgeDocument.querySelectorAll('h1, h2, h3').forEach(function (element) {
+      if (!isVisibleBridgeElement(element, bridgeWindow) || headings.length >= 12) {
+        return;
+      }
+      var text = normalizeContextText(element.innerText || element.textContent, 120);
+      if (text) {
+        headings.push(text);
+      }
+    });
+    bridgeDocument.querySelectorAll('a[href]').forEach(function (element) {
+      if (!isVisibleBridgeElement(element, bridgeWindow) || links.length >= 40) {
+        return;
+      }
+      var text = normalizeContextText(element.innerText || element.textContent || element.getAttribute('aria-label'), 120);
+      var href = element.href ? new URL(element.href, url).toString() : '';
+      var container = element.closest('tr, li, article, section, .card, .list-group-item, .content-item');
+      var context = normalizeContextText((container || element).innerText || (container || element).textContent, 160);
+      if (!text && !href) {
+        return;
+      }
+      links.push({
+        text: text,
+        href: href,
+        context: context
+      });
+    });
+    bridgeDocument.querySelectorAll('button, input[type="submit"], input[type="button"], [role="button"]').forEach(function (element) {
+      if (!isVisibleBridgeElement(element, bridgeWindow) || buttons.length >= 20) {
+        return;
+      }
+      var text = normalizeContextText(element.innerText || element.textContent || element.value || element.getAttribute('aria-label'), 120);
+      if (text) {
+        buttons.push({
+          text: text
+        });
+      }
+    });
+    var textPreview = normalizeContextText(bridgeDocument.body && bridgeDocument.body.innerText || '', 1500);
+    return JSON.stringify({
+      url: url,
+      title: bridgeDocument.title || '',
+      isParentContext: bridgeWindow !== window,
+      headings: headings,
+      links: links,
+      buttons: buttons,
+      textPreview: textPreview
+    });
+  }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
     // Keep defaultConfig in sync so renderers use overridden values
@@ -668,7 +821,7 @@ window.openAIChatManager = function () {
             return _regenerator().w(function (_context3) {
               while (1) switch (_context3.p = _context3.n) {
                 case 0:
-                  _this3.connection = new signalR.HubConnectionBuilder().withUrl(config.signalRHubUrl).withAutomaticReconnect().build();
+                  _this3.connection = new signalR.HubConnectionBuilder().withUrl(buildHubUrlWithBrowserContext(config.signalRHubUrl)).withAutomaticReconnect().build();
 
                   // Allow long-running operations (e.g., multi-step MCP tool calls)
                   // without the client disconnecting prematurely.
@@ -697,6 +850,9 @@ window.openAIChatManager = function () {
                       _this3.prompt = config.initialPrompt;
                       _this3.sendMessage();
                     }
+                  });
+                  _this3.connection.on("NavigateTo", function (url) {
+                    navigateLivePage(url);
                   });
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
@@ -1152,7 +1308,8 @@ window.openAIChatManager = function () {
           // Get the index after showing typing indicator.
           var messageIndex = this.messages.length;
           var currentSessionId = this.getSessionId();
-          this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
+          var livePageContextJson = captureLivePageContext();
+          this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId, livePageContextJson).subscribe({
             next: function next(chunk) {
               var message = _this8.messages[messageIndex];
               if (!message) {

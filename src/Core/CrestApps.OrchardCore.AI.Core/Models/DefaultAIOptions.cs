@@ -14,7 +14,7 @@ public sealed class DefaultAIOptions
 
     public int PastMessagesCount { get; set; } = 10;
 
-    public int MaximumIterationsPerRequest { get; set; } = 10;
+    public int MaximumIterationsPerRequest { get; set; } = 20;
 
     public int AbsoluteMaximumIterationsPerRequest { get; set; } = 100;
 

@@ -43,14 +43,14 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
     protected override ChatContextType GetChatType()
         => ChatContextType.ChatInteraction;
 
-    public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
+    public ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, string clientPageContextJson, CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
         // Create a child scope for proper ISession/IDocumentStore lifecycle.
         _ = ShellScope.UsingChildScopeAsync(async scope =>
         {
-            await HandlePromptAsync(channel.Writer, scope.ServiceProvider, itemId, prompt, cancellationToken);
+            await HandlePromptAsync(channel.Writer, scope.ServiceProvider, itemId, prompt, clientPageContextJson, cancellationToken);
         });
 
         return channel.Reader;
@@ -367,11 +367,12 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         });
     }
 
-    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, string itemId, string prompt, CancellationToken cancellationToken)
+    private async Task HandlePromptAsync(ChannelWriter<CompletionPartialMessage> writer, IServiceProvider services, string itemId, string prompt, string clientPageContextJson, CancellationToken cancellationToken)
     {
         try
         {
             using var invocationScope = AIInvocationScope.Begin();
+            LivePageContextPromptBuilder.Store(invocationScope.Context, clientPageContextJson);
 
             if (string.IsNullOrWhiteSpace(itemId))
             {
@@ -418,6 +419,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             var handlerResolver = services.GetRequiredService<IChatResponseHandlerResolver>();
             var citationCollector = services.GetRequiredService<CitationReferenceCollector>();
             var clock = services.GetRequiredService<IClock>();
+            var effectivePrompt = LivePageContextPromptBuilder.Append(prompt, AIInvocationScope.Current);
 
             // Create and save user prompt
             var userPrompt = new ChatInteractionPrompt
@@ -445,6 +447,8 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 .Select(p => new ChatMessage(p.Role, p.Text))
                 .ToList();
 
+            ReplaceLatestUserMessage(conversationHistory, effectivePrompt);
+
             // Resolve the chat response handler for this interaction.
             // In conversation mode, always use the AI handler for TTS/STT integration.
             var siteService = services.GetRequiredService<ISiteService>();
@@ -454,7 +458,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
             var handlerContext = new ChatResponseHandlerContext
             {
-                Prompt = prompt,
+                Prompt = effectivePrompt,
                 ConnectionId = Context.ConnectionId,
                 SessionId = interaction.ItemId,
                 ChatType = ChatContextType.ChatInteraction,
@@ -549,6 +553,8 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             {
                 await interactionManager.UpdateAsync(interaction);
             }
+
+            await NavigateCallerIfRequestedAsync(invocationScope.Context);
         }
         catch (Exception ex)
         {
@@ -580,6 +586,52 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         {
             writer.Complete();
         }
+    }
+
+    private async Task NavigateCallerIfRequestedAsync(AIInvocationContext invocationContext)
+    {
+        if (!TryGetRequestedNavigationUrl(invocationContext, out var url))
+        {
+            return;
+        }
+
+        await Clients.Caller.NavigateTo(url);
+    }
+
+    private static void ReplaceLatestUserMessage(List<ChatMessage> conversationHistory, string effectivePrompt)
+    {
+        if (conversationHistory.Count == 0 || string.IsNullOrWhiteSpace(effectivePrompt))
+        {
+            return;
+        }
+
+        var latestMessage = conversationHistory[^1];
+        if (latestMessage.Role != ChatRole.User)
+        {
+            return;
+        }
+
+        conversationHistory[^1] = new ChatMessage(ChatRole.User, effectivePrompt);
+    }
+
+    private static bool TryGetRequestedNavigationUrl(AIInvocationContext invocationContext, out string url)
+    {
+        url = null;
+
+        if (invocationContext is null)
+        {
+            return false;
+        }
+
+        if (!invocationContext.Items.TryGetValue(AIInvocationItemKeys.LiveNavigationUrl, out var requestedUrl) ||
+            requestedUrl is not string stringUrl ||
+            string.IsNullOrWhiteSpace(stringUrl))
+        {
+            return false;
+        }
+
+        url = stringUrl;
+        return true;
     }
 
     public async Task StartConversation(string itemId, IAsyncEnumerable<string> audioChunks, string audioFormat = null, string language = null)
@@ -911,7 +963,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
-        var handleTask = HandlePromptAsync(channel.Writer, services, itemId, prompt, cancellationToken);
+        var handleTask = HandlePromptAsync(channel.Writer, services, itemId, prompt, null, cancellationToken);
 
         var sentenceChannel = Channel.CreateUnbounded<string>();
         string messageId = null;

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Agent.Communications;
+using CrestApps.OrchardCore.AI.Agent.Tools.Communications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
