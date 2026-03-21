@@ -276,14 +276,17 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Using statements**: 
   - Sort System directives first
   - Prefer simple using statements over braces when possible
+  - Remove unused usings from the code you touch
   
 #### Code Preferences  
 - **Range/Index operators**: Avoid using range/index operators (enforced as warning)
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
+- **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
 - **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
+- **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 
 ### Module Structure Conventions
@@ -524,20 +527,20 @@ services.AddNavigationProvider<MyAdminMenu>();
 
 ## Anti-Patterns to Avoid
 
-- ❌ Don't use static mutable state
-- ❌ Don't create tight coupling between modules
-- ❌ Don't bypass Orchard Core's dependency injection
-- ❌ Don't hardcode connection strings or secrets
-- ❌ Don't use synchronous I/O operations (use async/await)
-- ❌ Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
-- ❌ Don't skip writing tests for new features
-- ❌ Don't commit commented-out code
-- ❌ Don't use `System.Range` or `System.Index` operators (enforced as warning)
-- ❌ Don't leave unused services injected through dependency injection
-- ❌ Don't leave unused `using` statements in source files
-- ❌ Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
-- ❌ Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
-- ❌ Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
+- Don't use static mutable state
+- Don't create tight coupling between modules
+- Don't bypass Orchard Core's dependency injection
+- Don't hardcode connection strings or secrets
+- Don't use synchronous I/O operations (use async/await)
+- Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
+- Don't skip writing tests for new features
+- Don't commit commented-out code
+- Don't use `System.Range` or `System.Index` operators (enforced as warning)
+- Don't leave unused services injected through dependency injection
+- Don't leave unused `using` statements in source files
+- Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
+- Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
 
 ## Code Cleanup (Required After Completing Work)
 

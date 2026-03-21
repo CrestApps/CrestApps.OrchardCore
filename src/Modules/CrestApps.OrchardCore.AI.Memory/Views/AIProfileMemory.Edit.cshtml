@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.AI.Memory.ViewModels
+
+@model EditAIProfileMemoryViewModel
+
+@if (!Model.HasIndexProfile)
+{
+    <div id="profileMemoryIndexWarning" class="alert alert-warning @(Model.EnableUserMemory ? string.Empty : "d-none")" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+        <strong>@T["Index Not Configured"]</strong>
+        <p class="mb-0">
+            @T["No AI memory index is configured. Go to Settings > Artificial Intelligence > Memory and choose an index profile before enabling user memory on this profile."]
+        </p>
+    </div>
+}
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnableUserMemory" />
+        <label class="form-check-label" asp-for="EnableUserMemory">@T["Enable User Memory"]</label>
+        <span class="hint">@T["When enabled, authenticated users can store and recall private, non-sensitive memory across chat sessions that use this profile."]</span>
+    </div>
+</div>
+
+<div class="alert alert-secondary" role="alert">
+    <i class="fa-solid fa-shield-halved me-2"></i>
+    @T["Do not store sensitive data in memory. This includes credentials, API keys, payment card numbers, Social Security numbers, and other confidential personal data."]
+</div>
+
+@if (!Model.HasIndexProfile)
+{
+    <script at="Foot">
+        (function () {
+            const toggle = document.getElementById('@Html.IdFor(m => m.EnableUserMemory)');
+            const warning = document.getElementById('profileMemoryIndexWarning');
+            if (!toggle || !warning) return;
+
+            const syncWarning = function () {
+                warning.classList.toggle('d-none', !toggle.checked);
+            };
+
+            toggle.addEventListener('change', syncWarning);
+            syncWarning();
+        })();
+    </script>
+}

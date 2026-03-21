@@ -32,6 +32,12 @@ public sealed class AIToolDefinitionEntry
     /// </summary>
     public string Purpose { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether this tool should always be included after scoping.
+    /// This keeps the tool invokable without contributing noise to relevance search.
+    /// </summary>
+    public bool IsAlwaysAvailable { get; set; }
+
     public bool HasPurpose(string purpose)
     {
         ArgumentException.ThrowIfNullOrEmpty(purpose);

@@ -27,6 +27,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Image generation — generate images from text prompts using AI image generation models
 - Chart generation — generate chart specifications from prompts (for rendering as a chart)
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
+- User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 
 ## Getting Started
@@ -92,6 +93,17 @@ Text-to-speech synthesis occurs after the full response text has been received �
 :::
 
 ## Related Features
+
+### AI Memory
+
+For persistent private memory across chat interactions, see the [AI Memory documentation](memory).
+
+Chat Interaction memory is:
+
+- **enabled by default**
+- **available only to authenticated users**
+- **always filtered by the current user ID**
+- **disabled automatically when no AI Memory index profile is configured**
 
 ### AI Documents
 

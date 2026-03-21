@@ -45,6 +45,7 @@ The **Orchestrator** (`IOrchestrator`) is the central runtime that manages AI co
 | [Copilot Integration](copilot) | GitHub Copilot SDK-based orchestration |
 | [Data Sources](data-sources/) | Retrieval-augmented generation (RAG) / knowledge base indexing and vector search |
 | [Documents](documents/) | Document upload, text extraction, and embedding |
+| [AI Memory](memory) | Persistent, user-scoped memory for preferences and durable background details |
 | [MCP](mcp/) | Model Context Protocol client and server support |
 | [Orchard Core Agent](agent) | Intelligent agents that perform tasks on your site |
 

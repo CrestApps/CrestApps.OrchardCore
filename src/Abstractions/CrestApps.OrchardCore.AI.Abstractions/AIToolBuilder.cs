@@ -56,6 +56,17 @@ public sealed class AIToolBuilder<TTool>
     }
 
     /// <summary>
+    /// Marks this tool as always available during orchestration.
+    /// Always-available tools are excluded from relevance scoping and appended
+    /// after scoped entries so they remain invokable without increasing search noise.
+    /// </summary>
+    public AIToolBuilder<TTool> AlwaysAvailable()
+    {
+        _entry.IsAlwaysAvailable = true;
+        return this;
+    }
+
+    /// <summary>
     /// Makes this tool visible in the UI for user selection.
     /// By default, tools are system tools managed by the orchestrator and are not shown in the UI.
     /// </summary>

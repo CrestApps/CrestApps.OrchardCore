@@ -53,11 +53,18 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
                 continue;
             }
 
+            if (entry.HasPurpose(AIToolPurposes.Memory))
+            {
+                continue;
+            }
+
             entries.Add(new ToolRegistryEntry
             {
                 Id = name,
                 Name = name,
                 Description = entry.Description ?? entry.Title ?? name,
+                Purpose = entry.Purpose,
+                IsAlwaysAvailable = entry.IsAlwaysAvailable,
                 Source = ToolRegistryEntrySource.System,
                 CreateAsync = (sp) => ValueTask.FromResult(sp.GetKeyedService<AITool>(name)),
             });

@@ -30,6 +30,19 @@ public sealed class ToolRegistryEntry
     public string Description { get; set; }
 
     /// <summary>
+    /// Gets or sets the purpose tag for this tool entry.
+    /// Mirrors the registered <see cref="AIToolDefinitionEntry.Purpose"/> value
+    /// so orchestration can make purpose-aware decisions after registry aggregation.
+    /// </summary>
+    public string Purpose { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this tool should bypass relevance scoping and always
+    /// be appended after scoped entries are selected.
+    /// </summary>
+    public bool IsAlwaysAvailable { get; set; }
+
+    /// <summary>
     /// Gets or sets the source type of this tool entry.
     /// </summary>
     public ToolRegistryEntrySource Source { get; set; }
@@ -47,6 +60,18 @@ public sealed class ToolRegistryEntry
     /// MCP proxy creation for MCP tools).
     /// </summary>
     public Func<IServiceProvider, ValueTask<AITool>> CreateAsync { get; set; }
+
+    public bool HasPurpose(string purpose)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(purpose);
+
+        if (Purpose == null)
+        {
+            return false;
+        }
+
+        return string.Equals(Purpose, purpose, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 /// <summary>

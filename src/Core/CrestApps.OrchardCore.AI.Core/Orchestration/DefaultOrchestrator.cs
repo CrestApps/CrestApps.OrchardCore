@@ -246,6 +246,13 @@ public sealed class DefaultOrchestrator : IOrchestrator
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
     {
+        var alwaysAvailableEntries = allTools
+            .Where(tool => tool.IsAlwaysAvailable)
+            .ToList();
+        var scopedCandidates = allTools
+            .Where(tool => !tool.IsAlwaysAvailable)
+            .ToList();
+
         // All tools are subject to relevance scoring when the total count
         // exceeds the scoping threshold. No source gets special treatment.
         var budget = _options.InitialToolCount;
@@ -260,7 +267,10 @@ public sealed class DefaultOrchestrator : IOrchestrator
         {
             // No scoring text available; return capped tools by original order.
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(Math.Max(budget, _options.MaxToolCount)).ToList());
+                scopedCandidates
+                    .Take(Math.Max(budget, _options.MaxToolCount))
+                    .Concat(alwaysAvailableEntries)
+                    .ToList());
         }
 
         var scoringTokens = _tokenizer.Tokenize(scoringText);
@@ -268,13 +278,16 @@ public sealed class DefaultOrchestrator : IOrchestrator
         if (scoringTokens.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(budget).ToList());
+                scopedCandidates
+                    .Take(budget)
+                    .Concat(alwaysAvailableEntries)
+                    .ToList());
         }
 
         // Score all tools uniformly by relevance.
         var scored = new List<(ToolRegistryEntry Entry, double Score)>();
 
-        foreach (var tool in allTools)
+        foreach (var tool in scopedCandidates)
         {
             var title = tool.Name;
 
@@ -323,9 +336,19 @@ public sealed class DefaultOrchestrator : IOrchestrator
         // If no tools matched, fill budget by original order as fallback.
         if (scopedEntries.Count == 0 && budget > 0)
         {
-            scopedEntries = allTools
+            scopedEntries = scopedCandidates
                 .Take(budget)
                 .ToList();
+        }
+
+        foreach (var alwaysAvailableEntry in alwaysAvailableEntries)
+        {
+            if (scopedEntries.Any(entry => string.Equals(entry.Id, alwaysAvailableEntry.Id, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            scopedEntries.Add(alwaysAvailableEntry);
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))

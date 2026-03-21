@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore AI Memory - Elasticsearch</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Elasticsearch support for AI memory embeddings and indexing.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Memory Elasticsearch</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Search.Elasticsearch.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
