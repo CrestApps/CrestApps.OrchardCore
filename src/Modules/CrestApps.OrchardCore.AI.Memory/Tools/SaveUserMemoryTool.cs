@@ -28,7 +28,7 @@ public sealed class SaveUserMemoryTool : AIFunction
             },
             "content": {
               "type": "string",
-              "description": "The durable, non-sensitive memory content to store."
+              "description": "The durable memory content to store, such as a preference, project, recurring topic, interest, or other reusable background detail."
             }
           },
           "required": ["name", "description", "content"],
@@ -38,7 +38,7 @@ public sealed class SaveUserMemoryTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Creates or updates a durable, non-sensitive memory for the current authenticated user.";
+    public override string Description => "Creates or updates a durable memory for the current authenticated user, such as a preference, project, recurring topic, interest, or other reusable background detail.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 

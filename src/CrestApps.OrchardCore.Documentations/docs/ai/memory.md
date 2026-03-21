@@ -34,6 +34,9 @@ Use memory for durable, non-sensitive information such as:
 
 - response style preferences
 - formatting preferences
+- active projects or workstreams
+- recurring topics the user commonly asks about
+- durable interests or reference areas
 - long-lived product or workflow preferences
 - stable background context that the user explicitly wants remembered
 
@@ -51,7 +54,7 @@ AI Memory should never store:
 - private keys
 - connection strings
 
-The built-in memory save tool rejects obvious sensitive patterns, and the orchestration guidance also instructs the model not to save confidential data. This includes sensitive identity details such as a user's date of birth or birthday.
+The built-in memory save tool rejects obvious sensitive patterns, and the orchestration guidance also instructs the model not to save confidential data such as passwords, API keys, tokens, credit card numbers, Social Security numbers, private keys, or connection strings.
 
 ## How It Works
 

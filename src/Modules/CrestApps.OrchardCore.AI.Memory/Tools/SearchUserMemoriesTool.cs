@@ -32,7 +32,7 @@ public sealed class SearchUserMemoriesTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Searches the current authenticated user's private memories for relevant preferences and durable details.";
+    public override string Description => "Searches the current authenticated user's private memories for relevant preferences, projects, recurring topics, interests, and other durable details.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 

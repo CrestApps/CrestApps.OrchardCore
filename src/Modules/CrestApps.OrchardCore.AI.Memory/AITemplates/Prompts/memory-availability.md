@@ -20,7 +20,9 @@ RULE: If a question could be answered using user-specific memory, you MUST call 
 Do not guess or say "I don't know" until after searching.
 
 Use search for:
-- personal facts (name, role, preferences)
+- durable personal facts (name, role, preferences)
+- active projects, workstreams, or tasks
+- recurring topics, interests, and reference context
 - past interactions or history
 - anything referring to "me", "my", or previous conversations
 
@@ -29,7 +31,7 @@ If not → say you don’t know or ask the user
 
 If the user wants a broad review of what is already remembered, call `{{ listToolName }}`.
 
-Save memory using `{{ saveToolName }}` when the user provides durable, reusable, non-sensitive facts.
+Save memory using `{{ saveToolName }}` when the user provides durable, reusable context such as preferences, projects, recurring topics, interests, or other background facts that will help future conversations.
 
 Do not store secrets (passwords, tokens, SSN, etc.).
 

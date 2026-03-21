@@ -48,17 +48,17 @@ public sealed class Startup : StartupBase
 
         services.AddAITool<SearchUserMemoriesTool>(SearchUserMemoriesTool.TheName)
             .WithTitle("Search User Memories")
-            .WithDescription("Search the current authenticated user's long-term memory for relevant durable preferences, identity details, and background facts that were saved from prior conversations.")
+            .WithDescription("Search the current authenticated user's long-term memory for relevant preferences, active projects, recurring topics, interests, identity details, and other reusable background facts saved from prior conversations.")
             .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<ListUserMemoriesTool>(ListUserMemoriesTool.TheName)
             .WithTitle("List User Memories")
-            .WithDescription("List the current authenticated user's saved long-term memories when you need to review what durable non-sensitive facts are already known about them.")
+            .WithDescription("List the current authenticated user's saved long-term memories when you need to review what durable preferences, projects, topics, interests, and other background facts are already known about them.")
             .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<SaveUserMemoryTool>(SaveUserMemoryTool.TheName)
             .WithTitle("Save User Memory")
-            .WithDescription("Create or update a long-term memory for the current authenticated user when they reveal a durable, non-sensitive fact that should persist across future conversations, even if they did not explicitly ask to save it.")
+            .WithDescription("Create or update a long-term memory for the current authenticated user when they reveal durable context such as preferences, active projects, recurring topics, interests, or other facts that should persist across future conversations, even if they did not explicitly ask to save it.")
             .WithPurpose(AIToolPurposes.Memory);
 
         services.AddAITool<RemoveUserMemoryTool>(RemoveUserMemoryTool.TheName)
