@@ -18,6 +18,16 @@ public sealed class ProfileTemplateMetadata
     public string ConnectionName { get; set; }
 
     /// <summary>
+    /// Gets or sets the chat deployment identifier to pre-fill.
+    /// </summary>
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier to pre-fill.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the orchestrator to use.
     /// </summary>
     public string OrchestratorName { get; set; }

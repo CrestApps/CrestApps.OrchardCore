@@ -5,7 +5,7 @@
 @model AIProfileChatModeViewModel
 
 <div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
-    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat Mode"]</label>
+    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat mode"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select" id="chatModeSelector">
         </select>

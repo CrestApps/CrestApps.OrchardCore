@@ -34,22 +34,19 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        return Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
+        var dataSourceResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
-            var ragMetadata = template.As<AIDataSourceRagMetadata>();
-
-            var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
-            model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
-            model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
-            model.IsInScope = ragMetadata.IsInScope;
-            model.Filter = ragMetadata.Filter;
-
-            var metadata = template.As<DataSourceMetadata>();
-            model.DataSourceId = metadata.DataSourceId;
-            model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Content:2")
+            await PopulateViewModelAsync(template, model);
+        }).Location("Content:7%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
+        {
+            await PopulateViewModelAsync(template, model);
+        }).Location("Content:10%Parameters;5")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        return Combine(dataSourceResult, parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -114,5 +111,21 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         });
 
         return Edit(template, context);
+    }
+
+    private async Task PopulateViewModelAsync(AIProfileTemplate template, EditProfileDataSourcesViewModel model)
+    {
+        var ragMetadata = template.As<AIDataSourceRagMetadata>();
+
+        var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+        model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
+        model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
+        model.IsInScope = ragMetadata.IsInScope;
+        model.Filter = ragMetadata.Filter;
+
+        var metadata = template.As<DataSourceMetadata>();
+        model.DataSourceId = metadata.DataSourceId;
+        model.DataSources = await _dataSourceStore.GetAllAsync();
     }
 }

@@ -6,7 +6,7 @@
 
 <div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
     <label asp-for="ChatDeploymentId" class="form-label">
-        @T["Chat Model"]
+        @T["Chat deployment"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select the deployment to use for chat completions."]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
@@ -19,8 +19,8 @@
 
 <div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
     <label asp-for="UtilityDeploymentId" class="form-label">
-        @T["Utility Model (Optional)"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a lightweight model for auxiliary tasks. Falls back to the global default if not set."]">
+        @T["Utility deployment"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set."]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>

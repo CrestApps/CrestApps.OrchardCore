@@ -3,64 +3,64 @@ using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
-internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
-    public AIProfileDeploymentDisplayDriver(
+    public AIProfileTemplateDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IOptions<AIOptions> aiOptions,
-        IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
+        IStringLocalizer<AIProfileTemplateDeploymentDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
+            if (template.Source != AITemplateSources.Profile)
             {
                 return;
             }
 
-            model.ChatDeploymentId = profile.ChatDeploymentId;
-            model.UtilityDeploymentId = profile.UtilityDeploymentId;
+            var metadata = template.As<ProfileTemplateMetadata>();
+            model.ChatDeploymentId = metadata.ChatDeploymentId;
+            model.UtilityDeploymentId = metadata.UtilityDeploymentId;
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-        }).Location("Content:1%Deployments;2");
+        }).Location("Content:1%Deployments;2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out _))
+        if (template.Source != AITemplateSources.Profile)
         {
             return null;
         }
 
         var model = new EditProfileDeploymentViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.ChatDeploymentId = model.ChatDeploymentId;
-        profile.UtilityDeploymentId = model.UtilityDeploymentId;
+        var metadata = template.As<ProfileTemplateMetadata>();
+        metadata.ChatDeploymentId = model.ChatDeploymentId;
+        metadata.UtilityDeploymentId = model.UtilityDeploymentId;
+        template.Put(metadata);
 
-        return Edit(profile, context);
+        return Edit(template, context);
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)

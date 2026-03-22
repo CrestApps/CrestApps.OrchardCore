@@ -14,24 +14,21 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
 /// Display driver for Profile-source AI templates.
-/// Manages connection, profile-specific fields, and model parameters
+/// Manages orchestration, profile-specific fields, and model parameters
 /// stored in <see cref="ProfileTemplateMetadata"/>.
 /// </summary>
 internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
-    private readonly AIProviderOptions _providerOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly IChatResponseHandlerResolver _handlerResolver;
 
     internal readonly IStringLocalizer S;
 
     public ProfileTemplateDisplayDriver(
-        IOptions<AIProviderOptions> providerOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IChatResponseHandlerResolver handlerResolver,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)
     {
-        _providerOptions = providerOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
         _handlerResolver = handlerResolver;
         S = stringLocalizer;
@@ -43,18 +40,8 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
         var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
         {
-            model.ConnectionName = metadata.ConnectionName;
             model.OrchestratorName = metadata.OrchestratorName;
             model.InitialResponseHandlerName = metadata.InitialResponseHandlerName;
-
-            model.ConnectionNames = _providerOptions.Providers
-                .SelectMany(p => p.Value.Connections)
-                .Select(c => new SelectListItem(
-                    c.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : c.Key,
-                    c.Key))
-                .DistinctBy(x => x.Value)
-                .OrderBy(x => x.Text)
-                .ToList();
 
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
                 .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
@@ -67,54 +54,40 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
                     .OrderBy(x => x.Text)
                     .ToList()
                 : [];
-        }).Location("Content:2")
+        }).Location("Content:2%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-        var profileFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateProfileFields_Edit", model =>
+        var generalFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateGeneralFields_Edit", model =>
         {
-            model.WelcomeMessage = metadata.WelcomeMessage;
-            model.PromptTemplate = metadata.PromptTemplate;
-            model.PromptSubject = metadata.PromptSubject;
-            model.Description = metadata.Description;
-            model.ProfileType = metadata.ProfileType;
-            model.AgentAvailability = metadata.AgentAvailability;
-            model.TitleType = metadata.TitleType;
+            PopulateProfileFields(metadata, model);
+        }).Location("Content:5%General;1")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-            model.ProfileTypes =
-            [
-                new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
-                new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
-                new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
-                new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
-            ];
+        var interactionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInteractionFields_Edit", model =>
+        {
+            PopulateProfileFields(metadata, model);
+        }).Location("Content:1%Interactions;3")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-            model.TitleTypes =
-            [
-                new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
-                new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
-            ];
+        var instructionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInstructionFields_Edit", model =>
+        {
+            PopulateProfileFields(metadata, model);
+        }).Location("Content:1%Instructions;4")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-            model.AvailabilityTypes =
-            [
-                new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
-                new SelectListItem(S["Always available"], nameof(AgentAvailability.AlwaysAvailable)),
-            ];
-        }).Location("Content:5")
+        var systemInstructionsResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateSystemInstructions_Edit", model =>
+        {
+            PopulateParameters(metadata, model);
+        }).Location("Content:10%Instructions;4")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var parametersResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateParameters_Edit", model =>
         {
-            model.SystemMessage = metadata.SystemMessage;
-            model.Temperature = metadata.Temperature;
-            model.TopP = metadata.TopP;
-            model.FrequencyPenalty = metadata.FrequencyPenalty;
-            model.PresencePenalty = metadata.PresencePenalty;
-            model.MaxOutputTokens = metadata.MaxOutputTokens;
-            model.PastMessagesCount = metadata.PastMessagesCount;
-        }).Location("Content:10")
+            PopulateParameters(metadata, model);
+        }).Location("Content:1%Parameters;5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-        return Combine(connectionResult, profileFieldsResult, parametersResult);
+        return Combine(connectionResult, generalFieldsResult, interactionFieldsResult, instructionFieldsResult, systemInstructionsResult, parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -129,7 +102,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var connectionModel = new AIProfileTemplateConnectionViewModel();
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
-        metadata.ConnectionName = connectionModel.ConnectionName;
+        metadata.ConnectionName = null;
         metadata.OrchestratorName = connectionModel.OrchestratorName;
         metadata.InitialResponseHandlerName = connectionModel.InitialResponseHandlerName?.Trim();
 
@@ -163,5 +136,47 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         template.Put(metadata);
 
         return Edit(template, context);
+    }
+
+    private void PopulateProfileFields(ProfileTemplateMetadata metadata, AIProfileTemplateProfileFieldsViewModel model)
+    {
+        model.WelcomeMessage = metadata.WelcomeMessage;
+        model.PromptTemplate = metadata.PromptTemplate;
+        model.PromptSubject = metadata.PromptSubject;
+        model.Description = metadata.Description;
+        model.ProfileType = metadata.ProfileType;
+        model.AgentAvailability = metadata.AgentAvailability;
+        model.TitleType = metadata.TitleType;
+
+        model.ProfileTypes =
+        [
+            new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
+            new SelectListItem(S["Utility"], nameof(AIProfileType.Utility)),
+            new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
+            new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
+        ];
+
+        model.TitleTypes =
+        [
+            new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
+            new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
+        ];
+
+        model.AvailabilityTypes =
+        [
+            new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
+            new SelectListItem(S["Always available"], nameof(AgentAvailability.AlwaysAvailable)),
+        ];
+    }
+
+    private static void PopulateParameters(ProfileTemplateMetadata metadata, AIProfileTemplateParametersViewModel model)
+    {
+        model.SystemMessage = metadata.SystemMessage;
+        model.Temperature = metadata.Temperature;
+        model.TopP = metadata.TopP;
+        model.FrequencyPenalty = metadata.FrequencyPenalty;
+        model.PresencePenalty = metadata.PresencePenalty;
+        model.MaxOutputTokens = metadata.MaxOutputTokens;
+        model.PastMessagesCount = metadata.PastMessagesCount;
     }
 }

@@ -25,7 +25,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
     private readonly DefaultAIOptions _defaultAIOptions;
-    private readonly AIProviderOptions _connectionOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
@@ -34,7 +33,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         INamedCatalog<AIProfile> profilesCatalog,
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AIOptions> aiOptions,
-        IOptions<AIProviderOptions> connectionOptions,
         DefaultAIOptions defaultAIOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IAuthorizationService authorizationService,
@@ -47,7 +45,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         _httpContextAccessor = httpContextAccessor;
         _aiOptions = aiOptions.Value;
         _defaultAIOptions = defaultAIOptions;
-        _connectionOptions = connectionOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
         S = stringLocalizer;
     }
@@ -67,53 +64,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        var mainFieldsResult = Initialize<EditProfileMainFieldsViewModel>("AIProfileMainFields_Edit", model =>
-        {
-            model.Name = profile.Name;
-            model.DisplayText = profile.DisplayText;
-            model.IsNew = context.IsNew;
-        }).Location("Content:1");
-
-        var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
-        {
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
-            {
-                return;
-            }
-
-            if (profileSource is not null && _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
-            {
-                if (provider.Connections.Count == 1)
-                {
-                    // At this point, there is no deployment associated with the profile. Check the connections to obtain available deployments.
-
-                    var connection = provider.Connections.First();
-                    model.ConnectionName = connection.Key;
-                }
-                else
-                {
-                    model.ConnectionName = profile.ConnectionName;
-                }
-
-                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(x.Value.TryGetValue("ConnectionNameAlias", out var a) ? a.ToString() : x.Key, x.Key)).ToArray();
-            }
-            else
-            {
-                model.ConnectionNames = [];
-            }
-
-            // Populate orchestrator selection when multiple orchestrators are registered.
-            var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-            if (orchestrators.Count > 1)
-            {
-                model.OrchestratorName = profile.OrchestratorName;
-                model.Orchestrators = orchestrators
-                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
-                    .ToArray();
-            }
-        }).Location("Content:2");
-
-        var fieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", model =>
+        void PopulateProfileFields(EditProfileViewModel model)
         {
             var metadata = profile.As<AIProfileMetadata>();
             var agentMetadata = profile.As<AgentMetadata>();
@@ -145,9 +96,9 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
                 new SelectListItem(S["Always available"], nameof(AgentAvailability.AlwaysAvailable)),
             ];
-        }).Location("Content:5");
+        }
 
-        var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", model =>
+        void PopulateParameters(ProfileMetadataViewModel model)
         {
             var metadata = profile.As<AIProfileMetadata>();
 
@@ -162,9 +113,55 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
 
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
-        }).Location("Content:10");
+        }
 
-        return Combine(mainFieldsResult, connectionFieldResult, fieldsResult, parametersResult);
+        var mainFieldsResult = Initialize<EditProfileMainFieldsViewModel>("AIProfileMainFields_Edit", model =>
+        {
+            model.Name = profile.Name;
+            model.DisplayText = profile.DisplayText;
+            model.IsNew = context.IsNew;
+        }).Location("Content:1%General;1");
+
+        var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
+        {
+            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out _))
+            {
+                return;
+            }
+
+            var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+            if (orchestrators.Count > 1)
+            {
+                model.OrchestratorName = profile.OrchestratorName;
+                model.Orchestrators = orchestrators
+                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                    .ToArray();
+            }
+        }).Location("Content:2%General;1");
+
+        var generalFieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", PopulateProfileFields)
+            .Location("Content:5%General;1");
+
+        var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
+            .Location("Content:1%Interactions;3");
+
+        var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
+            .Location("Content:5%Instructions;4");
+
+        var systemInstructionsResult = Initialize<ProfileMetadataViewModel>("AIProfileSystemInstructions_Edit", PopulateParameters)
+            .Location("Content:10%Instructions;4");
+
+        var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", PopulateParameters)
+            .Location("Content:1%Parameters;5");
+
+        return Combine(
+            mainFieldsResult,
+            connectionFieldResult,
+            generalFieldsResult,
+            interactionFieldsResult,
+            instructionFieldsResult,
+            systemInstructionsResult,
+            parametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -201,16 +198,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.DisplayText), S["Title is required."]);
         }
 
-        if (!string.IsNullOrEmpty(connectionModel.ConnectionName))
-        {
-            if (_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource) &&
-                _connectionOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider) &&
-                !provider.Connections.TryGetValue(connectionModel.ConnectionName, out _))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(connectionModel.ConnectionName), S["Invalid connection provided."]);
-            }
-        }
-
         if (model.ProfileType == AIProfileType.TemplatePrompt)
         {
             if (string.IsNullOrEmpty(model.PromptTemplate))
@@ -242,7 +229,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.Description = model.Description?.Trim();
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
-        profile.ConnectionName = connectionModel.ConnectionName;
+        profile.ConnectionName = null;
         profile.OrchestratorName = connectionModel.OrchestratorName;
 
         var parametersModel = new ProfileMetadataViewModel();

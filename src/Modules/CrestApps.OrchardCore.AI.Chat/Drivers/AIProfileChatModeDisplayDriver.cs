@@ -40,7 +40,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:5.3")
+        }).Location("Content:10%Interactions;3")
         .RenderWhen(async () =>
         {
             if (profile.Type != AIProfileType.Chat)

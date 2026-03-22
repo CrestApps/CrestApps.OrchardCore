@@ -4,7 +4,7 @@
 @model ChatInteractionChatModeSettingsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat Interactions Mode"]</label>
+    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat mode"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select">
         </select>

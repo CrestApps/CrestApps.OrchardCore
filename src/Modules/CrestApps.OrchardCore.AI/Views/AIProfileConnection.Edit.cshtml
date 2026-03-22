@@ -20,24 +20,6 @@ else
     <input type="hidden" asp-for="OrchestratorName" />
 }
 
-@if (Model.ConnectionNames?.Count > 1)
-{
-    <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" asp-items="Model.ConnectionNames" class="form-select">
-                <option value="">@T["Default connection"]</option>
-            </select>
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            <span class="hint">@T["The connection to use for this profile."]</span>
-        </div>
-    </div>
-}
-else
-{
-    <input type="hidden" asp-for="ConnectionName" />
-}
-
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const orchestratorSelector = document.getElementById('orchestrator-selector');
@@ -59,10 +41,7 @@ else
             }
         }
 
-        // Initial render
         updateFieldVisibility();
-
-        // React to user changes
         orchestratorSelector.addEventListener('change', updateFieldVisibility);
     });
 </script>

@@ -120,12 +120,21 @@ After you start storing production memory data, avoid changing the configured ma
 
 #### AI Profiles
 
-AI Profiles have a **Memory** section with **Enable User Memory**.
+AI Profiles expose **Enable User Memory** in the **Interactions** card of the profile editor.
 
 - Default: **disabled**
 - Scope: per profile
 
 This lets you opt in only on the profiles where cross-session personalization is appropriate.
+
+#### AI Profile Templates
+
+Profile-source AI Templates also expose **Enable User Memory** in the **Interactions** card.
+
+- Default: **disabled**
+- Scope: persisted with the template and applied to new profiles created from it
+
+This makes it easy to preconfigure memory behavior when you create reusable chat profile templates.
 
 #### Chat Interactions
 

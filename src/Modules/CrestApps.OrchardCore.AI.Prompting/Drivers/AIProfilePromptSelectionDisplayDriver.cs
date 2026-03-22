@@ -37,7 +37,7 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
             model.PromptParameters = SerializeParameters(promptMetadata.Parameters);
 
             PopulateViewModel(model, listableTemplates);
-        }).Location("Content:9");
+        }).Location("Content:1%Instructions;4");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

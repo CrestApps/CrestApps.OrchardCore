@@ -1,0 +1,101 @@
+@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditProfileViewModel
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-template-prompt")@(Model.ProfileType == AIProfileType.TemplatePrompt ? string.Empty : " d-none")">
+    <label asp-for="PromptTemplate" class="@Orchard.GetLabelClasses()">@T["Prompt template"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <textarea asp-for="PromptTemplate" class="form-control content-preview-text" rows="5"></textarea>
+        <span class="hint">@T["When using the session tool, the prompt is dynamically generated based on a prompt template. You can structure the prompt using Liquid syntax and incorporate the <code>{0}</code> and <code>{1}</code> variables.", "session", "profile"]</span>
+    </div>
+</div>
+
+<style asp-name="codemirror"></style>
+<script asp-name="codemirror" at="Foot"></script>
+<script asp-name="codemirror-mode-javascript" at="Foot"></script>
+<script asp-name="codemirror-addon-display-autorefresh" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-simple" at="Foot"></script>
+<script asp-name="codemirror-addon-mode-multiplex" at="Foot"></script>
+<script asp-name="codemirror-mode-xml" at="Foot"></script>
+<script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const convertToKebabCase = (str) => {
+            return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+        };
+
+        const initializeLiquidEditor = (textArea) => {
+            if (!textArea) {
+                return;
+            }
+
+            const editor = CodeMirror.fromTextArea(textArea, {
+                autoRefresh: true,
+                lineNumbers: true,
+                styleActiveLine: true,
+                matchBrackets: true,
+                mode: { name: "liquid" },
+            });
+
+            editor.on('change', function (cmEditor) {
+                cmEditor.save();
+                document.dispatchEvent(new Event('contentpreview:render'));
+            });
+        };
+
+        const profileType = document.getElementById('@Html.IdFor(x => x.ProfileType)');
+        const addInitialPrompt = document.getElementById('@Html.IdFor(x => x.AddInitialPrompt)');
+        const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
+        const initialPromptGroup = document.getElementById('initialPromptGroup');
+        const agentAvailability = document.getElementById('@Html.IdFor(x => x.AgentAvailability)');
+        const agentAvailabilityWarning = document.getElementById('agentAvailabilityWarning');
+
+        const toggleInitialPromptFields = () => {
+            if (!profileType || !addInitialPrompt || !welcomeMessageGroup || !initialPromptGroup) {
+                return;
+            }
+
+            const isChatType = profileType.value === 'Chat';
+            const showInitialPrompt = addInitialPrompt.checked;
+            welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
+            initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
+        };
+
+        if (profileType) {
+            profileType.addEventListener('change', function (e) {
+                const value = e.target.value;
+                const className = 'profile-type-' + convertToKebabCase(value);
+                const elements = document.querySelectorAll('.profile-type');
+
+                for (let i = 0; i < elements.length; i++) {
+                    const element = elements[i];
+
+                    if (element.classList.contains(className)) {
+                        element.classList.remove('d-none');
+                    } else {
+                        element.classList.add('d-none');
+                    }
+                }
+
+                toggleInitialPromptFields();
+            });
+
+            profileType.dispatchEvent(new Event('change'));
+        }
+
+        if (addInitialPrompt) {
+            addInitialPrompt.addEventListener('change', toggleInitialPromptFields);
+        }
+
+        if (agentAvailability && agentAvailabilityWarning) {
+            agentAvailability.addEventListener('change', function () {
+                agentAvailabilityWarning.classList.toggle('d-none', this.value !== 'AlwaysAvailable');
+            });
+        }
+
+        toggleInitialPromptFields();
+        initializeLiquidEditor(document.getElementById('@Html.IdFor(x => x.PromptTemplate)'));
+    });
+</script>
