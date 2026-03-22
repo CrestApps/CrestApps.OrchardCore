@@ -28,8 +28,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
-    private readonly IOptions<AIProviderOptions> _providerOptions;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -41,8 +41,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
+        IAIDeploymentManager deploymentManager,
         IOptions<ChatDocumentsOptions> extractorOptions,
-        IOptions<AIProviderOptions> providerOptions,
         ILogger<AIProfileTemplateDocumentsDisplayDriver> logger,
         IStringLocalizer<AIProfileTemplateDocumentsDisplayDriver> stringLocalizer)
     {
@@ -52,8 +52,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         _documentStore = documentStore;
         _chunkStore = chunkStore;
         _documentProcessingService = documentProcessingService;
+        _deploymentManager = deploymentManager;
         _extractorOptions = extractorOptions;
-        _providerOptions = providerOptions;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -151,9 +151,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             if (model.Files != null && model.Files.Length > 0)
             {
                 var profileMetadata = template.As<ProfileTemplateMetadata>();
-                var providerName = ResolveProviderName(profileMetadata.ConnectionName);
-
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(providerName, profileMetadata.ConnectionName);
+                var deployment = await ResolveDeploymentAsync(profileMetadata);
+                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(
+                    deployment?.ProviderName,
+                    deployment?.ConnectionName);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -227,26 +228,14 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         return Edit(template, context);
     }
 
-    /// <summary>
-    /// Resolves the provider name for a given connection name by searching through configured providers.
-    /// </summary>
-    private string ResolveProviderName(string connectionName)
+    private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {
-        if (string.IsNullOrEmpty(connectionName))
-        {
-            return null;
-        }
-
-        foreach (var provider in _providerOptions.Value.Providers)
-        {
-            if (provider.Value.Connections != null &&
-                provider.Value.Connections.ContainsKey(connectionName))
-            {
-                return provider.Key;
-            }
-        }
-
-        return null;
+        return await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Chat,
+            deploymentId: profileMetadata.ChatDeploymentId)
+            ?? await _deploymentManager.ResolveAsync(
+                AIDeploymentType.Utility,
+                deploymentId: profileMetadata.UtilityDeploymentId);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

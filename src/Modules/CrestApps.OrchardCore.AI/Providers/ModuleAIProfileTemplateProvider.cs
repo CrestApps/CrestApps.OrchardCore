@@ -150,11 +150,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
             profileMetadata.ProfileType = profileType;
         }
 
-        if (props.TryGetValue(nameof(ProfileTemplateMetadata.ConnectionName), out var connectionName))
-        {
-            profileMetadata.ConnectionName = connectionName;
-        }
-
         if (props.TryGetValue(nameof(ProfileTemplateMetadata.ChatDeploymentId), out var chatDeploymentId))
         {
             profileMetadata.ChatDeploymentId = chatDeploymentId;

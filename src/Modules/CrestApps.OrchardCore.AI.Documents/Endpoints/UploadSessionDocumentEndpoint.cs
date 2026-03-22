@@ -34,6 +34,7 @@ internal static class UploadSessionDocumentEndpoint
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IAIChatSessionManager sessionManager,
+        IAIDeploymentManager deploymentManager,
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
@@ -111,7 +112,8 @@ internal static class UploadSessionDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, profile.ConnectionName);
+        var connectionName = await ResolveConnectionNameAsync(profile, deploymentManager);
+        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, connectionName);
 
         session.Documents ??= [];
 
@@ -203,6 +205,20 @@ internal static class UploadSessionDocumentEndpoint
     {
         var profileManager = serviceProvider.GetService(typeof(IAIProfileManager)) as IAIProfileManager;
         return profileManager != null ? await profileManager.FindByIdAsync(profileId) : null;
+    }
+
+    private static async Task<string> ResolveConnectionNameAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
+    {
+        var deployment = await deploymentManager.ResolveAsync(
+            AIDeploymentType.Chat,
+            deploymentId: profile.ChatDeploymentId,
+            providerName: profile.Source)
+            ?? await deploymentManager.ResolveAsync(
+                AIDeploymentType.Utility,
+                deploymentId: profile.UtilityDeploymentId,
+                providerName: profile.Source);
+
+        return deployment?.ConnectionName;
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

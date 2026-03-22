@@ -144,7 +144,6 @@ You can create or update AI chat profiles via the Recipes module using the follo
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName":"<!-- Connection name; leave blank to derive from the selected deployment. -->",
           "ChatDeploymentId":"<!-- Deployment ID for chat completions; leave blank for default. -->",
           "UtilityDeploymentId":"<!-- Deployment ID for utility/auxiliary tasks; leave blank for default. -->",
           "Properties": {

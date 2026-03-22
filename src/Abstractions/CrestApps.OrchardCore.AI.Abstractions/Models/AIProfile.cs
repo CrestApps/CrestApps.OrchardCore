@@ -30,8 +30,10 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection name to use for this profile.
+    /// Gets or sets the legacy connection name for the profile.
+    /// Retained for backward compatibility with older stored profiles.
     /// </summary>
+    [Obsolete("Use ChatDeploymentId and UtilityDeploymentId. The selected deployment determines the connection.")]
     public string ConnectionName { get; set; }
 
     /// <summary>
@@ -121,7 +123,9 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             Type = Type,
             Description = Description,
             OrchestratorName = OrchestratorName,
+#pragma warning disable CS0618 // Type or member is obsolete
             ConnectionName = ConnectionName,
+#pragma warning restore CS0618 // Type or member is obsolete
             ChatDeploymentId = ChatDeploymentId,
             UtilityDeploymentId = UtilityDeploymentId,
             TitleType = TitleType,

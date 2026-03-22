@@ -229,7 +229,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.Description = model.Description?.Trim();
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
-        profile.ConnectionName = null;
         profile.OrchestratorName = connectionModel.OrchestratorName;
 
         var parametersModel = new ProfileMetadataViewModel();

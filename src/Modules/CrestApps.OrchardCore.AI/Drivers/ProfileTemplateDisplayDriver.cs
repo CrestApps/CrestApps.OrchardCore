@@ -102,7 +102,6 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var connectionModel = new AIProfileTemplateConnectionViewModel();
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
-        metadata.ConnectionName = null;
         metadata.OrchestratorName = connectionModel.OrchestratorName;
         metadata.InitialResponseHandlerName = connectionModel.InitialResponseHandlerName?.Trim();
 

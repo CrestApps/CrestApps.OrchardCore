@@ -19,6 +19,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class PostSessionProcessingService
 {
     private readonly IAIClientFactory _clientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIToolsService _toolsService;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IServiceProvider _serviceProvider;
@@ -36,9 +37,11 @@ public sealed class PostSessionProcessingService
         DefaultAIOptions defaultOptions,
         IServiceProvider serviceProvider,
         IClock clock,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IAIDeploymentManager deploymentManager = null)
     {
         _clientFactory = clientFactory;
+        _deploymentManager = deploymentManager;
         _toolsService = toolsService;
         _aiTemplateService = aiTemplateService;
         _serviceProvider = serviceProvider;
@@ -792,14 +795,29 @@ public sealed class PostSessionProcessingService
 
     private async Task<IChatClient> GetChatClientAsync(AIProfile profile)
     {
+        if (_deploymentManager != null)
+        {
+            var deployment = await _deploymentManager.ResolveAsync(
+                AIDeploymentType.Utility,
+                deploymentId: profile.UtilityDeploymentId,
+                providerName: profile.Source)
+                ?? await _deploymentManager.ResolveAsync(
+                    AIDeploymentType.Chat,
+                    deploymentId: profile.ChatDeploymentId,
+                    providerName: profile.Source);
+
+            if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.Name))
+            {
+                return await _clientFactory.CreateChatClientAsync(profile.Source, deployment.ConnectionName, deployment.Name);
+            }
+        }
+
         if (!_providerOptions.Providers.TryGetValue(profile.Source, out var provider))
         {
             return null;
         }
 
-        var connectionName = !string.IsNullOrEmpty(profile.ConnectionName)
-            ? profile.ConnectionName
-            : provider.DefaultConnectionName;
+        var connectionName = provider.DefaultConnectionName;
 
         if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
         {
