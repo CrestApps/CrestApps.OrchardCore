@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Data.Migration;
 using OrchardCore.Documents;
@@ -26,12 +28,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
             foreach (var connection in connectionDoc.Records.Values)
             {
-#pragma warning disable CS0618 // Type or member is obsolete
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.ChatDeploymentName, AIDeploymentType.Chat);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.EmbeddingDeploymentName, AIDeploymentType.Embedding);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.ImagesDeploymentName, AIDeploymentType.Image);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.UtilityDeploymentName, AIDeploymentType.Utility);
-#pragma warning restore CS0618 // Type or member is obsolete
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyChatDeploymentName(), AIDeploymentType.Chat);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyEmbeddingDeploymentName(), AIDeploymentType.Embedding);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyUtilityDeploymentName(), AIDeploymentType.Utility);
             }
 
             if (needsSave)
@@ -41,6 +41,59 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         });
 
         return Task.FromResult(1);
+    }
+
+#pragma warning disable CA1822 // Mark members as static
+    public int UpdateFrom1()
+#pragma warning restore CA1822 // Mark members as static
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProfile>>();
+            var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
+
+            var deployments = (await deploymentManager.GetAllByTypeAsync(AIDeploymentType.Chat)).ToList();
+            var profiles = await profileCatalog.GetAllAsync();
+
+            var updatedCount = 0;
+            var skippedCount = 0;
+
+            foreach (var profile in profiles)
+            {
+                if (!string.IsNullOrEmpty(profile.ChatDeploymentId))
+                {
+                    continue;
+                }
+
+                var deploymentId = FindDefaultChatDeploymentId(profile, deployments);
+
+                if (string.IsNullOrEmpty(deploymentId))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                profile.ChatDeploymentId = deploymentId;
+                await profileCatalog.UpdateAsync(profile);
+                updatedCount++;
+            }
+
+            if (updatedCount == 0 && skippedCount == 0)
+            {
+                return;
+            }
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Backfilled ChatDeploymentId for {UpdatedCount} AI profiles. Skipped {SkippedCount} profiles that had no matching legacy chat deployment.",
+                    updatedCount,
+                    skippedCount);
+            }
+        });
+
+        return 2;
     }
 
     private static bool TryCreateDeployment(
@@ -80,5 +133,26 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         deploymentDoc.Records[deployment.ItemId] = deployment;
         return true;
+    }
+
+    private static string FindDefaultChatDeploymentId(AIProfile profile, IEnumerable<AIDeployment> deployments)
+    {
+        var connectionName = profile.GetLegacyConnectionName();
+
+        if (string.IsNullOrWhiteSpace(connectionName) || string.IsNullOrWhiteSpace(profile.Source))
+        {
+            return null;
+        }
+
+        var candidates = deployments
+            .Where(deployment =>
+                deployment.Type == AIDeploymentType.Chat &&
+                string.Equals(deployment.ProviderName, profile.Source, StringComparison.OrdinalIgnoreCase) &&
+                (string.Equals(deployment.ConnectionName, connectionName, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return candidates.FirstOrDefault(deployment => deployment.IsDefault)?.ItemId
+            ?? candidates.FirstOrDefault()?.ItemId;
     }
 }

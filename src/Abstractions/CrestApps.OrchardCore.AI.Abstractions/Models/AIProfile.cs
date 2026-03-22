@@ -108,6 +108,13 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     /// </summary>
     public JsonObject Settings { get; init; } = [];
 
+    public string GetLegacyConnectionName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ConnectionName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
     /// <summary>
     /// Creates a deep copy of the current profile.
     /// </summary>
