@@ -16,6 +16,26 @@ Provides UI to interact with AI models using the profiles.
 
 The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles.
 
+### AI Profile and Template Editor Layout
+
+The AI Profile editor groups the most common profile settings into five cards at the top of the page:
+
+- **General** — title, technical name, data source, profile type, orchestrator, and admin menu visibility
+- **Deployments** — chat deployment and utility deployment
+- **Interactions** — title behavior, welcome/initial prompt behavior, prompt subject, chat mode, and per-profile user memory
+- **Instructions** — prompt template selection, template-specific prompt text, and system instructions
+- **Parameters** — model tuning values and data-source retrieval parameters
+
+Profile-source AI Templates now follow the same top-level card grouping:
+
+- **General** — title, technical name, category, profile type, orchestrator, response handler, data source, and admin menu visibility
+- **Deployments** — chat deployment and utility deployment
+- **Interactions** — title behavior, welcome message, prompt subject, chat mode, and per-template user memory
+- **Instructions** — prompt template text and system instructions
+- **Parameters** — model tuning values and data-source retrieval parameters
+
+Additional advanced sections such as capabilities, response handling, analytics, documents, and post-session processing continue to appear below these cards in their existing sections.
+
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using OpenAI service.

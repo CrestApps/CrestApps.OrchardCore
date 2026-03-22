@@ -3,43 +3,32 @@
 
 @model AIProfileTemplateConnectionViewModel
 
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="OrchestratorName" class="@Orchard.GetLabelClasses()">@T["Orchestrator"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="OrchestratorName" class="form-select">
-            <option value="">@T["Default"]</option>
-            @foreach (var orchestrator in Model.Orchestrators)
-            {
-                <option value="@orchestrator.Value" selected="@(orchestrator.Value == Model.OrchestratorName)">@orchestrator.Text</option>
-            }
-        </select>
-        <span asp-validation-for="OrchestratorName" class="text-danger"></span>
-        <span class="hint">@T["The orchestrator to use for profiles created from this template."]</span>
-    </div>
-</div>
-
-@if (Model.ConnectionNames?.Count > 0)
+@if (Model.Orchestrators?.Count > 1)
 {
     <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+        <label asp-for="OrchestratorName" class="@Orchard.GetLabelClasses()">@T["Orchestrator"]</label>
         <div class="@Orchard.GetEndClasses()">
-            <select asp-for="ConnectionName" class="form-select">
-                <option value="">@T["Default connection"]</option>
-                @foreach (var connection in Model.ConnectionNames)
+            <select asp-for="OrchestratorName" class="form-select">
+                <option value="">@T["Default"]</option>
+                @foreach (var orchestrator in Model.Orchestrators)
                 {
-                    <option value="@connection.Value" selected="@(connection.Value == Model.ConnectionName)">@connection.Text</option>
+                    <option value="@orchestrator.Value" selected="@(orchestrator.Value == Model.OrchestratorName)">@orchestrator.Text</option>
                 }
             </select>
-            <span asp-validation-for="ConnectionName" class="text-danger"></span>
-            <span class="hint">@T["The connection to use for profiles created from this template."]</span>
+            <span asp-validation-for="OrchestratorName" class="text-danger"></span>
+            <span class="hint">@T["The orchestrator to use for profiles created from this template."]</span>
         </div>
     </div>
+}
+else
+{
+    <input type="hidden" asp-for="OrchestratorName" />
 }
 
 @if (Model.ResponseHandlers?.Count > 0)
 {
     <div class="@Orchard.GetWrapperClasses()">
-        <label asp-for="InitialResponseHandlerName" class="@Orchard.GetLabelClasses()">@T["Initial Response Handler"]</label>
+        <label asp-for="InitialResponseHandlerName" class="@Orchard.GetLabelClasses()">@T["Initial response handler"]</label>
         <div class="@Orchard.GetEndClasses()">
             <select asp-for="InitialResponseHandlerName" class="form-select">
                 <option value="">@T["Default (AI)"]</option>

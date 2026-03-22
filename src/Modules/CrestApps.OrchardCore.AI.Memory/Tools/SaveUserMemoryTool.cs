@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Memory.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -95,6 +95,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         }
 
         var store = arguments.Services.GetRequiredService<IAIMemoryStore>();
+        var manager = arguments.Services.GetRequiredService<ICatalogManager<AIMemoryEntry>>();
         var clock = arguments.Services.GetRequiredService<IClock>();
         var existingMemory = await store.FindByUserAndNameAsync(userId, name);
         var created = existingMemory is null;
@@ -111,7 +112,7 @@ public sealed class SaveUserMemoryTool : AIFunction
                 UpdatedUtc = clock.UtcNow,
             };
 
-            await store.CreateAsync(existingMemory);
+            await manager.CreateAsync(existingMemory);
         }
         else
         {
@@ -119,13 +120,8 @@ public sealed class SaveUserMemoryTool : AIFunction
             existingMemory.Description = description;
             existingMemory.Content = content;
             existingMemory.UpdatedUtc = clock.UtcNow;
-            await store.UpdateAsync(existingMemory);
+            await manager.UpdateAsync(existingMemory);
         }
-
-        await store.SaveChangesAsync();
-
-        var indexingService = arguments.Services.GetRequiredService<AIMemoryIndexingService>();
-        await indexingService.IndexAsync(existingMemory, cancellationToken);
 
         return JsonSerializer.Serialize(new
         {

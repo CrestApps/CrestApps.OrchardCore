@@ -215,7 +215,8 @@ public sealed class ChatDeploymentsStartup : StartupBase
     {
         services
             .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>()
-            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>();
     }
 }
 

@@ -13,9 +13,21 @@ public sealed class ProfileTemplateMetadata
     public AIProfileType? ProfileType { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection name to pre-fill.
+    /// Gets or sets the legacy connection name used by older templates.
+    /// Retained for backward compatibility with existing template metadata.
     /// </summary>
+    [Obsolete("Use ChatDeploymentId and UtilityDeploymentId. The selected deployment determines the connection.")]
     public string ConnectionName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chat deployment identifier to pre-fill.
+    /// </summary>
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier to pre-fill.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the orchestrator to use.

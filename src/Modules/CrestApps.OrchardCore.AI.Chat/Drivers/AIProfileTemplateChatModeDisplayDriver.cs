@@ -43,7 +43,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:5.3")
+        }).Location("Content:10%Interactions;3")
         .RenderWhen(async () =>
         {
             if (template.Source != AITemplateSources.Profile)
@@ -83,8 +83,8 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     {
         var modes = new List<SelectListItem>
         {
-            new(S["Text Only"], nameof(ChatMode.TextInput)),
-            new(S["Audio Input"], nameof(ChatMode.AudioInput)),
+            new(S["Text only"], nameof(ChatMode.TextInput)),
+            new(S["Audio input"], nameof(ChatMode.AudioInput)),
             new(S["Conversation"], nameof(ChatMode.Conversation)),
         };
 

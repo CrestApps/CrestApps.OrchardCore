@@ -72,12 +72,12 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
         var modes = new List<SelectListItem>
         {
-            new(S["Text Input"], nameof(ChatMode.TextInput)),
+            new(S["Text input"], nameof(ChatMode.TextInput)),
         };
 
         if (hasSTT)
         {
-            modes.Add(new SelectListItem(S["Audio Input"], nameof(ChatMode.AudioInput)));
+            modes.Add(new SelectListItem(S["Audio input"], nameof(ChatMode.AudioInput)));
         }
 
         if (hasSTT && hasTTS)

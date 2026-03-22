@@ -30,7 +30,6 @@ public sealed class AIProfileTemplateRecipeStep : IRecipeStep
                 ("Category", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Grouping category.")),
                 ("IsListable", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the template appears in the selection dropdown.")),
                 ("ProfileType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt", "Agent").Description("The profile type.")),
-                ("ConnectionName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("AI provider connection name.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name.")),
                 ("SystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("System prompt for the AI.")),
                 ("WelcomeMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Initial greeting.")),

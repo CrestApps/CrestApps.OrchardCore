@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Memory.Services;
 using CrestApps.OrchardCore.AI.Memory.Tools;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -31,6 +32,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()
+            .AddScoped<ICatalogManager<AIMemoryEntry>, DefaultAIMemoryManager>()
+            .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
             .AddScoped<IAIMemorySafetyService, DefaultAIMemorySafetyService>()
             .AddScoped<AIMemorySearchService>()
             .AddScoped<AIMemoryIndexingService>()

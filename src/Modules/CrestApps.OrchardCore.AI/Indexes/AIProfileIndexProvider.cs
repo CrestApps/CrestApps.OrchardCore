@@ -27,7 +27,6 @@ internal sealed class AIProfileIndexProvider : IndexProvider<AIProfile>
                     Source = profile.Source,
                     Type = profile.Type.ToString(),
                     Description = profile.Description,
-                    ConnectionName = profile.ConnectionName,
                     DeploymentId = profile.ChatDeploymentId,
                     OrchestratorName = profile.OrchestratorName,
                     OwnerId = profile.OwnerId,

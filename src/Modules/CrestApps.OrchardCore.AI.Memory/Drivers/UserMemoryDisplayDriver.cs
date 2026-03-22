@@ -1,6 +1,7 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Memory.Services;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
@@ -14,8 +15,8 @@ namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICatalogManager<AIMemoryEntry> _memoryManager;
     private readonly IAIMemoryStore _memoryStore;
-    private readonly AIMemoryIndexingService _memoryIndexingService;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -23,15 +24,15 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
+        ICatalogManager<AIMemoryEntry> memoryManager,
         IAIMemoryStore memoryStore,
-        AIMemoryIndexingService memoryIndexingService,
         INotifier notifier,
         IHtmlLocalizer<UserMemoryDisplayDriver> htmlLocalizer,
         IStringLocalizer<UserMemoryDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
+        _memoryManager = memoryManager;
         _memoryStore = memoryStore;
-        _memoryIndexingService = memoryIndexingService;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -81,11 +82,10 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
         foreach (var memory in memories)
         {
-            await _memoryStore.DeleteAsync(memory);
+            await _memoryManager.DeleteAsync(memory);
         }
 
         await _memoryStore.SaveChangesAsync();
-        await _memoryIndexingService.DeleteAsync(memories.Select(x => x.ItemId));
         await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
 
         return Edit(user, context);

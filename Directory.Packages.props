@@ -7,8 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="CrestApps.AgentSkills.OrchardCore" Version="1.0.0-preview-0002" />
-    <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0002" />
+    <PackageVersion Include="CrestApps.AgentSkills.OrchardCore" Version="1.0.0-preview-0003" />
+    <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0003" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.4.1" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="FluentFTP" Version="53.0.2" />

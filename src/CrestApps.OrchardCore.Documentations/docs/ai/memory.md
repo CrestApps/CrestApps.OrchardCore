@@ -71,6 +71,8 @@ Memory tools are only force-included for requests where user memory is enabled f
 
 Each memory is stored as a single record in the configured master index. The index stores the memory ID, `userId`, a stable memory `name`, a semantic `description`, content, timestamp, and embedding vector.
 
+Memory indexing is triggered from deferred AI memory catalog entry handlers instead of individual tools. This keeps the tenant store and external index in sync even when memory entries are created, updated, or deleted from other code paths such as admin actions or future integrations.
+
 Use short stable names for durable facts so the system can update and locate the same memory later. For example, store a remembered preferred name using a key like `preferred_name`.
 
 Each saved memory should also include a short description explaining what the value represents. For example:
@@ -120,12 +122,21 @@ After you start storing production memory data, avoid changing the configured ma
 
 #### AI Profiles
 
-AI Profiles have a **Memory** section with **Enable User Memory**.
+AI Profiles expose **Enable User Memory** in the **Interactions** card of the profile editor.
 
 - Default: **disabled**
 - Scope: per profile
 
 This lets you opt in only on the profiles where cross-session personalization is appropriate.
+
+#### AI Profile Templates
+
+Profile-source AI Templates also expose **Enable User Memory** in the **Interactions** card.
+
+- Default: **disabled**
+- Scope: persisted with the template and applied to new profiles created from it
+
+This makes it easy to preconfigure memory behavior when you create reusable chat profile templates.
 
 #### Chat Interactions
 

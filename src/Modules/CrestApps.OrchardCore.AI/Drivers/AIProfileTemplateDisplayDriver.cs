@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Services;
@@ -46,7 +47,7 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
             model.Category = template.Category;
             model.IsListable = template.IsListable;
             model.IsNew = context.IsNew;
-        }).Location("Content:1");
+        }).Location(template.Source == AITemplateSources.Profile ? "Content:1%General;1" : "Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)

@@ -29,11 +29,6 @@ public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex, ISourceA
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection name associated with the profile.
-    /// </summary>
-    public string ConnectionName { get; set; }
-
-    /// <summary>
     /// Gets or sets the deployment identifier associated with the profile.
     /// </summary>
     public string DeploymentId { get; set; }

@@ -540,7 +540,6 @@ public sealed class PostSessionProcessingServiceTests
             Name = "TestProfile",
             DisplayText = "Test Profile",
             Source = TestProviderName,
-            ConnectionName = TestConnectionName,
         };
 
         return profile;

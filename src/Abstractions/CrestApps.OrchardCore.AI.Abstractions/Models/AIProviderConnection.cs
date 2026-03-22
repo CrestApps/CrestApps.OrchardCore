@@ -42,6 +42,34 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string OwnerId { get; set; }
 
+    public string GetLegacyChatDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ChatDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyEmbeddingDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return EmbeddingDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyImageDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ImagesDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyUtilityDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return UtilityDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
     public AIProviderConnection Clone()
     {
         return new AIProviderConnection

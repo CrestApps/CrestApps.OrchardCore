@@ -43,7 +43,7 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-        }).Location("Content:4");
+        }).Location("Content:1%Deployments;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

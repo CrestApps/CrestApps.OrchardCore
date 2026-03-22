@@ -157,13 +157,6 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             profile.ChatDeploymentId = deploymentId;
         }
 
-        var connectionName = data[nameof(AIProfile.ConnectionName)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(connectionName))
-        {
-            profile.ConnectionName = connectionName;
-        }
-
         var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(welcomeMessage))

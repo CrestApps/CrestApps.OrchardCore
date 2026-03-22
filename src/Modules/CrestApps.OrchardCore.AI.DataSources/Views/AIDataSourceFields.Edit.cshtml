@@ -19,7 +19,7 @@
 }
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="SourceIndexProfileName" class="@Orchard.GetLabelClasses()">@T["Source Index"]</label>
+    <label asp-for="SourceIndexProfileName" class="@Orchard.GetLabelClasses()">@T["Source index"]</label>
     <div class="@Orchard.GetEndClasses()">
         @if (Model.IsLocked)
         {
@@ -37,7 +37,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="AIKnowledgeBaseIndexProfileName" class="@Orchard.GetLabelClasses()">@T["Knowledge Base Index"]</label>
+    <label asp-for="AIKnowledgeBaseIndexProfileName" class="@Orchard.GetLabelClasses()">@T["Knowledge base index"]</label>
     <div class="@Orchard.GetEndClasses()">
         @if (Model.IsLocked)
         {
@@ -54,14 +54,14 @@
         else
         {
             <div class="alert alert-warning mb-0">
-                @T["No knowledge base indexes are available. Create an AI Knowledge Base Index using the Indexing feature before you can use data sources."]
+                @T["No knowledge base indexes are available. Create an AI knowledge base index using the Indexing feature before you can use data sources."]
             </div>
         }
     </div>
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ContentFieldName" class="@Orchard.GetLabelClasses()">@T["Content Field"]</label>
+    <label asp-for="ContentFieldName" class="@Orchard.GetLabelClasses()">@T["Content field"]</label>
     <div class="@Orchard.GetEndClasses()">
         @if (Model.IsLocked)
         {
@@ -86,7 +86,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="TitleFieldName" class="@Orchard.GetLabelClasses()">@T["Title Field"]</label>
+    <label asp-for="TitleFieldName" class="@Orchard.GetLabelClasses()">@T["Title field"]</label>
     <div class="@Orchard.GetEndClasses()">
         @if (Model.IsLocked)
         {
@@ -111,7 +111,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="KeyFieldName" class="@Orchard.GetLabelClasses()">@T["Key Field"]</label>
+    <label asp-for="KeyFieldName" class="@Orchard.GetLabelClasses()">@T["Key field"]</label>
     <div class="@Orchard.GetEndClasses()">
         @if (Model.IsLocked)
         {

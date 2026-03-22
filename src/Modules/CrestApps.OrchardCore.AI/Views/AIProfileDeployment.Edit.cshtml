@@ -4,7 +4,7 @@
 @model EditProfileDeploymentViewModel
 
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
-    <label asp-for="ChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Chat Model"]</label>
+    <label asp-for="ChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Chat deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ChatDeploymentId" asp-items="Model.ChatDeployments" class="form-select">
             <option value="">@T["Default"]</option>
@@ -15,12 +15,12 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
-    <label asp-for="UtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Utility Model (Optional)"]</label>
+    <label asp-for="UtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Utility deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="UtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
             <option value="">@T["Default"]</option>
         </select>
         <span asp-validation-for="UtilityDeploymentId" class="text-danger"></span>
-        <span class="hint">@T["Select a lightweight model for auxiliary tasks. Falls back to the global default if not set."]</span>
+        <span class="hint">@T["Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set."]</span>
     </div>
 </div>

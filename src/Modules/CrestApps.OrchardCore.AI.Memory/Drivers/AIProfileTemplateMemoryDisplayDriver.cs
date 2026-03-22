@@ -24,7 +24,7 @@ public sealed class AIProfileTemplateMemoryDisplayDriver : DisplayDriver<AIProfi
         {
             model.EnableUserMemory = template.As<AIProfileMemorySettings>().EnableUserMemory;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:5#Memory:1")
+        }).Location("Content:15%Interactions;3")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

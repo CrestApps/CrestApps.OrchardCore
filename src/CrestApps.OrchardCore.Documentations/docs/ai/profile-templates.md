@@ -177,7 +177,6 @@ The body after the front matter becomes the **System Message**.
 | `Source` | string | `Profile` | The template source (e.g., `Profile` or `SystemPrompt`). Overrides the default. |
 | `IsListable` | bool | `true` | Whether this template appears in selection dropdowns |
 | `ProfileType` | string | `null` | Profile type: `Chat`, `Utility`, or `TemplatePrompt` |
-| `ConnectionName` | string | `null` | AI provider connection name (derived from deployment if not set) |
 | `ChatDeploymentId` | string | `null` | Deployment ID for chat completions |
 | `UtilityDeploymentId` | string | `null` | Deployment ID for auxiliary/utility tasks |
 | `WelcomeMessage` | string | `null` | Initial greeting shown to users |
@@ -373,7 +372,7 @@ Use the `AIProfileTemplate` step key to define templates in a recipe:
           "Properties": {
             "ProfileTemplateMetadata": {
               "ProfileType": "Chat",
-              "ConnectionName": "openai-main",
+              "ChatDeploymentId": "customer-support-chat",
               "SystemMessage": "You are a professional customer support agent.",
               "WelcomeMessage": "Hello! How can I help you today?",
               "TitleType": "Generated",
@@ -448,7 +447,6 @@ These fields are nested inside `Properties.ProfileTemplateMetadata`:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `ProfileType` | string | `null` | `Chat`, `Utility`, or `TemplatePrompt` |
-| `ConnectionName` | string | `null` | AI provider connection name |
 | `SystemMessage` | string | `null` | System prompt text |
 | `WelcomeMessage` | string | `null` | Initial greeting for chat profiles |
 | `TitleType` | string | `null` | `Generated`, `Fixed`, or `None` |
@@ -482,7 +480,7 @@ When a **Profile** source template is applied, the `ProfileTemplateMetadata` fie
 | Template Metadata Field | AI Profile Field | Notes |
 |------------------------|-----------------|-------|
 | `ProfileType` | `Type` | The profile type (Chat, Utility, TemplatePrompt) |
-| `ConnectionName` | `ConnectionName` | AI provider connection |
+| `ChatDeploymentId` | `ChatDeploymentId` | The selected chat deployment, which also determines the provider connection |
 | `OrchestratorName` | `OrchestratorName` | The orchestrator to use |
 | `SystemMessage` | `AIProfileMetadata.SystemMessage` | Via profile metadata |
 | `WelcomeMessage` | `WelcomeMessage` | Only for Chat profiles |
