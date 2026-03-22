@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Memory.Services;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -64,6 +65,7 @@ public sealed class RemoveUserMemoryTool : AIFunction
         }
 
         var store = arguments.Services.GetRequiredService<IAIMemoryStore>();
+        var manager = arguments.Services.GetRequiredService<ICatalogManager<AIMemoryEntry>>();
         var existingMemory = await store.FindByUserAndNameAsync(userId, name);
 
         if (existingMemory is null)
@@ -71,11 +73,8 @@ public sealed class RemoveUserMemoryTool : AIFunction
             return "No saved memory was found with that name.";
         }
 
-        await store.DeleteAsync(existingMemory);
+        await manager.DeleteAsync(existingMemory);
         await store.SaveChangesAsync();
-
-        var indexingService = arguments.Services.GetRequiredService<AIMemoryIndexingService>();
-        await indexingService.DeleteAsync([existingMemory.ItemId], cancellationToken);
 
         return JsonSerializer.Serialize(new
         {

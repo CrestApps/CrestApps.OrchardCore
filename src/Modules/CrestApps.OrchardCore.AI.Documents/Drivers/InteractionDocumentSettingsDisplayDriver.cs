@@ -42,9 +42,8 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         {
             viewModel.IndexProfileName = section.IndexProfileName;
 
-            var items= await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+            var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
-            // Here you would typically populate the IndexProfiles from your data source.
             viewModel.IndexProfiles = items.Select(x => new SelectListItem(x.Name, x.Name));
 
         }).Location("Content:5%Documents;1")
@@ -65,7 +64,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
 
         if (string.IsNullOrEmpty(model.IndexProfileName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The Index profile field is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The index profile field is required."]);
         }
         else
         {
