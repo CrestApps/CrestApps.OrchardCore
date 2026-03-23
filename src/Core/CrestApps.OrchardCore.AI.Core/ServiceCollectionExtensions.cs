@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
             .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
+            .AddScoped<ISpeechVoiceResolver, DefaultSpeechVoiceResolver>()
             .AddScoped<DefaultSpeechVoicePresenter>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
             .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())

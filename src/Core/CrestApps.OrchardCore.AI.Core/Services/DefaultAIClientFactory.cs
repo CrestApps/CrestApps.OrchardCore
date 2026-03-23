@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.AI;
@@ -152,7 +151,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
-        var connectionEntry = BuildConnectionEntry(deployment);
+        var connectionEntry = AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);
 
         foreach (var clientProvider in _clientProviders)
         {
@@ -167,6 +166,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
     }
 
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
@@ -207,7 +207,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
-        var connectionEntry = BuildConnectionEntry(deployment);
+        var connectionEntry = AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);
 
         foreach (var clientProvider in _clientProviders)
         {
@@ -221,26 +221,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
 
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
     }
-
-    public async Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
-    {
-        ArgumentNullException.ThrowIfNull(deployment);
-        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
-
-        var connectionEntry = GetConnectionEntry(deployment);
-
-        foreach (var clientProvider in _clientProviders)
-        {
-            if (!clientProvider.CanHandle(deployment.ProviderName))
-            {
-                continue;
-            }
-
-            return await clientProvider.GetSpeechVoicesAsync(connectionEntry, deployment.Name);
-        }
-
-        return [];
-    }
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
     private AIProviderConnectionEntry GetConnectionEntry(AIDeployment deployment)
     {
@@ -255,84 +236,6 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
             throw new ArgumentException($"Connection '{deployment.ConnectionName}' not found within the provider '{deployment.ProviderName}'.");
         }
 
-        return BuildConnectionEntry(deployment);
-    }
-
-    private AIProviderConnectionEntry BuildConnectionEntry(AIDeployment deployment)
-    {
-        var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-        if (deployment.Properties != null)
-        {
-            foreach (var property in deployment.Properties)
-            {
-                values[property.Key] = ConvertJsonNode(property.Value);
-            }
-        }
-
-        UnprotectApiKeys(values);
-
-        return new AIProviderConnectionEntry(values);
-    }
-
-    private object ConvertJsonNode(JsonNode node)
-    {
-        return node switch
-        {
-            JsonObject jsonObject => jsonObject.ToDictionary(
-                property => property.Key,
-                property => ConvertJsonNode(property.Value),
-                StringComparer.OrdinalIgnoreCase),
-            JsonArray jsonArray => jsonArray.Select(ConvertJsonNode).ToList(),
-            JsonValue jsonValue when jsonValue.TryGetValue<string>(out var s) => s,
-            JsonValue jsonValue when jsonValue.TryGetValue<bool>(out var b) => b,
-            JsonValue jsonValue when jsonValue.TryGetValue<int>(out var i) => i,
-            JsonValue jsonValue when jsonValue.TryGetValue<long>(out var l) => l,
-            JsonValue jsonValue when jsonValue.TryGetValue<double>(out var d) => d,
-            _ => node?.ToString(),
-        };
-    }
-
-    private void UnprotectApiKeys(IDictionary<string, object> values)
-    {
-        foreach (var (key, value) in values.ToList())
-        {
-            switch (value)
-            {
-                case IDictionary<string, object> nestedDictionary:
-                    UnprotectApiKeys(nestedDictionary);
-                    break;
-
-                case List<object> items:
-                    UnprotectApiKeys(items);
-                    break;
-
-                case string encryptedKey when
-                    string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(encryptedKey):
-                {
-                    var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-                    values[key] = protector.Unprotect(encryptedKey);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void UnprotectApiKeys(List<object> values)
-    {
-        foreach (var value in values)
-        {
-            switch (value)
-            {
-                case IDictionary<string, object> nestedDictionary:
-                    UnprotectApiKeys(nestedDictionary);
-                    break;
-
-                case List<object> nestedList:
-                    UnprotectApiKeys(nestedList);
-                    break;
-            }
-        }
+        return AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);
     }
 }

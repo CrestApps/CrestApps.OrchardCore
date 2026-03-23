@@ -119,7 +119,14 @@ public sealed class GetRecipeJsonSchemaTool : AIFunction
             return JsonSerializer.Serialize(schema);
         }
 
-        var stepsBuilder = new JsonSchemaBuilder().OneOf(stepSchemas.Values);
+        var stepsBuilder = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(stepSchemas.Keys)))
+            .Required("name")
+            .AdditionalProperties(true);
 
         var rootSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)

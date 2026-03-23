@@ -18,7 +18,7 @@ internal static class RecipeStepSchemaBuilders
 
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
-            .Properties(allProperties.ToDictionary(property => property.Name, property => property.Schema.Build()));
+            .Properties(allProperties.ToDictionary(property => property.Name, property => property.Schema));
 
         var required = requiredProperties?.Prepend("name").ToArray() ?? ["name"];
 
@@ -61,7 +61,7 @@ internal static class RecipeStepSchemaBuilders
 
         if (properties is not null)
         {
-            builder = builder.Properties(properties.ToDictionary(property => property.Name, property => property.Schema.Build()));
+            builder = builder.Properties(properties.ToDictionary(property => property.Name, property => property.Schema));
         }
 
         if (requiredProperties is not null)

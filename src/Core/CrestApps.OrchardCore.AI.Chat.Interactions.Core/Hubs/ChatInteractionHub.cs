@@ -26,6 +26,7 @@ using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
 public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>

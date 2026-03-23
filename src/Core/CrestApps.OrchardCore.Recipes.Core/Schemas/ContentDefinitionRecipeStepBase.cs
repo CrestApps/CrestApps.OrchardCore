@@ -120,7 +120,7 @@ public abstract class ContentDefinitionRecipeStepBase(
         {
             result = result.Properties(("Settings", new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
-                .AllOf(fragments)
+                .AllOf(fragments.ToArray())
                 .AdditionalProperties(true)));
         }
 
@@ -145,7 +145,7 @@ public abstract class ContentDefinitionRecipeStepBase(
         {
             result = result.Properties(("Settings", new JsonSchemaBuilder()
                 .Type(SchemaValueType.Object)
-                .AllOf(fragments)
+                .AllOf(fragments.ToArray())
                 .AdditionalProperties(true)));
         }
 
@@ -169,9 +169,9 @@ public abstract class ContentDefinitionRecipeStepBase(
             .AdditionalProperties(true);
     }
 
-    private async ValueTask<List<JsonSchema>> GatherFragmentsAsync(ContentDefinitionSchemaType target)
+    private async ValueTask<List<JsonSchemaBuilder>> GatherFragmentsAsync(ContentDefinitionSchemaType target)
     {
-        var collected = new List<JsonSchema>();
+        var collected = new List<JsonSchemaBuilder>();
         foreach (var schemaDefinition in _schemaDefinitions)
         {
             if (schemaDefinition.Type == target)

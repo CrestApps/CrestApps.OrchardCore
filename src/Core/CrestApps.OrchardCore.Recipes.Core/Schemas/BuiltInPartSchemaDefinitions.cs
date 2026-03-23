@@ -8,7 +8,7 @@ public sealed class CommonPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "CommonPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("CommonPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("CommonPartSettings",
         Obj(
             Prop("DisplayDateEditor", BoolProp()),
             Prop("DisplayOwnerEditor", BoolProp())));
@@ -18,7 +18,7 @@ public sealed class TitlePartSchema : PartSettingsSchemaBase
 {
     public override string Name => "TitlePart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("TitlePartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("TitlePartSettings",
         Obj(
             Prop("RenderTitle", BoolProp()),
             Prop("Options", new JsonSchemaBuilder()
@@ -34,7 +34,7 @@ public sealed class AutoroutePartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AutoroutePart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("AutoroutePartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("AutoroutePartSettings",
         Obj(
             Prop("AllowCustomPath", BoolProp()),
             Prop("Pattern", new JsonSchemaBuilder()
@@ -53,7 +53,7 @@ public sealed class AliasPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AliasPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("AliasPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("AliasPartSettings",
         Obj(
             Prop("Pattern", new JsonSchemaBuilder()
                 .Type(SchemaValueType.String)
@@ -70,7 +70,7 @@ public sealed class HtmlBodyPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "HtmlBodyPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("HtmlBodyPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("HtmlBodyPartSettings",
         Obj(
             Prop("SanitizeHtml", new JsonSchemaBuilder()
                 .Type(SchemaValueType.Boolean)
@@ -82,7 +82,7 @@ public sealed class MarkdownBodyPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "MarkdownBodyPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("MarkdownBodyPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("MarkdownBodyPartSettings",
         Obj(
             Prop("SanitizeHtml", new JsonSchemaBuilder()
                 .Type(SchemaValueType.Boolean)
@@ -94,7 +94,7 @@ public sealed class ListPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "ListPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("ListPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("ListPartSettings",
         Obj(
             Prop("PageSize", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(10)),
             Prop("ContainedContentTypes", StringArray()),
@@ -106,7 +106,7 @@ public sealed class FlowPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "FlowPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("FlowPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("FlowPartSettings",
         Obj(
             Prop("ContainedContentTypes", StringArray()),
             Prop("CollapseContainedItems", BoolProp())));
@@ -116,7 +116,7 @@ public sealed class BagPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "BagPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("BagPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("BagPartSettings",
         Obj(
             Prop("ContainedContentTypes", StringArray()),
             Prop("ContainedStereotypes", StringArray()),
@@ -128,7 +128,7 @@ public sealed class WidgetsListPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "WidgetsListPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("WidgetsListPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("WidgetsListPartSettings",
         Obj(Prop("Zones", StringArray())));
 }
 
@@ -136,7 +136,7 @@ public sealed class PreviewPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "PreviewPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("PreviewPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("PreviewPartSettings",
         Obj(
             Prop("Pattern", new JsonSchemaBuilder()
                 .Type(SchemaValueType.String)
@@ -147,7 +147,7 @@ public sealed class SeoMetaPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "SeoMetaPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("SeoMetaPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("SeoMetaPartSettings",
         Obj(
             Prop("DisplayKeywords", BoolProp()),
             Prop("DisplayCustomMetaTags", BoolProp()),
@@ -160,7 +160,7 @@ public sealed class AuditTrailPartSchema : PartSettingsSchemaBase
 {
     public override string Name => "AuditTrailPart";
 
-    protected override JsonSchema BuildSettingsCore() => Envelope("AuditTrailPartSettings",
+    protected override JsonSchemaBuilder BuildSettingsCore() => Envelope("AuditTrailPartSettings",
         Obj(
             Prop("ShowCommentInput", new JsonSchemaBuilder()
                 .Type(SchemaValueType.Boolean)
