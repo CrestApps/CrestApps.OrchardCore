@@ -3,7 +3,6 @@ using CrestApps.AI.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

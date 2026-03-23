@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model ChatInteractionChatModeSettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat mode"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select">
+        </select>
+        <span class="hint">@T["Controls how users interact with chat interactions. Audio input adds a microphone for dictation. Conversation enables continuous two-way voice interaction."]</span>
+    </div>
+</div>

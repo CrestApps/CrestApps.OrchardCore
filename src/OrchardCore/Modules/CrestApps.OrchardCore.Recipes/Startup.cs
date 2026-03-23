@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
+using OrchardCore.Mvc.LocationExpander;
 
 namespace CrestApps.OrchardCore.Recipes;
 
@@ -12,6 +13,7 @@ public sealed class Startup : StartupBase
     {
         services.AddScoped<RecipeExecutionService>();
         services.AddScoped<RecipeSchemaService>();
+        services.AddSingleton<IViewLocationExpanderProvider, DeploymentJsonViewLocationExpander>();
     }
 }
 
@@ -352,5 +354,18 @@ public sealed class AuditTrailSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentDefinitionSchemaDefinition, AuditTrailPartSchema>();
+    }
+}
+
+[RequireFeatures("CrestApps.OrchardCore.AI", "OrchardCore.Recipes.Core")]
+public sealed class AIRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AIProfileRecipeStep>();
+        services.AddScoped<IRecipeStep, AIProfileTemplateRecipeStep>();
+        services.AddScoped<IRecipeStep, AIDeploymentRecipeStep>();
+        services.AddScoped<IRecipeStep, DeleteAIDeploymentsRecipeStep>();
+        services.AddScoped<IRecipeStep, AIProviderConnectionsRecipeStep>();
     }
 }

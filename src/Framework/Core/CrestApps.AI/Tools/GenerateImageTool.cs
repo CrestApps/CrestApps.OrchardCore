@@ -99,7 +99,9 @@ public sealed class GenerateImageTool : AIFunction
                 return "Image generation is not available. No connection is configured.";
             }
 
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
             var deploymentName = connection.GetImagesDeploymentOrDefaultName(throwException: false);
+#pragma warning restore CS0618
 
             if (string.IsNullOrEmpty(deploymentName))
             {

@@ -2,10 +2,13 @@ using CrestApps.AI;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -120,6 +123,7 @@ public sealed class DefaultOrchestratorResolverTests
         services.AddSingleton<IAICompletionService, NullCompletionService>();
         services.AddSingleton<IAIClientFactory, NullAIClientFactory>();
         services.AddSingleton<IAITemplateService, NullAITemplateService>();
+        services.AddSingleton(Mock.Of<IAIDeploymentManager>());
         services.AddSingleton<IToolRegistry, NullToolRegistry>();
         services.AddSingleton<ITextTokenizer, LuceneTextTokenizer>();
         services.AddLogging(builder => builder.ClearProviders());
@@ -139,4 +143,5 @@ public sealed class DefaultOrchestratorResolverTests
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => Task.FromResult<string>(null);
     }
+
 }

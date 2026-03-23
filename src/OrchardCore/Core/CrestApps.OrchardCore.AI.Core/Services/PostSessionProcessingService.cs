@@ -1,7 +1,8 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core.Models;
 
 using CrestApps.OrchardCore.Core;
 using J2N.Text;
@@ -20,6 +21,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class PostSessionProcessingService
 {
     private readonly IAIClientFactory _clientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIToolsService _toolsService;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IServiceProvider _serviceProvider;
@@ -34,18 +36,20 @@ public sealed class PostSessionProcessingService
         IAIToolsService toolsService,
         IAITemplateService aiTemplateService,
         IOptions<AIProviderOptions> providerOptions,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         IServiceProvider serviceProvider,
         IClock clock,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        IAIDeploymentManager deploymentManager = null)
     {
         _clientFactory = clientFactory;
+        _deploymentManager = deploymentManager;
         _toolsService = toolsService;
         _aiTemplateService = aiTemplateService;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _providerOptions = providerOptions.Value;
-        _defaultOptions = defaultOptions.Value;
+        _defaultOptions = defaultOptions;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PostSessionProcessingService>();
     }
@@ -321,6 +325,15 @@ public sealed class PostSessionProcessingService
             return null;
         }
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session structured output for session '{SessionId}' returned {TaskCount} task result(s): [{TaskNames}].",
+                session.SessionId,
+                response.Result.Tasks.Count,
+                string.Join(", ", response.Result.Tasks.Select(t => t.Name)));
+        }
+
         return ApplyResults(tasksToProcess, response.Result.Tasks);
     }
 
@@ -367,55 +380,325 @@ public sealed class PostSessionProcessingService
                 toolResultCount);
         }
 
-        var responseText = response.Messages?.LastOrDefault()?.Text?.Trim();
+        // Extract the final assistant message text, ignoring intermediate tool
+        // call and tool result messages. After FunctionInvokingChatClient resolves
+        // all tool calls, the model produces a final assistant message with the JSON
+        // task results — that is the only message we care about.
+        var responseText = response.Messages?
+            .LastOrDefault(m => m.Role == ChatRole.Assistant && !string.IsNullOrEmpty(m.Text))
+            ?.Text?.Trim();
 
-        if (string.IsNullOrEmpty(responseText))
+        // Always log the raw response text for troubleshooting.
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session tools raw response for session '{SessionId}': '{ResponseText}'.",
+                sessionId,
+                CreateResponseLogPreview(responseText));
+        }
+
+        if (!string.IsNullOrEmpty(responseText))
+        {
+            var result = TryParsePostSessionResponse(sessionId, responseText);
+
+            if (result?.Tasks != null && result.Tasks.Count > 0)
+            {
+                return ApplyResults(tasks, result.Tasks);
+            }
+        }
+        else if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session tools response for session '{SessionId}' has no final text content. Attempting structured recovery from tool messages.",
+                sessionId);
+        }
+
+        var recoveredResults = await TryRecoverStructuredToolsResponseAsync(
+            sessionId,
+            chatClient,
+            messages,
+            response.Messages,
+            tasks,
+            cancellationToken);
+
+        if (recoveredResults is not null && recoveredResults.Count > 0)
+        {
+            return recoveredResults;
+        }
+
+        return CreateFailedResults(sessionId, tasks, responseText);
+    }
+
+    /// <summary>
+    /// Attempts to parse the AI response text as a <see cref="PostSessionProcessingResponse"/>
+    /// using progressively lenient strategies:
+    /// 1. Direct JSON deserialization.
+    /// 2. Extract JSON from markdown code fences (```json ... ```).
+    /// 3. Extract the first JSON object from surrounding text.
+    /// </summary>
+    private PostSessionProcessingResponse TryParsePostSessionResponse(string sessionId, string responseText)
+    {
+        // Strategy 1: Direct JSON deserialization.
+        try
+        {
+            var result = JsonSerializer.Deserialize<PostSessionProcessingResponse>(
+                responseText, JSOptions.CaseInsensitive);
+
+            if (result?.Tasks != null && result.Tasks.Count > 0)
+            {
+                return result;
+            }
+        }
+        catch (JsonException)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Post-session tools response for session '{SessionId}' has no final text content. Tools may have executed as side effects.",
+                    "Post-session response for session '{SessionId}' is not valid JSON. Trying fallback extraction.",
                     sessionId);
             }
-
-            return null;
         }
 
-        // Try to parse the response as structured JSON.
-        // When tools are involved, the model may return plain text after tool execution
-        // instead of structured JSON — this is expected behavior.
-        PostSessionProcessingResponse result = null;
+        // Strategy 2: Extract JSON from markdown code fences.
+        var jsonBlock = ExtractJsonFromCodeFence(responseText);
+
+        if (jsonBlock != null)
+        {
+            try
+            {
+                var result = JsonSerializer.Deserialize<PostSessionProcessingResponse>(
+                    jsonBlock, JSOptions.CaseInsensitive);
+
+                if (result?.Tasks != null && result.Tasks.Count > 0)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Post-session response for session '{SessionId}' parsed successfully from code fence.",
+                            sessionId);
+                    }
+
+                    return result;
+                }
+            }
+            catch (JsonException)
+            {
+                // Code fence content wasn't valid JSON either, continue to next strategy.
+            }
+        }
+
+        // Strategy 3: Extract the first JSON object from surrounding text.
+        var jsonObject = ExtractJsonObject(responseText);
+
+        if (jsonObject != null && jsonObject != responseText)
+        {
+            try
+            {
+                var result = JsonSerializer.Deserialize<PostSessionProcessingResponse>(
+                    jsonObject, JSOptions.CaseInsensitive);
+
+                if (result?.Tasks != null && result.Tasks.Count > 0)
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Post-session response for session '{SessionId}' parsed successfully from embedded JSON object.",
+                            sessionId);
+                    }
+
+                    return result;
+                }
+            }
+            catch (JsonException)
+            {
+                // Extracted text wasn't valid JSON either.
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session response for session '{SessionId}' could not be parsed as structured JSON after all extraction attempts.",
+                sessionId);
+        }
+
+        return null;
+    }
+
+    private async Task<Dictionary<string, PostSessionResult>> TryRecoverStructuredToolsResponseAsync(
+        string sessionId,
+        IChatClient chatClient,
+        List<ChatMessage> requestMessages,
+        IList<ChatMessage> responseMessages,
+        List<PostSessionTask> tasks,
+        CancellationToken cancellationToken)
+    {
+        var followUpMessages = new List<ChatMessage>(requestMessages);
+        var trailingAssistantText = responseMessages?
+            .LastOrDefault(message => message.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(message.Text));
+
+        if (responseMessages is not null)
+        {
+            foreach (var responseMessage in responseMessages)
+            {
+                if (ReferenceEquals(responseMessage, trailingAssistantText))
+                {
+                    continue;
+                }
+
+                followUpMessages.Add(responseMessage);
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Attempting structured recovery for post-session tool response on session '{SessionId}' using the original post-session analysis context. TaskCount={TaskCount}.",
+                sessionId,
+                tasks.Count);
+        }
+
+        var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(followUpMessages, new ChatOptions
+        {
+            Temperature = 0f,
+        }, null, cancellationToken);
+
+        var recoveryResponseText = response.Messages?
+            .LastOrDefault(message => message.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(message.Text))
+            ?.Text?.Trim();
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Post-session structured recovery raw response for session '{SessionId}': '{ResponseText}'.",
+                sessionId,
+                CreateResponseLogPreview(recoveryResponseText));
+        }
+
+        PostSessionProcessingResponse result;
 
         try
         {
-            result = System.Text.Json.JsonSerializer.Deserialize<PostSessionProcessingResponse>(
-                responseText, JSOptions.CaseInsensitive);
+            result = response.Result;
         }
-        catch (System.Text.Json.JsonException)
+        catch (InvalidOperationException)
         {
-            // Model returned text after executing tools. Tools have already run.
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Post-session tools response for session '{SessionId}' is not valid JSON (tools likely executed). Response text: '{ResponseText}'.",
-                    sessionId,
-                    responseText.Length > 500 ? responseText[..500] + "..." : responseText);
+                    "Structured recovery for post-session tool response on session '{SessionId}' did not return JSON content.",
+                    sessionId);
             }
-        }
 
-        if (result?.Tasks == null || result.Tasks.Count == 0)
+            return null;
+        }
+        catch (JsonException)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Post-session tools response for session '{SessionId}' produced no structured task results.",
+                    "Structured recovery for post-session tool response on session '{SessionId}' returned invalid JSON content.",
                     sessionId);
             }
 
             return null;
         }
 
+        if (result?.Tasks is null || result.Tasks.Count == 0)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Structured recovery for post-session tool response on session '{SessionId}' returned no task results.",
+                    sessionId);
+            }
+
+            return null;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Structured recovery for post-session tool response on session '{SessionId}' succeeded with {TaskCount} task result(s).",
+                sessionId,
+                result.Tasks.Count);
+        }
+
         return ApplyResults(tasks, result.Tasks);
+    }
+
+    private Dictionary<string, PostSessionResult> CreateFailedResults(
+        string sessionId,
+        List<PostSessionTask> tasks,
+        string responseText)
+    {
+        var now = _clock.UtcNow;
+        var errorMessage = string.IsNullOrWhiteSpace(responseText)
+            ? "Tool execution completed, but the AI response did not contain the required structured JSON results."
+            : "The AI response could not be parsed as structured JSON after tool execution.";
+
+        _logger.LogWarning(
+            "Post-session tool response for session '{SessionId}' failed structured parsing. Marking {TaskCount} task(s) as failed. ResponseLength={ResponseLength}.",
+            sessionId,
+            tasks.Count,
+            responseText?.Length ?? 0);
+
+        return tasks.ToDictionary(
+            task => task.Name,
+            task => new PostSessionResult
+            {
+                Name = task.Name,
+                Status = PostSessionTaskResultStatus.Failed,
+                ErrorMessage = errorMessage,
+                ProcessedAtUtc = now,
+            },
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Extracts JSON content from markdown code fences (e.g., ```json ... ``` or ``` ... ```).
+    /// </summary>
+    private static string ExtractJsonFromCodeFence(string text)
+    {
+        var match = Regex.Match(text, @"```(?:json)?\s*\n?([\s\S]*?)\n?\s*```", RegexOptions.None, TimeSpan.FromSeconds(1));
+
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    /// <summary>
+    /// Extracts the first balanced JSON object from text that may contain surrounding content.
+    /// </summary>
+    private static string ExtractJsonObject(string text)
+    {
+        var start = text.IndexOf('{');
+
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var end = text.LastIndexOf('}');
+
+        if (end <= start)
+        {
+            return null;
+        }
+
+        return text[start..(end + 1)];
+    }
+
+    private static string CreateResponseLogPreview(string responseText)
+    {
+        if (string.IsNullOrEmpty(responseText))
+        {
+            return "(empty)";
+        }
+
+        var normalized = responseText
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
+
+        return normalized.Length > 2000 ? normalized[..2000] + "..." : normalized;
     }
 
     private Dictionary<string, PostSessionResult> ApplyResults(
@@ -429,6 +712,14 @@ public sealed class PostSessionProcessingService
         {
             if (string.IsNullOrWhiteSpace(result.Name) || string.IsNullOrWhiteSpace(result.Value))
             {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Post-session task result skipped: Name='{Name}', HasValue={HasValue}.",
+                        result.Name ?? "(null)",
+                        !string.IsNullOrWhiteSpace(result.Value));
+                }
+
                 continue;
             }
 
@@ -437,6 +728,13 @@ public sealed class PostSessionProcessingService
 
             if (task == null)
             {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Post-session task result skipped: no matching task definition for '{Name}'.",
+                        result.Name);
+                }
+
                 continue;
             }
 
@@ -484,6 +782,14 @@ public sealed class PostSessionProcessingService
                 Status = PostSessionTaskResultStatus.Succeeded,
                 ProcessedAtUtc = now,
             };
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Post-session task '{TaskName}' applied successfully (ValueLength={ValueLength}).",
+                    task.Name,
+                    result.Value.Length);
+            }
         }
 
         return applied;
@@ -491,26 +797,43 @@ public sealed class PostSessionProcessingService
 
     private async Task<IChatClient> GetChatClientAsync(AIProfile profile)
     {
+        if (_deploymentManager != null)
+        {
+            var deployment = await _deploymentManager.ResolveAsync(
+                AIDeploymentType.Utility,
+                deploymentId: profile.UtilityDeploymentId,
+                providerName: profile.Source)
+                ?? await _deploymentManager.ResolveAsync(
+                    AIDeploymentType.Chat,
+                    deploymentId: profile.ChatDeploymentId,
+                    providerName: profile.Source);
+
+            if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.Name))
+            {
+                return await _clientFactory.CreateChatClientAsync(profile.Source, deployment.ConnectionName, deployment.Name);
+            }
+        }
+
         if (!_providerOptions.Providers.TryGetValue(profile.Source, out var provider))
         {
             return null;
         }
 
-        var connectionName = !string.IsNullOrEmpty(profile.ConnectionName)
-            ? profile.ConnectionName
-            : provider.DefaultConnectionName;
+        var connectionName = provider.DefaultConnectionName;
 
         if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
         {
             return null;
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
         var deploymentName = connection.GetUtilityDeploymentName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
             deploymentName = connection.GetChatDeploymentName(throwException: false);
         }
+#pragma warning restore CS0618
 
         if (string.IsNullOrEmpty(deploymentName))
         {

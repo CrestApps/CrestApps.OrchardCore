@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -11,8 +12,8 @@ public sealed class AIProfileViewModel
     public string DisplayText { get; set; }
     public AIProfileType Type { get; set; }
     public string Source { get; set; }
-    public string ConnectionName { get; set; }
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+    public string UtilityDeploymentId { get; set; }
     public string OrchestratorName { get; set; }
     public string WelcomeMessage { get; set; }
     public string PromptTemplate { get; set; }
@@ -57,9 +58,16 @@ public sealed class AIProfileViewModel
 
     // Dropdowns
     public List<SelectListItem> Sources { get; set; } = [];
-    public List<SelectListItem> Connections { get; set; } = [];
     public List<SelectListItem> Orchestrators { get; set; } = [];
-    public List<SelectListItem> Deployments { get; set; } = [];
+    public List<SelectListItem> ChatDeployments { get; set; } = [];
+    public List<SelectListItem> UtilityDeployments { get; set; } = [];
+    public List<SelectListItem> Templates { get; set; } = [];
+
+    // Template
+    public string SelectedTemplateId { get; set; }
+
+    // Memory
+    public bool EnableUserMemory { get; set; }
 
     public static AIProfileViewModel FromProfile(AIProfile profile)
     {
@@ -71,6 +79,7 @@ public sealed class AIProfileViewModel
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
+        var memorySettings = profile.GetSettings<MemorySettings>();
 
         return new AIProfileViewModel
         {
@@ -79,8 +88,8 @@ public sealed class AIProfileViewModel
             DisplayText = profile.DisplayText,
             Type = profile.Type,
             Source = profile.Source,
-            ConnectionName = profile.ConnectionName,
-            DeploymentId = profile.DeploymentId,
+            ChatDeploymentId = profile.ChatDeploymentId,
+            UtilityDeploymentId = profile.UtilityDeploymentId,
             OrchestratorName = profile.OrchestratorName,
             WelcomeMessage = profile.WelcomeMessage,
             PromptTemplate = profile.PromptTemplate,
@@ -127,6 +136,8 @@ public sealed class AIProfileViewModel
                 AllowMultipleValues = t.AllowMultipleValues,
                 Options = string.Join(Environment.NewLine, t.Options.Select(o => o.Value)),
             }).ToList(),
+
+            EnableUserMemory = memorySettings.EnableUserMemory,
         };
     }
 
@@ -136,8 +147,8 @@ public sealed class AIProfileViewModel
         profile.DisplayText = DisplayText;
         profile.Type = Type;
         profile.Source = Source;
-        profile.ConnectionName = ConnectionName;
-        profile.DeploymentId = DeploymentId;
+        profile.ChatDeploymentId = ChatDeploymentId;
+        profile.UtilityDeploymentId = UtilityDeploymentId;
         profile.OrchestratorName = OrchestratorName;
         profile.WelcomeMessage = WelcomeMessage;
         profile.PromptTemplate = PromptTemplate;
@@ -208,6 +219,11 @@ public sealed class AIProfileViewModel
                         .Select(o => new PostSessionTaskOption { Value = o.Trim() })
                         .ToList(),
                 }).ToList();
+        });
+
+        profile.AlterSettings<MemorySettings>(m =>
+        {
+            m.EnableUserMemory = EnableUserMemory;
         });
     }
 }

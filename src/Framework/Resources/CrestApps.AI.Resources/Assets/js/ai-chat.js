@@ -17,11 +17,11 @@ window.openAIChatManager = function () {
         codeCopiedText: 'Copied!',
         messageTemplate: `
         <div class="ai-chat-messages">
-            <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
+            <div v-for="(message, index) in messages" :key="'msg-' + index" class="ai-chat-message-item">
                 <div>
                     <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
                     <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                        <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
+                        <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
                         {{ assistantLabel }}
                     </div>
                     <div class="lh-base">
@@ -45,11 +45,26 @@ window.openAIChatManager = function () {
                     </div>
                 </div>
             </div>
+            <div v-for="notification in notifications" :key="'notif-' + notification.type" class="ai-chat-notification" :class="'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')">
+                <div class="ai-chat-notification-content">
+                    <i v-if="notification.icon" :class="notification.icon" class="ai-chat-notification-icon"></i>
+                    <span class="ai-chat-notification-text">{{ notification.content }}</span>
+                    <button v-if="notification.dismissible" class="btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss" @click="dismissNotification(notification.type)" title="Dismiss">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div v-if="notification.actions && notification.actions.length" class="ai-chat-notification-actions">
+                    <button v-for="action in notification.actions" :key="action.name" class="btn btn-sm" :class="action.cssClass || 'btn-outline-secondary'" @click="handleNotificationAction(notification.type, action.name)">
+                        <i v-if="action.icon" :class="action.icon" class="me-1"></i>
+                        {{ action.label }}
+                    </button>
+                </div>
+            </div>
         </div>
     `,
         indicatorTemplate: `
         <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
-            <i class="fa fa-robot ai-streaming-icon" style="display: inline-block;"></i>
+            <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
             Assistant
         </div>
     `
@@ -335,11 +350,12 @@ window.openAIChatManager = function () {
                     chatWidgetStateSession: null,
                     chatHistorySection: null,
                     widgetIsInitialized: false,
-                    isSteaming: false,
+                    isStreaming: false,
                     isNavigatingAway: false,
                     autoScroll: true,
                     stream: null,
                     messages: [],
+                    notifications: [],
                     prompt: '',
                     documents: config.existingDocuments || [],
                     isUploading: false,
@@ -352,7 +368,34 @@ window.openAIChatManager = function () {
                     thumbsUpTitle: config.thumbsUpTitle,
                     thumbsDownTitle: config.thumbsDownTitle,
                     copyTitle: config.copyTitle,
+                    isRecording: false,
+                    mediaRecorder: null,
+                    preRecordingPrompt: '',
+                    micButton: null,
+                    speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
+                    textToSpeechEnabled: config.chatMode === 'Conversation',
+                    ttsVoiceName: config.ttsVoiceName || null,
+                    audioChunks: [],
+                    audioPlayQueue: [],
+                    isPlayingAudio: false,
+                    currentAudioElement: null,
+                    ttsButton: null,
+                    conversationModeEnabled: config.chatMode === 'Conversation',
+                    conversationButton: null,
+                    isConversationMode: false,
+                    selectedResponseHandler: '',
+                    responseHandlers: config.responseHandlers || [],
                 };
+            },
+            computed: {
+                lastAssistantIndex() {
+                    for (var i = this.messages.length - 1; i >= 0; i--) {
+                        if (this.messages[i].role === 'assistant') {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }
             },
             methods: {
                 handleBeforeUnload() {
@@ -483,6 +526,50 @@ window.openAIChatManager = function () {
                     if (bytes < 1024) return bytes + ' B';
                     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
                     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                },
+                renderHandlerSelector() {
+                    if (!this.placeholder || this.responseHandlers.length === 0) {
+                        return;
+                    }
+
+                    var existing = this.placeholder.querySelector('.ai-chat-handler-selector');
+                    if (existing) {
+                        return;
+                    }
+
+                    var container = document.createElement('div');
+                    container.className = 'ai-chat-handler-selector mt-2';
+                    container.style.cssText = 'font-size: 0.85rem;';
+
+                    var label = document.createElement('label');
+                    label.className = 'form-label mb-1';
+                    label.style.fontSize = '0.8rem';
+                    label.textContent = 'Response Handler';
+
+                    var select = document.createElement('select');
+                    select.className = 'form-select form-select-sm';
+
+                    var defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'Default (AI)';
+                    select.appendChild(defaultOption);
+
+                    for (var i = 0; i < this.responseHandlers.length; i++) {
+                        var handler = this.responseHandlers[i];
+                        var option = document.createElement('option');
+                        option.value = handler.name;
+                        option.textContent = handler.name;
+                        select.appendChild(option);
+                    }
+
+                    var self = this;
+                    select.addEventListener('change', function () {
+                        self.selectedResponseHandler = this.value;
+                    });
+
+                    container.appendChild(label);
+                    container.appendChild(select);
+                    this.placeholder.appendChild(container);
                 },
                 renderDocumentBar() {
                     if (!this.documentBar) return;
@@ -616,6 +703,18 @@ window.openAIChatManager = function () {
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+
+                        if (this.isRecording) {
+                            this.stopRecording();
+                        }
+
+                        // If this is a widget with a stale cached session (e.g., profile was deleted),
+                        // clear the cached session and start fresh with the current profile.
+                        if (this.widgetIsInitialized && !this.isSessionStarted && !this._attemptedSessionRecovery) {
+                            this._attemptedSessionRecovery = true;
+                            localStorage.removeItem(this.chatWidgetStateSession);
+                            this.startNewSession();
+                        }
                     });
 
                     this.connection.on("MessageRated", (messageId, userRating) => {
@@ -623,6 +722,146 @@ window.openAIChatManager = function () {
                         if (msg) {
                             msg.userRating = userRating;
                         }
+                    });
+
+                    this.connection.on("ReceiveTranscript", (sessionId, text, isFinal) => {
+                        if (this.isConversationMode) {
+                            if (!isFinal && text) {
+                                this._conversationPartialTranscript = text;
+                                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                                // Show partial transcript as a live user message.
+                                if (!this._conversationPartialMessage) {
+                                    this.hidePlaceholder();
+                                    this._conversationPartialMessage = {
+                                        role: 'user',
+                                        content: text,
+                                        htmlContent: html,
+                                        isPartial: true
+                                    };
+                                    this.messages.push(this._conversationPartialMessage);
+                                } else {
+                                    this._conversationPartialMessage.content = text;
+                                    this._conversationPartialMessage.htmlContent = html;
+                                }
+                                this.scrollToBottom();
+                            }
+                            return;
+                        }
+
+                        if (text && !this._audioInputSent) {
+                            this.prompt = this.preRecordingPrompt + text;
+                            if (this.inputElement) {
+                                this.inputElement.value = this.prompt;
+                                this.inputElement.dispatchEvent(new Event('input'));
+                            }
+                        }
+                    });
+
+                    this.connection.on("ReceiveConversationUserMessage", (sessionId, text) => {
+                        if (text) {
+                            this.stopAudio();
+
+                            // If there's an interrupted assistant message still streaming,
+                            // mark it as done to stop the spinner animation.
+                            if (this._conversationAssistantMessage) {
+                                var oldMsg = this.messages[this._conversationAssistantMessage.index];
+                                if (oldMsg) {
+                                    oldMsg.isStreaming = false;
+                                }
+                                this._conversationAssistantMessage = null;
+                            }
+
+                            // Replace the partial transcript message with the final one.
+                            if (this._conversationPartialMessage) {
+                                var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                this._conversationPartialMessage.content = text;
+                                this._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                                this._conversationPartialMessage.isPartial = false;
+                                this._conversationPartialMessage = null;
+                            } else {
+                                this.addMessage({
+                                    role: 'user',
+                                    content: text
+                                });
+                            }
+                            this.scrollToBottom();
+                        }
+                    });
+
+                    this.connection.on("ReceiveConversationAssistantToken", (sessionId, messageId, token, responseId) => {
+                        if (!this._conversationAssistantMessage) {
+                            this.stopAudio();
+                            this.hideTypingIndicator();
+
+                            // Ensure no stale streaming indicators remain from prior messages.
+                            for (var j = 0; j < this.messages.length; j++) {
+                                if (this.messages[j].isStreaming) {
+                                    this.messages[j].isStreaming = false;
+                                }
+                            }
+
+                            var msgIndex = this.messages.length;
+                            var newMessage = {
+                                id: messageId,
+                                role: "assistant",
+                                content: "",
+                                htmlContent: "",
+                                isStreaming: true,
+                                userRating: null,
+                            };
+                            this.messages.push(newMessage);
+                            this._conversationAssistantMessage = { index: msgIndex, content: '' };
+                        }
+
+                        this._conversationAssistantMessage.content += token;
+                        var msg = this.messages[this._conversationAssistantMessage.index];
+                        if (msg) {
+                            msg.content = this._conversationAssistantMessage.content;
+                            msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                            this.$nextTick(() => {
+                                renderChartsInMessage(msg);
+                                this.scrollToBottom();
+                            });
+                        }
+                    });
+
+                    this.connection.on("ReceiveConversationAssistantComplete", (sessionId, messageId) => {
+                        if (this._conversationAssistantMessage) {
+                            var msg = this.messages[this._conversationAssistantMessage.index];
+                            if (msg) {
+                                msg.isStreaming = false;
+                            }
+                            this._conversationAssistantMessage = null;
+                        }
+                    });
+
+                    this.connection.on("ReceiveAudioChunk", (sessionId, base64Audio, contentType) => {
+                        if (base64Audio) {
+                            const binaryString = atob(base64Audio);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let i = 0; i < binaryString.length; i++) {
+                                bytes[i] = binaryString.charCodeAt(i);
+                            }
+                            this.audioChunks.push(bytes);
+                        }
+                    });
+
+                    this.connection.on("ReceiveAudioComplete", (sessionId) => {
+                        this.playCollectedAudio();
+                    });
+
+                    this.connection.on("ReceiveNotification", (notification) => {
+                        this.receiveNotification(notification);
+                    });
+
+                    this.connection.on("UpdateNotification", (notification) => {
+                        this.updateNotification(notification);
+                    });
+
+                    this.connection.on("RemoveNotification", (notificationType) => {
+                        this.removeNotification(notificationType);
                     });
 
                     this.connection.onreconnecting(() => {
@@ -762,6 +1001,14 @@ window.openAIChatManager = function () {
                         return;
                     }
 
+                    // Stop any active recording before sending.
+                    if (this.isRecording) {
+                        this.stopRecording();
+                    }
+
+                    // Prevent stale ReceiveTranscript events from repopulating the prompt.
+                    this._audioInputSent = true;
+
                     this.addMessage({
                         role: 'user',
                         content: trimmedPrompt
@@ -770,6 +1017,88 @@ window.openAIChatManager = function () {
                     this.streamMessage(this.getProfileId(), trimmedPrompt, null);
                     this.inputElement.value = '';
                     this.prompt = '';
+                },
+                startRecording() {
+                    if (this.isRecording || !this.connection) {
+                        return;
+                    }
+
+                    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+                        .then(stream => {
+                            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                                ? 'audio/ogg;codecs=opus'
+                                : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                                    ? 'audio/webm;codecs=opus'
+                                    : 'audio/webm';
+
+                            this.mediaRecorder = new MediaRecorder(stream, {
+                                mimeType: mimeType,
+                                audioBitsPerSecond: 128000,
+                            });
+
+                            this.preRecordingPrompt = this.prompt;
+                            this._audioInputSent = false;
+
+                            var subject = new signalR.Subject();
+                            var profileId = this.getProfileId();
+                            var sessionId = this.getSessionId() || '';
+                            var pendingChunk = Promise.resolve();
+
+                            this.mediaRecorder.addEventListener('dataavailable', (e) => {
+                                if (e.data && e.data.size > 0) {
+                                    pendingChunk = pendingChunk.then(async () => {
+                                        var data = await e.data.arrayBuffer();
+                                        var uint8Array = new Uint8Array(data);
+                                        var binaryString = uint8Array.reduce(function (str, byte) { return str + String.fromCharCode(byte); }, '');
+                                        var base64 = btoa(binaryString);
+                                        subject.next(base64);
+                                    });
+                                }
+                            });
+
+                            this.mediaRecorder.addEventListener('stop', () => {
+                                stream.getTracks().forEach(track => track.stop());
+                                pendingChunk.then(() => subject.complete());
+                            });
+
+                            var language = document.documentElement.lang || 'en-US';
+                            this.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
+                            this.mediaRecorder.start(1000);
+                            this.isRecording = true;
+                            this.updateMicButton();
+                        })
+                        .catch(err => {
+                            console.error('Microphone access denied:', err);
+                        });
+                },
+                stopRecording() {
+                    if (!this.isRecording || !this.mediaRecorder) {
+                        return;
+                    }
+
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                    this.updateMicButton();
+                },
+                toggleRecording() {
+                    if (this.isRecording) {
+                        this.stopRecording();
+                    } else {
+                        this.startRecording();
+                    }
+                },
+                updateMicButton() {
+                    if (!this.micButton) {
+                        return;
+                    }
+
+                    if (this.isRecording) {
+                        this.micButton.classList.add('stt-recording');
+                        this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                    } else {
+                        this.micButton.classList.remove('stt-recording');
+                        this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+                    }
                 },
                 streamMessage(profileId, trimmedPrompt, sessionProfileId) {
 
@@ -877,6 +1206,11 @@ window.openAIChatManager = function () {
                                 if (!msg || !msg.content) {
                                     // No content received at all.
                                     this.hideTypingIndicator();
+                                }
+
+                                // Trigger text-to-speech only in conversation mode.
+                                if (this.isConversationMode && this.textToSpeechEnabled && msg && msg.content) {
+                                    this.synthesizeSpeech(msg.content);
                                 }
 
                                 this.stream?.dispose();
@@ -1007,6 +1341,289 @@ window.openAIChatManager = function () {
                         }
                     }
                 },
+                synthesizeSpeech(text) {
+                    if (!this.textToSpeechEnabled || !text || !this.connection) {
+                        return;
+                    }
+
+                    this.audioChunks = [];
+                    this.isPlayingAudio = true;
+
+                    this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)
+                        .catch(err => {
+                            console.error("TTS synthesis error:", err);
+                            this.isPlayingAudio = false;
+                        });
+                },
+                playCollectedAudio() {
+                    if (this.audioChunks.length === 0) {
+                        if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
+                            this.isPlayingAudio = false;
+                        }
+                        return;
+                    }
+
+                    const totalLength = this.audioChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+                    const combined = new Uint8Array(totalLength);
+                    let offset = 0;
+                    for (const chunk of this.audioChunks) {
+                        combined.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+                    this.audioChunks = [];
+
+                    const blob = new Blob([combined], { type: 'audio/mp3' });
+
+                    // If audio is already playing, queue this blob for sequential playback.
+                    if (this.currentAudioElement) {
+                        this.audioPlayQueue.push(blob);
+                        return;
+                    }
+
+                    this.playAudioBlob(blob);
+                },
+                playAudioBlob(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+
+                    this.currentAudioElement = audio;
+                    this.isPlayingAudio = true;
+
+                    audio.addEventListener('ended', () => {
+                        URL.revokeObjectURL(url);
+                        this.currentAudioElement = null;
+                        this.playNextInQueue();
+                    });
+
+                    audio.addEventListener('error', () => {
+                        URL.revokeObjectURL(url);
+                        this.currentAudioElement = null;
+                        this.playNextInQueue();
+                    });
+
+                    audio.play().catch(err => {
+                        console.error("Audio playback error:", err);
+                        URL.revokeObjectURL(url);
+                        this.currentAudioElement = null;
+                        this.isPlayingAudio = false;
+                    });
+                },
+                playNextInQueue() {
+                    if (this.audioPlayQueue.length > 0) {
+                        var nextBlob = this.audioPlayQueue.shift();
+                        this.playAudioBlob(nextBlob);
+                    } else {
+                        this.isPlayingAudio = false;
+                        this.conversationModeOnAudioEnded();
+                    }
+                },
+                stopAudio() {
+                    if (this.currentAudioElement) {
+                        this.currentAudioElement.pause();
+                        this.currentAudioElement.currentTime = 0;
+                        this.currentAudioElement = null;
+                    }
+                    this.audioChunks = [];
+                    this.audioPlayQueue = [];
+                    this.isPlayingAudio = false;
+                },
+                toggleConversationMode() {
+                    if (this.isConversationMode) {
+                        this.stopConversationMode();
+                    } else {
+                        this.startConversationMode();
+                    }
+                },
+                startConversationMode() {
+                    if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
+                        return;
+                    }
+
+                    this.isConversationMode = true;
+                    this.updateConversationButton();
+                    this._conversationPartialTranscript = '';
+                    this._conversationAssistantMessage = null;
+                    this._conversationPartialMessage = null;
+
+                    // Remove any previous conversation ended notification.
+                    this.removeNotification('conversation-ended');
+                    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+                        .then(stream => {
+                            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                                ? 'audio/ogg;codecs=opus'
+                                : MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+                                    ? 'audio/webm;codecs=opus'
+                                    : 'audio/webm';
+
+                            this.mediaRecorder = new MediaRecorder(stream, {
+                                mimeType: mimeType,
+                                audioBitsPerSecond: 128000,
+                            });
+
+                            this._conversationSubject = new signalR.Subject();
+                            this._conversationStream = stream;
+
+                            // Create an AnalyserNode for volume-based interrupt detection.
+                            // During TTS playback, detect when the user speaks above
+                            // the threshold to stop TTS (interrupt). Audio chunks are
+                            // always forwarded — browser echo cancellation handles
+                            // speaker echo so the STT stream has no gaps.
+                            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+                            if (AudioCtx) {
+                                this._conversationAudioCtx = new AudioCtx();
+                                this._conversationAnalyser = this._conversationAudioCtx.createAnalyser();
+                                this._conversationAnalyser.fftSize = 256;
+                                var micSource = this._conversationAudioCtx.createMediaStreamSource(stream);
+                                micSource.connect(this._conversationAnalyser);
+                            }
+
+                            var pendingChunk = Promise.resolve();
+                            var analyser = this._conversationAnalyser;
+                            var interruptVolumeThreshold = 30;
+
+                            this.mediaRecorder.addEventListener('dataavailable', (e) => {
+                                if (e.data && e.data.size > 0) {
+                                    // During TTS playback, check mic volume to detect
+                                    // user interruption (speaking above threshold).
+                                    if (this.isPlayingAudio && analyser) {
+                                        var freqData = new Uint8Array(analyser.frequencyBinCount);
+                                        analyser.getByteFrequencyData(freqData);
+                                        var sum = 0;
+                                        for (var k = 0; k < freqData.length; k++) { sum += freqData[k]; }
+                                        var avg = sum / freqData.length;
+
+                                        if (avg >= interruptVolumeThreshold) {
+                                            // User is speaking — interrupt TTS playback.
+                                            this.stopAudio();
+                                        }
+                                    }
+
+                                    // Always send audio to STT — browser echo cancellation
+                                    // handles speaker echo; continuous audio avoids gaps
+                                    // that increase recognition latency.
+                                    pendingChunk = pendingChunk.then(async () => {
+                                        var data = await e.data.arrayBuffer();
+                                        var uint8Array = new Uint8Array(data);
+                                        var binaryString = uint8Array.reduce(function (str, byte) { return str + String.fromCharCode(byte); }, '');
+                                        var base64 = btoa(binaryString);
+                                        try {
+                                            this._conversationSubject.next(base64);
+                                        } catch (err) {
+                                            // Subject may have been completed already.
+                                        }
+                                    });
+                                }
+                            });
+
+                            this.mediaRecorder.addEventListener('stop', () => {
+                                stream.getTracks().forEach(track => track.stop());
+                                pendingChunk.then(() => {
+                                    try {
+                                        this._conversationSubject.complete();
+                                    } catch (err) {
+                                        // Already completed.
+                                    }
+                                });
+                            });
+
+                            var profileId = this.getProfileId();
+                            var sessionId = this.getSessionId() || '';
+                            var language = document.documentElement.lang || 'en-US';
+
+                            this.connection.send("StartConversation", profileId, sessionId, this._conversationSubject, mimeType, language);
+                            this.mediaRecorder.start(1000);
+                            this.isRecording = true;
+                        })
+                        .catch(err => {
+                            console.error('Microphone access denied:', err);
+                            this.isConversationMode = false;
+                            this.updateConversationButton();
+                        });
+                },
+                stopConversationMode() {
+                    if (!this.isConversationMode) {
+                        return;
+                    }
+
+                    this.isConversationMode = false;
+                    this.updateConversationButton();
+
+                    // Signal the server to cancel all in-progress STT/TTS streams immediately.
+                    if (this.connection) {
+                        this.connection.invoke("StopConversation").catch(function () { });
+                    }
+
+                    if (this.isRecording && this.mediaRecorder) {
+                        this.mediaRecorder.stop();
+                        this.isRecording = false;
+                    }
+
+                    this.stopAudio();
+                    this._conversationPartialTranscript = '';
+                    this._conversationPartialMessage = null;
+
+                    // Clean up the AudioContext used for volume monitoring.
+                    if (this._conversationAudioCtx) {
+                        this._conversationAudioCtx.close().catch(function () { });
+                        this._conversationAudioCtx = null;
+                        this._conversationAnalyser = null;
+                    }
+
+                    // Mark any in-flight assistant message as done to stop the spinner.
+                    if (this._conversationAssistantMessage) {
+                        var msg = this.messages[this._conversationAssistantMessage.index];
+                        if (msg) {
+                            msg.isStreaming = false;
+                        }
+                        this._conversationAssistantMessage = null;
+                    }
+
+                    // Safety net: clear all lingering streaming indicators.
+                    for (var i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].isStreaming) {
+                            this.messages[i].isStreaming = false;
+                        }
+                    }
+
+                    // Show a "conversation ended" notification system message.
+                    this.receiveNotification({
+                        type: 'conversation-ended',
+                        content: 'Conversation ended.',
+                        icon: 'fa-solid fa-circle-check',
+                        dismissible: true
+                    });
+                },
+                updateConversationButton() {
+                    if (!this.conversationButton) {
+                        return;
+                    }
+
+                    if (this.isConversationMode) {
+                        this.conversationButton.classList.add('active', 'btn-primary');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
+                        var endHtml = this.conversationButton.getAttribute('data-end-html');
+                        if (endHtml) {
+                            this.conversationButton.replaceChildren(DOMPurify.sanitize(endHtml, { RETURN_DOM_FRAGMENT: true }));
+                        }
+                    } else {
+                        this.conversationButton.classList.remove('active', 'btn-primary');
+                        this.conversationButton.classList.add('btn-dark');
+                        this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
+                        var startHtml = this.conversationButton.getAttribute('data-start-html');
+                        if (startHtml) {
+                            this.conversationButton.replaceChildren(DOMPurify.sanitize(startHtml, { RETURN_DOM_FRAGMENT: true }));
+                        }
+                    }
+                },
+                conversationModeSendPrompt() {
+                    // Legacy: only used by AudioInput mode's ReceiveTranscript.
+                },
+                conversationModeOnAudioEnded() {
+                    // Legacy: in conversation mode, audio playback continuation
+                    // is handled by the persistent stream. This method is only
+                    // called from playCollectedAudio for non-conversation TTS.
+                },
                 generatePrompt(element) {
                     if (!element) {
                         console.error('The element paramter is required.');
@@ -1048,6 +1665,44 @@ window.openAIChatManager = function () {
                     const removedCount = originalLength - this.messages.length;
                     return removedCount;
                 },
+                receiveNotification(notification) {
+                    if (!notification || !notification.type) {
+                        return;
+                    }
+                    var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
+                    if (existingIndex >= 0) {
+                        this.notifications.splice(existingIndex, 1, notification);
+                    } else {
+                        this.notifications.push(notification);
+                    }
+                    this.$nextTick(() => {
+                        this.scrollToBottom();
+                    });
+                },
+                updateNotification(notification) {
+                    if (!notification || !notification.type) {
+                        return;
+                    }
+                    var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
+                    if (existingIndex >= 0) {
+                        this.notifications.splice(existingIndex, 1, notification);
+                    }
+                },
+                removeNotification(notificationType) {
+                    this.notifications = this.notifications.filter(n => n.type !== notificationType);
+                },
+                dismissNotification(notificationType) {
+                    this.removeNotification(notificationType);
+                },
+                handleNotificationAction(notificationType, actionName) {
+                    if (!this.connection) {
+                        return;
+                    }
+                    var sessionId = this.getSessionId();
+                    this.connection.invoke("HandleNotificationAction", sessionId, notificationType, actionName).catch(function (err) {
+                        console.error("Error handling notification action:", err);
+                    });
+                },
                 scrollToBottom() {
                     if (!this.autoScroll) {
                         return;
@@ -1066,6 +1721,7 @@ window.openAIChatManager = function () {
                     this.inputElement.setAttribute('data-session-id', sessionId || '');
                 },
                 resetSession() {
+                    this.stopRecording();
                     this.setSessionId('');
                     this.isSessionStarted = false;
                     this.sessionRating = null;
@@ -1088,7 +1744,9 @@ window.openAIChatManager = function () {
                         return;
                     }
 
-                    this.connection.invoke("StartSession", profileId).catch(err => console.error(err));
+                    const handlerName = this.selectedResponseHandler || null;
+
+                    this.connection.invoke("StartSession", profileId, handlerName).catch(err => console.error(err));
                 },
                 initializeApp() {
                     this.inputElement = document.querySelector(config.inputElementSelector);
@@ -1096,7 +1754,15 @@ window.openAIChatManager = function () {
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
 
-                    if (config.autoCreateSession && !config.widget && !this.getSessionId()) {
+                    // Render the handler selector in the placeholder if multiple handlers are available.
+                    if (this.placeholder && this.responseHandlers.length > 0) {
+                        this.renderHandlerSelector();
+                    }
+
+                    const sessionId = this.getSessionId();
+                    if (!config.widget && sessionId) {
+                        this.loadSession(sessionId);
+                    } else if (config.autoCreateSession && !config.widget && !sessionId) {
                         this.startNewSession();
                     }
 
@@ -1245,6 +1911,27 @@ window.openAIChatManager = function () {
                                 }, 2000);
                             }
                         });
+                    }
+
+                    // Initialize speech-to-text microphone button.
+                    if (this.speechToTextEnabled && config.micButtonElementSelector) {
+                        this.micButton = document.querySelector(config.micButtonElementSelector);
+                        if (this.micButton) {
+                            this.micButton.style.display = '';
+                            this.micButton.addEventListener('click', () => {
+                                this.toggleRecording();
+                            });
+                        }
+                    }
+
+                    // Initialize conversation mode button.
+                    if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+                        this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
+                        if (this.conversationButton) {
+                            this.conversationButton.addEventListener('click', () => {
+                                this.toggleConversationMode();
+                            });
+                        }
                     }
                 },
                 loadSession(sessionId) {
@@ -1445,7 +2132,30 @@ window.openAIChatManager = function () {
                     handler() { this.renderDocumentBar(); },
                     deep: true
                 },
-                isUploading() { this.renderDocumentBar(); }
+                isUploading() { this.renderDocumentBar(); },
+                isPlayingAudio() {
+                    // Reserved for future use — volume-based interrupt detection
+                    // no longer mutes tracks; browser echo cancellation handles echo.
+                },
+                isConversationMode(active) {
+                    // Hide/show mic button.
+                    if (this.micButton) {
+                        this.micButton.style.display = active ? 'none' : (this.speechToTextEnabled ? '' : 'none');
+                    }
+
+                    // Hide/show send button.
+                    if (this.buttonElement) {
+                        this.buttonElement.style.display = active ? 'none' : '';
+                    }
+
+                    // Disable/enable textarea.
+                    if (this.inputElement) {
+                        this.inputElement.disabled = active;
+                        if (active) {
+                            this.inputElement.placeholder = '';
+                        }
+                    }
+                }
             },
             mounted() {
                 (async () => {

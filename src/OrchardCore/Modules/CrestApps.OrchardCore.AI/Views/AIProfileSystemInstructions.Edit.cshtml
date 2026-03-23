@@ -1,0 +1,61 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model ProfileMetadataViewModel
+
+<div class="@Orchard.GetWrapperClasses()" data-ci-system-message-wrapper>
+    <label asp-for="SystemMessage" class="@Orchard.GetLabelClasses()">@T["System instructions"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <div class="hint mb-1">@T["The system instruction sets the AI's behavior and response style, guiding how it interacts in a conversation."]</div>
+        <textarea asp-for="SystemMessage" class="form-control content-preview-text" rows="5" disabled="@Model.IsSystemMessageLocked"></textarea>
+    </div>
+</div>
+
+<style asp-name="codemirror"></style>
+<style asp-name="easymde"></style>
+<style at="Head">
+    .cm-editor-readonly {
+        background-color: var(--bs-secondary-bg, '#e9ecef') !important;
+    }
+</style>
+
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
+    document.addEventListener('DOMContentLoaded', function () {
+        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+        const isDisabled = @(Model.IsSystemMessageLocked ? "true" : "false");
+
+        const systemMessageElement = document.getElementById("@Html.IdFor(m => m.SystemMessage)");
+        const mde = new EasyMDE({
+            element: systemMessageElement,
+            forceSync: true,
+            readOnly: isDisabled ? 'nocursor' : false,
+            autoDownloadFontAwesome: false
+        });
+
+        mde.codemirror.on('change', function () {
+            document.dispatchEvent(new Event('contentpreview:render'));
+        });
+
+        if (isDisabled) {
+            systemMessageElement.parentNode.querySelector(".CodeMirror").classList.add('cm-editor-readonly');
+        }
+
+        if (isRtl) {
+            const toolbarEditors = document.querySelectorAll('.editor-toolbar');
+
+            for (let i = 0; i < toolbarEditors.length; i++)
+            {
+                toolbarEditors[i].style.direction = 'rtl';
+                toolbarEditors[i].style.textAlign = 'right';
+            }
+
+            const mirrorContainers = document.querySelectorAll('.CodeMirror');
+
+            for (let i = 0; i < mirrorContainers.length; i++)
+            {
+                mirrorContainers[i].style.textAlign = 'right';
+            }
+        }
+    });
+</script>

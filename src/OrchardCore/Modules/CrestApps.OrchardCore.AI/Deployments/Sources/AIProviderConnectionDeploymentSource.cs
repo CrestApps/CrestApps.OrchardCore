@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
@@ -47,10 +48,12 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "ItemId", connection.ItemId },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 { "ChatDeploymentName", connection.ChatDeploymentName },
                 { "EmbeddingDeploymentName", connection.EmbeddingDeploymentName },
                 { "ImagesDeploymentName", connection.ImagesDeploymentName },
                 { "UtilityDeploymentName", connection.UtilityDeploymentName },
+#pragma warning restore CS0618
                 { "IsDefault", connection.IsDefault },
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },

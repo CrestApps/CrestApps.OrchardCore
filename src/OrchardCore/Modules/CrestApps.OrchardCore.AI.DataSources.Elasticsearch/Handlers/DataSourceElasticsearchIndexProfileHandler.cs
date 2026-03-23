@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;
@@ -41,7 +42,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= [];
+        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
         var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Models;
 using CrestApps.Services;
 
@@ -22,14 +23,44 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public AIProfileType Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection name to use for this profile.
+    /// Gets or sets a description of the profile's capabilities.
+    /// Required for <see cref="AIProfileType.Agent"/> profiles, where it describes
+    /// what the agent can do so the orchestrator can decide when to invoke it.
     /// </summary>
+    public string Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the legacy connection name for the profile.
+    /// Retained for backward compatibility with older stored profiles.
+    /// </summary>
+    [Obsolete("Use ChatDeploymentId and UtilityDeploymentId. The selected deployment determines the connection.")]
     public string ConnectionName { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment identifier associated with the profile.
+    /// Gets or sets the chat deployment identifier for this profile.
     /// </summary>
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier for this profile.
+    /// When not set, falls back to the global default utility deployment.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
+
+    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    public string DeploymentId
+    {
+        get => ChatDeploymentId;
+        set => ChatDeploymentId = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("DeploymentId")]
+    private string _deploymentIdBackingField
+    {
+        set => ChatDeploymentId = value;
+    }
 
     /// <summary>
     /// Gets or sets the type of title used in the session.
@@ -77,6 +108,13 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     /// </summary>
     public JsonObject Settings { get; init; } = [];
 
+    public string GetLegacyConnectionName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ConnectionName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
     /// <summary>
     /// Creates a deep copy of the current profile.
     /// </summary>
@@ -90,9 +128,13 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             DisplayText = DisplayText,
             Source = Source,
             Type = Type,
+            Description = Description,
             OrchestratorName = OrchestratorName,
+#pragma warning disable CS0618 // Type or member is obsolete
             ConnectionName = ConnectionName,
-            DeploymentId = DeploymentId,
+#pragma warning restore CS0618 // Type or member is obsolete
+            ChatDeploymentId = ChatDeploymentId,
+            UtilityDeploymentId = UtilityDeploymentId,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
             PromptSubject = PromptSubject,

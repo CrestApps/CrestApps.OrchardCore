@@ -1,7 +1,9 @@
 using CrestApps.AI.Models;
-using CrestApps.Models;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.AI;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Core.Services;
+using CrestApps.Models;
+using CrestApps.Services;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;

@@ -5,6 +5,7 @@
 @model AzureAIInferenceConnectionViewModel
 @{
     var apiKeyWrapperId = Html.IdFor(m => m.ApiKey) + "_wrapper";
+    var identityIdWrapperId = Html.IdFor(m => m.IdentityId) + "_wrapper";
 }
 
 <div class="@Orchard.GetWrapperClasses()">
@@ -34,11 +35,21 @@
     </div>
 </div>
 
+<div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ManagedIdentity ? string.Empty : "d-none")" id="@identityIdWrapperId">
+    <label asp-for="IdentityId" class="@Orchard.GetLabelClasses()">@T["Identity client ID"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="IdentityId" class="form-control" />
+        <span asp-validation-for="IdentityId" class="text-danger"></span>
+        <span class="hint">@T["The client ID of a user-assigned managed identity. If not provided, the system-assigned managed identity will be used."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
 
         const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
         const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
+        const identityIdWrapper = document.getElementById('@identityIdWrapperId');
 
         menuElement.addEventListener('change', (e) => {
 
@@ -46,6 +57,12 @@
                 apiKeyWrapper.classList.remove('d-none');
             } else {
                 apiKeyWrapper.classList.add('d-none');
+            }
+
+            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
+                identityIdWrapper.classList.remove('d-none');
+            } else {
+                identityIdWrapper.classList.add('d-none');
             }
         });
     });

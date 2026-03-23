@@ -17,7 +17,8 @@ public sealed class OllamaCompletionClient : NamedAICompletionClient
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
-        IAITemplateService aiTemplateService)
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager)
         : base(
             OllamaConstants.ImplementationName,
             aIClientFactory, distributedCache,
@@ -26,7 +27,8 @@ public sealed class OllamaCompletionClient : NamedAICompletionClient
             providerOptions.Value,
             defaultOptions.Value,
             handlers,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
     }
 

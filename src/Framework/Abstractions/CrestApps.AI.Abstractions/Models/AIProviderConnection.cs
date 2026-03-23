@@ -12,13 +12,20 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string DisplayText { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string ChatDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string EmbeddingDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string ImagesDeploymentName { get; set; }
 
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string UtilityDeploymentName { get; set; }
+
+    [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
+    public string SpeechToTextDeploymentName { get; set; }
 
     public bool IsDefault { get; set; }
 
@@ -35,6 +42,34 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public string OwnerId { get; set; }
 
+    public string GetLegacyChatDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ChatDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyEmbeddingDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return EmbeddingDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyImageDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return ImagesDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    public string GetLegacyUtilityDeploymentName()
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+        return UtilityDeploymentName;
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
     public AIProviderConnection Clone()
     {
         return new AIProviderConnection
@@ -44,10 +79,13 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             Name = Name,
             DisplayText = DisplayText,
             IsDefault = IsDefault,
+#pragma warning disable CS0618 // Type or member is obsolete
             ChatDeploymentName = ChatDeploymentName,
             EmbeddingDeploymentName = EmbeddingDeploymentName,
             ImagesDeploymentName = ImagesDeploymentName,
             UtilityDeploymentName = UtilityDeploymentName,
+            SpeechToTextDeploymentName = SpeechToTextDeploymentName,
+#pragma warning restore CS0618
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

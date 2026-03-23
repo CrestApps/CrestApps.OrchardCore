@@ -84,7 +84,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">@T["Instructions"]</label>
-                                        <textarea class="form-control" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
+                                        <textarea class="form-control post-session-instructions-editor" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
                                         <span class="hint">@T["Additional instructions for the AI model when processing this task."]</span>
                                     </div>
                                     <div class="task-options-group @(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "d-none")">
@@ -206,8 +206,11 @@
     </div>
 </div>
 
-<script at="Foot">
+<style asp-name="easymde"></style>
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
     document.addEventListener('DOMContentLoaded', function () {
+        var isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
         var toggleCheckbox = document.getElementById('@Html.IdFor(m => m.EnablePostSessionProcessing)');
         var target = document.getElementById('@postSessionSettingsId');
         if (toggleCheckbox && target) {
@@ -220,6 +223,79 @@
         var addButton = document.getElementById('@addTaskBtnId');
         var tasksPrefix = '@Html.NameFor(m => m.Tasks)';
         var containerIdPrefix = '@tasksContainerId';
+        var instructionEditors = new Map();
+
+        function applyEditorDirection(editor) {
+            if (!isRtl || !editor || !editor.codemirror) {
+                return;
+            }
+
+            var toolbar = editor.gui && editor.gui.toolbar;
+            if (toolbar) {
+                toolbar.style.direction = 'rtl';
+                toolbar.style.textAlign = 'right';
+            }
+
+            var wrapper = editor.codemirror.getWrapperElement();
+            if (wrapper) {
+                wrapper.style.textAlign = 'right';
+            }
+        }
+
+        function initializeInstructionEditor(textarea) {
+            if (!textarea || textarea.dataset.easymdeInitialized === 'true') {
+                return;
+            }
+
+            var editor = new EasyMDE({
+                element: textarea,
+                forceSync: true,
+                autoDownloadFontAwesome: false
+            });
+
+            textarea.dataset.easymdeInitialized = 'true';
+            instructionEditors.set(textarea, editor);
+            applyEditorDirection(editor);
+            window.setTimeout(function () {
+                editor.codemirror.refresh();
+            }, 0);
+        }
+
+        function initializeInstructionEditors(root) {
+            if (!root) {
+                return;
+            }
+
+            root.querySelectorAll('.post-session-instructions-editor').forEach(initializeInstructionEditor);
+        }
+
+        function destroyInstructionEditors(root) {
+            if (!root) {
+                return;
+            }
+
+            root.querySelectorAll('.post-session-instructions-editor').forEach(function (textarea) {
+                var editor = instructionEditors.get(textarea);
+
+                if (!editor) {
+                    return;
+                }
+
+                editor.toTextArea();
+                instructionEditors.delete(textarea);
+                delete textarea.dataset.easymdeInitialized;
+            });
+        }
+
+        function refreshInstructionEditors() {
+            instructionEditors.forEach(function (editor) {
+                if (!editor || !editor.codemirror) {
+                    return;
+                }
+
+                editor.codemirror.refresh();
+            });
+        }
 
         function createOptionCard(taskIndex, optionIndex) {
             var optionPrefix = tasksPrefix + '[' + taskIndex + '].Options';
@@ -255,7 +331,7 @@
                         '<div class="card-body">' +
                             '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control task-name-input" name="' + tasksPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" /><span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span></div>' +
                             '<div class="mb-3"><label class="form-label">@T["Type"]</label><select class="form-select task-type-select" name="' + tasksPrefix + '[' + index + '].Type"><option value="Semantic">@T["Semantic"]</option><option value="PredefinedOptions">@T["Predefined Options"]</option></select><span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span></div>' +
-                            '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control post-session-instructions-editor" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
                             '<div class="task-options-group d-none">' +
                                 '<div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="' + tasksPrefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">@T["Allow Multiple Values"]</label><span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span></div>' +
                                 '<div class="mb-3"><label class="form-label">@T["Options"]</label><span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from."]</span><div class="task-options-container"></div><button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button></div>' +
@@ -263,6 +339,7 @@
                         '</div>' +
                     '</div>';
                 container.appendChild(card);
+                initializeInstructionEditors(card);
             });
         }
 
@@ -270,7 +347,10 @@
         document.addEventListener('click', function (e) {
             if (e.target.closest('.remove-task-btn')) {
                 var card = e.target.closest('.post-session-task-card');
-                if (card) card.remove();
+                if (card) {
+                    destroyInstructionEditors(card);
+                    card.remove();
+                }
             }
         });
 
@@ -427,5 +507,15 @@
             toolContainer.querySelectorAll('.ps-group-toggle').forEach(function (t) { updateGroupToggle(t.dataset.group); });
             updateGlobalToggle();
         }
+
+        initializeInstructionEditors(container || document);
+
+        document.addEventListener('shown.bs.tab', function () {
+            window.setTimeout(refreshInstructionEditors, 0);
+        });
+
+        document.addEventListener('shown.bs.collapse', function () {
+            window.setTimeout(refreshInstructionEditors, 0);
+        });
     });
 </script>

@@ -1,32 +1,47 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.Handlers;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment>, IAIDeploymentManager
+/// <summary>
+/// OrchardCore-specific AIDeploymentManager that reads global default deployment
+/// settings from ISiteService instead of IOptions.
+/// </summary>
+public sealed class DefaultAIDeploymentManager : CrestApps.AI.Services.DefaultAIDeploymentManager
 {
+    private readonly ISiteService _siteService;
+
     public DefaultAIDeploymentManager(
         INamedSourceCatalog<AIDeployment> deploymentStore,
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
+        IOptionsMonitor<DefaultAIDeploymentSettings> deploymentSettings,
+        ISiteService siteService,
         ILogger<DefaultAIDeploymentManager> logger)
-        : base(deploymentStore, handlers, logger)
+        : base(deploymentStore, handlers, deploymentSettings, logger)
     {
+        _siteService = siteService;
     }
 
-    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName)
+    protected override string GetGlobalDefaultId(AIDeploymentType type)
     {
-        var deployments = (await Catalog.GetAllAsync())
-            .Where(x => x.ProviderName == providerName &&
-            (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
+        // In OrchardCore, settings are stored via ISiteService rather than IOptions.
+        var settings = _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>()
+            .GetAwaiter().GetResult();
 
-        foreach (var deployment in deployments)
+        return type switch
         {
-            await LoadAsync(deployment);
-        }
-
-        return deployments;
+            AIDeploymentType.Chat => settings.DefaultChatDeploymentId,
+            AIDeploymentType.Utility => settings.DefaultUtilityDeploymentId,
+            AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentId,
+            AIDeploymentType.Image => settings.DefaultImageDeploymentId,
+            AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentId,
+            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentId,
+            _ => null,
+        };
     }
 }

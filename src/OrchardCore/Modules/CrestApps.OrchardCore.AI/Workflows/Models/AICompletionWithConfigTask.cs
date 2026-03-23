@@ -32,7 +32,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         IAIToolsService aIToolsService,
         ILiquidTemplateManager liquidTemplateManager,
         ILoggerFactory loggerFactory,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
         _aiProviderOptions = aiProviderOptions.Value;
@@ -41,7 +41,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         _aIToolsService = aIToolsService;
         _liquidTemplateManager = liquidTemplateManager;
         _loggerFactory = loggerFactory;
-        _defaultOptions = defaultOptions.Value;
+        _defaultOptions = defaultOptions;
         _logger = _loggerFactory.CreateLogger<AICompletionWithConfigTask>();
         S = stringLocalizer;
     }
@@ -146,7 +146,9 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
         try
         {
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
             var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, ConnectionName ?? provider.DefaultConnectionName, DeploymentName ?? provider.DefaultChatDeploymentName);
+#pragma warning restore CS0618
 
             var chatOptions = new ChatOptions
             {

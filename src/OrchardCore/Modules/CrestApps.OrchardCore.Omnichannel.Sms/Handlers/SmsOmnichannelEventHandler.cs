@@ -161,7 +161,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             var context = new AICompletionContext
             {
                 ConnectionName = campaign.ConnectionName,
-                DeploymentId = campaign.DeploymentName,
+                ChatDeploymentId = campaign.DeploymentName,
                 Temperature = campaign.Temperature,
                 TopP = campaign.TopP,
                 FrequencyPenalty = campaign.FrequencyPenalty,

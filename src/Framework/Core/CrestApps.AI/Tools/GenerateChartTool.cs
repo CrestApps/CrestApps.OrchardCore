@@ -100,12 +100,14 @@ public sealed class GenerateChartTool : AIFunction
             }
 
             // Prefer the utility deployment for chart generation, fall back to the default deployment.
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
             var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
 
             if (string.IsNullOrEmpty(deploymentName))
             {
                 deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
             }
+#pragma warning restore CS0618
 
             if (string.IsNullOrEmpty(deploymentName))
             {

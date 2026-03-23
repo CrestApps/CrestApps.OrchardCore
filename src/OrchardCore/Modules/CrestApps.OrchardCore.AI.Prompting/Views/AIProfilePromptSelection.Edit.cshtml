@@ -10,7 +10,7 @@
 
 <div class="@Orchard.GetWrapperClasses()">
     <label asp-for="SelectedPromptId" class="@Orchard.GetLabelClasses()">
-        @T["Prompt Template"]
+        @T["Prompt template"]
         <span class="text-muted" data-bs-toggle="tooltip" title="@T["Select a reusable prompt template for system instructions. The template output is combined with any custom system message you provide."]">
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
@@ -24,7 +24,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses(string.IsNullOrEmpty(Model.SelectedPromptId) ? "d-none" : "")" data-ci-prompt-parameters-wrapper>
-    <label asp-for="PromptParameters" class="@Orchard.GetLabelClasses()">@T["Template Parameters"]</label>
+    <label asp-for="PromptParameters" class="@Orchard.GetLabelClasses()">@T["Template parameters"]</label>
     <div class="@Orchard.GetEndClasses()">
         <div class="mb-1 d-none" data-ci-prompt-parameters-info>
             <small class="text-muted">@T["Expected parameters:"]</small>

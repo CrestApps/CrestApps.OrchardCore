@@ -6,6 +6,7 @@ using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -327,6 +328,7 @@ public sealed class DefaultOrchestratorTests
             completionService ?? new FakeCompletionService("default response"),
             new FakeAIClientFactory(),
             new FakeAITemplateService(),
+            Mock.Of<IAIDeploymentManager>(),
             Options.Create(new AIProviderOptions()),
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
@@ -358,7 +360,7 @@ public sealed class DefaultOrchestratorTests
             CompletionContext = new AICompletionContext
             {
                 ConnectionName = "test",
-                DeploymentId = "test-deployment",
+                ChatDeploymentId = "test-deployment",
                 ToolNames = ["tool0", "tool1", "tool2"],
             },
             SourceName = "TestClient",
@@ -471,7 +473,22 @@ public sealed class DefaultOrchestratorTests
 #pragma warning disable MEAI001
         public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
             => new((IImageGenerator)null);
+
+        public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((ISpeechToTextClient)null);
+
+        public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
+            => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
+
+        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((ITextToSpeechClient)null);
+
+        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((ITextToSpeechClient)null);
+
+        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
+            => Task.FromResult(Array.Empty<SpeechVoice>());
     }
 
     /// <summary>
@@ -491,4 +508,5 @@ public sealed class DefaultOrchestratorTests
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => Task.FromResult<string>(null);
     }
+
 }

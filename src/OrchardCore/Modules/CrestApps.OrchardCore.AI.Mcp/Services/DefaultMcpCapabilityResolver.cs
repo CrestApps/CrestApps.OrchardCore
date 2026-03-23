@@ -410,7 +410,9 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             return null;
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
         var deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(throwException: false);
+#pragma warning restore CS0618
 
         if (string.IsNullOrEmpty(deploymentName))
         {

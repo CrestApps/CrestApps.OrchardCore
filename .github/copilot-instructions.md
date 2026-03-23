@@ -51,6 +51,8 @@ gulp rebuild
 dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true /p:NuGetAudit=false
 ```
 
+**Important for Copilot skills**: In a fresh environment, build the project early and then check for newly generated skills under `.agents\skills`. One of the packages can create `.agents\skills` on the first build, and those generated skills may contain important, up-to-date capabilities that are not visible before the build runs.
+
 **If build fails with NU1301 errors** about `nuget.cloudsmith.io`, this is expected in restricted environments. Document this limitation rather than attempting workarounds.
 
 #### Unit Tests (Requires Successful Build)
@@ -200,6 +202,7 @@ tests/
 - **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
 - **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
 - **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
+- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `AITemplates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `IAITemplateService`.
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
@@ -272,13 +275,20 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Using statements**: 
   - Sort System directives first
   - Prefer simple using statements over braces when possible
+  - Remove unused usings from the code you touch
   
 #### Code Preferences  
 - **Range/Index operators**: Avoid using range/index operators (enforced as warning)
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
+- **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
 - **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
+- **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
+- **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
+- **Deferred third-party work**: When a catalog handler must call indexing systems, external APIs, or other third-party/background-style services, follow the deferred task pattern used by `ChatInteractionHandler` and `AIMemoryEntryHandler`: capture the affected models/IDs in the scoped handler and schedule the work with `ShellScope.AddDeferredTask(...)` so the external work runs later instead of inline during the catalog event.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
+- **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 
 ### Module Structure Conventions
@@ -519,20 +529,20 @@ services.AddNavigationProvider<MyAdminMenu>();
 
 ## Anti-Patterns to Avoid
 
-- ❌ Don't use static mutable state
-- ❌ Don't create tight coupling between modules
-- ❌ Don't bypass Orchard Core's dependency injection
-- ❌ Don't hardcode connection strings or secrets
-- ❌ Don't use synchronous I/O operations (use async/await)
-- ❌ Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
-- ❌ Don't skip writing tests for new features
-- ❌ Don't commit commented-out code
-- ❌ Don't use `System.Range` or `System.Index` operators (enforced as warning)
-- ❌ Don't leave unused services injected through dependency injection
-- ❌ Don't leave unused `using` statements in source files
-- ❌ Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
-- ❌ Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
-- ❌ Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
+- Don't use static mutable state
+- Don't create tight coupling between modules
+- Don't bypass Orchard Core's dependency injection
+- Don't hardcode connection strings or secrets
+- Don't use synchronous I/O operations (use async/await)
+- Don't ignore compiler warnings (TreatWarningsAsErrors is enabled) — fix all warnings in the entire project, not just changed files
+- Don't skip writing tests for new features
+- Don't commit commented-out code
+- Don't use `System.Range` or `System.Index` operators (enforced as warning)
+- Don't leave unused services injected through dependency injection
+- Don't leave unused `using` statements in source files
+- Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
+- Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
 
 ## Code Cleanup (Required After Completing Work)
 

@@ -151,7 +151,9 @@ public sealed class SearchDocumentsTool : AIFunction
                 if (!string.IsNullOrEmpty(connectionName) &&
                     provider.Connections.TryGetValue(connectionName, out var connection))
                 {
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
                     deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
+#pragma warning restore CS0618
                 }
             }
 

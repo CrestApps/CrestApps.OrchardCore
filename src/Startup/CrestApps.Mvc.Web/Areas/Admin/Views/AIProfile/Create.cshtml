@@ -72,16 +72,16 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="ConnectionName" class="form-label">Connection</label>
-                                <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections"></select>
-                                <div class="form-text">The AI provider connection to use.</div>
+                                <label asp-for="ChatDeploymentId" class="form-label">Chat deployment</label>
+                                <select asp-for="ChatDeploymentId" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                <div class="form-text">The chat model deployment to use.</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="DeploymentId" class="form-label">Deployment</label>
-                                <select asp-for="DeploymentId" class="form-select" asp-items="Model.Deployments"></select>
-                                <div class="form-text">The model deployment to use.</div>
+                                <label asp-for="UtilityDeploymentId" class="form-label">Utility deployment</label>
+                                <select asp-for="UtilityDeploymentId" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                <div class="form-text">Optional deployment for utility tasks (planning, summarization).</div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -89,6 +89,24 @@
                                 <label asp-for="OrchestratorName" class="form-label">Orchestrator</label>
                                 <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators"></select>
                                 <div class="form-text">The orchestrator that manages AI interactions.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="SelectedTemplateId" class="form-label">AI Template</label>
+                                <select asp-for="SelectedTemplateId" class="form-select" asp-items="Model.Templates"></select>
+                                <div class="form-text">Optionally apply a template to pre-fill the system message and parameters.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3 pt-4">
+                                <div class="form-check form-switch">
+                                    <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
+                                    <label asp-for="EnableUserMemory" class="form-check-label">Enable user memory</label>
+                                </div>
+                                <div class="form-text">Store and recall user conversation history for personalized responses.</div>
                             </div>
                         </div>
                     </div>
@@ -210,6 +228,9 @@
 
                 <!-- Documents Tab -->
                 <div class="tab-pane fade" id="docs" role="tabpanel">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Documents uploaded here will be used as a <strong>knowledgebase</strong> for the AI model. The model will search these documents to provide contextually relevant answers during chat sessions.
+                    </div>
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="AllowSessionDocuments" class="form-check-input" type="checkbox" />

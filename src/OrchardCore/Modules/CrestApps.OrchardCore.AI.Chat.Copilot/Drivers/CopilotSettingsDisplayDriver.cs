@@ -69,8 +69,8 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             // Select list options
             model.AuthenticationTypes =
             [
-                new SelectListItem(S["GitHub Signed-in User"], nameof(CopilotAuthenticationType.GitHubOAuth)),
-                new SelectListItem(S["API Key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
+                new SelectListItem(S["GitHub signed-in user"], nameof(CopilotAuthenticationType.GitHubOAuth)),
+                new SelectListItem(S["API key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
             ];
 
             model.ProviderTypes =
@@ -82,7 +82,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             model.WireApiOptions =
             [
-                new SelectListItem(S["Chat Completions (default)"], "completions"),
+                new SelectListItem(S["Chat completions (default)"], "completions"),
                 new SelectListItem(S["Responses (GPT-5 series)"], "responses"),
             ];
         })
@@ -116,7 +116,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             }
             else if (string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client Secret is required."]);
+                context.Updater.ModelState.AddModelError(nameof(model.ClientSecret), S["Client secret is required."]);
             }
         }
         else
@@ -130,7 +130,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.IsNullOrWhiteSpace(settings.ProviderType))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ProviderType), S["Provider Type is required."]);
+                context.Updater.ModelState.AddModelError(nameof(model.ProviderType), S["Provider type is required."]);
             }
 
             if (string.IsNullOrWhiteSpace(settings.BaseUrl))
@@ -140,7 +140,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.IsNullOrWhiteSpace(settings.DefaultModel))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.DefaultModel), S["Default Model is required."]);
+                context.Updater.ModelState.AddModelError(nameof(model.DefaultModel), S["Default model is required."]);
             }
 
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
@@ -152,14 +152,14 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(settings.AzureApiVersion))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.AzureApiVersion), S["Azure API Version is required for Azure provider."]);
+                context.Updater.ModelState.AddModelError(nameof(model.AzureApiVersion), S["Azure API version is required for Azure provider."]);
             }
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(model.ApiKey)
                 && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
-                context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API Key is required for Azure provider."]);
+                context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }
         }
 

@@ -22,5 +22,11 @@
       "Assets/css/ai-chat-widget.css"
     ],
     "output": "wwwroot/css/ai-chat-widget.css"
+  },
+  {
+    "inputs": [
+      "Assets/css/speech-to-text.css"
+    ],
+    "output": "wwwroot/css/speech-to-text.css"
   }
 ]

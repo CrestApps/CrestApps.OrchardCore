@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <Title>CrestApps OrchardCore Recipes Module</Title>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <Description>
       $(CrestAppsDescription)
 
@@ -17,6 +18,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment" />
   </ItemGroup>
 
   <ItemGroup>

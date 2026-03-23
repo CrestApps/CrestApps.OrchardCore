@@ -27,7 +27,7 @@ public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProf
 
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
-        }).Location("Content:10#Data Processing & Metrics:1");
+        }).Location("Content:1#Data Processing & Metrics;10");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

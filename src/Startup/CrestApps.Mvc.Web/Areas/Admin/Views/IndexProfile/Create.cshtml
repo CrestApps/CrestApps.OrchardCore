@@ -1,0 +1,69 @@
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.IndexProfileViewModel
+@{
+    ViewData["Title"] = "Create Index Profile";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Create Index Profile</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" required placeholder="e.g., my-documents-index" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <div class="form-text">A unique name for this index profile.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DisplayText" class="form-label">Display text</label>
+                <input asp-for="DisplayText" class="form-control" placeholder="e.g., My Documents Index" />
+                <span asp-validation-for="DisplayText" class="text-danger"></span>
+                <div class="form-text">A human-readable label (optional).</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="IndexName" class="form-label">Index name <span class="text-danger">*</span></label>
+                <input asp-for="IndexName" class="form-control" required
+                       placeholder="e.g., ai-documents" />
+                <span asp-validation-for="IndexName" class="text-danger"></span>
+                <div class="form-text">The actual index name in the search backend. Use lowercase letters, numbers, and hyphens.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ProviderName" class="form-label">Provider <span class="text-danger">*</span></label>
+                <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select" required>
+                    <option value="">— Select Provider —</option>
+                </select>
+                <span asp-validation-for="ProviderName" class="text-danger"></span>
+                <div class="form-text">The search backend provider.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Type" class="form-label">Type <span class="text-danger">*</span></label>
+                <select asp-for="Type" asp-items="Model.Types" class="form-select" required>
+                    <option value="">— Select Type —</option>
+                </select>
+                <span asp-validation-for="Type" class="text-danger"></span>
+                <div class="form-text">Determines how this index is used (documents, data source, or memory).</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="EmbeddingDeploymentId" class="form-label">Embedding deployment</label>
+                <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+                </select>
+                <span asp-validation-for="EmbeddingDeploymentId" class="text-danger"></span>
+                <div class="form-text">The embedding deployment used to generate vector embeddings for this index.</div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Create
+                </button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>

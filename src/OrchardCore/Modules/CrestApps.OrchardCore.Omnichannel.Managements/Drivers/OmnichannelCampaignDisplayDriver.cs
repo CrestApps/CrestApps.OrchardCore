@@ -31,7 +31,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IOptions<AIProviderOptions> aiProviderOptions,
-        IOptions<DefaultAIOptions> defaultAIOptions,
+        DefaultAIOptions defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
@@ -39,7 +39,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         _channelEndpointsCatalog = channelEndpointsCatalog;
         _toolDefinitions = toolDefinitions.Value;
         _aiProviderOptions = aiProviderOptions.Value;
-        _defaultAIOptions = defaultAIOptions.Value;
+        _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }

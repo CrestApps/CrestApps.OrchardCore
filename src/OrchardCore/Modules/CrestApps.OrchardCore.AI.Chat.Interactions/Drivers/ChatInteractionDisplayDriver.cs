@@ -93,7 +93,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         {
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
-            model.DeploymentId = interaction.DeploymentId;
+            model.ChatDeploymentId = interaction.ChatDeploymentId;
             model.ConnectionName = interaction.ConnectionName;
             model.SystemMessage = interaction.SystemMessage;
             model.Temperature = interaction.Temperature;

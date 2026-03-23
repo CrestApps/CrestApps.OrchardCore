@@ -111,7 +111,8 @@
 
 .ai-admin-widget-input-wrapper {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    gap: 0.25rem;
     background: var(--bs-tertiary-bg, #f8f9fa);
     border: 1px solid var(--bs-border-color, #dee2e6);
     border-radius: 0.5rem;
@@ -155,6 +156,14 @@
 .ai-admin-widget-send-btn:disabled {
     opacity: 0.4;
     cursor: default;
+}
+
+.ai-admin-widget-send-btn.active {
+    background: var(--bs-primary, #0d6efd);
+    width: auto;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+    font-size: 0.75rem;
 }
 
 .ai-admin-widget-history-panel {
@@ -303,6 +312,11 @@
 .ai-admin-widget .ai-chat-message-item {
     position: relative;
     padding: 0.15rem;
+}
+
+.ai-admin-widget .ai-partial-transcript {
+    font-style: italic;
+    opacity: 0.7;
 }
 
 .ai-admin-widget-body .ai-chat-message-item + .ai-chat-message-item::before {

@@ -67,10 +67,12 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIProviderConnection.Source)]));
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
         if (string.IsNullOrWhiteSpace(context.Model.ChatDeploymentName))
         {
             context.Result.Fail(new ValidationResult(S["Chat Deployment name is required."], [nameof(AIProviderConnection.ChatDeploymentName)]));
         }
+#pragma warning restore CS0618
     }
 
     public override Task InitializedAsync(InitializedContext<AIProviderConnection> context)
@@ -100,6 +102,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
             }
         }
 
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
         var defaultDeploymentName = data[nameof(AIProviderConnection.ChatDeploymentName)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(defaultDeploymentName))
@@ -127,6 +130,7 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         {
             connection.ImagesDeploymentName = imagesDeploymentName;
         }
+#pragma warning restore CS0618
 
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();
 

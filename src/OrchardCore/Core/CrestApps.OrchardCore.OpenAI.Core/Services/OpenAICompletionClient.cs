@@ -23,10 +23,11 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IServiceProvider serviceProvider,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             OpenAIConst.ImplementationName,
             aIClientFactory,
@@ -34,10 +35,11 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             loggerFactory,
             serviceProvider,
             providerOptions.Value,
-            defaultOptions.Value,
+            defaultOptions,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
@@ -53,7 +55,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             implementationName,
             aIClientFactory,
@@ -64,7 +67,8 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
             defaultOptions,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }

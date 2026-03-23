@@ -59,11 +59,17 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
 
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
+
+        services.AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>();
+
+        // Chat Interaction notification transport.
+        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
 
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
@@ -74,6 +80,9 @@ public sealed class Startup : StartupBase
             // without the server dropping the connection prematurely.
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+            // Allow larger messages for audio transcription payloads.
+            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
     }
 

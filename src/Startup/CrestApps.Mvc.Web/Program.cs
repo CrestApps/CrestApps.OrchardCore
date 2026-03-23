@@ -2,6 +2,8 @@ using CrestApps;
 using CrestApps.AI;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
+using CrestApps.AI.DataSources.AzureAI;
+using CrestApps.AI.DataSources.Elasticsearch;
 using CrestApps.AI.Models;
 using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
@@ -68,6 +70,15 @@ builder.Services.Configure<AIProviderOptions>(
     builder.Configuration.GetSection("CrestApps:AI:Providers"));
 
 // ---------------------------------------------------------------------------
+// Search Providers — configure Elasticsearch and/or Azure AI Search for
+// vector search, data sources, and document indexing.
+// Connection settings are read from appsettings.json under "CrestApps:Search".
+// ---------------------------------------------------------------------------
+builder.Services
+    .AddElasticsearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
+    .AddAzureAISearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
+
+// ---------------------------------------------------------------------------
 // AI Tools — register custom tools that AI profiles can invoke.
 // ---------------------------------------------------------------------------
 builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
@@ -95,10 +106,14 @@ builder.Services.AddSingleton(sp =>
     store.RegisterIndexes<AIProfileIndexProvider>();
     store.RegisterIndexes<AIProviderConnectionIndexProvider>();
     store.RegisterIndexes<AIDeploymentIndexProvider>();
+    store.RegisterIndexes<AIProfileTemplateIndexProvider>();
     store.RegisterIndexes<AIChatSessionIndexProvider>();
     store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
     store.RegisterIndexes<AIDocumentIndexProvider>();
     store.RegisterIndexes<AIDocumentChunkIndexProvider>();
+    store.RegisterIndexes<SearchIndexProfileIndexProvider>();
+    store.RegisterIndexes<AIDataSourceIndexProvider>();
+    store.RegisterIndexes<AIMemoryEntryIndexProvider>();
 
     return store;
 });
@@ -110,15 +125,22 @@ builder.Services
     .AddNamedSourceDocumentCatalog<AIProfile, AIProfileIndex>()
     .AddNamedSourceDocumentCatalog<AIProviderConnection, AIProviderConnectionIndex>()
     .AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>()
+    .AddNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>()
     .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
     .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
     .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
     .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>()
-    .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>();
+    .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>()
+    .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
+    .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
+    .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>();
 
 // Local file store for uploaded documents.
 builder.Services.AddSingleton(new FileSystemFileStore(
     Path.Combine(appDataPath, "Documents")));
+
+// Settings service for managing AI settings.
+builder.Services.AddSingleton(new JsonFileSettingsService(appDataPath));
 
 // ---------------------------------------------------------------------------
 // MVC & SignalR
@@ -196,6 +218,12 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIDeploymentIndex.Source), c => c.WithLength(255))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIProfileTemplateIndex>(t => t
+            .Column<string>(nameof(AIProfileTemplateIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIProfileTemplateIndex.Name), c => c.WithLength(255))
+            .Column<string>(nameof(AIProfileTemplateIndex.Source), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIChatSessionIndex>(t => t
             .Column<string>(nameof(AIChatSessionIndex.ItemId), c => c.WithLength(44))
             .Column<string>(nameof(AIChatSessionIndex.SessionId), c => c.WithLength(44))
@@ -222,6 +250,25 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIDocumentChunkIndex.ReferenceId), c => c.WithLength(26))
             .Column<string>(nameof(AIDocumentChunkIndex.ReferenceType), c => c.WithLength(50))
             .Column<int>(nameof(AIDocumentChunkIndex.Index))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<SearchIndexProfileIndex>(t => t
+            .Column<string>(nameof(SearchIndexProfileIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(SearchIndexProfileIndex.Name), c => c.WithLength(255))
+            .Column<string>(nameof(SearchIndexProfileIndex.ProviderName), c => c.WithLength(50))
+            .Column<string>(nameof(SearchIndexProfileIndex.Type), c => c.WithLength(50))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIDataSourceIndex>(t => t
+            .Column<string>(nameof(AIDataSourceIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIDataSourceIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(AIDataSourceIndex.SourceIndexProfileName), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<AIMemoryEntryIndex>(t => t
+            .Column<string>(nameof(AIMemoryEntryIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(AIMemoryEntryIndex.UserId), c => c.WithLength(255))
+            .Column<string>(nameof(AIMemoryEntryIndex.Name), c => c.WithLength(255))));
 
     await transaction.CommitAsync();
 }

@@ -5,10 +5,10 @@
 @model AIChatAdminWidgetSettingsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["AI Profile"]</label>
+    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["AI profile"]</label>
     <div class="@Orchard.GetEndClasses()">
         <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
-            <option value="">@T["-- Select a profile --"]</option>
+            <option value="">@T["No profile (disabled)"]</option>
         </select>
         <span asp-validation-for="ProfileId" class="text-danger"></span>
         <span class="hint">@T["Select the AI profile to use for the admin widget. Users with the appropriate permission can chat with this profile from any admin page."]</span>
@@ -16,7 +16,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="MaxSessions" class="@Orchard.GetLabelClasses()">@T["Max History Sessions"]</label>
+    <label asp-for="MaxSessions" class="@Orchard.GetLabelClasses()">@T["Max history sessions"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="MaxSessions"
                min="@AIChatAdminWidgetSettings.MinMaxSessions"
@@ -28,7 +28,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="PrimaryColor" class="@Orchard.GetLabelClasses()">@T["Primary Color"]</label>
+    <label asp-for="PrimaryColor" class="@Orchard.GetLabelClasses()">@T["Primary color"]</label>
     <div class="@Orchard.GetEndClasses()">
         <div class="input-group">
             <input type="color" class="form-control form-control-color" asp-for="PrimaryColor" />

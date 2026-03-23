@@ -16,8 +16,8 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class AIProfileController : Controller
 {
     private readonly IAIProfileManager _profileManager;
-    private readonly ICatalog<AIProviderConnection> _connectionCatalog;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
+    private readonly ICatalog<AIProfileTemplate> _templateCatalog;
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly FileSystemFileStore _fileStore;
@@ -27,8 +27,8 @@ public sealed class AIProfileController : Controller
 
     public AIProfileController(
         IAIProfileManager profileManager,
-        ICatalog<AIProviderConnection> connectionCatalog,
         ICatalog<AIDeployment> deploymentCatalog,
+        ICatalog<AIProfileTemplate> templateCatalog,
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         FileSystemFileStore fileStore,
@@ -37,8 +37,8 @@ public sealed class AIProfileController : Controller
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
         _profileManager = profileManager;
-        _connectionCatalog = connectionCatalog;
         _deploymentCatalog = deploymentCatalog;
+        _templateCatalog = templateCatalog;
         _documentStore = documentStore;
         _chunkStore = chunkStore;
         _fileStore = fileStore;
@@ -166,17 +166,25 @@ public sealed class AIProfileController : Controller
         model.Sources.AddRange(_aiOptions.ProfileSources.Select(s =>
             new SelectListItem(s.Value.DisplayName?.Value ?? s.Key, s.Key)));
 
-        var connections = await _connectionCatalog.GetAllAsync();
-        model.Connections = [new SelectListItem("— Default Connection —", "")];
-        model.Connections.AddRange(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)));
+        var allDeployments = await _deploymentCatalog.GetAllAsync();
 
-        var deployments = await _deploymentCatalog.GetAllAsync();
-        model.Deployments = [new SelectListItem("— Default Deployment —", "")];
-        model.Deployments.AddRange(deployments.Select(d => new SelectListItem(d.Name, d.Name)));
+        model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
+        model.ChatDeployments.AddRange(allDeployments
+            .Where(d => d.Type == AIDeploymentType.Chat)
+            .Select(d => new SelectListItem(d.Name, d.ItemId)));
+
+        model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
+        model.UtilityDeployments.AddRange(allDeployments
+            .Where(d => d.Type == AIDeploymentType.Utility || d.Type == AIDeploymentType.Chat)
+            .Select(d => new SelectListItem(d.Name, d.ItemId)));
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
         model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
         model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+
+        var templates = await _templateCatalog.GetAllAsync();
+        model.Templates = [new SelectListItem("— No Template —", "")];
+        model.Templates.AddRange(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
 
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableTools = _toolOptions.Tools

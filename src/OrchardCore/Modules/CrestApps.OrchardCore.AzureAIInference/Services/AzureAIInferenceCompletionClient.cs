@@ -19,9 +19,10 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IServiceProvider serviceProvider,
-        IOptions<DefaultAIOptions> defaultOptions,
+        DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
-        IAITemplateService aiTemplateService
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
         ) : base(
             AzureAIInferenceConstants.ImplementationName,
             aIClientFactory,
@@ -29,10 +30,11 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
             loggerFactory,
             serviceProvider,
             providerOptions.Value,
-            defaultOptions.Value,
+            defaultOptions,
             handlers,
             deploymentStore,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
     }
 

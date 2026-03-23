@@ -48,6 +48,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
             model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+            model.IdentityId = metadata.IdentityId;
         }).Location("Content:5");
     }
 
@@ -74,6 +75,9 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         }
 
         metadata.AuthenticationType = model.AuthenticationType;
+
+        var trimmedIdentityId = model.IdentityId?.Trim();
+        metadata.IdentityId = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 

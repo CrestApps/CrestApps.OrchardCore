@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model AIProfileTemplateProfileFieldsViewModel
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="TitleType" class="@Orchard.GetLabelClasses()">@T["Title type"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="TitleType" class="form-select">
+            <option value="">@T["Select a session title type"]</option>
+            @foreach (var item in Model.TitleTypes)
+            {
+                <option value="@item.Value" selected="@(item.Value == Model.TitleType?.ToString())">@item.Text</option>
+            }
+        </select>
+        <span asp-validation-for="TitleType" class="text-danger"></span>
+        <span class="hint">@T["Choose how the session title should be set when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="WelcomeMessage" class="@Orchard.GetLabelClasses()">@T["Welcome message"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="WelcomeMessage" class="form-control" />
+        <span asp-validation-for="WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["The welcome message to show on the user-interface when a new session is created."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="PromptSubject" class="@Orchard.GetLabelClasses()">@T["Prompt subject"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="PromptSubject" class="form-control" />
+        <span asp-validation-for="PromptSubject" class="text-danger"></span>
+        <span class="hint">@T["When set, this title will be displayed as the response header for each message from the model."]</span>
+    </div>
+</div>

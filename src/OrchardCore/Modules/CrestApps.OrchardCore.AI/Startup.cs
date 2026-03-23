@@ -1,5 +1,7 @@
 using CrestApps.AI;
+using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
+using CrestApps.AI.Prompting.Extensions;
 using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
@@ -13,6 +15,7 @@ using CrestApps.OrchardCore.AI.Endpoints.Api;
 using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
+using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
@@ -24,6 +27,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -35,6 +39,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -44,6 +49,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAICoreServices();
+
+        // Register embedded AI templates from this module so they are always
+        // available, even when the AI Prompting feature is not enabled.
+        services.AddAITemplatesFromAssembly(typeof(Startup).Assembly);
         services.AddPermissionProvider<AIPermissionsProvider>();
         services.Configure<TemplateOptions>(o =>
         {
@@ -64,7 +73,16 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
+            .AddScoped(sp =>
+            {
+                var defaultOptions = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>().Value;
+                var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
+
+                return defaultOptions.ApplySiteOverrides(site.As<GeneralAISettings>());
+            })
+            .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
         services
@@ -73,7 +91,9 @@ public sealed class Startup : StartupBase
         // Add tools core functionality.
         services
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
             .AddScoped<CrestApps.AI.IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
+            .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -85,13 +105,50 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddIndexProvider<AIProfileIndexProvider>();
 
+        // AI Profile Template services.
+        services
+            .AddScoped<DefaultAIProfileTemplateStore>()
+            .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<INamedSourceCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
+            .AddScoped<DefaultAIProfileTemplateManager>()
+            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
+            .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
+            .AddDataMigration<AIProfileTemplateIndexMigrations>()
+            .AddIndexProvider<AIProfileTemplateIndexProvider>()
+            .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
+            .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
+            .AddNavigationProvider<AITemplateAdminMenu>()
+            .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
+
+        // Register template sources.
+        services
+            .AddAITemplateSource(AITemplateSources.Profile, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
+                entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
+            })
+            .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
+                entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
+            });
+
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddGetConnectionsEndpoint();
+            .AddGetConnectionsEndpoint()
+            .AddGetVoicesEndpoint();
     }
 }
 
@@ -101,6 +158,7 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIProfileStep>();
+        services.AddRecipeExecutionStep<AIProfileTemplateStep>();
     }
 }
 
@@ -129,6 +187,7 @@ public sealed class OCDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
+        services.AddDeployment<AIProfileTemplateDeploymentSource, AIProfileTemplateDeploymentStep, AIProfileTemplateDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
         services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
@@ -145,7 +204,9 @@ public sealed class DeploymentsStartup : StartupBase
             .AddAIDeploymentServices()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddNavigationProvider<AIDeploymentAdminMenu>();
+            .AddNavigationProvider<AIDeploymentAdminMenu>()
+            .AddDataMigration<AIDeploymentTypeMigrations>()
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -163,7 +224,8 @@ public sealed class ChatDeploymentsStartup : StartupBase
     {
         services
             .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>()
-            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>();
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>();
     }
 }
 
@@ -207,6 +269,8 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
+        services.AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIToolExecutionContextOrchestrationHandler>());
 
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();

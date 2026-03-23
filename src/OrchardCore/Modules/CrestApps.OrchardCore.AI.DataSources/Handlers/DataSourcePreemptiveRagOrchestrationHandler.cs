@@ -5,10 +5,12 @@ using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Services;
 using Cysharp.Text;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
+using OrchardCore.Indexing.Models;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
@@ -24,6 +26,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITemplateService _templateService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
@@ -33,6 +36,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aiClientFactory,
         IAITemplateService templateService,
+        IAIDeploymentManager deploymentManager,
         ISiteService siteService,
         IServiceProvider serviceProvider,
         ILogger<DataSourcePreemptiveRagHandler> logger)
@@ -41,6 +45,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         _indexProfileStore = indexProfileStore;
         _aiClientFactory = aiClientFactory;
         _templateService = templateService;
+        _deploymentManager = deploymentManager;
         _siteService = siteService;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -100,6 +105,29 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         // Get embedding configuration.
         var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
 
+        // Try the new deployment resolver first.
+        var embeddingDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Embedding,
+            deploymentId: profileMetadata.EmbeddingDeploymentId);
+
+        if (embeddingDeployment != null)
+        {
+            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+                embeddingDeployment.ProviderName,
+                embeddingDeployment.ConnectionName,
+                embeddingDeployment.Name);
+
+            if (embeddingGenerator == null)
+            {
+                return;
+            }
+
+            await SearchAndInjectContextAsync(context, ragMetadata, masterProfile, contentManager, embeddingGenerator);
+            return;
+        }
+
+        // Fall back to legacy explicit metadata properties for backward compatibility.
+#pragma warning disable CS0618 // Type or member is obsolete
         if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
             string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
@@ -107,15 +135,29 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+        var legacyEmbeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
             profileMetadata.EmbeddingProviderName,
             profileMetadata.EmbeddingConnectionName,
             profileMetadata.EmbeddingDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
-        if (embeddingGenerator == null)
+        if (legacyEmbeddingGenerator == null)
         {
             return;
         }
+
+        await SearchAndInjectContextAsync(context, ragMetadata, masterProfile, contentManager, legacyEmbeddingGenerator);
+    }
+
+    private async Task SearchAndInjectContextAsync(
+        PreemptiveRagContext context,
+        AIDataSourceRagMetadata ragMetadata,
+        IndexProfile masterProfile,
+        IDataSourceContentManager contentManager,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+    {
+        var orchestrationContext = context.OrchestrationContext;
+        var dataSourceId = orchestrationContext.CompletionContext.DataSourceId;
 
         // Generate embeddings for all search queries.
         var embeddings = await embeddingGenerator.GenerateAsync(context.Queries);

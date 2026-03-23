@@ -34,12 +34,20 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
+            .AddScoped<IAIClientProvider, AzureSpeechClientProvider>()
             .AddScoped<IOpenAIChatOptionsConfiguration, AzurePatchOpenAIDataSourceHandler>()
             .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
             {
                 o.DisplayName = S["Azure OpenAI"];
                 o.Description = S["Azure OpenAI model deployments."];
-            });
+            })
+            .AddAIDeploymentProvider(AzureOpenAIConstants.AzureSpeechProviderName, o =>
+            {
+                o.SupportsContainedConnection = true;
+                o.DisplayName = S["Azure AI Services"];
+                o.Description = S["Azure deployment via a service connection."];
+            })
+            .AddDisplayDriver<AIDeployment, AzureSpeechDeploymentDisplayDriver>();
 
         services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
         {

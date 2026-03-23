@@ -29,8 +29,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IAITemplateService aiTemplateService)
-        : base(providerOptions, aiTemplateService)
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager)
+        : base(providerOptions, aiTemplateService, deploymentManager)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;
@@ -95,6 +96,16 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
 
+        // Use the deployment resolver with fallback to legacy dictionary-based resolution.
+        var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
+            AIDeploymentType.Chat,
+            provider,
+            ProviderName,
+            connectionName,
+            deploymentId: context.ChatDeploymentId);
+
+        connectionName = resolvedConnectionName;
+
         if (string.IsNullOrEmpty(connectionName))
         {
             Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
@@ -102,11 +113,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             return null;
         }
 
-        var deploymentName = GetDefaultDeploymentName(provider, connectionName);
-
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.DeploymentId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
 
             return null;
         }
@@ -145,6 +154,16 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
 
+        // Use the deployment resolver with fallback to legacy dictionary-based resolution.
+        var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
+            AIDeploymentType.Chat,
+            provider,
+            ProviderName,
+            connectionName,
+            deploymentId: context.ChatDeploymentId);
+
+        connectionName = resolvedConnectionName;
+
         if (string.IsNullOrEmpty(connectionName))
         {
             Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
@@ -152,11 +171,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             yield break;
         }
 
-        var deploymentName = GetDefaultDeploymentName(provider, connectionName);
-
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.DeploymentId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
 
             yield break;
         }

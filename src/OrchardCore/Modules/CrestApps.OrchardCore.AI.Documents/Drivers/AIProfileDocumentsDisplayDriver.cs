@@ -28,6 +28,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly ILogger _logger;
 
@@ -40,6 +41,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
+        IAIDeploymentManager deploymentManager,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<AIProfileDocumentsDisplayDriver> logger,
         IStringLocalizer<AIProfileDocumentsDisplayDriver> stringLocalizer)
@@ -50,6 +52,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         _documentStore = documentStore;
         _chunkStore = chunkStore;
         _documentProcessingService = documentProcessingService;
+        _deploymentManager = deploymentManager;
         _extractorOptions = extractorOptions;
         _logger = logger;
         S = stringLocalizer;
@@ -143,7 +146,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, profile.ConnectionName);
+                var connectionName = await ResolveConnectionNameAsync(profile);
+                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, connectionName);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -218,6 +222,20 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         profile.Put(documentsMetadata);
 
         return Edit(profile, context);
+    }
+
+    private async Task<string> ResolveConnectionNameAsync(AIProfile profile)
+    {
+        var deployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Chat,
+            deploymentId: profile.ChatDeploymentId,
+            providerName: profile.Source)
+            ?? await _deploymentManager.ResolveAsync(
+                AIDeploymentType.Utility,
+                deploymentId: profile.UtilityDeploymentId,
+                providerName: profile.Source);
+
+        return deployment?.ConnectionName;
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

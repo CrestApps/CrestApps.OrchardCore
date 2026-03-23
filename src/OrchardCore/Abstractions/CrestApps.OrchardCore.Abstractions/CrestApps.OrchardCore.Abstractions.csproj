@@ -14,11 +14,13 @@
 	<ItemGroup>
 		<PackageReference Include="NuGet.Versioning" />
 		<PackageReference Include="OrchardCore.Abstractions" />
+		<PackageReference Include="OrchardCore.Indexing.Abstractions" />
 		<PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.Abstractions/CrestApps.Abstractions.csproj" />
+		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

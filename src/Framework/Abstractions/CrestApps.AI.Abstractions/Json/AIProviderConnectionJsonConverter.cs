@@ -23,6 +23,7 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
                 ?? GetString(node, "ProviderName"),
             Name = GetString(node, nameof(AIProviderConnection.Name)),
             DisplayText = GetString(node, nameof(AIProviderConnection.DisplayText)),
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
             ChatDeploymentName = GetString(node, nameof(AIProviderConnection.ChatDeploymentName))
                 ?? GetString(node, "DefaultDeploymentName"),
             EmbeddingDeploymentName = GetString(node, nameof(AIProviderConnection.EmbeddingDeploymentName))
@@ -31,6 +32,7 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
                 ?? GetString(node, "DefaultImagesDeploymentName"),
             UtilityDeploymentName = GetString(node, nameof(AIProviderConnection.UtilityDeploymentName))
                 ?? GetString(node, "DefaultUtilityDeploymentName"),
+#pragma warning restore CS0618
             IsDefault = GetBool(node, nameof(AIProviderConnection.IsDefault)),
             CreatedUtc = GetDateTime(node, nameof(AIProviderConnection.CreatedUtc)),
             Author = GetString(node, nameof(AIProviderConnection.Author)),
@@ -56,10 +58,12 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         WriteString(writer, nameof(AIProviderConnection.Source), value.Source);
         WriteString(writer, nameof(AIProviderConnection.Name), value.Name);
         WriteString(writer, nameof(AIProviderConnection.DisplayText), value.DisplayText);
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
         WriteString(writer, nameof(AIProviderConnection.ChatDeploymentName), value.ChatDeploymentName);
         WriteString(writer, nameof(AIProviderConnection.EmbeddingDeploymentName), value.EmbeddingDeploymentName);
         WriteString(writer, nameof(AIProviderConnection.ImagesDeploymentName), value.ImagesDeploymentName);
         WriteString(writer, nameof(AIProviderConnection.UtilityDeploymentName), value.UtilityDeploymentName);
+#pragma warning restore CS0618
         writer.WriteBoolean(nameof(AIProviderConnection.IsDefault), value.IsDefault);
         writer.WriteString(nameof(AIProviderConnection.CreatedUtc), value.CreatedUtc);
         WriteString(writer, nameof(AIProviderConnection.Author), value.Author);

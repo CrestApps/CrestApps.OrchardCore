@@ -135,7 +135,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             }
             else
             {
-                var prompt = await _templateService.RenderAsync(AITemplateIds.RagScopeNoRefsToolsEnabled);
+                var prompt = await _templateService.RenderAsync(AITemplateIds.RagScopeNoRefsToolsEnabled, CreateSearchToolArguments());
 
                 if (!string.IsNullOrEmpty(prompt))
                 {
@@ -160,7 +160,8 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
     {
         if (ragMetadata?.IsInScope == true)
         {
-            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchStrict);
+            // IsInScope ON: the model MUST call search tools and MUST NOT use general knowledge.
+            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchStrict, CreateSearchToolArguments());
 
             if (!string.IsNullOrEmpty(prompt))
             {
@@ -170,7 +171,8 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
         }
         else
         {
-            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchRelaxed);
+            // IsInScope OFF: the model MUST try search tools first, then may supplement with general knowledge.
+            var prompt = await _templateService.RenderAsync(AITemplateIds.RagToolSearchRelaxed, CreateSearchToolArguments());
 
             if (!string.IsNullOrEmpty(prompt))
             {
@@ -179,6 +181,16 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
             }
         }
     }
+
+    private static Dictionary<string, object> CreateSearchToolArguments() =>
+        new()
+        {
+            ["searchToolNames"] = new[]
+            {
+                SystemToolNames.SearchDataSources,
+                SystemToolNames.SearchDocuments,
+            },
+        };
 
     private static AIDataSourceRagMetadata GetRagMetadata(object resource)
     {

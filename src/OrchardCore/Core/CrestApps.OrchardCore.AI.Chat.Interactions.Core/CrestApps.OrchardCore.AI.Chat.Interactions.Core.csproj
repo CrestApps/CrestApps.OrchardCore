@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
   </ItemGroup>

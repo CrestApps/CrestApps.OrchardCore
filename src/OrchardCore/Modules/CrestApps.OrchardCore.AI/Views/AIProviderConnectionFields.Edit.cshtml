@@ -29,42 +29,6 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ChatDeploymentName" class="@Orchard.GetLabelClasses()">@T["Chat deployment name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" asp-for="ChatDeploymentName" class="form-control" />
-        <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["The deployment or model name used by the provider for this connection."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="EmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Embedding deployment name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" asp-for="EmbeddingDeploymentName" class="form-control" />
-        <span asp-validation-for="EmbeddingDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["The embedding deployment or model name used by the provider for this connection."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ImagesDeploymentName" class="@Orchard.GetLabelClasses()">@T["Images deployment name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" asp-for="ImagesDeploymentName" class="form-control" />
-        <span asp-validation-for="ImagesDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["The image generation deployment or model name used by the provider for this connection."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="UtilityDeploymentName" class="@Orchard.GetLabelClasses()">@T["Utility deployment name"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <input type="text" asp-for="UtilityDeploymentName" class="form-control" />
-        <span asp-validation-for="UtilityDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["Optional lightweight model used for auxiliary tasks such as query rewriting, intent detection, and chart generation. When empty, the chat deployment name is used as a fallback."]</span>
-    </div>
-</div>
-
-<div class="@Orchard.GetWrapperClasses()">
     <div class="@Orchard.GetEndClasses(true)">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IsDefault">

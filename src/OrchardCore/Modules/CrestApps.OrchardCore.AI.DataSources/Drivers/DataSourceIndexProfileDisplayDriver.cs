@@ -50,7 +50,9 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
             {
                 foreach (var (connectionName, connection) in provider.Connections)
                 {
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
                     var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
+#pragma warning restore CS0618
 
                     if (string.IsNullOrEmpty(embeddingDeploymentName))
                     {
@@ -63,9 +65,11 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
                         ? $"{alias} ({providerName})"
                         : $"{connectionName} ({providerName})";
 
+#pragma warning disable CS0618 // Type or member is obsolete
                     var isSelected = metadata.EmbeddingProviderName == providerName &&
                                 metadata.EmbeddingDeploymentName == embeddingDeploymentName &&
                                 metadata.EmbeddingConnectionName == connectionName;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     if (isSelected)
                     {
@@ -79,8 +83,10 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
             model.EmbeddingConnections = embeddingConnections;
 
             // Make read-only once the index has been created.
+#pragma warning disable CS0618 // Type or member is obsolete
             model.IsLocked = !string.IsNullOrEmpty(metadata.EmbeddingProviderName) &&
                              !string.IsNullOrEmpty(indexProfile.IndexFullName);
+#pragma warning restore CS0618 // Type or member is obsolete
         }).Location("Content:3");
     }
 
@@ -98,6 +104,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
         var metadata = indexProfile.As<DataSourceIndexProfileMetadata>();
 
         // Don't allow changes if already locked.
+#pragma warning disable CS0618 // Type or member is obsolete
         if (!string.IsNullOrEmpty(metadata.EmbeddingProviderName) &&
             !string.IsNullOrEmpty(indexProfile.IndexFullName))
         {
@@ -119,6 +126,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
                 isSet = true;
             }
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         if (!isSet)
         {

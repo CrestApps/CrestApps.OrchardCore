@@ -1,0 +1,267 @@
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AITemplateViewModel
+@{
+    ViewData["Title"] = "Create AI Template";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Create AI Template</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" required placeholder="e.g., customer-support-prompt" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="DisplayText" class="form-label">Display text</label>
+                <input asp-for="DisplayText" class="form-control" placeholder="e.g., Customer Support Prompt" />
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="Source" class="form-label">Source <span class="text-danger">*</span></label>
+                        <select asp-for="Source" class="form-select" id="sourceSelect">
+                            <option value="SystemPrompt">System Prompt</option>
+                            <option value="Profile">AI Profile</option>
+                        </select>
+                        <div class="form-text">System Prompt templates define only a system message. Profile templates include full AI profile configuration.</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="Category" class="form-label">Category</label>
+                        <input asp-for="Category" class="form-control" placeholder="e.g., Customer Service" />
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2" placeholder="Describe what this template provides"></textarea>
+            </div>
+
+            <!-- System Prompt fields (shown for SystemPrompt source) -->
+            <div id="systemPromptFields">
+                <div class="mb-3">
+                    <label asp-for="SystemMessage" class="form-label">System message</label>
+                    <textarea asp-for="SystemMessage" class="form-control" rows="6" placeholder="You are a helpful assistant that..."></textarea>
+                    <div class="form-text">The system message that defines the AI's behavior and role.</div>
+                </div>
+            </div>
+
+            <!-- Profile fields (shown for Profile source, tabbed like AI Profile) -->
+            <div id="profileFields" style="display: none;">
+                <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">Basic info</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="params-tab" data-bs-toggle="tab" data-bs-target="#params" type="button" role="tab">AI parameters</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tools-tab" data-bs-toggle="tab" data-bs-target="#tools" type="button" role="tab">AI tools</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-3 border border-top-0 rounded-bottom" id="profileTabContent">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="ProfileType" class="form-label">Profile type</label>
+                                    <select asp-for="ProfileType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIProfileType>()">
+                                        <option value="">— Default —</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="TitleType" class="form-label">Title type</label>
+                                    <select asp-for="TitleType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AISessionTitleType>()">
+                                        <option value="">— Default —</option>
+                                    </select>
+                                    <div class="form-text">How the chat session title is determined.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="ChatDeploymentId" class="form-label">Chat deployment</label>
+                                    <select asp-for="ChatDeploymentId" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                    <div class="form-text">The chat model deployment to use.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="UtilityDeploymentId" class="form-label">Utility deployment</label>
+                                    <select asp-for="UtilityDeploymentId" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                    <div class="form-text">Optional deployment for utility tasks.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="OrchestratorName" class="form-label">Orchestrator</label>
+                                    <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators"></select>
+                                    <div class="form-text">The orchestrator that manages AI interactions.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="PromptSubject" class="form-label">Prompt subject</label>
+                            <input asp-for="PromptSubject" class="form-control" placeholder="Optional subject context for the prompt" />
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="WelcomeMessage" class="form-label">Welcome message</label>
+                            <textarea asp-for="WelcomeMessage" class="form-control" rows="2" placeholder="Hello! How can I help you today?"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="PromptTemplate" class="form-label">Prompt template</label>
+                            <textarea asp-for="PromptTemplate" class="form-control" rows="3" placeholder="Optional template for formatting user prompts (Liquid syntax supported)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- AI Parameters Tab -->
+                    <div class="tab-pane fade" id="params" role="tabpanel">
+                        <div class="mb-3">
+                            <label class="form-label">System message</label>
+                            <textarea name="SystemMessage" class="form-control" rows="6" placeholder="You are a helpful assistant that...">@Model.SystemMessage</textarea>
+                            <div class="form-text">The system message that defines the AI's behavior and role.</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Temperature" class="form-label">Temperature</label>
+                                    <input asp-for="Temperature" class="form-control" type="number" step="0.1" min="0" max="2" />
+                                    <div class="form-text">Controls randomness (0 = deterministic, 2 = very creative).</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="TopP" class="form-label">Top P</label>
+                                    <input asp-for="TopP" class="form-control" type="number" step="0.1" min="0" max="1" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty</label>
+                                    <input asp-for="FrequencyPenalty" class="form-control" type="number" step="0.1" min="-2" max="2" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PresencePenalty" class="form-label">Presence penalty</label>
+                                    <input asp-for="PresencePenalty" class="form-control" type="number" step="0.1" min="-2" max="2" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="MaxOutputTokens" class="form-label">Max output tokens</label>
+                                    <input asp-for="MaxOutputTokens" class="form-control" type="number" min="1" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PastMessagesCount" class="form-label">Past messages count</label>
+                                    <input asp-for="PastMessagesCount" class="form-control" type="number" min="0" />
+                                    <div class="form-text">Number of previous messages to include for context.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Tools Tab -->
+                    <div class="tab-pane fade" id="tools" role="tabpanel">
+                        @if (Model.AvailableTools.Count == 0)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> No selectable AI tools are registered. Register tools using <code>services.AddAITool&lt;T&gt;(name).Selectable()</code> in your service configuration.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted mb-0">Select the tools profiles created from this template can use during conversations.</p>
+                                <div class="btn-group btn-group-sm ms-3" role="group">
+                                    <button type="button" class="btn btn-outline-primary" id="select-all-tools"><i class="bi bi-check-all"></i> Select All</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="deselect-all-tools"><i class="bi bi-x-lg"></i> Deselect All</button>
+                                </div>
+                            </div>
+                            @foreach (var group in Model.AvailableTools.GroupBy(t => t.Category).OrderBy(g => g.Key))
+                            {
+                                <h6 class="text-secondary mt-3 mb-2"><i class="bi bi-folder"></i> @group.Key</h6>
+                                @foreach (var tool in group)
+                                {
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="SelectedToolNames" value="@tool.Name" id="tool_@tool.Name"
+                                               @(tool.IsSelected ? "checked" : "") />
+                                        <label class="form-check-label" for="tool_@tool.Name">
+                                            <strong>@tool.Title</strong>
+                                            @if (!string.IsNullOrEmpty(tool.Description))
+                                            {
+                                                <br /><small class="text-muted">@tool.Description</small>
+                                            }
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsListable" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsListable" class="form-check-label">Listable</label>
+                </div>
+                <div class="form-text">Whether this template appears in listing UIs.</div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Create
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var sourceSelect = document.getElementById('sourceSelect');
+            var profileFields = document.getElementById('profileFields');
+            var systemPromptFields = document.getElementById('systemPromptFields');
+
+            function updateVisibility() {
+                var isProfile = sourceSelect.value === 'Profile';
+                profileFields.style.display = isProfile ? '' : 'none';
+                systemPromptFields.style.display = isProfile ? 'none' : '';
+            }
+
+            sourceSelect.addEventListener('change', updateVisibility);
+            updateVisibility();
+
+            var selectAll = document.getElementById('select-all-tools');
+            var deselectAll = document.getElementById('deselect-all-tools');
+            if (selectAll) {
+                selectAll.addEventListener('click', function () {
+                    document.querySelectorAll('#tools .form-check-input').forEach(function (cb) { cb.checked = true; });
+                });
+            }
+            if (deselectAll) {
+                deselectAll.addEventListener('click', function () {
+                    document.querySelectorAll('#tools .form-check-input').forEach(function (cb) { cb.checked = false; });
+                });
+            }
+        });
+    </script>
+}

@@ -21,7 +21,7 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         }
 
         context.Context.ConnectionName = interaction.ConnectionName;
-        context.Context.DeploymentId = interaction.DeploymentId;
+        context.Context.ChatDeploymentId = interaction.ChatDeploymentId;
         context.Context.SystemMessage = await ResolveSystemMessageAsync(interaction);
         context.Context.Temperature = interaction.Temperature;
         context.Context.TopP = interaction.TopP;
@@ -30,6 +30,7 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         context.Context.MaxTokens = interaction.MaxTokens;
         context.Context.PastMessagesCount = interaction.PastMessagesCount;
         context.Context.ToolNames = interaction.ToolNames?.ToArray();
+        context.Context.AgentNames = interaction.AgentNames?.ToArray();
         context.Context.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
 
         context.Context.AdditionalProperties["InteractionId"] = interaction.ItemId;

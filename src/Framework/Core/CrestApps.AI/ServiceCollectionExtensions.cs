@@ -9,6 +9,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI;
 
@@ -91,6 +92,7 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
     {
@@ -137,6 +139,16 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddAITemplateSource(this IServiceCollection services, string sourceName, Action<AITemplateSourceEntry> configure = null)
+    {
+        services.Configure<AIOptions>(o =>
+        {
+            o.AddTemplateSource(sourceName, configure);
+        });
+
+        return services;
+    }
+
     /// <summary>
     /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
     /// for each supported file extension.
@@ -177,6 +189,25 @@ public static class ServiceCollectionExtensions
         services.AddOptions<OrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorSettings>();
+        services.AddOptions<DefaultAIDeploymentSettings>();
+
+        // Register DefaultAIOptions as a scoped service that reads from IOptionsSnapshot
+        // and applies GeneralAISettings overrides. Host applications (OrchardCore, MVC, etc.)
+        // can replace this with their own implementation (e.g., reading from ISiteService).
+        services.TryAddScoped(sp =>
+        {
+            var snapshot = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>();
+            var settings = sp.GetRequiredService<IOptionsSnapshot<GeneralAISettings>>();
+
+            return snapshot.Value.ApplySiteOverrides(settings.Value);
+        });
+
+        // Register the Framework-level deployment manager.
+        // OrchardCore overrides this with its ISiteService-backed implementation.
+        services.TryAddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>();
+
+        services.TryAddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
+        services.TryAddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
 
         services.TryAddScoped<IAIToolsService, DefaultAIToolsService>();
         services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();
@@ -185,6 +216,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, ProfileToolRegistryProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, AgentToolRegistryProvider>());
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
@@ -201,6 +233,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
 
+
+        // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
             .WithTitle("Generate Image")
             .WithDescription("Generates an image from a text description using an AI image generation model.")

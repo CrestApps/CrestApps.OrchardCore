@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIProfileTemplateSelectionViewModel
+
+@if (Model.Templates.Count > 0)
+{
+    var selectId = Html.IdFor(m => m.TemplateId);
+    var buttonId = $"{selectId}_apply";
+
+    <div class="alert alert-secondary mb-3" role="alert">
+        <label asp-for="TemplateId" class="form-label fw-semibold">@T["Apply Template"]</label>
+        <div class="input-group">
+            <select asp-for="TemplateId" asp-items="Model.Templates" class="form-control">
+                <option value="">@T["Select a template"]</option>
+            </select>
+            <button type="button" class="btn btn-secondary" id="@buttonId">
+                <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
+            </button>
+        </div>
+        <span class="hint">@T["Select a profile template to pre-fill the form fields."]</span>
+    </div>
+
+    <script at="Foot">
+        document.getElementById('@buttonId').addEventListener('click', function () {
+            var templateId = document.getElementById('@selectId').value;
+            if (templateId) {
+                var currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('templateId', templateId);
+                window.location.href = currentUrl.toString();
+            }
+        });
+    </script>
+}

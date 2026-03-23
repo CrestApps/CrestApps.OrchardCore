@@ -315,6 +315,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     {
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
         var taskNames = postSessionSettings.PostSessionTasks.Select(t => t.Name).ToList();
+        var clock = serviceProvider.GetRequiredService<IClock>();
 
         try
         {
@@ -339,6 +340,16 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 }
             }
 
+            // Increment attempts for non-succeeded tasks before processing.
+            foreach (var taskName in taskNames)
+            {
+                if (chatSession.PostSessionResults.TryGetValue(taskName, out var existing)
+                    && existing.Status != PostSessionTaskResultStatus.Succeeded)
+                {
+                    existing.Attempts++;
+                }
+            }
+
             var postSessionService = serviceProvider.GetService<PostSessionProcessingService>();
 
             if (postSessionService is null)
@@ -357,6 +368,12 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             {
                 foreach (var (taskName, result) in results)
                 {
+                    // Preserve the attempt count from existing tracking.
+                    if (chatSession.PostSessionResults.TryGetValue(taskName, out var existing))
+                    {
+                        result.Attempts = existing.Attempts;
+                    }
+
                     chatSession.PostSessionResults[taskName] = result;
 
                     if (logger.IsEnabled(LogLevel.Debug))
@@ -371,12 +388,37 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 }
             }
 
-            // Determine if all tasks are now Succeeded.
-            var allSucceeded = taskNames.All(name =>
-                chatSession.PostSessionResults.TryGetValue(name, out var r)
-                && r.Status == PostSessionTaskResultStatus.Succeeded);
+            // Permanently fail tasks that produced no result and have exhausted retry attempts.
+            var utcNow = clock.UtcNow;
 
-            chatSession.IsPostSessionTasksProcessed = allSucceeded;
+            foreach (var taskName in taskNames)
+            {
+                if (chatSession.PostSessionResults.TryGetValue(taskName, out var result)
+                    && result.Status != PostSessionTaskResultStatus.Succeeded
+                    && result.Attempts >= MaxPostCloseAttempts)
+                {
+                    result.Status = PostSessionTaskResultStatus.Failed;
+                    result.ProcessedAtUtc = utcNow;
+                    result.ErrorMessage ??= $"Task produced no result after {result.Attempts} attempt(s).";
+
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                            "Post-session task '{TaskName}' for session '{SessionId}' permanently failed after {Attempts} attempt(s).",
+                            taskName,
+                            chatSession.SessionId,
+                            result.Attempts);
+                    }
+                }
+            }
+
+            // Tasks are fully processed when all are either Succeeded or permanently Failed.
+            var allProcessed = taskNames.All(name =>
+                chatSession.PostSessionResults.TryGetValue(name, out var r)
+                && (r.Status == PostSessionTaskResultStatus.Succeeded
+                    || (r.Status == PostSessionTaskResultStatus.Failed && r.Attempts >= MaxPostCloseAttempts)));
+
+            chatSession.IsPostSessionTasksProcessed = allProcessed;
 
             if (logger.IsEnabled(LogLevel.Information))
             {
@@ -395,7 +437,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             var workflowManager = serviceProvider.GetService<IWorkflowManager>();
 
-            if (workflowManager is not null && allSucceeded)
+            if (workflowManager is not null && allProcessed)
             {
                 var input = new Dictionary<string, object>
                 {
@@ -421,15 +463,21 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 chatSession.PostSessionProcessingAttempts,
                 string.Join(", ", taskNames));
 
-            // Mark all non-succeeded tasks as Failed.
+            // Record error on all non-succeeded tasks; permanently fail those that have exhausted attempts.
+            var utcNow = clock.UtcNow;
+
             foreach (var taskName in taskNames)
             {
                 if (chatSession.PostSessionResults.TryGetValue(taskName, out var result)
                     && result.Status != PostSessionTaskResultStatus.Succeeded)
                 {
-                    result.Status = PostSessionTaskResultStatus.Failed;
                     result.ErrorMessage = ex.Message;
-                    result.ProcessedAtUtc = DateTime.UtcNow;
+
+                    if (result.Attempts >= MaxPostCloseAttempts)
+                    {
+                        result.Status = PostSessionTaskResultStatus.Failed;
+                        result.ProcessedAtUtc = utcNow;
+                    }
                 }
             }
         }

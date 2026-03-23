@@ -99,6 +99,7 @@ public sealed class ProfileDocumentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDocumentsDisplayDriver>();
     }
 }
 
@@ -108,6 +109,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileSessionDocumentsDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

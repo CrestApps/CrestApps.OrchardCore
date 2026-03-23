@@ -4,6 +4,8 @@ namespace CrestApps;
 
 public static class JSOptions
 {
+    public readonly static JsonSerializerOptions Default = new();
+
     public readonly static JsonSerializerOptions CaseInsensitive = new()
     {
         PropertyNameCaseInsensitive = true,

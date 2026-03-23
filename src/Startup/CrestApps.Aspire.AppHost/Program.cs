@@ -9,7 +9,7 @@ var ollama = builder.AddOllama("Ollama")
 
 ollama.AddModel(ollamaModelName);
 
-var password = builder.AddParameter("Password", secret: true);
+// var password = builder.AddParameter("Password", secret: true);
 
 // var elasticsearch = builder.AddElasticsearch("Elasticsearch", password)
 //     .WithDataVolume()
@@ -57,6 +57,12 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         // options.EnvironmentVariables.Add("OrchardCore__CrestApps_OrchardCore_AI_Chat_Copilot__ApiKey", "<your-api-key>");
         // options.EnvironmentVariables.Add("OrchardCore__CrestApps_OrchardCore_AI_Chat_Copilot__DefaultModel", "gpt-4o");
         // options.EnvironmentVariables.Add("OrchardCore__CrestApps_OrchardCore_AI_Chat_Copilot__AzureApiVersion", "2024-10-21");
+
+        // Configure authentication for sample projects.
+        // Set to "None" so the sample MCP and A2A clients can connect without tokens.
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__McpServer__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__ExposeAgentsAsSkill", "true");
     });
 
 builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
@@ -65,8 +71,14 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientS
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
 
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
+    .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
+
 builder.AddProject<Projects.CrestApps_Mvc_Web>("MvcWeb")
-    .WithHttpsEndpoint(5003, name: "HttpsMvcWeb");
+    .WithHttpsEndpoint(5004, name: "HttpsMvcWeb");
 
 var app = builder.Build();
 

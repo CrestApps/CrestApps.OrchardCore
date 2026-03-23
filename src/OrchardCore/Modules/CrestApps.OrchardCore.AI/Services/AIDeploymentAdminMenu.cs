@@ -17,7 +17,7 @@ public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Deployments"], "after.10", deployments => deployments
+                .Add(S["Deployments"], S["Deployments"].PrefixPosition(), deployments => deployments
                     .AddClass("ai-deployments")
                     .Id("aiDeployments")
                     .Action("Index", "Deployments", AIConstants.Feature.Area)

@@ -51,7 +51,7 @@ Click **Generate Report** to run the query and display results.
 
 ## Metrics Reference
 
-### 🤖 Conversation & Usage Metrics
+### Conversation and Usage Metrics
 
 These metrics provide an overview of how your chatbot is being used.
 
@@ -100,7 +100,7 @@ Breakdown of chat sessions by user authentication status.
 
 A stacked progress bar shows the **authenticated vs. anonymous split** as a percentage.
 
-### ⚙️ Model & System Performance
+### Model and System Performance
 
 Metrics about AI model response speed and resource consumption. These are captured automatically when the AI provider returns token usage and latency data.
 
@@ -118,7 +118,7 @@ Metrics about AI model response speed and resource consumption. These are captur
 Performance metrics are only available when the AI provider reports token usage. Not all providers return this data for streaming responses.
 :::
 
-### 🎯 Resolution & Conversion Metrics
+### Resolution and Conversion Metrics
 
 These metrics are powered by AI-based post-session analysis.
 
@@ -411,10 +411,12 @@ Post-session processing runs after a chat session is closed and performs AI-powe
 5. Configure the task:
    - **Name**: A unique identifier (alphanumeric + underscores only).
    - **Type**: Choose **Predefined Options** or **Semantic**.
-   - **Instructions**: Guidance for the AI model on how to process this task.
+   - **Instructions**: Guidance for the AI model on how to process this task. This field uses a Markdown editor in the admin UI.
    - For **Predefined Options**: Add options with values and optional descriptions.
 6. Optionally, switch to the **Capabilities** tab to select AI tools that should be available during post-session processing.
 7. Save the profile.
+
+For data extraction entries on the same **Data Processing & Metrics** tab, entry descriptions use multiline textareas so longer extraction guidance is easier to author and review.
 
 ### Tool Capabilities
 
@@ -439,3 +441,9 @@ A typical disposition task classifies the outcome of a conversation:
 - **Name**: `summary`
 - **Type**: Semantic
 - **Instructions**: "Write a concise 2-3 sentence summary of the conversation."
+
+### Retry Behavior
+
+Each post-session task is attempted up to **3 times** before being permanently marked as failed. If a task attempt errors or the AI model returns malformed or truncated structured output (for example, only `{` or other non-parseable JSON after tool execution), that attempt is recorded as `Failed` with an error message and retried on the next background processing cycle. The `Attempts` counter on each task result tracks how many times processing has been attempted.
+
+Tasks are considered fully processed when they are either **Succeeded** or **Failed** (after exhausting all retry attempts). Once every configured task reaches a terminal state, the session's post-session processing is marked as complete and the **AI Chat Session Post-Processed** workflow event is triggered.

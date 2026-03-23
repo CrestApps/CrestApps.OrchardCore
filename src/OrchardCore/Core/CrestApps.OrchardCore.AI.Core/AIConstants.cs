@@ -55,6 +55,8 @@ public static class AIConstants
     {
         public const string Profile = "profile";
 
+        public const string ProfileTemplate = "profile-template";
+
         public const string ChatInteraction = "chat-interaction";
 
         public const string ChatSession = "chat-session";
@@ -112,5 +114,7 @@ public static class AIConstants
         public const string ChatSessionUploadDocument = "ChatSessionUploadDocument";
 
         public const string ChatSessionRemoveDocument = "ChatSessionRemoveDocument";
+
+        public const string GetVoices = "AIApiGetVoices";
     }
 }

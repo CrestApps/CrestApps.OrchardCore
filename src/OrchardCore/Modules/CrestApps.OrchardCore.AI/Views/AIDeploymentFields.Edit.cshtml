@@ -3,10 +3,10 @@
 
 @model EditDeploymentViewModel
 
-@if (Model.Connections == null || Model.Connections.Count == 0)
+@if (!Model.HasContainedConnection && (Model.Connections == null || Model.Connections.Count == 0))
 {
     <div class="alert alert-danger" role="alert">
-        @T["There are no configured connection."]
+        @T["There are no configured connections."]
     </div>
 
     return;
@@ -29,10 +29,32 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection Name"]</label>
+    <label asp-for="Type" class="@Orchard.GetLabelClasses()">@T["Type"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
-        <span asp-validation-for="ConnectionName" class="text-danger"></span>
-        <span class="hint">@T["Connection name to use for this deployment."]</span>
+        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
+        <span asp-validation-for="Type" class="text-danger"></span>
+        <span class="hint">@T["The capability type of this deployment."]</span>
+    </div>
+</div>
+
+@if (!Model.HasContainedConnection)
+{
+    <div class="@Orchard.GetWrapperClasses()">
+        <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+        <div class="@Orchard.GetEndClasses()">
+            <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
+            <span asp-validation-for="ConnectionName" class="text-danger"></span>
+            <span class="hint">@T["Connection name to use for this deployment."]</span>
+        </div>
+    </div>
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="IsDefault">
+            <label class="form-check-label" asp-for="IsDefault">@T["Is default"]</label>
+            <span class="hint dashed">@T["When enabled, this deployment is the default for its type within its connection."]</span>
+        </div>
     </div>
 </div>

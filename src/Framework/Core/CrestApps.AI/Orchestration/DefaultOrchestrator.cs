@@ -27,6 +27,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITemplateService _aiTemplateService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
@@ -37,6 +38,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         IAICompletionService completionService,
         IAIClientFactory aiClientFactory,
         IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager,
         IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
@@ -46,6 +48,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         _completionService = completionService;
         _aiClientFactory = aiClientFactory;
         _aiTemplateService = aiTemplateService;
+        _deploymentManager = deploymentManager;
         _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
@@ -188,7 +191,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 var planningContext = new AICompletionContext
                 {
                     ConnectionName = context.CompletionContext.ConnectionName,
-                    DeploymentId = context.CompletionContext.DeploymentId,
+                    ChatDeploymentId = context.CompletionContext.ChatDeploymentId,
                     DisableTools = true,
                     SystemMessage = planningSystemPrompt,
                     Temperature = 0.1f,
@@ -243,6 +246,17 @@ public sealed class DefaultOrchestrator : IOrchestrator
         OrchestrationContext context,
         IReadOnlyList<ToolRegistryEntry> allTools)
     {
+        var mustIncludeToolNames = context.MustIncludeTools
+            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
+            .Distinct(StringComparer.Ordinal)
+            .ToHashSet(StringComparer.Ordinal);
+        var mustIncludeEntries = allTools
+            .Where(tool => mustIncludeToolNames.Contains(tool.Name))
+            .ToList();
+        var scopedCandidates = allTools
+            .Where(tool => !mustIncludeToolNames.Contains(tool.Name))
+            .ToList();
+
         // All tools are subject to relevance scoring when the total count
         // exceeds the scoping threshold. No source gets special treatment.
         var budget = _options.InitialToolCount;
@@ -257,7 +271,10 @@ public sealed class DefaultOrchestrator : IOrchestrator
         {
             // No scoring text available; return capped tools by original order.
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(Math.Max(budget, _options.MaxToolCount)).ToList());
+                scopedCandidates
+                    .Take(Math.Max(budget, _options.MaxToolCount))
+                    .Concat(mustIncludeEntries)
+                    .ToList());
         }
 
         var scoringTokens = _tokenizer.Tokenize(scoringText);
@@ -265,13 +282,16 @@ public sealed class DefaultOrchestrator : IOrchestrator
         if (scoringTokens.Count == 0)
         {
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
-                allTools.Take(budget).ToList());
+                scopedCandidates
+                    .Take(budget)
+                    .Concat(mustIncludeEntries)
+                    .ToList());
         }
 
         // Score all tools uniformly by relevance.
         var scored = new List<(ToolRegistryEntry Entry, double Score)>();
 
-        foreach (var tool in allTools)
+        foreach (var tool in scopedCandidates)
         {
             var title = tool.Name;
 
@@ -320,9 +340,19 @@ public sealed class DefaultOrchestrator : IOrchestrator
         // If no tools matched, fill budget by original order as fallback.
         if (scopedEntries.Count == 0 && budget > 0)
         {
-            scopedEntries = allTools
+            scopedEntries = scopedCandidates
                 .Take(budget)
                 .ToList();
+        }
+
+        foreach (var mustIncludeEntry in mustIncludeEntries)
+        {
+            if (scopedEntries.Any(entry => string.Equals(entry.Id, mustIncludeEntry.Id, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            scopedEntries.Add(mustIncludeEntry);
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -411,19 +441,50 @@ public sealed class DefaultOrchestrator : IOrchestrator
             connectionName = provider.DefaultConnectionName;
         }
 
+        // Try the deployment resolver first for a Utility deployment.
+        // ResolveAsync will fall back to Chat if no Utility deployment is found.
+        var utilityDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Utility,
+            deploymentId: context.CompletionContext?.UtilityDeploymentId,
+            providerName: providerName,
+            connectionName: connectionName);
+
+        if (utilityDeployment != null)
+        {
+            var resolvedConnectionName = utilityDeployment.ConnectionName ?? connectionName;
+
+            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, utilityDeployment.Name);
+        }
+
+        // Fall back to chat deployment via the resolver.
+        var chatDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Chat,
+            deploymentId: context.CompletionContext?.ChatDeploymentId,
+            providerName: providerName,
+            connectionName: connectionName);
+
+        if (chatDeployment != null)
+        {
+            var resolvedConnectionName = chatDeployment.ConnectionName ?? connectionName;
+
+            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, chatDeployment.Name);
+        }
+
+        // Fall back to legacy dictionary-based resolution.
         if (string.IsNullOrEmpty(connectionName) ||
             !provider.Connections.TryGetValue(connectionName, out var connection))
         {
             return null;
         }
 
-        // Prefer the utility deployment, fall back to the default deployment.
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
         var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
 
         if (string.IsNullOrEmpty(deploymentName))
         {
             deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
         }
+#pragma warning restore CS0618
 
         if (string.IsNullOrEmpty(deploymentName))
         {

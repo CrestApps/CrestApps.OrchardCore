@@ -44,6 +44,11 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
+        if (!Enum.IsDefined(context.Model.Type))
+        {
+            context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
+        }
+
         var hasConnectionName = true;
 
         if (string.IsNullOrWhiteSpace(context.Model.ConnectionName))
@@ -116,6 +121,20 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         else if (!string.IsNullOrEmpty(providerName) && _providerOptions.Providers.TryGetValue(providerName, out var provider))
         {
             deployment.ConnectionName = provider.DefaultConnectionName;
+        }
+
+        var typeValue = data[nameof(AIDeployment.Type)]?.GetValue<string>();
+
+        if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var type))
+        {
+            deployment.Type = type;
+        }
+
+        var isDefault = data[nameof(AIDeployment.IsDefault)]?.GetValue<bool>();
+
+        if (isDefault.HasValue)
+        {
+            deployment.IsDefault = isDefault.Value;
         }
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();

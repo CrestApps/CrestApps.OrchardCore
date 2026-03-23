@@ -47,6 +47,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+            model.IdentityId = metadata.IdentityId;
         }).Location("Content:5");
     }
 
@@ -87,6 +88,9 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         }
 
         metadata.AuthenticationType = model.AuthenticationType;
+
+        var trimmedIdentityId = model.IdentityId?.Trim();
+        metadata.IdentityId = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
 
         connection.Put(metadata);
 

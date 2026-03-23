@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Models;
 
 namespace CrestApps.AI.Models;
@@ -29,9 +30,30 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment identifier (AI model) to use.
+    /// Gets or sets the chat deployment identifier (AI model) to use.
     /// </summary>
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the utility deployment identifier for this interaction.
+    /// When not set, falls back to the global default utility deployment.
+    /// </summary>
+    public string UtilityDeploymentId { get; set; }
+
+    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    public string DeploymentId
+    {
+        get => ChatDeploymentId;
+        set => ChatDeploymentId = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("DeploymentId")]
+    private string _deploymentIdBackingField
+    {
+        set => ChatDeploymentId = value;
+    }
 
     /// <summary>
     /// Gets or sets the connection name for the AI provider.
@@ -86,14 +108,34 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     public string OrchestratorName { get; set; }
 
     /// <summary>
+    /// Gets or sets the technical name of the <see cref="IChatResponseHandler"/> currently
+    /// handling prompts for this interaction. When <see langword="null"/> or empty, the default
+    /// AI handler is used. This value can be changed mid-conversation (e.g., by an AI
+    /// function that transfers the chat to a live-agent platform).
+    /// </summary>
+    public string ResponseHandlerName { get; set; }
+
+    /// <summary>
     /// Gets or sets the list of AI tool names to use.
     /// </summary>
     public IList<string> ToolNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the list of agent profile names to include.
+    /// Agents are AI profiles with <see cref="AIProfileType.Agent"/> type
+    /// that are dynamically exposed as tools for multi-agent orchestration.
+    /// </summary>
+    public IList<string> AgentNames { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the list of MCP connection IDs to use.
     /// </summary>
     public IList<string> McpConnectionIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the list of A2A connection IDs to use.
+    /// </summary>
+    public IList<string> A2AConnectionIds { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the collection of attached documents for "chat against own data" functionality.

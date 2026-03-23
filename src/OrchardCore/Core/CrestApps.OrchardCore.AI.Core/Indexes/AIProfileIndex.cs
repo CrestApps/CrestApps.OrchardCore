@@ -17,15 +17,16 @@ public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex, ISourceA
     public string Source { get; set; }
 
     /// <summary>
-    /// Gets or sets the profile type (e.g., Chat, TemplatePrompt, Utility).
+    /// Gets or sets the profile type (e.g., Chat, TemplatePrompt, Utility, Agent).
     /// Stored as the string representation of <see cref="Models.AIProfileType"/>.
     /// </summary>
     public string Type { get; set; }
 
     /// <summary>
-    /// Gets or sets the connection name associated with the profile.
+    /// Gets or sets the description of the profile.
+    /// Primarily used for Agent profiles to describe agent capabilities.
     /// </summary>
-    public string ConnectionName { get; set; }
+    public string Description { get; set; }
 
     /// <summary>
     /// Gets or sets the deployment identifier associated with the profile.

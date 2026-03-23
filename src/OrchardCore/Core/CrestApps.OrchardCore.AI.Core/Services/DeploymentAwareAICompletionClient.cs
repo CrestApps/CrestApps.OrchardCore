@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClient
 {
     private readonly ICatalog<AIDeployment> _store;
+    private readonly IAIDeploymentManager _deploymentManager;
 
     public DeploymentAwareAICompletionClient(
         string name,
@@ -21,7 +22,8 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         ICatalog<AIDeployment> deploymentStore,
-        IAITemplateService aiTemplateService)
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager)
         : base(
             name,
             aIClientFactory,
@@ -31,16 +33,28 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
             providerOptions,
             defaultOptions,
             handlers,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
         _store = deploymentStore;
+        _deploymentManager = deploymentManager;
     }
 
     protected override async Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
-        if (!string.IsNullOrEmpty(content.DeploymentId))
+        if (!string.IsNullOrEmpty(content.ChatDeploymentId))
         {
-            return await _store.FindByIdAsync(content.DeploymentId);
+            if (_deploymentManager != null)
+            {
+                var deployment = await _deploymentManager.FindByIdAsync(content.ChatDeploymentId);
+
+                if (deployment != null)
+                {
+                    return deployment;
+                }
+            }
+
+            return await _store.FindByIdAsync(content.ChatDeploymentId);
         }
 
         return null;

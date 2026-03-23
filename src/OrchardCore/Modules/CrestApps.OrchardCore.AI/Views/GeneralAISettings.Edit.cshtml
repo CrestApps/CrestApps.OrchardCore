@@ -1,0 +1,104 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model GeneralAISettingsViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnablePreemptiveMemoryRetrieval" />
+            <label class="form-check-label" asp-for="EnablePreemptiveMemoryRetrieval">
+                @T["Enable preemptive memory retrieval"]
+            </label>
+            <span class="hint dashed">@T["When enabled, authenticated user memory can be searched and injected before the LLM call. Disabling this keeps memory tools available but skips upfront memory retrieval."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input ai-general-override-toggle" asp-for="OverrideMaximumIterationsPerRequest" data-target-id="@Html.IdFor(m => m.MaximumIterationsPerRequest)" />
+            <label class="form-check-label" asp-for="OverrideMaximumIterationsPerRequest">
+                @T["Override maximum iterations per request"]
+            </label>
+            <span class="hint dashed">@T["When disabled, the appsettings.json value of {0} is used. Site overrides cannot exceed the absolute maximum of {1}.", Model.AppSettingsMaximumIterationsPerRequest, Model.AbsoluteMaximumIterationsPerRequest]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="MaximumIterationsPerRequest" class="@Orchard.GetLabelClasses()">@T["Maximum iterations per request"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="@Model.AbsoluteMaximumIterationsPerRequest" />
+        <span class="hint">@T["The effective value is always capped at {0}.", Model.AbsoluteMaximumIterationsPerRequest]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input ai-general-override-toggle" asp-for="OverrideEnableDistributedCaching" data-target-id="@Html.IdFor(m => m.EnableDistributedCaching)" />
+            <label class="form-check-label" asp-for="OverrideEnableDistributedCaching">
+                @T["Override distributed caching"]
+            </label>
+            <span class="hint dashed">@T["When disabled, the appsettings.json value of {0} is used.", Model.AppSettingsEnableDistributedCaching]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableDistributedCaching" />
+            <label class="form-check-label" asp-for="EnableDistributedCaching">
+                @T["Enable distributed caching"]
+            </label>
+            <span class="hint dashed">@T["When enabled, AI completion services can use distributed caching for eligible responses."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input ai-general-override-toggle" asp-for="OverrideEnableOpenTelemetry" data-target-id="@Html.IdFor(m => m.EnableOpenTelemetry)" />
+            <label class="form-check-label" asp-for="OverrideEnableOpenTelemetry">
+                @T["Override OpenTelemetry"]
+            </label>
+            <span class="hint dashed">@T["When disabled, the appsettings.json value of {0} is used.", Model.AppSettingsEnableOpenTelemetry]</span>
+        </div>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableOpenTelemetry" />
+            <label class="form-check-label" asp-for="EnableOpenTelemetry">
+                @T["Enable OpenTelemetry"]
+            </label>
+            <span class="hint dashed">@T["When enabled, AI requests emit OpenTelemetry instrumentation where supported."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.ai-general-override-toggle').forEach(function (toggle) {
+            const targetId = toggle.getAttribute('data-target-id');
+            const target = targetId ? document.getElementById(targetId) : null;
+
+            if (!target) {
+                return;
+            }
+
+            const syncTarget = function () {
+                target.disabled = !toggle.checked;
+            };
+
+            toggle.addEventListener('change', syncTarget);
+            syncTarget();
+        });
+    });
+</script>

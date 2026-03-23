@@ -21,6 +21,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IOptions<AIProviderOptions> _providerOptions;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -29,6 +30,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         IOptions<ChatDocumentsOptions> extractorOptions,
         IAIClientFactory aiClientFactory,
         IOptions<AIProviderOptions> providerOptions,
+        IAIDeploymentManager deploymentManager,
         IClock clock,
         ILogger<DefaultAIDocumentProcessingService> logger)
     {
@@ -36,15 +38,39 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         _extractorOptions = extractorOptions;
         _aiClientFactory = aiClientFactory;
         _providerOptions = providerOptions;
+        _deploymentManager = deploymentManager;
         _clock = clock;
         _logger = logger;
     }
 
     public async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName)
     {
+        var embeddingDeployment = await _deploymentManager.ResolveAsync(
+            AIDeploymentType.Embedding,
+            providerName: providerName,
+            connectionName: connectionName);
+
+        if (embeddingDeployment != null)
+        {
+            var generator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+                embeddingDeployment.ProviderName,
+                embeddingDeployment.ConnectionName,
+                embeddingDeployment.Name);
+
+            if (generator == null)
+            {
+                _logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
+                    embeddingDeployment.ProviderName, embeddingDeployment.ConnectionName, embeddingDeployment.Name);
+            }
+
+            return generator;
+        }
+
+        // Fall back to legacy provider options lookup for backward compatibility.
         string deploymentName = null;
 
-        if (_providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (!string.IsNullOrEmpty(providerName) && _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
         {
             if (string.IsNullOrEmpty(connectionName))
             {
@@ -53,9 +79,12 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
             if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
             {
+#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
                 deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
+#pragma warning restore CS0618
             }
         }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         if (string.IsNullOrEmpty(deploymentName))
         {
@@ -63,15 +92,15 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
             return null;
         }
 
-        var generator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
+        var legacyGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
 
-        if (generator == null)
+        if (legacyGenerator == null)
         {
             _logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
                 providerName, connectionName, deploymentName);
         }
 
-        return generator;
+        return legacyGenerator;
     }
 
     public async Task<DocumentProcessingResult> ProcessFileAsync(

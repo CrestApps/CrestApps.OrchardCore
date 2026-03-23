@@ -13,19 +13,16 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 {
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly AIOptions _aiOptions;
-    private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
         IOptions<AIOptions> aiOptions,
-        IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<ChatInteractionConnectionDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _aiOptions = aiOptions.Value;
-        _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -38,58 +35,14 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                 return;
             }
 
-            model.ProviderName = profileSource.ProviderName;
-            model.DeploymentId = interaction.DeploymentId;
+            model.ChatDeploymentId = interaction.ChatDeploymentId;
+            model.UtilityDeploymentId = interaction.UtilityDeploymentId;
 
-            if (profileSource is not null && _providerOptions.Providers.TryGetValue(profileSource.ProviderName, out var provider))
-            {
-                if (provider.Connections.Count == 1)
-                {
-                    // If there's only one connection, use it automatically
-                    var connection = provider.Connections.First();
-                    model.ConnectionName = connection.Key;
-                }
-                else
-                {
-                    model.ConnectionName = interaction.ConnectionName;
-                }
+            model.ChatDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
 
-                model.ConnectionNames = provider.Connections.Select(x => new SelectListItem(
-                    x.Value.TryGetValue("ConnectionNameAlias", out var alias) ? alias.ToString() : x.Key,
-                    x.Key)).ToArray();
-            }
-            else
-            {
-                model.ConnectionNames = [];
-            }
-
-            // Load deployments based on connection name
-            if (!string.IsNullOrEmpty(interaction.DeploymentId))
-            {
-                var deployment = await _deploymentManager.FindByIdAsync(interaction.DeploymentId);
-
-                if (deployment is not null)
-                {
-                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, deployment.ConnectionName))
-                        .Select(x => new SelectListItem(x.Name, x.ItemId));
-                }
-            }
-
-            if (model.Deployments is null || !model.Deployments.Any())
-            {
-                var connectionName = interaction.ConnectionName;
-
-                if (string.IsNullOrEmpty(connectionName) && _providerOptions.Providers.TryGetValue(profileSource.ProviderName, out var prov))
-                {
-                    connectionName = prov.DefaultConnectionName;
-                }
-
-                if (!string.IsNullOrEmpty(connectionName))
-                {
-                    model.Deployments = (await _deploymentManager.GetAllAsync(profileSource.ProviderName, connectionName))
-                        .Select(x => new SelectListItem(x.Name, x.ItemId));
-                }
-            }
+            model.UtilityDeployments = BuildGroupedDeploymentItems(
+                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
 
         }).Location("Parameters:3#Settings;1");
 
@@ -107,9 +60,30 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        interaction.ConnectionName = model.ConnectionName;
-        interaction.DeploymentId = model.DeploymentId;
+        interaction.ChatDeploymentId = model.ChatDeploymentId;
+        interaction.UtilityDeploymentId = model.UtilityDeploymentId;
 
         return Edit(interaction, context);
+    }
+
+    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
+    {
+        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
+
+        return deployments
+            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(d =>
+            {
+                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+
+                if (!groups.TryGetValue(groupKey, out var group))
+                {
+                    group = new SelectListGroup { Name = groupKey };
+                    groups[groupKey] = group;
+                }
+
+                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+            });
     }
 }

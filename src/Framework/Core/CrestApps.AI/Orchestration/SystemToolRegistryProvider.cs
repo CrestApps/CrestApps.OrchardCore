@@ -33,6 +33,9 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
         var hasDocuments = context?.AdditionalProperties is not null
             && context.AdditionalProperties.TryGetValue(AICompletionContextKeys.HasDocuments, out var val)
             && val is true;
+        var hasMemory = context?.AdditionalProperties is not null
+            && context.AdditionalProperties.TryGetValue(AICompletionContextKeys.HasMemory, out var hasMemoryValue)
+            && hasMemoryValue is true;
 
         var entries = new List<ToolRegistryEntry>();
 
@@ -49,6 +52,11 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
             }
 
             if (entry.HasPurpose(AIToolPurposes.DocumentProcessing) && !hasDocuments)
+            {
+                continue;
+            }
+
+            if (entry.HasPurpose(AIToolPurposes.Memory) && !hasMemory)
             {
                 continue;
             }

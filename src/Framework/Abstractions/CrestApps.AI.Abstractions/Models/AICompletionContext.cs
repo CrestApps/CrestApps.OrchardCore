@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.AI.Models;
 
 public class AICompletionContext
@@ -26,11 +28,32 @@ public class AICompletionContext
 
     public string[] ToolNames { get; set; }
 
+    public string[] AgentNames { get; set; }
+
     public string[] McpConnectionIds { get; set; }
+
+    public string[] A2AConnectionIds { get; set; }
 
     public string DataSourceId { get; set; }
 
-    public string DeploymentId { get; set; }
+    public string ChatDeploymentId { get; set; }
+
+    public string UtilityDeploymentId { get; set; }
+
+    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    public string DeploymentId
+    {
+        get => ChatDeploymentId;
+        set => ChatDeploymentId = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("DeploymentId")]
+    private string _deploymentIdBackingField
+    {
+        set => ChatDeploymentId = value;
+    }
 
     public Dictionary<string, object> AdditionalProperties { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

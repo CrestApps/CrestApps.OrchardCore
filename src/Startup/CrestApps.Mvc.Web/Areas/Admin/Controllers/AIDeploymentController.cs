@@ -19,8 +19,22 @@ public sealed class AIDeploymentController : Controller
         new("OpenAI", "OpenAI"),
         new("Azure OpenAI", "Azure"),
         new("Azure AI Inference (GitHub Models)", "AzureAIInference"),
+        new("Azure AI Services", "AzureSpeech"),
         new("Ollama", "Ollama"),
     ];
+
+    private static readonly List<SelectListItem> _authTypes =
+    [
+        new("API Key", "ApiKey"),
+        new("Default Azure Credential", "Default"),
+        new("Managed Identity", "ManagedIdentity"),
+    ];
+
+    // Providers that are standalone (do not require a connection).
+    private static readonly HashSet<string> _standaloneProviders = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AzureSpeech",
+    };
 
     public AIDeploymentController(
         ICatalog<AIDeployment> deploymentCatalog,
@@ -58,6 +72,12 @@ public sealed class AIDeploymentController : Controller
         {
             await PopulateDropdownsAsync(model);
             return View(model);
+        }
+
+        // Clear connection for standalone providers.
+        if (_standaloneProviders.Contains(model.ProviderName ?? string.Empty))
+        {
+            model.ConnectionName = null;
         }
 
         var deployment = new AIDeployment
@@ -111,6 +131,12 @@ public sealed class AIDeploymentController : Controller
             return NotFound();
         }
 
+        // Clear connection for standalone providers.
+        if (_standaloneProviders.Contains(model.ProviderName ?? string.Empty))
+        {
+            model.ConnectionName = null;
+        }
+
         model.ApplyTo(existing);
 
         await _deploymentCatalog.UpdateAsync(existing);
@@ -139,8 +165,9 @@ public sealed class AIDeploymentController : Controller
     private async Task PopulateDropdownsAsync(AIDeploymentViewModel model)
     {
         var connections = await _connectionCatalog.GetAllAsync();
-        model.Connections = [new SelectListItem("— Select Connection —", "")];
+        model.Connections = [new SelectListItem("— No Connection (Standalone) —", "")];
         model.Connections.AddRange(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)));
         model.Providers = _providers;
+        model.AuthenticationTypes = _authTypes;
     }
 }

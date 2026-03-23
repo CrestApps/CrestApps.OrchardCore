@@ -8,6 +8,8 @@ public static class AIPermissions
 
     public static readonly Permission ManageAIProfiles = new("ManageAIProfiles", "Manage AI profiles");
 
+    public static readonly Permission ManageAIProfileTemplates = new("ManageAIProfileTemplates", "Manage AI profile templates");
+
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", "Manage AI deployments");
 
     public static readonly Permission ManageAIDataSources = new("ManageAIDataSources", "Manage AI data sources");

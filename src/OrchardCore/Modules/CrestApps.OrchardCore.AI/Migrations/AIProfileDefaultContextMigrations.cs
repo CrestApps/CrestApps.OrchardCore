@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,7 @@ internal sealed class AIProfileDefaultContextMigrations : DataMigration
         ShellScope.AddDeferredTask(async scope =>
         {
             var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProfile>>();
-            var defaultOptions = scope.ServiceProvider.GetRequiredService<IOptions<DefaultAIOptions>>().Value;
+            var defaultOptions = scope.ServiceProvider.GetRequiredService<DefaultAIOptions>();
 
             var profiles = await profileCatalog.GetAllAsync();
 

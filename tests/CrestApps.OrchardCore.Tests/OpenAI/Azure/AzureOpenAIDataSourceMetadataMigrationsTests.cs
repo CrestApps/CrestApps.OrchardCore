@@ -12,6 +12,8 @@ using Microsoft.Extensions.Options;
 using Moq;
 
 
+#pragma warning disable CS0618 // Type or member is obsolete
+
 
 namespace CrestApps.OrchardCore.Tests.OpenAI.Azure;
 

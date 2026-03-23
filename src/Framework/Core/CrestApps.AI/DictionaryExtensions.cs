@@ -25,39 +25,57 @@ public static class DictionaryExtensions
         return uri;
     }
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetChatDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ChatDeploymentName", throwException)
             ?? entry.GetStringValue("DefaultChatDeploymentName", throwException)
             ?? entry.GetStringValue("DefaultDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetEmbeddingDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("EmbeddingDeploymentName", throwException)
             ?? entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetImagesDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ImagesDeploymentName", throwException)
             ?? entry.GetStringValue("DefaultImagesDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetUtilityDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("UtilityDeploymentName", throwException)
             ?? entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetChatDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ChatDeploymentName", false)
         ?? entry.GetStringValue("DeploymentName", false)
         ?? entry.GetStringValue("DefaultDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetEmbeddingDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("EmbeddingDeploymentName", false)
         ?? entry.GetStringValue("DefaultEmbeddingDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetImagesDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ImagesDeploymentName", false)
         ?? entry.GetStringValue("DefaultImagesDeploymentName", throwException);
 
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
     public static string GetUtilityDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("UtilityDeploymentName", false)
         ?? entry.GetStringValue("DefaultUtilityDeploymentName", throwException);
+
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
+    public static string GetSpeechToTextDeploymentName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("SpeechToTextDeploymentName", throwException)
+            ?? entry.GetStringValue("DefaultSpeechToTextDeploymentName", throwException);
+
+    [Obsolete("Deployment names on connections are deprecated. Use the deployment resolver instead.")]
+    public static string GetSpeechToTextDeploymentOrDefaultName(this IDictionary<string, object> entry, bool throwException = true)
+        => entry.GetStringValue("SpeechToTextDeploymentName", false)
+        ?? entry.GetStringValue("DefaultSpeechToTextDeploymentName", throwException);
 
     public static string GetStringValue(this IDictionary<string, object> entry, string key, bool throwException = false)
     {

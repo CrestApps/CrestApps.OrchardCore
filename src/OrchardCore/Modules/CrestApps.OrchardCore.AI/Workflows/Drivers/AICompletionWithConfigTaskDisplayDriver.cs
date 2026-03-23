@@ -27,13 +27,13 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
     public AICompletionWithConfigTaskDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IOptions<AIProviderOptions> aiProviderOptions,
-        IOptions<DefaultAIOptions> defaultAIOptions,
+        DefaultAIOptions defaultAIOptions,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
         _aiProviderOptions = aiProviderOptions.Value;
-        _defaultAIOptions = defaultAIOptions.Value;
+        _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
@@ -77,7 +77,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                     Description = entry.Value.Description,
                     IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
                 }).OrderBy(entry => entry.DisplayText).ToArray());
-        }).Location("Content:8#Capabilities:5");
+        }).Location("Content:7#Capabilities;8");
 
         return Combine(contents, tools);
     }

@@ -36,7 +36,7 @@ public sealed class ViewAIProfileTool : AIFunction
 
     public override string Description =>
         "Retrieves detailed information about a specific AI profile by its ID or technical name. " +
-        "Returns the full profile configuration including type, connection, welcome message, " +
+        "Returns the full profile configuration including type, deployments, welcome message, " +
         "analytics settings, data extraction settings, and post-session processing settings.";
 
     public override JsonElement JsonSchema => _jsonSchema;
@@ -88,8 +88,7 @@ public sealed class ViewAIProfileTool : AIFunction
             ["displayText"] = profile.DisplayText,
             ["type"] = profile.Type.ToString(),
             ["source"] = profile.Source,
-            ["connectionName"] = profile.ConnectionName,
-            ["deploymentId"] = profile.DeploymentId,
+            ["chatDeploymentId"] = profile.ChatDeploymentId,
             ["welcomeMessage"] = profile.WelcomeMessage,
             ["promptSubject"] = profile.PromptSubject,
             ["createdUtc"] = profile.CreatedUtc.ToString("o"),

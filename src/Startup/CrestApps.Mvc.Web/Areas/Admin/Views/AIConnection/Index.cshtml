@@ -25,7 +25,6 @@ else
                     <th>Name</th>
                     <th>Display Text</th>
                     <th>Provider</th>
-                    <th>Chat Deployment</th>
                     <th>Default</th>
                     <th style="width: 180px;">Actions</th>
                 </tr>
@@ -39,7 +38,6 @@ else
                         <td>
                             <span class="badge bg-info">@(connection.Source ?? "—")</span>
                         </td>
-                        <td>@(connection.ChatDeploymentName ?? "—")</td>
                         <td>
                             @if (connection.IsDefault)
                             {

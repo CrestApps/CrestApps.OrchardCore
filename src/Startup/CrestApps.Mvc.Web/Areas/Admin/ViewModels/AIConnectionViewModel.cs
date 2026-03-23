@@ -9,10 +9,6 @@ public sealed class AIConnectionViewModel
     public string Name { get; set; }
     public string DisplayText { get; set; }
     public string Source { get; set; }
-    public string ChatDeploymentName { get; set; }
-    public string EmbeddingDeploymentName { get; set; }
-    public string ImagesDeploymentName { get; set; }
-    public string UtilityDeploymentName { get; set; }
     public bool IsDefault { get; set; }
 
     // Provider-specific connection settings.
@@ -31,10 +27,6 @@ public sealed class AIConnectionViewModel
             Name = connection.Name,
             DisplayText = connection.DisplayText,
             Source = connection.Source,
-            ChatDeploymentName = connection.ChatDeploymentName,
-            EmbeddingDeploymentName = connection.EmbeddingDeploymentName,
-            ImagesDeploymentName = connection.ImagesDeploymentName,
-            UtilityDeploymentName = connection.UtilityDeploymentName,
             IsDefault = connection.IsDefault,
         };
 
@@ -54,10 +46,6 @@ public sealed class AIConnectionViewModel
         connection.Name = Name;
         connection.DisplayText = DisplayText;
         connection.Source = Source;
-        connection.ChatDeploymentName = ChatDeploymentName;
-        connection.EmbeddingDeploymentName = EmbeddingDeploymentName;
-        connection.ImagesDeploymentName = ImagesDeploymentName;
-        connection.UtilityDeploymentName = UtilityDeploymentName;
         connection.IsDefault = IsDefault;
 
         // Store provider-specific settings in Properties dictionary.

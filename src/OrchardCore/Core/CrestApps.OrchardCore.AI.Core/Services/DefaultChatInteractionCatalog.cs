@@ -1,6 +1,7 @@
 using CrestApps.AI.Models;
+using CrestApps.AI;
 using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.Data.YesSql.Services;
 using CrestApps.Services;
 using YesSql;
 

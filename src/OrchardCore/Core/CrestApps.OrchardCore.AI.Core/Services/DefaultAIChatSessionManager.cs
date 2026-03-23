@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.Handlers;
+using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Core.Models;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -90,6 +91,14 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                     Content = initialPrompt,
                     CreatedUtc = _clock.UtcNow,
                 });
+            }
+
+            // Set the initial response handler from profile settings.
+            var handlerSettings = profile.GetSettings<ResponseHandlerProfileSettings>();
+
+            if (!string.IsNullOrEmpty(handlerSettings.InitialResponseHandlerName))
+            {
+                chatSession.ResponseHandlerName = handlerSettings.InitialResponseHandlerName;
             }
         }
 

@@ -16,7 +16,7 @@ A provider is a module that implements the connection layer between CrestApps AI
 - **Authentication** — Managing API keys, tokens, or managed identity credentials
 - **Client creation** — Creating `IChatClient`, `IEmbeddingGenerator`, and `IImageGenerator` instances
 - **Connection configuration** — Defining endpoints, deployment names, and provider-specific settings
-- **Deployment management** — Supporting multiple models/deployments under a single connection
+- **Deployment management** — Supporting multiple typed models/deployments under a single connection, each with a `Type` (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an `IsDefault` flag
 
 ## Built-in Providers
 
@@ -69,13 +69,13 @@ public sealed class CustomCompletionClient : NamedAICompletionClient
         IDistributedCache distributedCache,
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IOptions<DefaultAIOptions> defaultOptions
+        DefaultAIOptions defaultOptions
     ) : base(
         "CustomSource",
         aIClientFactory, distributedCache,
         loggerFactory,
         providerOptions.Value,
-        defaultOptions.Value,
+        defaultOptions,
         handlers)
     {
     }
@@ -129,3 +129,36 @@ services.AddAIDeploymentProvider("CustomProvider", options =>
     options.Description = _localizer["Custom provider deployments."];
 });
 ```
+
+### Typed Deployments
+
+Deployments are now first-class typed entities. Each deployment has a `Type` property that indicates its purpose:
+
+| Type | Purpose |
+|------|---------|
+| `Chat` | Primary chat completions |
+| `Utility` | Lightweight auxiliary tasks (query rewriting, planning) |
+| `Embedding` | Vector embeddings for RAG / semantic search |
+| `Image` | Image generation |
+| `SpeechToText` | Speech-to-text transcription |
+
+When configuring connections via `appsettings.json`, deployments are defined as a `Deployments` array on each connection:
+
+```json
+{
+  "Connections": {
+    "my-connection": {
+      "ApiKey": "...",
+      "Deployments": [
+        { "Name": "gpt-4o", "Type": "Chat", "IsDefault": true },
+        { "Name": "gpt-4o-mini", "Type": "Utility", "IsDefault": true },
+        { "Name": "text-embedding-3-large", "Type": "Embedding", "IsDefault": true }
+      ]
+    }
+  }
+}
+```
+
+The `IsDefault` flag marks a deployment as the default for its type within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for type → global default → null/error.
+
+Global defaults can be configured under **Settings → Artificial Intelligence → Default AI Deployment Settings**.

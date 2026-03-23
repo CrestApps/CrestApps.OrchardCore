@@ -127,6 +127,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             var profileMetadata = masterIndexProfile.As<DataSourceIndexProfileMetadata>();
 
+#pragma warning disable CS0618 // Type or member is obsolete
             if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
@@ -139,6 +140,7 @@ public sealed class DataSourceSearchTool : AIFunction
                 profileMetadata.EmbeddingProviderName,
                 profileMetadata.EmbeddingConnectionName,
                 profileMetadata.EmbeddingDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             if (embeddingGenerator == null)
             {

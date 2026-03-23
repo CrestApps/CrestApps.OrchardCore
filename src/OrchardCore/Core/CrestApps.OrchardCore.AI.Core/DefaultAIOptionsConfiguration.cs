@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
@@ -17,5 +18,6 @@ public sealed class DefaultAIOptionsConfiguration : IConfigureOptions<DefaultAIO
     public void Configure(DefaultAIOptions options)
     {
         _shellConfiguration.GetSection("CrestApps_AI:DefaultParameters").Bind(options);
+        options.Normalize();
     }
 }

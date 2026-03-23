@@ -4,22 +4,22 @@
 <fieldset class="form-group">
     <div class="row">
         <div class="col-12">
-            <h3>@T["Copilot Authentication"]</h3>
+            <h3>@T["Copilot authentication"]</h3>
             <p class="hint">@T["Configure how the Copilot orchestrator authenticates with the AI provider."]</p>
         </div>
     </div>
 
     <div class="mb-3">
-        <label asp-for="AuthenticationType" class="form-label">@T["Authentication Type"]</label>
+        <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
         <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select" id="copilot-auth-type">
         </select>
-        <span class="hint">@T["Choose how the Copilot orchestrator authenticates. \"GitHub Signed-in User\" requires a GitHub Copilot subscription. \"API Key (BYOK)\" uses your own API key from a model provider."]</span>
+        <span class="hint">@T["Choose how the Copilot orchestrator authenticates. \"GitHub signed-in user\" requires a GitHub Copilot subscription. \"API key (BYOK)\" uses your own API key from a model provider."]</span>
     </div>
 
     @* ── GitHub OAuth Section ── *@
     <div id="copilot-github-oauth-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "d-none" : "")">
         <div class="mb-4">
-            <h4 class="mb-2">@T["How to create a GitHub App"]</h4>
+            <h4 class="mb-2">@T["How to create a GitHub app"]</h4>
             <div class="ps-3">
                 <ol>
                     <li>
@@ -53,12 +53,12 @@
             <label asp-for="ClientId" class="form-label">@T["Client ID"]</label>
             <input asp-for="ClientId" class="form-control" />
             <span asp-validation-for="ClientId" class="text-danger"></span>
-            <span class="hint">@T["The Client ID from your GitHub App."]</span>
+            <span class="hint">@T["The client ID from your GitHub app."]</span>
         </div>
 
         <div class="mb-3">
-            <label asp-for="ClientSecret" class="form-label">@T["Client Secret"]</label>
-            <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter new secret to update"]" />
+            <label asp-for="ClientSecret" class="form-label">@T["Client secret"]</label>
+            <input asp-for="ClientSecret" type="password" class="form-control" placeholder="@T["Enter a new secret to update"]" />
             <span asp-validation-for="ClientSecret" class="text-danger"></span>
             @if (Model.HasSecret)
             {
@@ -66,7 +66,7 @@
             }
             else
             {
-                <span class="hint">@T["The Client Secret from your GitHub App."]</span>
+                <span class="hint">@T["The client secret from your GitHub app."]</span>
             }
         </div>
     </div>
@@ -74,13 +74,13 @@
     @* ── BYOK (API Key) Section ── *@
     <div id="copilot-api-key-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "" : "d-none")">
         <div class="mb-4">
-            <h4 class="mb-2">@T["API Key (BYOK) Configuration"]</h4>
+            <h4 class="mb-2">@T["API key (BYOK) configuration"]</h4>
             <p class="hint">@T["Use your own API key from a model provider. No GitHub Copilot subscription is required. {0}",
                 Html.Raw("<a href=\"https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more about BYOK</a>")]</p>
         </div>
 
         <div class="mb-3">
-            <label asp-for="ProviderType" class="form-label">@T["Provider Type"]</label>
+            <label asp-for="ProviderType" class="form-label">@T["Provider type"]</label>
             <select asp-for="ProviderType" asp-items="Model.ProviderTypes" class="form-select" id="copilot-provider-type">
             </select>
             <span asp-validation-for="ProviderType" class="text-danger"></span>
@@ -102,7 +102,7 @@
                     <strong>@T["Azure OpenAI"]</strong><br />
                     @T["Use for native Azure OpenAI endpoints at <code>*.openai.azure.com</code>."]<br />
                     @T["<strong>Base URL</strong> should be the deployment URL, e.g., <code>https://&lt;deployment-name&gt;.openai.azure.com/</code>. Do <strong>not</strong> include <code>/openai/v1</code> — the SDK handles path construction."]<br />
-                    @T["An <strong>API Key</strong> and <strong>Azure API Version</strong> are required."]
+                    @T["An <strong>API key</strong> and <strong>Azure API version</strong> are required."]
                 </div>
             </div>
             <div class="copilot-provider-hint copilot-provider-hint-anthropic @(Model.ProviderType != "anthropic" ? "d-none" : "")">
@@ -122,7 +122,7 @@
         </div>
 
         <div class="mb-3">
-            <label asp-for="ApiKey" class="form-label">@T["API Key"]</label>
+            <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
             <input asp-for="ApiKey" type="password" class="form-control" placeholder="@T["Enter API key"]" />
             <span asp-validation-for="ApiKey" class="text-danger"></span>
             @if (Model.HasApiKey)
@@ -136,21 +136,21 @@
         </div>
 
         <div class="mb-3">
-            <label asp-for="DefaultModel" class="form-label">@T["Default Model"]</label>
+            <label asp-for="DefaultModel" class="form-label">@T["Default model"]</label>
             <input asp-for="DefaultModel" class="form-control" placeholder="gpt-4o" />
             <span asp-validation-for="DefaultModel" class="text-danger"></span>
             <span class="hint">@T["The model name or deployment name to use (e.g., \"gpt-4o\", \"claude-3.5-sonnet\"). This is required for BYOK."]</span>
         </div>
 
         <div class="mb-3">
-            <label asp-for="WireApi" class="form-label">@T["Wire API Format"]</label>
+            <label asp-for="WireApi" class="form-label">@T["Wire API format"]</label>
             <select asp-for="WireApi" asp-items="Model.WireApiOptions" class="form-select">
             </select>
-            <span class="hint">@T["\"Chat Completions\" works for most models. Use \"Responses\" for GPT-5 series models that support the newer responses format."]</span>
+            <span class="hint">@T["\"Chat completions\" works for most models. Use \"Responses\" for GPT-5 series models that support the newer responses format."]</span>
         </div>
 
         <div class="mb-3 @(Model.ProviderType != "azure" ? "d-none" : "")" id="copilot-azure-version-group">
-            <label asp-for="AzureApiVersion" class="form-label">@T["Azure API Version"]</label>
+            <label asp-for="AzureApiVersion" class="form-label">@T["Azure API version"]</label>
             <input asp-for="AzureApiVersion" class="form-control" placeholder="2024-10-21" />
             <span asp-validation-for="AzureApiVersion" class="text-danger"></span>
             <span class="hint">@T["Required for Azure provider. Default: <code>2024-10-21</code>."]</span>

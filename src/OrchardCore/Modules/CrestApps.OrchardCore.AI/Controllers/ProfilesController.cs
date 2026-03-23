@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Models;
@@ -7,12 +9,15 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -123,7 +128,7 @@ public sealed class ProfilesController : Controller
     }
 
     [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source)
+    public async Task<ActionResult> Create(string source, [FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
@@ -144,6 +149,17 @@ public sealed class ProfilesController : Controller
             await _notifier.ErrorAsync(H["Invalid profile source."]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!string.IsNullOrEmpty(templateId))
+        {
+            var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
+            var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
+
+            if (template != null)
+            {
+                await ApplyTemplateToProfileAsync(profile, template);
+            }
         }
 
         var model = new EditCatalogEntryViewModel
@@ -347,5 +363,237 @@ public sealed class ProfilesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task ApplyTemplateToProfileAsync(AIProfile profile, AIProfileTemplate template)
+    {
+        // Copy all extensibility properties from the template to the profile.
+        // This transfers settings stored by external module drivers (e.g., analytics,
+        // data extraction, post-session, MCP connections, data sources, etc.).
+        // Template drivers store settings in template.Properties (via Entity.As<T>/Put<T>).
+        // Profile drivers may read from either profile.Properties or profile.Settings,
+        // so we copy to both to ensure all drivers can read the applied values.
+        if (template.Properties != null)
+        {
+            foreach (var property in template.Properties)
+            {
+                // Skip source-specific metadata keys; they are handled below.
+                if (string.Equals(property.Key, nameof(ProfileTemplateMetadata), StringComparison.Ordinal) ||
+                    string.Equals(property.Key, nameof(SystemPromptTemplateMetadata), StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                profile.Properties[property.Key] = property.Value;
+                profile.Settings[property.Key] = JsonSerializer.SerializeToNode(property.Value);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(template.DisplayText))
+        {
+            profile.DisplayText = template.DisplayText;
+        }
+
+        if (!string.IsNullOrEmpty(template.Name))
+        {
+            profile.Name = template.Name;
+        }
+
+        var templateMetadata = template.As<ProfileTemplateMetadata>();
+
+        if (templateMetadata.ProfileType.HasValue)
+        {
+            profile.Type = templateMetadata.ProfileType.Value;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentId))
+        {
+            profile.ChatDeploymentId = templateMetadata.ChatDeploymentId;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentId))
+        {
+            profile.UtilityDeploymentId = templateMetadata.UtilityDeploymentId;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.OrchestratorName))
+        {
+            profile.OrchestratorName = templateMetadata.OrchestratorName;
+        }
+
+        if (templateMetadata.TitleType.HasValue)
+        {
+            profile.TitleType = templateMetadata.TitleType;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.WelcomeMessage))
+        {
+            profile.WelcomeMessage = templateMetadata.WelcomeMessage;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.PromptSubject))
+        {
+            profile.PromptSubject = templateMetadata.PromptSubject;
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.PromptTemplate))
+        {
+            profile.PromptTemplate = templateMetadata.PromptTemplate;
+        }
+
+        var metadata = profile.As<AIProfileMetadata>();
+
+        if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
+        {
+            metadata.SystemMessage = templateMetadata.SystemMessage;
+        }
+
+        if (templateMetadata.Temperature.HasValue)
+        {
+            metadata.Temperature = templateMetadata.Temperature;
+        }
+
+        if (templateMetadata.TopP.HasValue)
+        {
+            metadata.TopP = templateMetadata.TopP;
+        }
+
+        if (templateMetadata.FrequencyPenalty.HasValue)
+        {
+            metadata.FrequencyPenalty = templateMetadata.FrequencyPenalty;
+        }
+
+        if (templateMetadata.PresencePenalty.HasValue)
+        {
+            metadata.PresencePenalty = templateMetadata.PresencePenalty;
+        }
+
+        if (templateMetadata.MaxOutputTokens.HasValue)
+        {
+            metadata.MaxTokens = templateMetadata.MaxOutputTokens;
+        }
+
+        if (templateMetadata.PastMessagesCount.HasValue)
+        {
+            metadata.PastMessagesCount = templateMetadata.PastMessagesCount;
+        }
+
+        profile.Put(metadata);
+
+        if (templateMetadata.ToolNames != null && templateMetadata.ToolNames.Length > 0)
+        {
+            var toolMetadata = profile.As<FunctionInvocationMetadata>();
+            toolMetadata.Names = [.. templateMetadata.ToolNames];
+            profile.Put(toolMetadata);
+        }
+
+        if (templateMetadata.AgentNames != null && templateMetadata.AgentNames.Length > 0)
+        {
+            var agentMetadata = profile.As<AgentInvocationMetadata>();
+            agentMetadata.Names = [.. templateMetadata.AgentNames];
+            profile.Put(agentMetadata);
+        }
+
+        if (!string.IsNullOrEmpty(templateMetadata.Description))
+        {
+            profile.Description = templateMetadata.Description;
+        }
+
+        if (templateMetadata.AgentAvailability.HasValue)
+        {
+            var agentMeta = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            agentMeta.Availability = templateMetadata.AgentAvailability.Value;
+            profile.Put(agentMeta);
+        }
+
+        // Clone documents from the template to the profile when the Documents feature is enabled.
+        await CloneTemplateDocumentsAsync(profile, template);
+    }
+
+    private async Task CloneTemplateDocumentsAsync(AIProfile profile, AIProfileTemplate template)
+    {
+        var documentsMetadata = template.As<DocumentsMetadata>();
+
+        if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
+        {
+            return;
+        }
+
+        var documentStore = HttpContext.RequestServices.GetService<IAIDocumentStore>();
+        var chunkStore = HttpContext.RequestServices.GetService<IAIDocumentChunkStore>();
+
+        if (documentStore == null || chunkStore == null)
+        {
+            return;
+        }
+
+        var profileDocuments = new DocumentsMetadata
+        {
+            DocumentTopN = documentsMetadata.DocumentTopN,
+            Documents = [],
+        };
+
+        foreach (var docInfo in documentsMetadata.Documents)
+        {
+            var templateDocument = await documentStore.FindByIdAsync(docInfo.DocumentId);
+
+            if (templateDocument == null)
+            {
+                continue;
+            }
+
+            // Clone the document record with a new ID and profile reference.
+            var clonedDocument = new AIDocument
+            {
+                ItemId = IdGenerator.GenerateId(),
+                ReferenceId = profile.ItemId,
+                ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
+                FileName = templateDocument.FileName,
+                ContentType = templateDocument.ContentType,
+                FileSize = templateDocument.FileSize,
+                UploadedUtc = templateDocument.UploadedUtc,
+            };
+
+            await documentStore.CreateAsync(clonedDocument);
+
+            // Clone associated chunks with new IDs and updated references.
+            var templateChunks = await chunkStore.GetChunksByAIDocumentIdAsync(templateDocument.ItemId);
+
+            foreach (var templateChunk in templateChunks)
+            {
+                var clonedChunk = new AIDocumentChunk
+                {
+                    ItemId = IdGenerator.GenerateId(),
+                    AIDocumentId = clonedDocument.ItemId,
+                    ReferenceId = profile.ItemId,
+                    ReferenceType = AIConstants.DocumentReferenceTypes.Profile,
+                    Content = templateChunk.Content,
+                    Embedding = templateChunk.Embedding,
+                    Index = templateChunk.Index,
+                };
+
+                await chunkStore.CreateAsync(clonedChunk);
+            }
+
+            profileDocuments.Documents.Add(new ChatDocumentInfo
+            {
+                DocumentId = clonedDocument.ItemId,
+                FileName = clonedDocument.FileName,
+                ContentType = clonedDocument.ContentType,
+                FileSize = clonedDocument.FileSize,
+            });
+        }
+
+        if (profileDocuments.Documents.Count > 0)
+        {
+            profile.Put(profileDocuments);
+
+            // Also update Settings for drivers that read from profile.Settings.
+            var serialized = JsonSerializer.SerializeToNode(profileDocuments);
+            if (serialized is JsonObject jsonObj)
+            {
+                profile.Settings[nameof(DocumentsMetadata)] = jsonObj;
+            }
+        }
     }
 }

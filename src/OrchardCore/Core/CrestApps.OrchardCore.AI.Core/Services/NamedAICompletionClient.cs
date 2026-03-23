@@ -17,7 +17,8 @@ public abstract class NamedAICompletionClient : CrestApps.AI.Services.NamedAICom
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IAITemplateService aiTemplateService)
+        IAITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager)
         : base(
             name,
             aIClientFactory,
@@ -27,7 +28,8 @@ public abstract class NamedAICompletionClient : CrestApps.AI.Services.NamedAICom
             providerOptions,
             defaultOptions,
             handlers,
-            aiTemplateService)
+            aiTemplateService,
+            deploymentManager)
     {
     }
 }

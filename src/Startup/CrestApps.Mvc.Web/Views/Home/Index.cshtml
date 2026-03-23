@@ -63,6 +63,65 @@
     </div>
 </div>
 
+<div class="row g-4 mt-1">
+    <div class="col-md-3">
+        <div class="card h-100 border-secondary">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-file-earmark-text fs-2 text-secondary me-3"></i>
+                    <h5 class="card-title mb-0">AI Templates</h5>
+                </div>
+                <p class="card-text">Create reusable system prompt and profile templates for consistent AI behavior.</p>
+                <a asp-area="Admin" asp-controller="AITemplate" asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-right"></i> Manage Templates
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-dark">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-database-gear fs-2 text-dark me-3"></i>
+                    <h5 class="card-title mb-0">Index Profiles</h5>
+                </div>
+                <p class="card-text">Define search index profiles for Elasticsearch or Azure AI Search vector stores.</p>
+                <a asp-area="Admin" asp-controller="IndexProfile" asp-action="Index" class="btn btn-dark">
+                    <i class="bi bi-arrow-right"></i> Manage Index Profiles
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100" style="border-color: #6f42c1;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-collection fs-2 me-3" style="color: #6f42c1;"></i>
+                    <h5 class="card-title mb-0">Data Sources</h5>
+                </div>
+                <p class="card-text">Map existing search indexes to a knowledge base for AI-powered retrieval.</p>
+                <a asp-area="Admin" asp-controller="AIDataSource" asp-action="Index" class="btn text-white" style="background-color: #6f42c1;">
+                    <i class="bi bi-arrow-right"></i> Manage Data Sources
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100" style="border-color: #20c997;">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-gear fs-2 me-3" style="color: #20c997;"></i>
+                    <h5 class="card-title mb-0">Settings</h5>
+                </div>
+                <p class="card-text">Configure memory, orchestration, caching, and diagnostics settings.</p>
+                <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="btn text-white" style="background-color: #20c997;">
+                    <i class="bi bi-arrow-right"></i> Manage Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 @if (!User.Identity.IsAuthenticated)
 {
     <div class="alert alert-warning mt-4">

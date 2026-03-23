@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.Handlers;
 using CrestApps.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
@@ -43,7 +44,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= [];
+        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);

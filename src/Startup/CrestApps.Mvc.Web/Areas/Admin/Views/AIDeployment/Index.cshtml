@@ -23,8 +23,10 @@ else
             <thead class="table-dark">
                 <tr>
                     <th>Name</th>
+                    <th>Type</th>
                     <th>Provider</th>
                     <th>Connection</th>
+                    <th>Default</th>
                     <th style="width: 180px;">Actions</th>
                 </tr>
             </thead>
@@ -33,10 +35,21 @@ else
                 {
                     <tr>
                         <td><strong>@deployment.Name</strong></td>
+                        <td><span class="badge bg-secondary">@deployment.Type</span></td>
                         <td>
                             <span class="badge bg-info">@(deployment.ProviderName ?? "—")</span>
                         </td>
-                        <td>@(deployment.ConnectionName ?? "—")</td>
+                        <td>@(string.IsNullOrEmpty(deployment.ConnectionName) ? "Standalone" : deployment.ConnectionName)</td>
+                        <td>
+                            @if (deployment.IsDefault)
+                            {
+                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Yes</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No</span>
+                            }
+                        </td>
                         <td>
                             <a asp-action="Edit" asp-route-id="@deployment.ItemId" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Edit

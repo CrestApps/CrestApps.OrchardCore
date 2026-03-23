@@ -101,6 +101,21 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
             }
 
+            var typeValue = token[nameof(AIDeployment.Type)]?.GetValue<string>();
+
+            if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var deploymentType))
+            {
+                deployment.Type = deploymentType;
+            }
+            else
+            {
+                // Default to Chat for backward compatibility with recipes
+                // that do not include the Type property.
+                deployment.Type = AIDeploymentType.Chat;
+            }
+
+            deployment.IsDefault = token[nameof(AIDeployment.IsDefault)]?.GetValue<bool>() ?? false;
+
             var validationResult = await _manager.ValidateAsync(deployment);
 
             if (!validationResult.Succeeded)

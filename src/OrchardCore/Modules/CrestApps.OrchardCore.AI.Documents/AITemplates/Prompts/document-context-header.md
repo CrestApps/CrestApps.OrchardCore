@@ -2,9 +2,9 @@
 Title: Document Context Header
 Description: Header for uploaded document RAG context injection.
 Parameters:
-	- searchToolName: the name of the search tool for additional lookups (optional).
-	- hasUserSuppliedDocumentContext: boolean flag indicating user-uploaded/session document context is present.
-	- hasKnowledgeBaseDocumentContext: boolean flag indicating profile knowledge-base document context is present.
+  - searchToolName: the name of the search tool for additional lookups (optional).
+  - hasUserSuppliedDocumentContext: boolean flag indicating user-uploaded/session document context is present.
+  - hasKnowledgeBaseDocumentContext: boolean flag indicating profile knowledge-base document context is present.
 IsListable: false
 Category: RAG
 ---

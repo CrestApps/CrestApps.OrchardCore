@@ -51,6 +51,15 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             .GetImageClient(deploymentName)
             .AsIImageGenerator();
     }
+
+    protected override ISpeechToTextClient GetSpeechToTextClient(AIProviderConnectionEntry connection, string deploymentName)
+    {
+        var endpoint = connection.GetEndpoint();
+
+        return GetClient(connection, endpoint)
+            .GetAudioClient(deploymentName)
+            .AsISpeechToTextClient();
+    }
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
     private AzureOpenAIClient GetClient(AIProviderConnectionEntry connection, Uri endpoint)
@@ -66,10 +75,12 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
             },
         };
 
+        var identityId = connection.GetIdentityId();
+
         var azureClient = connection.GetAzureAuthenticationType() switch
         {
             AzureAuthenticationType.ApiKey => new AzureOpenAIClient(endpoint, new ApiKeyCredential(connection.GetApiKey()), options),
-            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned), options),
+            AzureAuthenticationType.ManagedIdentity => new AzureOpenAIClient(endpoint, new ManagedIdentityCredential(string.IsNullOrEmpty(identityId) ? ManagedIdentityId.SystemAssigned : ManagedIdentityId.FromUserAssignedClientId(identityId)), options),
             AzureAuthenticationType.Default => new AzureOpenAIClient(endpoint, new DefaultAzureCredential(), options),
             _ => throw new NotSupportedException("The provided authentication type is not supported.")
         };
