@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
 public sealed class DefaultOrchestratorTests
@@ -482,14 +483,13 @@ public sealed class DefaultOrchestratorTests
             => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 
+#pragma warning disable MEAI001
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ITextToSpeechClient)null);
 
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
             => new((ITextToSpeechClient)null);
-
-        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
-            => Task.FromResult(Array.Empty<SpeechVoice>());
+#pragma warning restore MEAI001
     }
 
     /// <summary>

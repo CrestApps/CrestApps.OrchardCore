@@ -78,7 +78,9 @@ public interface IAIClientFactory
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ITextToSpeechClient"/>.
     /// </returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
     /// <summary>
     /// Asynchronously creates an <see cref="ITextToSpeechClient"/> instance from a deployment that may use
@@ -88,12 +90,8 @@ public interface IAIClientFactory
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="ITextToSpeechClient"/>.
     /// </returns>
+#pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment);
+#pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
-    /// <summary>
-    /// Gets the available speech voices for the specified deployment by delegating to the appropriate provider.
-    /// </summary>
-    /// <param name="deployment">The AI deployment containing provider, connection, and model information.</param>
-    /// <returns>An array of available <see cref="SpeechVoice"/> instances.</returns>
-    Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment);
 }

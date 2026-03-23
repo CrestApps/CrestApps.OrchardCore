@@ -8,18 +8,18 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultSpeechVoicePresenter
 {
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAIClientFactory _clientFactory;
+    private readonly ISpeechVoiceResolver _speechVoiceResolver;
     private readonly ILocalizationService _localizationService;
     private readonly ILogger _logger;
 
     public DefaultSpeechVoicePresenter(
         IAIDeploymentManager deploymentManager,
-        IAIClientFactory clientFactory,
+        ISpeechVoiceResolver speechVoiceResolver,
         ILocalizationService localizationService,
         ILogger<DefaultSpeechVoicePresenter> logger)
     {
         _deploymentManager = deploymentManager;
-        _clientFactory = clientFactory;
+        _speechVoiceResolver = speechVoiceResolver;
         _localizationService = localizationService;
         _logger = logger;
     }
@@ -40,7 +40,7 @@ public sealed class DefaultSpeechVoicePresenter
                 return [];
             }
 
-            var speechVoices = await _clientFactory.GetSpeechVoicesAsync(deployment);
+            var speechVoices = await _speechVoiceResolver.GetSpeechVoicesAsync(deployment);
 
             var supportedCultures = await _localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(

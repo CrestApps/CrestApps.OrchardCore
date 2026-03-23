@@ -18,6 +18,7 @@ using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Settings;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Memory.Handlers;
 
 public sealed class AIMemoryPreemptiveRagHandlerTests
@@ -307,14 +308,13 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
             => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 
+#pragma warning disable MEAI001
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ITextToSpeechClient)null);
 
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
             => new((ITextToSpeechClient)null);
-
-        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
-            => Task.FromResult(Array.Empty<SpeechVoice>());
+#pragma warning restore MEAI001
     }
 
     private sealed class FakeEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>

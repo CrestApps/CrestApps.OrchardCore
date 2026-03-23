@@ -9,6 +9,7 @@ using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core.Services;
 
 /// <summary>

@@ -21,7 +21,7 @@ public interface IContentDefinitionSchemaDefinition
 
     string Name { get; }
 
-    ValueTask<JsonSchema> GetSettingsSchemaAsync();
+    ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync();
 }
 
 /// <summary>
@@ -31,30 +31,29 @@ public interface IContentDefinitionSchemaDefinition
 /// </summary>
 public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinition
 {
-    private JsonSchema _cache;
+    private JsonSchemaBuilder _cache;
 
     public ContentDefinitionSchemaType Type => ContentDefinitionSchemaType.Part;
 
     public abstract string Name { get; }
 
-    public ValueTask<JsonSchema> GetSettingsSchemaAsync()
+    public ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync()
     {
         _cache ??= BuildSettingsCore();
         return ValueTask.FromResult(_cache);
     }
 
-    protected abstract JsonSchema BuildSettingsCore();
+    protected abstract JsonSchemaBuilder BuildSettingsCore();
 
     /// <summary>
     /// Wraps <paramref name="innerSettings"/> under a top-level object
     /// property keyed by <paramref name="settingsKey"/>.
     /// </summary>
-    protected static JsonSchema Envelope(string settingsKey, JsonSchemaBuilder innerSettings)
+    protected static JsonSchemaBuilder Envelope(string settingsKey, JsonSchemaBuilder innerSettings)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties((settingsKey, innerSettings))
-            .AdditionalProperties(true)
-            .Build();
+            .AdditionalProperties(true);
 
     protected static JsonSchemaBuilder BoolProp()
         => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
@@ -64,13 +63,13 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
 
-    protected static (string, JsonSchema) Prop(string name, JsonSchemaBuilder schema)
+    protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
         => (name, schema);
 
     /// <summary>
     /// Builds a settings-object with <c>additionalProperties: false</c>.
     /// </summary>
-    protected static JsonSchemaBuilder Obj(params (string, JsonSchema)[] props)
+    protected static JsonSchemaBuilder Obj(params (string, JsonSchemaBuilder)[] props)
         => new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(props)

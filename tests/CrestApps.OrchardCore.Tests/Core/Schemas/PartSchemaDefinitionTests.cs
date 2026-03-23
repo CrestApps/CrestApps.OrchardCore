@@ -68,7 +68,7 @@ public sealed class PartSchemaDefinitionTests
 
         Assert.NotNull(schema);
 
-        var json = JsonSerializer.Serialize(schema);
+        var json = schema.Build().Root.Source.GetRawText();
 
         Assert.NotEmpty(json);
         Assert.StartsWith("{", json);
@@ -102,7 +102,7 @@ public sealed class PartSchemaDefinitionTests
     {
         var def = new TitlePartSchema();
         var schema = await def.GetSettingsSchemaAsync();
-        var json = JsonSerializer.Serialize(schema);
+        var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("TitlePartSettings", json);
         Assert.Contains("Editable", json);
@@ -116,7 +116,7 @@ public sealed class PartSchemaDefinitionTests
     {
         var def = new AliasPartSchema();
         var schema = await def.GetSettingsSchemaAsync();
-        var json = JsonSerializer.Serialize(schema);
+        var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("AliasPartSettings", json);
         Assert.Contains("Pattern", json);
@@ -128,7 +128,7 @@ public sealed class PartSchemaDefinitionTests
     {
         var def = new HtmlBodyPartSchema();
         var schema = await def.GetSettingsSchemaAsync();
-        var json = JsonSerializer.Serialize(schema);
+        var json = schema.Build().Root.Source.GetRawText();
 
         Assert.Contains("SanitizeHtml", json);
         Assert.Contains("\"default\":true", json);

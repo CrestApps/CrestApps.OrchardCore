@@ -7,6 +7,6 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Description = "Extends the Resources module with additional reusable scripts and stylesheets.",
-    Category = "Theming",
+    Category = "Resources",
     IsAlwaysEnabled = false
 )]

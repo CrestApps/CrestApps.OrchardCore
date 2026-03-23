@@ -1,33 +1,12 @@
-using Json.Schema;
-
 namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 
 /// <summary>
 /// Schema for the "ReplaceContentDefinition" recipe step — replaces content type/part definitions entirely.
 /// </summary>
-public sealed class ReplaceContentDefinitionRecipeStep : IRecipeStep
+public sealed class ReplaceContentDefinitionRecipeStep(
+    IEnumerable<IContentDefinitionSchemaDefinition> schemaDefinitions,
+    IContentSchemaProvider contentSchemaProvider)
+    : ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
 {
-    private JsonSchema _cached;
-    public string Name => "ReplaceContentDefinition";
-
-    public ValueTask<JsonSchema> GetSchemaAsync()
-    {
-        _cached ??= CreateSchema();
-        return ValueTask.FromResult(_cached);
-    }
-
-    private static JsonSchema CreateSchema()
-        => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("ReplaceContentDefinition")),
-                ("ContentTypes", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))),
-                ("ContentParts", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true))))
-            .Required("name")
-            .AdditionalProperties(true)
-            .Build();
+    public override string Name => "ReplaceContentDefinition";
 }
