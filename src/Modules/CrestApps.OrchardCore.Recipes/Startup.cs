@@ -85,6 +85,24 @@ public sealed class ContentRecipeStartup : StartupBase
     }
 }
 
+[RequireFeatures("OrchardCore.Users", "OrchardCore.Recipes.Core")]
+public sealed class UsersRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, UsersRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Users.CustomUserSettings", "OrchardCore.Recipes.Core")]
+public sealed class CustomUserSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, CustomUserSettingsRecipeStep>();
+    }
+}
+
 [RequireFeatures("OrchardCore.Media", "OrchardCore.Recipes.Core")]
 public sealed class MediaRecipeStartup : StartupBase
 {
@@ -195,6 +213,16 @@ public sealed class UrlRewritingRecipeStartup : StartupBase
     }
 }
 
+[RequireFeatures("OrchardCore.DataLocalization", "OrchardCore.Recipes.Core")]
+public sealed class TranslationsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, TranslationsRecipeStep>();
+        services.AddScoped<IRecipeStep, DynamicDataTranslationsRecipeStep>();
+    }
+}
+
 [RequireFeatures("OrchardCore.Tenants.FeatureProfiles", "OrchardCore.Recipes.Core")]
 public sealed class FeatureProfilesRecipeStartup : StartupBase
 {
@@ -245,6 +273,97 @@ public sealed class IndexProfileRecipeStartup : StartupBase
         services.AddScoped<IRecipeStep, CreateOrUpdateIndexProfileRecipeStep>();
         services.AddScoped<IRecipeStep, ResetIndexRecipeStep>();
         services.AddScoped<IRecipeStep, RebuildIndexRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Microsoft.Authentication.AzureAD", "OrchardCore.Recipes.Core")]
+public sealed class AzureADSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AzureADSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Microsoft.Authentication.MicrosoftAccount", "OrchardCore.Recipes.Core")]
+public sealed class MicrosoftAccountSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, MicrosoftAccountSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Facebook", "OrchardCore.Recipes.Core")]
+public sealed class FacebookCoreSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, FacebookCoreSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Facebook.Login", "OrchardCore.Recipes.Core")]
+public sealed class FacebookLoginSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, FacebookLoginSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.GitHub.Authentication", "OrchardCore.Recipes.Core")]
+public sealed class GitHubAuthenticationSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, GitHubAuthenticationSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Twitter.Signin", "OrchardCore.Recipes.Core")]
+public sealed class TwitterSettingsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, TwitterSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.OpenId.Management", "OrchardCore.Recipes.Core")]
+public sealed class OpenIdManagementRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OpenIdApplicationRecipeStep>();
+        services.AddScoped<IRecipeStep, OpenIdScopeRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.OpenId.Client", "OrchardCore.Recipes.Core")]
+public sealed class OpenIdClientRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OpenIdClientSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.OpenId.Server", "OrchardCore.Recipes.Core")]
+public sealed class OpenIdServerRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OpenIdServerSettingsRecipeStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.OpenId.Validation", "OrchardCore.Recipes.Core")]
+public sealed class OpenIdValidationRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, OpenIdValidationSettingsRecipeStep>();
     }
 }
 

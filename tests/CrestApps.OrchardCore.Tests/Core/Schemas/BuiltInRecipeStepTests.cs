@@ -63,6 +63,11 @@ public sealed class BuiltInRecipeStepTests
 
     private static IRecipeStep CreateStep(Type stepType)
     {
+        if (stepType == typeof(ContentDefinitionRecipeStep))
+        {
+            return new ContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
+        }
+
         if (stepType == typeof(FeatureRecipeStep))
         {
             return new FeatureRecipeStep(CreateShellFeaturesManager());
@@ -76,6 +81,11 @@ public sealed class BuiltInRecipeStepTests
         if (stepType == typeof(ContentRecipeStep))
         {
             return new ContentRecipeStep(CreateContentDefinitionManager());
+        }
+
+        if (stepType == typeof(ReplaceContentDefinitionRecipeStep))
+        {
+            return new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
         }
 
         if (stepType == typeof(RecipesRecipeStep))
@@ -104,7 +114,22 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaRecipeStep), "media")]
     [InlineData(typeof(MediaProfilesRecipeStep), "MediaProfiles")]
     [InlineData(typeof(RolesRecipeStep), "Roles")]
+    [InlineData(typeof(UsersRecipeStep), "Users")]
+    [InlineData(typeof(CustomUserSettingsRecipeStep), "custom-user-settings")]
     [InlineData(typeof(CustomSettingsRecipeStep), "custom-settings")]
+    [InlineData(typeof(AzureADSettingsRecipeStep), "AzureADSettings")]
+    [InlineData(typeof(MicrosoftAccountSettingsRecipeStep), "MicrosoftAccountSettings")]
+    [InlineData(typeof(FacebookCoreSettingsRecipeStep), "FacebookCoreSettings")]
+    [InlineData(typeof(FacebookLoginSettingsRecipeStep), "FacebookLoginSettings")]
+    [InlineData(typeof(GitHubAuthenticationSettingsRecipeStep), "GitHubAuthenticationSettings")]
+    [InlineData(typeof(TwitterSettingsRecipeStep), "TwitterSettings")]
+    [InlineData(typeof(OpenIdApplicationRecipeStep), "OpenIdApplication")]
+    [InlineData(typeof(OpenIdClientSettingsRecipeStep), "OpenIdClientSettings")]
+    [InlineData(typeof(OpenIdScopeRecipeStep), "OpenIdScope")]
+    [InlineData(typeof(OpenIdServerSettingsRecipeStep), "OpenIdServerSettings")]
+    [InlineData(typeof(OpenIdValidationSettingsRecipeStep), "OpenIdValidationSettings")]
+    [InlineData(typeof(TranslationsRecipeStep), "Translations")]
+    [InlineData(typeof(DynamicDataTranslationsRecipeStep), "DynamicDataTranslations")]
     [InlineData(typeof(LayersRecipeStep), "Layers")]
     [InlineData(typeof(QueriesRecipeStep), "Queries")]
     [InlineData(typeof(TemplatesRecipeStep), "Templates")]
@@ -149,7 +174,22 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaRecipeStep))]
     [InlineData(typeof(MediaProfilesRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
+    [InlineData(typeof(UsersRecipeStep))]
+    [InlineData(typeof(CustomUserSettingsRecipeStep))]
     [InlineData(typeof(CustomSettingsRecipeStep))]
+    [InlineData(typeof(AzureADSettingsRecipeStep))]
+    [InlineData(typeof(MicrosoftAccountSettingsRecipeStep))]
+    [InlineData(typeof(FacebookCoreSettingsRecipeStep))]
+    [InlineData(typeof(FacebookLoginSettingsRecipeStep))]
+    [InlineData(typeof(GitHubAuthenticationSettingsRecipeStep))]
+    [InlineData(typeof(TwitterSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdApplicationRecipeStep))]
+    [InlineData(typeof(OpenIdClientSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdScopeRecipeStep))]
+    [InlineData(typeof(OpenIdServerSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdValidationSettingsRecipeStep))]
+    [InlineData(typeof(TranslationsRecipeStep))]
+    [InlineData(typeof(DynamicDataTranslationsRecipeStep))]
     [InlineData(typeof(LayersRecipeStep))]
     [InlineData(typeof(QueriesRecipeStep))]
     [InlineData(typeof(TemplatesRecipeStep))]
@@ -199,7 +239,22 @@ public sealed class BuiltInRecipeStepTests
     [InlineData(typeof(MediaRecipeStep))]
     [InlineData(typeof(MediaProfilesRecipeStep))]
     [InlineData(typeof(RolesRecipeStep))]
+    [InlineData(typeof(UsersRecipeStep))]
+    [InlineData(typeof(CustomUserSettingsRecipeStep))]
     [InlineData(typeof(CustomSettingsRecipeStep))]
+    [InlineData(typeof(AzureADSettingsRecipeStep))]
+    [InlineData(typeof(MicrosoftAccountSettingsRecipeStep))]
+    [InlineData(typeof(FacebookCoreSettingsRecipeStep))]
+    [InlineData(typeof(FacebookLoginSettingsRecipeStep))]
+    [InlineData(typeof(GitHubAuthenticationSettingsRecipeStep))]
+    [InlineData(typeof(TwitterSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdApplicationRecipeStep))]
+    [InlineData(typeof(OpenIdClientSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdScopeRecipeStep))]
+    [InlineData(typeof(OpenIdServerSettingsRecipeStep))]
+    [InlineData(typeof(OpenIdValidationSettingsRecipeStep))]
+    [InlineData(typeof(TranslationsRecipeStep))]
+    [InlineData(typeof(DynamicDataTranslationsRecipeStep))]
     [InlineData(typeof(LayersRecipeStep))]
     [InlineData(typeof(QueriesRecipeStep))]
     [InlineData(typeof(TemplatesRecipeStep))]
@@ -305,6 +360,87 @@ public sealed class BuiltInRecipeStepTests
         Assert.Contains("\"ContentParts\"", json);
     }
 
+    [Fact]
+    public async Task ReplaceContentDefinitionRecipeStep_SchemaMatchesExpandedContentDefinitionShape()
+    {
+        var step = new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"ContentTypePartDefinitionRecords\"", json);
+        Assert.Contains("\"ContentPartFieldDefinitionRecords\"", json);
+        Assert.Contains("\"ContentTypeSettings\"", json);
+        Assert.Contains("\"AliasPartSettings\"", json);
+        Assert.Contains("\"FieldName\"", json);
+    }
+
+    [Fact]
+    public async Task CustomUserSettingsRecipeStep_SchemaAllowsNamedCollectionsOfUserSettings()
+    {
+        var step = new CustomUserSettingsRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"userId\"", json);
+        Assert.Contains("\"user-custom-user-settings\"", json);
+        Assert.Contains("\"ContentType\"", json);
+    }
+
+    [Fact]
+    public async Task OpenIdClientSettingsRecipeStep_SchemaContainsValidatedResponseEnums()
+    {
+        var step = new OpenIdClientSettingsRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"ResponseType\"", json);
+        Assert.Contains("\"code id_token token\"", json);
+        Assert.Contains("\"ResponseMode\"", json);
+        Assert.Contains("\"form_post\"", json);
+    }
+
+    [Fact]
+    public async Task OpenIdApplicationRecipeStep_SchemaContainsKnownClientAndConsentOptions()
+    {
+        var step = new OpenIdApplicationRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"ConsentType\"", json);
+        Assert.Contains("\"explicit\"", json);
+        Assert.Contains("\"Type\"", json);
+        Assert.Contains("\"public\"", json);
+    }
+
+    [Fact]
+    public async Task UsersRecipeStep_SchemaContainsUserShape()
+    {
+        var step = new UsersRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"Users\"", json);
+        Assert.Contains("\"UserName\"", json);
+        Assert.Contains("\"RoleNames\"", json);
+    }
+
+    [Fact]
+    public async Task TranslationsRecipeStep_SchemaContainsNewFormatTranslationEntries()
+    {
+        var step = new TranslationsRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"translations\"", json);
+        Assert.Contains("\"culture\"", json);
+        Assert.Contains("\"key\"", json);
+    }
+
+    [Fact]
+    public async Task DynamicDataTranslationsRecipeStep_SchemaContainsLegacyTranslationEntries()
+    {
+        var step = new DynamicDataTranslationsRecipeStep();
+        var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
+        Assert.Contains("\"Translations\"", json);
+        Assert.Contains("\"Translation\"", json);
+        Assert.Contains("\"Context\"", json);
+    }
+
     private static IContentDefinitionManager CreateContentDefinitionManager()
     {
         var manager = new Mock<IContentDefinitionManager>();
@@ -313,5 +449,50 @@ public sealed class BuiltInRecipeStepTests
         manager.Setup(m => m.ListTypeDefinitionsAsync()).ReturnsAsync(definitions);
 
         return manager.Object;
+    }
+
+    private static IContentDefinitionSchemaDefinition[] CreateContentDefinitionSchemaDefinitions()
+        => typeof(IContentDefinitionSchemaDefinition).Assembly.ExportedTypes
+            .Where(type =>
+                typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
+                type is { IsAbstract: false, IsInterface: false })
+            .OrderBy(type => type.Name, StringComparer.Ordinal)
+            .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type))
+            .ToArray();
+
+    private static StubContentSchemaProvider CreateContentSchemaProvider()
+        => new StubContentSchemaProvider(
+            CreateContentDefinitionSchemaDefinitions()
+                .Select(definition => definition.Name)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            [
+                "BooleanField",
+                "ContentPickerField",
+                "DateField",
+                "DateTimeField",
+                "HtmlField",
+                "LinkField",
+                "LocalizationSetContentPickerField",
+                "MediaField",
+                "MultiTextField",
+                "NumericField",
+                "TaxonomyField",
+                "TextField",
+                "TimeField",
+                "UserPickerField",
+                "YoutubeField",
+            ]);
+
+    private sealed class StubContentSchemaProvider(
+        IReadOnlyList<string> partNames,
+        IReadOnlyList<string> fieldTypeNames) : IContentSchemaProvider
+    {
+        public Task<IEnumerable<string>> GetPartNamesAsync()
+            => Task.FromResult<IEnumerable<string>>(partNames);
+
+        public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
+            => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
     }
 }

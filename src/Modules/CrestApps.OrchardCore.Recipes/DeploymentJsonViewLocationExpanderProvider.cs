@@ -18,7 +18,7 @@ internal sealed class DeploymentJsonViewLocationExpander : IViewLocationExpander
     public IEnumerable<string> ExpandViewLocations(ViewLocationExpanderContext context, IEnumerable<string> viewLocations)
     {
         // Only override the Import/Json view
-        if (context.ControllerName == "Import" && context.ViewName == "Json")
+        if (context.AreaName == "OrchardCore.Deployment" && context.ControllerName == "Import" && context.ViewName == "Json")
         {
             // Return your module path first
             yield return "/Areas/CrestApps.OrchardCore.Recipes/Views/Import/Json.cshtml";
