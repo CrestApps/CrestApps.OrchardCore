@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 using OrchardCore.Contents.Indexing;
@@ -23,10 +24,10 @@ internal static class GetDataSourceFieldsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        string indexProfileName,
-        IAuthorizationService authorizationService,
-        IIndexProfileStore indexProfileStore,
-        IOptions<AIDataSourceOptions> dataSourceOptions,
+        [FromRoute] string indexProfileName,
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IIndexProfileStore indexProfileStore,
+        [FromServices] IOptions<AIDataSourceOptions> dataSourceOptions,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.ManageAIDataSources))

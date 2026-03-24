@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -31,16 +32,16 @@ internal static class UploadSessionDocumentEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpRequest request,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIChatSessionManager sessionManager,
-        IAIDeploymentManager deploymentManager,
-        IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore,
-        IAIDocumentProcessingService documentProcessingService,
-        IOptions<ChatDocumentsOptions> extractorOptions,
-        ILogger<Startup> logger,
-        IStringLocalizer<Startup> S)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIChatSessionManager sessionManager,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIDocumentStore documentStore,
+        [FromServices] IAIDocumentChunkStore chunkStore,
+        [FromServices] IAIDocumentProcessingService documentProcessingService,
+        [FromServices] IOptions<ChatDocumentsOptions> extractorOptions,
+        [FromServices] ILogger<Startup> logger,
+        [FromServices] IStringLocalizer<Startup> S)
     {
         var httpContext = httpContextAccessor.HttpContext;
 

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Endpoints;
@@ -19,11 +20,11 @@ internal static class GetDeploymentsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIDeploymentManager deploymentManager,
-        string providerName,
-        string connection)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromQuery] string providerName,
+        [FromQuery] string connection)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
