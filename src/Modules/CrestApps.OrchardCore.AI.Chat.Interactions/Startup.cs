@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -64,7 +65,9 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
 
-        services.AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>();
+        services
+            .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Chat Interaction notification transport.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
