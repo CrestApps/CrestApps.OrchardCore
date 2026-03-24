@@ -150,6 +150,7 @@
                 prompt.IsGeneratedPrompt,
                 prompt.UserRating,
                 prompt.References,
+                Appearance = prompt.As<AssistantMessageAppearance>(),
             });
         }
     }
