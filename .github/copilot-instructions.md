@@ -291,6 +291,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
 - **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
+- **AI site settings navigation**: Every `SiteDisplayDriver<>` that sets `SettingsGroupId => AIConstants.AISettingsGroupId` must also register `.AddNavigationProvider<AISiteSettingsAdminMenu>()` in its feature's `Startup` class. This ensures the **Settings → Artificial Intelligence** admin menu entry exists whenever the feature is enabled, so users can navigate to the settings page.
 
 ### Module Structure Conventions
 

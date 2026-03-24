@@ -79,9 +79,11 @@ public sealed class Startup : StartupBase
                 var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
 
                 return defaultOptions.ApplySiteOverrides(site.As<GeneralAISettings>());
-            })
-            .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
-            .AddNavigationProvider<AIProfileAdminMenu>();
+            }).AddNavigationProvider<AIProfileAdminMenu>();
+
+        services
+              .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
+              .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services
             .AddScoped<IAIToolsService, DefaultAIToolsService>()
@@ -196,7 +198,8 @@ public sealed class DeploymentsStartup : StartupBase
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
-            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>();
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -266,6 +269,7 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
+        services.AddNavigationProvider<AISiteSettingsAdminMenu>();
     }
 }
 

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -91,7 +92,9 @@ public sealed class AdminWidgetStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>();
+        services
+            .AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.Configure<MvcOptions>(options =>
         {
