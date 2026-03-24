@@ -1036,9 +1036,11 @@ profile.AlterSettings<ResponseHandlerProfileSettings>(settings =>
 });
 ```
 
-### Via Chat UI
+For custom clients that need to override the profile default at session start, call the chat hub directly and pass the handler name as the second argument to `AIChatHub.StartSession(profileId, initialResponseHandlerName)`.
 
-When multiple response handlers are registered, the chat UI displays a **Response Handler** dropdown in the placeholder area before a session starts. Users can select which handler to use for their session, overriding the profile's default.
+### Built-in chat UI behavior
+
+The built-in CrestApps chat UI never displays a response-handler picker to end users. Sessions always start with the AI profile's configured initial response handler, or the default AI handler when the profile does not specify one.
 
 ## SignalR Groups for Deferred Responses
 
