@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Options;
 
@@ -21,10 +22,10 @@ internal static class GetConnectionsEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IOptions<AIProviderOptions> aiProviderOptions,
-        string providerName)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IOptions<AIProviderOptions> aiProviderOptions,
+        [FromQuery] string providerName)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {

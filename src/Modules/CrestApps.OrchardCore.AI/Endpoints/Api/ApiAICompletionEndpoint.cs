@@ -12,6 +12,7 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -33,20 +34,20 @@ internal static class ApiAICompletionEndpoint
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       IAuthorizationService authorizationService,
-       INamedCatalogManager<AIProfile> chatProfileManager,
-       IAIChatSessionManager sessionManager,
-       IAIChatSessionPromptStore promptStore,
-       ILiquidTemplateManager liquidTemplateManager,
-       IHttpContextAccessor httpContextAccessor,
-       IAICompletionService completionService,
-       IAICompletionContextBuilder completionContextBuilder,
-       IOrchestrationContextBuilder orchestrationContextBuilder,
-       IOrchestratorResolver orchestratorResolver,
-       CitationReferenceCollector citationCollector,
-       IAITemplateService aiTemplateService,
-       ILogger<T> logger,
-       AICompletionRequest requestData)
+       [FromServices] IAuthorizationService authorizationService,
+       [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+       [FromServices] IAIChatSessionManager sessionManager,
+       [FromServices] IAIChatSessionPromptStore promptStore,
+       [FromServices] ILiquidTemplateManager liquidTemplateManager,
+       [FromServices] IHttpContextAccessor httpContextAccessor,
+       [FromServices] IAICompletionService completionService,
+       [FromServices] IAICompletionContextBuilder completionContextBuilder,
+       [FromServices] IOrchestrationContextBuilder orchestrationContextBuilder,
+       [FromServices] IOrchestratorResolver orchestratorResolver,
+       [FromServices] CitationReferenceCollector citationCollector,
+       [FromServices] IAITemplateService aiTemplateService,
+       [FromServices] ILogger<T> logger,
+       [FromBody] AICompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {

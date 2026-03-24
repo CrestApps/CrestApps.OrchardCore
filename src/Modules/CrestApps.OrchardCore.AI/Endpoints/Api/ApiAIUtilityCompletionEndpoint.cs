@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -24,13 +25,13 @@ internal static class ApiAIUtilityCompletionEndpoint
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       IAuthorizationService authorizationService,
-       INamedCatalogManager<AIProfile> chatProfileManager,
-       IHttpContextAccessor httpContextAccessor,
-       IAICompletionService completionService,
-       IAICompletionContextBuilder completionContextBuilder,
-       ILogger<T> logger,
-       AIUtilityCompletionRequest requestData)
+       [FromServices] IAuthorizationService authorizationService,
+       [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+       [FromServices] IHttpContextAccessor httpContextAccessor,
+       [FromServices] IAICompletionService completionService,
+       [FromServices] IAICompletionContextBuilder completionContextBuilder,
+       [FromServices] ILogger<T> logger,
+       [FromBody] AIUtilityCompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {

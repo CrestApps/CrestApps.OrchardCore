@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -26,11 +27,11 @@ internal static class RemoveSessionDocumentEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpRequest httpRequest,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIChatSessionManager sessionManager,
-        IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIChatSessionManager sessionManager,
+        [FromServices] IAIDocumentStore documentStore,
+        [FromServices] IAIDocumentChunkStore chunkStore)
     {
         var httpContext = httpContextAccessor.HttpContext;
 
