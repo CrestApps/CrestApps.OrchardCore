@@ -521,6 +521,11 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             Title = profile.PromptSubject,
         };
 
+        if (handlerContext.AssistantAppearance is not null)
+        {
+            assistantMessage.Put(handlerContext.AssistantAppearance);
+        }
+
         var builder = ZString.CreateStringBuilder();
 
         var contentItemIds = new HashSet<string>();
@@ -553,6 +558,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 ResponseId = chunk.ResponseId,
                 Content = chunk.Text,
                 References = references,
+                Appearance = handlerContext.AssistantAppearance,
             };
 
             await writer.WriteAsync(partialMessage, cancellationToken);
@@ -695,15 +701,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             },
             chatSession.Documents,
             Messages = prompts.Select(message => new AIChatResponseMessageDetailed
-            {
-                Id = message.ItemId,
-                Role = message.Role.Value,
-                IsGeneratedPrompt = message.IsGeneratedPrompt,
-                Title = message.Title,
-                Content = message.Content,
-                UserRating = message.UserRating,
-                References = message.References,
-            })
+                {
+                    Id = message.ItemId,
+                    Role = message.Role.Value,
+                    IsGeneratedPrompt = message.IsGeneratedPrompt,
+                    Title = message.Title,
+                    Content = message.Content,
+                    UserRating = message.UserRating,
+                    References = message.References,
+                    Appearance = message.As<AssistantMessageAppearance>(),
+                })
         };
 
     private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)
@@ -1103,7 +1110,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 {
                     // Send text token to the client immediately so the user sees it right away.
                     await Clients.Caller.ReceiveConversationAssistantToken(
-                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty, chunk.Appearance);
 
                     sentenceBuffer.Append(chunk.Content);
 

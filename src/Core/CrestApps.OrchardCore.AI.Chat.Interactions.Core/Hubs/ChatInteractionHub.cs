@@ -115,6 +115,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     Title = message.Title,
                     Content = message.Text,
                     References = message.References,
+                    Appearance = message.As<AssistantMessageAppearance>(),
                 })
             });
         });
@@ -489,6 +490,11 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 CreatedUtc = clock.UtcNow,
             };
 
+            if (handlerContext.AssistantAppearance is not null)
+            {
+                assistantPrompt.Put(handlerContext.AssistantAppearance);
+            }
+
             var builder = ZString.CreateStringBuilder();
 
             var contentItemIds = new HashSet<string>();
@@ -519,6 +525,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     ResponseId = chunk.ResponseId,
                     Content = chunk.Text,
                     References = references,
+                    Appearance = handlerContext.AssistantAppearance,
                 };
 
                 await writer.WriteAsync(partialMessage, cancellationToken);
@@ -938,7 +945,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 }
 
                 // Send text token to the client immediately so the user sees it right away.
-                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty, chunk.Appearance);
 
                 sentenceBuffer.Append(chunk.Content);
 

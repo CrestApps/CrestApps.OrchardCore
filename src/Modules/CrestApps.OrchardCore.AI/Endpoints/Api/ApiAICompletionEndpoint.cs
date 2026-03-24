@@ -240,6 +240,7 @@ internal static class ApiAICompletionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
+                Appearance = message.As<AssistantMessageAppearance>(),
             },
         });
     }

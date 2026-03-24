@@ -17,7 +17,7 @@ public interface IChatHubClient
 
     Task ReceiveConversationUserMessage(string identifier, string text);
 
-    Task ReceiveConversationAssistantToken(string identifier, string messageId, string token, string responseId);
+    Task ReceiveConversationAssistantToken(string identifier, string messageId, string token, string responseId, AssistantMessageAppearance appearance = null);
 
     Task ReceiveConversationAssistantComplete(string identifier, string messageId);
 
