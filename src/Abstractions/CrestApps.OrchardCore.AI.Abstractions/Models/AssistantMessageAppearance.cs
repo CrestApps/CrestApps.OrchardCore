@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.AI.Models;
 public sealed class AssistantMessageAppearance
 {
     /// <summary>
+    /// Gets or sets the assistant role label shown in the chat UI.
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
     /// Gets or sets the Font Awesome icon classes for the assistant message.
     /// </summary>
     public string Icon { get; set; }

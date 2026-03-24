@@ -10,6 +10,7 @@ window.chatInteractionManager = function () {
         downloadChartTitle: 'Download chart as image',
         downloadChartButtonText: 'Download',
         codeCopiedText: 'Copied!',
+        assistantLabel: 'Assistant',
 
         messageTemplate: `
             <div class="ai-chat-messages">
@@ -18,7 +19,7 @@ window.chatInteractionManager = function () {
                         <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
                         <div v-else-if="message.role !== 'indicator'" :class="getAssistantRoleClasses(message)">
                             <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
-                            Assistant
+                            {{ getAssistantLabel(message) }}
                         </div>
                         <div class="lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
@@ -691,19 +692,25 @@ window.chatInteractionManager = function () {
                         return null;
                     }
 
+                    var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
                     var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
                     var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
                     var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
 
-                    if (!icon && !cssClass && !disableStreamingAnimation) {
+                    if (!label && !icon && !cssClass && !disableStreamingAnimation) {
                         return null;
                     }
 
                     return {
+                        label: label,
                         icon: icon,
                         cssClass: cssClass,
                         disableStreamingAnimation: disableStreamingAnimation,
                     };
+                },
+                getAssistantLabel(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.label ? appearance.label : defaultConfig.assistantLabel;
                 },
                 getAssistantRoleClasses(message) {
                     var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;

@@ -21,6 +21,7 @@ public sealed class ChatResponseHandlerContextTests
 
         context.AssistantAppearance = new AssistantMessageAppearance
         {
+            Label = "Mike",
             Icon = "fa-solid fa-headset",
             CssClass = "text-secondary",
             DisableStreamingAnimation = true,
@@ -29,6 +30,7 @@ public sealed class ChatResponseHandlerContextTests
         var result = context.AssistantAppearance;
 
         Assert.NotNull(result);
+        Assert.Equal("Mike", result.Label);
         Assert.Equal("fa-solid fa-headset", result.Icon);
         Assert.Equal("text-secondary", result.CssClass);
         Assert.True(result.DisableStreamingAnimation);
