@@ -83,6 +83,7 @@ public sealed class GenesysResponseHandler : IChatResponseHandler
         // Optional: set this only when you want to override the default bot appearance.
         context.AssistantAppearance = new AssistantMessageAppearance
         {
+            Label = "Mike",
             Icon = "fa-solid fa-headset",
             CssClass = "text-secondary",
             DisableStreamingAnimation = true,
@@ -108,7 +109,7 @@ public sealed class GenesysResponseHandler : IChatResponseHandler
 
 Setting `context.AssistantAppearance` is optional. If you leave it unset, the chat UI keeps the default assistant/bot appearance.
 
-Use `context.AssistantAppearance` only when your handler needs the streamed assistant message to render as something other than the default AI bot. This is especially useful for live-agent or transferred conversations where you want a headset icon, a different Bootstrap text color, or no streaming spinner/fade animation.
+Use `context.AssistantAppearance` only when your handler needs the streamed assistant message to render as something other than the default AI bot. This is especially useful for live-agent or transferred conversations where you want a custom label such as `Mike` or `Agent`, a headset icon, a different Bootstrap text color, or no streaming spinner/fade animation.
 
 For streaming handlers, setting `context.AssistantAppearance` is enough because the hub sends that same value to the client and persists it on the assistant prompt with `assistantMessage.Put(context.AssistantAppearance)`.
 
@@ -198,6 +199,7 @@ internal static class GenesysWebhookEndpoint
             };
             prompt.Put(new AssistantMessageAppearance
             {
+                Label = "Mike",
                 Icon = "fa-solid fa-headset",
                 CssClass = "text-secondary",
                 DisableStreamingAnimation = true,
@@ -286,7 +288,7 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 :::important
 `ReceiveMessage` is **not** a built-in SignalR client method in the current chat UI, so calling `SendAsync("ReceiveMessage", ...)` will not update the browser. The built-in client methods are:
 
-- `ReceiveConversationAssistantToken` + `ReceiveConversationAssistantComplete` to append a new assistant message directly to the current UI. `ReceiveConversationAssistantToken` accepts an optional `AssistantMessageAppearance` so services can override the icon, text color class, and streaming animation behavior.
+- `ReceiveConversationAssistantToken` + `ReceiveConversationAssistantComplete` to append a new assistant message directly to the current UI. `ReceiveConversationAssistantToken` accepts an optional `AssistantMessageAppearance` so services can override the visible assistant label, icon, text color class, and streaming animation behavior.
 - `LoadSession` / `LoadInteraction` to reload the full transcript after you persist a deferred assistant message.
 - `ReceiveNotification`, `UpdateNotification`, and `RemoveNotification` for transient system messages sent through `IChatNotificationSender`.
 
