@@ -28,6 +28,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
+    private readonly ISourceCatalog<CampaignAction> _actionCatalog;
     private readonly INamedCatalog<AIProfile> _aiProfileCatalog;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
@@ -43,6 +44,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
+        ISourceCatalog<CampaignAction> actionCatalog,
         INamedCatalog<AIProfile> aiProfileCatalog,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
@@ -56,6 +58,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
+        _actionCatalog = actionCatalog;
         _aiProfileCatalog = aiProfileCatalog;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
@@ -138,13 +141,21 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
 
-            var campaignDispositionIds = campaign?.DispositionIds ?? [];
+            // Derive distinct dispositions from campaign actions.
+            var allActions = await _actionCatalog.GetAllAsync();
+            var campaignDispositionIds = allActions
+                .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+                .Select(a => a.DispositionId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             if (!string.IsNullOrEmpty(activity.DispositionId) && !campaignDispositionIds.Contains(activity.DispositionId))
             {
                 campaignDispositionIds.Add(activity.DispositionId);
             }
 
+            model.CampaignId = activity.CampaignId;
             model.Channel = activity.Channel;
             model.CampaignTitle = campaign?.DisplayText;
             model.Channel = activity.Channel;
@@ -191,9 +202,14 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
             else
             {
-                var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
-
-                var campaignDispositionIds = campaign?.DispositionIds ?? [];
+                // Derive valid dispositions from campaign actions.
+                var allActions = await _actionCatalog.GetAllAsync();
+                var campaignDispositionIds = allActions
+                    .Where(a => string.Equals(a.CampaignId, activity.CampaignId, StringComparison.OrdinalIgnoreCase))
+                    .Select(a => a.DispositionId)
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
                 if (!string.IsNullOrEmpty(activity.DispositionId))
                 {
@@ -207,10 +223,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 if (disposition == null)
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.DispositionId), S["The selected Disposition is invalid."]);
-                }
-                else if (isCompletingActivity && disposition.CaptureDate && !processModel.ScheduleDate.HasValue)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(processModel.ScheduleDate), S["The Schedule Date field is required."]);
                 }
             }
 

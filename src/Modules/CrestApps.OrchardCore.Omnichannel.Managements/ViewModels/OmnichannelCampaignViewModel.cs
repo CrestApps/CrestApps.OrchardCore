@@ -47,8 +47,6 @@ public class OmnichannelCampaignViewModel
 
     public Dictionary<string, ToolEntry[]> Tools { get; set; }
 
-    public SelectListItem[] Dispositions { get; set; }
-
     public bool AllowAIToUpdateContact { get; set; }
 
     public bool AllowAIToUpdateSubject { get; set; }

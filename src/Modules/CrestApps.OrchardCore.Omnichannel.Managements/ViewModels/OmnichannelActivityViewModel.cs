@@ -14,6 +14,9 @@ public class OmnichannelActivityViewModel
     public DateTime? ScheduleDate { get; set; }
 
     [BindNever]
+    public string CampaignId { get; set; }
+
+    [BindNever]
     public string CampaignTitle { get; set; }
 
     [BindNever]

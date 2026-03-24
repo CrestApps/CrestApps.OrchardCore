@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore
+
+@model CampaignActionViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DispositionId" class="@Orchard.GetLabelClasses()">@T["Disposition"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DispositionId" asp-items="Model.Dispositions" class="form-select">
+            <option value="">@T["Select a disposition"]</option>
+        </select>
+        <span class="hint">@T["The disposition that triggers this action."]</span>
+        <span asp-validation-for="DispositionId" class="text-danger"></span>
+    </div>
+</div>
+
+<fieldset class="mb-3">
+    <legend>@T["Communication preferences"]</legend>
+    <span class="hint d-block mb-2">@T["Optionally set communication preferences on the contact when this action executes."]</span>
+
+    <div class="form-check">
+        <input asp-for="SetDoNotCall" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotCall == true)" />
+        <label asp-for="SetDoNotCall" class="form-check-label">@T["Set do not call"]</label>
+    </div>
+
+    <div class="form-check">
+        <input asp-for="SetDoNotSms" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotSms == true)" />
+        <label asp-for="SetDoNotSms" class="form-check-label">@T["Set do not SMS"]</label>
+    </div>
+
+    <div class="form-check">
+        <input asp-for="SetDoNotEmail" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotEmail == true)" />
+        <label asp-for="SetDoNotEmail" class="form-check-label">@T["Set do not email"]</label>
+    </div>
+
+    <div class="form-check">
+        <input asp-for="SetDoNotChat" class="form-check-input" type="checkbox" value="true" checked="@(Model.SetDoNotChat == true)" />
+        <label asp-for="SetDoNotChat" class="form-check-label">@T["Set do not chat"]</label>
+    </div>
+</fieldset>

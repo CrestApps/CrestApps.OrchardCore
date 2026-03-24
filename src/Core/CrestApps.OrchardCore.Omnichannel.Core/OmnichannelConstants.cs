@@ -53,6 +53,15 @@ public static class OmnichannelConstants
         public const string Email = "Email";
     }
 
+    public static class ActionTypes
+    {
+        public const string Finish = "Finish";
+
+        public const string TryAgain = "TryAgain";
+
+        public const string NewActivity = "NewActivity";
+    }
+
     public static class Events
     {
         public const string SmsReceived = "SmsReceived";

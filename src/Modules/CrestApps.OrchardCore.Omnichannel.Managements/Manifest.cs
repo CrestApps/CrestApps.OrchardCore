@@ -23,7 +23,6 @@ using OrchardCore.Modules.Manifest;
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
         "OrchardCore.Users",
-        "OrchardCore.Workflows",
         "CrestApps.OrchardCore.Users",
     ]
 )]

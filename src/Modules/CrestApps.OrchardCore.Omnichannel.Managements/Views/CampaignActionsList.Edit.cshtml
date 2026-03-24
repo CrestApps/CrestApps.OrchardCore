@@ -1,0 +1,97 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+@using OrchardCore.DisplayManagement
+
+@model CampaignActionsListViewModel
+
+<fieldset class="mb-3 mt-4">
+    <legend>@T["Campaign Actions"]</legend>
+
+    @if (string.IsNullOrEmpty(Model.CampaignId))
+    {
+        <div class="alert alert-info">
+            @T["Save the campaign first to add campaign actions."]
+        </div>
+    }
+    else
+    {
+        if (Model.Actions.Count > 0)
+        {
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>@T["Disposition"]</th>
+                        <th>@T["Action type"]</th>
+                        <th class="text-end">@T["Actions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in Model.Actions)
+                    {
+                        <tr>
+                            <td>@entry.DispositionDisplayText</td>
+                            <td>@entry.ActionTypeDisplayName</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-primary"
+                                   asp-route-action="Edit"
+                                   asp-route-controller="CampaignActions"
+                                   asp-route-id="@entry.Model.ItemId">@T["Edit"]</a>
+                                <form method="post"
+                                      asp-route-action="Delete"
+                                      asp-route-controller="CampaignActions"
+                                      asp-route-id="@entry.Model.ItemId"
+                                      class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            data-title="@T["Delete"]"
+                                            data-message="@T["Are you sure you want to delete this campaign action?"]"
+                                            data-ok-text="@T["Yes"]"
+                                            data-cancel-text="@T["No"]"
+                                            data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                @T["No campaign actions have been added yet. Click \"Add Campaign Action\" to define what happens when a disposition is selected."]
+            </div>
+        }
+
+        @if (Model.ActionTypes.Any())
+        {
+            <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#modalAddCampaignAction">
+                @T["Add Campaign Action"]
+            </button>
+
+            <!-- Modal -->
+            <div class="modal fade" id="modalAddCampaignAction" tabindex="-1" role="dialog" aria-labelledby="available-action-types-title" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="available-action-types-title">@T["Available Action Types"]</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row row-cols-1 row-cols-md-3 g-2">
+                                @foreach (var actionType in Model.ActionTypes)
+                                {
+                                    IShape shape = await New.CampaignAction_Link(Source: actionType.Type, CampaignId: Model.CampaignId);
+
+                                    @await DisplayAsync(shape)
+                                }
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</fieldset>

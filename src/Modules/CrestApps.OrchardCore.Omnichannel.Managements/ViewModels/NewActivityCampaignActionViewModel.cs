@@ -2,9 +2,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
+namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
-public class NewActivityTaskViewModel
+public class NewActivityCampaignActionViewModel
 {
     public string CampaignId { get; set; }
 
@@ -21,10 +21,4 @@ public class NewActivityTaskViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> Users { get; set; }
 }

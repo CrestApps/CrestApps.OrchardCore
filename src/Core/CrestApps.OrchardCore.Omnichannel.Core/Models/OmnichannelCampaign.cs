@@ -52,8 +52,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public string OwnerId { get; set; }
 
-    public IList<string> DispositionIds { get; set; }
-
     public bool AllowAIToUpdateContact { get; set; }
 
     public bool AllowAIToUpdateSubject { get; set; } = true;
@@ -83,7 +81,6 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,
-            DispositionIds = DispositionIds?.ToArray(),
             AllowAIToUpdateContact = AllowAIToUpdateContact,
             AllowAIToUpdateSubject = AllowAIToUpdateSubject,
         };

@@ -2,7 +2,6 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +23,6 @@ using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
-using OrchardCore.Workflows.Services;
 using YesSql;
 using YesSql.Services;
 
@@ -42,7 +40,7 @@ public sealed class ActivitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
-    private readonly IWorkflowManager _workflowManager;
+    private readonly ICampaignActionExecutor _campaignActionExecutor;
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -60,7 +58,7 @@ public sealed class ActivitiesController : Controller
         IAuthorizationService authorizationService,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
-        IWorkflowManager workflowManager,
+        ICampaignActionExecutor campaignActionExecutor,
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         IClock clock,
         INotifier notifier,
@@ -76,7 +74,7 @@ public sealed class ActivitiesController : Controller
         _authorizationService = authorizationService;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
-        _workflowManager = workflowManager;
+        _campaignActionExecutor = campaignActionExecutor;
         _dispositionsCatalog = dispositionsCatalog;
         _clock = clock;
         _notifier = notifier;
@@ -464,7 +462,7 @@ public sealed class ActivitiesController : Controller
 
         if (ModelState.IsValid)
         {
-            // Trigger the workflow here.
+            // Execute campaign actions for the selected disposition.
             activity.Subject = subject;
             activity.Status = ActivityStatus.Completed;
             activity.CompletedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -474,15 +472,15 @@ public sealed class ActivitiesController : Controller
             await _omnichannelActivityManager.UpdateAsync(activity);
             var disposition = await _dispositionsCatalog.FindByIdAsync(activity.DispositionId);
 
-            var input = new Dictionary<string, object>
+            var executionContext = new CampaignActionExecutionContext
             {
-                { "Activity", activity },
-                { "Contact", model.ContactContentItem },
-                { "Subject", subject },
-                { "Disposition", disposition },
+                Activity = activity,
+                Contact = model.ContactContentItem,
+                Subject = subject,
+                Disposition = disposition,
             };
 
-            await _workflowManager.TriggerEventAsync(nameof(CompletedActivityEvent), input, correlationId: activity.ItemId);
+            await _campaignActionExecutor.ExecuteAsync(executionContext);
 
             await _notifier.SuccessAsync(H["The activity has been completed successfully."]);
 

@@ -67,13 +67,6 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
             campaign.DisplayText = displayText;
         }
 
-        var dispositionIds = data[nameof(OmnichannelCampaign.DispositionIds)]?.AsArray();
-
-        if (dispositionIds != null && dispositionIds.Count > 0)
-        {
-            campaign.DispositionIds = dispositionIds.Select(x => x?.GetValue<string>()).Where(x => !string.IsNullOrEmpty(x)).ToArray();
-        }
-
         var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
 
         if (properties != null)

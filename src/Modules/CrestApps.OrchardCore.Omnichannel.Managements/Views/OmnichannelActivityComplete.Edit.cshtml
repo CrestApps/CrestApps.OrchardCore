@@ -67,24 +67,16 @@
                 <option value="">@T["Select a disposition"]</option>
                 @foreach (var disposition in Model.Dispositions)
                 {
-                    <option value="@disposition.ItemId" data-capture-date="@disposition.CaptureDate.ToString().ToLowerInvariant()">@disposition.DisplayText</option>
+                    <option value="@disposition.ItemId">@disposition.DisplayText</option>
                 }
             </select>
             <span asp-validation-for="DispositionId" class="text-danger"></span>
         </div>
     </div>
 
-    <div class="@Orchard.GetWrapperClasses("schedule-date-wrapper", "d-none")">
-        <label asp-for="ScheduleDate" class="@Orchard.GetLabelClasses()">@T["Schedule next activity at"]</label>
-        <div class="@Orchard.GetEndClasses()">
-            <input type="text"
-                   id="@Html.IdFor(m => m.ScheduleDate)"
-                   name="@Html.NameFor(m => m.ScheduleDate)"
-                   value="@Model.ScheduleDate"
-                   class="form-control"
-                   placeholder="@T["Schedule next activity at"]" />
-            <span asp-validation-for="ScheduleDate" class="text-danger"></span>
-        </div>
+    <div id="campaign-actions-preview" class="d-none mb-3">
+        <h5>@T["What will happen next"]</h5>
+        <div id="actions-list"></div>
     </div>
 </div>
 
@@ -99,12 +91,12 @@
         var patterns = flatpickrCulture.createFlatpickrDateTimePattern(datePattern, timePattern);
 
         const dispositionMenu = document.getElementById("@Html.IdFor(x => x.DispositionId)");
-        const parent = dispositionMenu.closest('.activity-wrapper');
-        const scheduleWrapper = parent.querySelector(".schedule-date-wrapper");
-        const scheduleDateInput = document.getElementById("@Html.IdFor(x => x.ScheduleDate)");
+        const previewContainer = document.getElementById("campaign-actions-preview");
+        const actionsList = document.getElementById("actions-list");
+        const campaignId = '@Model.CampaignId';
 
-        if (scheduleDateInput) {
-            flatpickr(scheduleDateInput, {
+        function initFlatpickr(input) {
+            flatpickr(input, {
                 enableTime: true,
                 time_24hr: patterns.time24hr,
                 dateFormat: patterns.dateTimePattern,
@@ -112,22 +104,78 @@
             });
         }
 
-        function toggleScheduleWrapper() {
-            const selectedOption = dispositionMenu.options[dispositionMenu.selectedIndex];
-            const captureDate = selectedOption.getAttribute("data-capture-date");
+        async function loadDispositionActions() {
+            const dispositionId = dispositionMenu.value;
 
-            if (captureDate === "true") {
-                scheduleWrapper.classList.remove("d-none");
-            } else {
-                scheduleWrapper.classList.add("d-none");
+            if (!dispositionId) {
+                previewContainer.classList.add("d-none");
+                actionsList.innerHTML = "";
+                return;
+            }
+
+            try {
+                const response = await fetch('@Url.Content("~/api/omnichannel/disposition-actions")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ campaignId: campaignId, dispositionId: dispositionId })
+                });
+
+                if (!response.ok) {
+                    previewContainer.classList.add("d-none");
+                    return;
+                }
+
+                const actions = await response.json();
+
+                if (!actions || actions.length === 0) {
+                    previewContainer.classList.add("d-none");
+                    actionsList.innerHTML = "";
+                    return;
+                }
+
+                actionsList.innerHTML = "";
+
+                actions.forEach(function (action) {
+                    const card = document.createElement("div");
+                    card.className = "card mb-2";
+
+                    let cardBody = '<div class="card-body"><strong>' + action.actionTypeDisplayName + '</strong>';
+
+                    if (action.requiresScheduleDate) {
+                        const inputId = 'schedule-' + action.actionId;
+                        const inputName = 'ActionScheduleDates[' + action.actionId + ']';
+                        const defaultDate = action.defaultScheduleDate
+                            ? new Date(action.defaultScheduleDate).toLocaleString()
+                            : '';
+
+                        cardBody += '<div class="mt-2">';
+                        cardBody += '<label for="' + inputId + '" class="form-label">@T["Schedule date"]</label>';
+                        cardBody += '<input type="text" id="' + inputId + '" name="' + inputName + '" value="' + defaultDate + '" class="form-control schedule-date-input" placeholder="@T["Schedule date"]" />';
+                        cardBody += '</div>';
+                    }
+
+                    cardBody += '</div>';
+                    card.innerHTML = cardBody;
+                    actionsList.appendChild(card);
+
+                    if (action.requiresScheduleDate) {
+                        const dateInput = card.querySelector('.schedule-date-input');
+                        if (dateInput) {
+                            initFlatpickr(dateInput);
+                        }
+                    }
+                });
+
+                previewContainer.classList.remove("d-none");
+            } catch (e) {
+                previewContainer.classList.add("d-none");
             }
         }
 
-        // Run on page load in case a disposition is already selected
-        toggleScheduleWrapper();
+        dispositionMenu.addEventListener("change", loadDispositionActions);
 
-        // Run whenever selection changes
-        dispositionMenu.addEventListener("change", toggleScheduleWrapper);
+        // Load on page load if a disposition is already selected.
+        loadDispositionActions();
     });
 </script>
 
