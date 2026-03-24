@@ -27,10 +27,10 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        var handlers = _handlerResolver.GetAll().ToList();
+        var handlers = _handlerResolver.GetAll();
 
         // Only show the handler selector when there is at least one non-AI handler registered.
-        if (handlers.Count <= 1)
+        if (!handlers.Any())
         {
             return null;
         }
