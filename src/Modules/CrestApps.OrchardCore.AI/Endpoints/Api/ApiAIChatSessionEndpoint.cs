@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -67,6 +68,7 @@ internal static class ApiAIChatSessionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
+                Appearance = message.As<AssistantMessageAppearance>(),
             })
         });
     }

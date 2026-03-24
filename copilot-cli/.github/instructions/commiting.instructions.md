@@ -17,6 +17,10 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 ### Prerequisites and Environment Setup
 - Install .NET 10.0 SDK
 - Install Node.js 15+ for frontend assets
+- Before starting a session, always run:
+  - `copilot plugin marketplace add CrestApps/CrestApps.AgentSkills`
+  - `copilot plugin install crestapps-orchardcore@crestapps-agentskills`
+- This installs the `crestapps-orchardcore` plugin so the session starts with the Orchard Core plugin set already available.
 - Follow build commands for both assets (`npm run rebuild`) and .NET solution (`dotnet build`) as described in the main project documentation
 
 ### Build Process

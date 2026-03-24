@@ -35,7 +35,7 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
   };
 
@@ -661,6 +661,44 @@ window.openAIChatManager = function () {
           div.textContent = text;
           return div.innerHTML;
         },
+        normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
+          if (!appearance) {
+            return null;
+          }
+          var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+          var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+          var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+          if (!icon && !cssClass && !disableStreamingAnimation) {
+            return null;
+          }
+          return {
+            icon: icon,
+            cssClass: cssClass,
+            disableStreamingAnimation: disableStreamingAnimation
+          };
+        },
+        getAssistantRoleClasses: function getAssistantRoleClasses(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          var classes = ['ai-chat-msg-role'];
+          if (appearance && appearance.cssClass) {
+            classes.push(appearance.cssClass);
+          } else {
+            classes.push('ai-chat-msg-role-assistant');
+          }
+          return classes;
+        },
+        getAssistantIconClasses: function getAssistantIconClasses(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+        },
+        getAssistantIcon: function getAssistantIcon(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+        },
+        shouldAnimateAssistantIcon: function shouldAnimateAssistantIcon(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return !!message && message.isStreaming && index === this.lastAssistantIndex && !(appearance && appearance.disableStreamingAnimation);
+        },
         startConnection: function startConnection() {
           var _this3 = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
@@ -783,7 +821,7 @@ window.openAIChatManager = function () {
                       _this3.scrollToBottom();
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId) {
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, appearance) {
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
@@ -801,7 +839,8 @@ window.openAIChatManager = function () {
                         content: "",
                         htmlContent: "",
                         isStreaming: true,
-                        userRating: null
+                        userRating: null,
+                        appearance: _this3.normalizeAssistantAppearance(appearance)
                       };
                       _this3.messages.push(newMessage);
                       _this3._conversationAssistantMessage = {
@@ -812,6 +851,9 @@ window.openAIChatManager = function () {
                     _this3._conversationAssistantMessage.content += token;
                     var msg = _this3.messages[_this3._conversationAssistantMessage.index];
                     if (msg) {
+                      if (!msg.appearance) {
+                        msg.appearance = _this3.normalizeAssistantAppearance(appearance);
+                      }
                       msg.content = _this3._conversationAssistantMessage.content;
                       msg.htmlContent = parseMarkdownContent(msg.content, msg);
                       _this3.$nextTick(function () {
@@ -888,6 +930,9 @@ window.openAIChatManager = function () {
         },
         addMessageInternal: function addMessageInternal(message) {
           var _this4 = this;
+          if (message.role === 'assistant') {
+            message.appearance = this.normalizeAssistantAppearance(message.appearance);
+          }
           if (message.content && !message.htmlContent) {
             message.htmlContent = parseMarkdownContent(message.content, message);
           }

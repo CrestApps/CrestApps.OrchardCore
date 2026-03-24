@@ -75,7 +75,7 @@
 }
 
 .ai-chat-messages .ai-bot-icon {
-    color: var(--ai-chat-primary, #198754);
+    color: currentColor;
     display: inline-block;
     animation: none;
 }
@@ -93,7 +93,7 @@
 }
 
 .ai-chat-messages .ai-streaming-icon {
-    color: var(--ai-chat-primary, #198754);
+    color: currentColor;
     display: inline-block;
     animation: ai-chat-streaming-effect 4s ease-in-out infinite;
 }

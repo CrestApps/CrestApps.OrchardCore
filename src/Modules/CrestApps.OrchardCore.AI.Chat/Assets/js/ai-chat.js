@@ -20,8 +20,8 @@ window.openAIChatManager = function () {
             <div v-for="(message, index) in messages" :key="'msg-' + index" class="ai-chat-message-item">
                 <div>
                     <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
-                    <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                        <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
+                    <div v-else-if="message.role !== 'indicator'" :class="getAssistantRoleClasses(message)">
+                        <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
                         {{ assistantLabel }}
                     </div>
                     <div class="lh-base">
@@ -664,6 +664,52 @@ window.openAIChatManager = function () {
                     div.textContent = text;
                     return div.innerHTML;
                 },
+                normalizeAssistantAppearance(appearance) {
+                    if (!appearance) {
+                        return null;
+                    }
+
+                    var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+                    var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+                    var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+
+                    if (!icon && !cssClass && !disableStreamingAnimation) {
+                        return null;
+                    }
+
+                    return {
+                        icon: icon,
+                        cssClass: cssClass,
+                        disableStreamingAnimation: disableStreamingAnimation,
+                    };
+                },
+                getAssistantRoleClasses(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    var classes = ['ai-chat-msg-role'];
+
+                    if (appearance && appearance.cssClass) {
+                        classes.push(appearance.cssClass);
+                    } else {
+                        classes.push('ai-chat-msg-role-assistant');
+                    }
+
+                    return classes;
+                },
+                getAssistantIconClasses(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+                },
+                getAssistantIcon(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+                },
+                shouldAnimateAssistantIcon(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return !!message &&
+                        message.isStreaming &&
+                        index === this.lastAssistantIndex &&
+                        !(appearance && appearance.disableStreamingAnimation);
+                },
                 async startConnection() {
                     this.connection = new signalR.HubConnectionBuilder()
                         .withUrl(config.signalRHubUrl)
@@ -790,7 +836,7 @@ window.openAIChatManager = function () {
                         }
                     });
 
-                    this.connection.on("ReceiveConversationAssistantToken", (sessionId, messageId, token, responseId) => {
+                    this.connection.on("ReceiveConversationAssistantToken", (sessionId, messageId, token, responseId, appearance) => {
                         if (!this._conversationAssistantMessage) {
                             this.stopAudio();
                             this.hideTypingIndicator();
@@ -810,6 +856,7 @@ window.openAIChatManager = function () {
                                 htmlContent: "",
                                 isStreaming: true,
                                 userRating: null,
+                                appearance: this.normalizeAssistantAppearance(appearance),
                             };
                             this.messages.push(newMessage);
                             this._conversationAssistantMessage = { index: msgIndex, content: '' };
@@ -818,6 +865,9 @@ window.openAIChatManager = function () {
                         this._conversationAssistantMessage.content += token;
                         var msg = this.messages[this._conversationAssistantMessage.index];
                         if (msg) {
+                            if (!msg.appearance) {
+                                msg.appearance = this.normalizeAssistantAppearance(appearance);
+                            }
                             msg.content = this._conversationAssistantMessage.content;
                             msg.htmlContent = parseMarkdownContent(msg.content, msg);
                             this.$nextTick(() => {
@@ -895,6 +945,10 @@ window.openAIChatManager = function () {
                     }
                 },
                 addMessageInternal(message) {
+                    if (message.role === 'assistant') {
+                        message.appearance = this.normalizeAssistantAppearance(message.appearance);
+                    }
+
                     if (message.content && !message.htmlContent) {
                         message.htmlContent = parseMarkdownContent(message.content, message);
                     }
