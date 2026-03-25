@@ -102,6 +102,18 @@ Available document tools:
 
 Parameter descriptors are informational — they appear in the UI when a user selects a template, helping them understand what arguments are available. The template still renders even if no arguments are supplied (missing variables render as empty strings).
 
+## Selecting prompt templates in the admin UI
+
+AI Profiles, Chat Interactions, and **Profile**-source AI Templates now use the same repeatable prompt-template picker in the **Instructions** area.
+
+- Use **Add prompt template** to open a searchable menu of available prompt templates.
+- Add as many prompt templates as needed; the same template can be added more than once.
+- Each selected template gets its own card with optional JSON template parameters.
+- Templates are rendered in card order, then the custom system instructions are appended afterward.
+- Runtime **System Prompt** templates created through the admin UI are listed together with file-based prompt templates.
+
+If a prompt template declares parameter descriptors in front matter, the picker shows the expected parameter names and descriptions on each card. Invalid parameter keys or non-string JSON values are rejected when the editor is saved.
+
 ### JSON Compaction
 
 Fenced ` ```json ``` ` code blocks in template files are automatically compacted during parsing. This lets you write readable, pretty-printed JSON in your source files while keeping the actual system prompt token-efficient at runtime:

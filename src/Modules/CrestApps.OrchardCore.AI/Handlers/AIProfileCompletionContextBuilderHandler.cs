@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Entities;
 
@@ -8,11 +8,11 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 
 internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
-    public AIProfileCompletionContextBuilderHandler(IAITemplateService aiTemplateService)
+    public AIProfileCompletionContextBuilderHandler(PromptTemplateSelectionService promptTemplateSelectionService)
     {
-        _aiTemplateService = aiTemplateService;
+        _promptTemplateSelectionService = promptTemplateSelectionService;
     }
 
     public async Task BuildingAsync(AICompletionContextBuildingContext context)
@@ -65,12 +65,13 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
     private async Task<string> ResolveSystemMessageAsync(AIProfile profile, AIProfileMetadata metadata)
     {
         var promptMetadata = profile.As<PromptTemplateMetadata>();
+        var hasPromptTemplates = promptMetadata.Templates?.Any(selection => !string.IsNullOrWhiteSpace(selection.TemplateId)) == true;
 
-        if (string.IsNullOrEmpty(promptMetadata.TemplateId))
+        if (!hasPromptTemplates)
         {
             return metadata.SystemMessage;
         }
 
-        return await _aiTemplateService.RenderAsync(promptMetadata.TemplateId, promptMetadata.Parameters);
+        return await _promptTemplateSelectionService.ComposeSystemMessageAsync(metadata.SystemMessage, promptMetadata);
     }
 }

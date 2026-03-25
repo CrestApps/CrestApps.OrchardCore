@@ -1,7 +1,6 @@
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.Tools;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

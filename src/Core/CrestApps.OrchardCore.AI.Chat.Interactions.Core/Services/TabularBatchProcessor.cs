@@ -266,7 +266,6 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 FrequencyPenalty = sourceContext.FrequencyPenalty,
                 PresencePenalty = sourceContext.PresencePenalty,
                 MaxTokens = sourceContext.MaxTokens,
-                UserMarkdownInResponse = false, // We want structured output
                 DisableTools = true, // Disable tools for batch processing
             };
 

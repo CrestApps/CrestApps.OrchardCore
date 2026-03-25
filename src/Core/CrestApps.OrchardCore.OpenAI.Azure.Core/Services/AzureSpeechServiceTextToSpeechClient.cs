@@ -3,7 +3,6 @@ using System.Threading.Channels;
 using Azure.Core;
 using Azure.Identity;
 using CrestApps.Azure.Core.Models;
-using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.AI;

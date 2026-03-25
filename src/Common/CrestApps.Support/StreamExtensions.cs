@@ -1,6 +1,5 @@
-using System.IO;
-
 namespace CrestApps.Support;
+
 public static class StreamExtensions
 {
     public static byte[] ReadAllBytes(this Stream instream)

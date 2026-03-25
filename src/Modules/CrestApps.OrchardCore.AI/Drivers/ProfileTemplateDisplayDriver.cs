@@ -48,7 +48,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         }).Location("Content:2%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-        var generalFieldsResult= Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateGeneralFields_Edit", model =>
+        var generalFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateGeneralFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
         }).Location("Content:5%General;1")
