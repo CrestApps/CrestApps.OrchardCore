@@ -31,26 +31,8 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
         {
             context.Context.SystemMessageBuilder.Append(context.Context.CompletionContext.SystemMessage);
         }
-
-        // Resolve SourceName from the resource (AIProfile or ChatInteraction).
-        context.Context.SourceName = ResolveSourceName(context.Resource);
     }
 
     public Task BuiltAsync(OrchestrationContextBuiltContext context)
         => Task.CompletedTask;
-
-    private static string ResolveSourceName(object resource)
-    {
-        if (resource is AIProfile profile)
-        {
-            return profile.Source;
-        }
-
-        if (resource is ChatInteraction interaction)
-        {
-            return interaction.Source;
-        }
-
-        return null;
-    }
 }

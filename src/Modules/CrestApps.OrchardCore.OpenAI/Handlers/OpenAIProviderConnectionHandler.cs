@@ -18,7 +18,7 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
 
     public void Exporting(ExportingAIProviderConnectionContext context)
     {
-        if (!string.Equals(context.Connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return;
         }
@@ -38,7 +38,7 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
 
     public void Initializing(InitializingAIProviderConnectionContext context)
     {
-        if (!string.Equals(context.Connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return;
         }

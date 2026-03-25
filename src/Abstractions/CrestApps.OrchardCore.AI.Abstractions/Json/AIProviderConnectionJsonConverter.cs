@@ -20,6 +20,7 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         {
             ItemId = GetString(node, nameof(AIProviderConnection.ItemId)),
             Source = GetString(node, nameof(AIProviderConnection.Source))
+                ?? GetString(node, nameof(AIProviderConnection.ClientName))
                 ?? GetString(node, "ProviderName"),
             Name = GetString(node, nameof(AIProviderConnection.Name)),
             DisplayText = GetString(node, nameof(AIProviderConnection.DisplayText)),
@@ -55,7 +56,7 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         writer.WriteStartObject();
 
         WriteString(writer, nameof(AIProviderConnection.ItemId), value.ItemId);
-        WriteString(writer, nameof(AIProviderConnection.Source), value.Source);
+        WriteString(writer, nameof(AIProviderConnection.ClientName), value.ClientName);
         WriteString(writer, nameof(AIProviderConnection.Name), value.Name);
         WriteString(writer, nameof(AIProviderConnection.DisplayText), value.DisplayText);
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility

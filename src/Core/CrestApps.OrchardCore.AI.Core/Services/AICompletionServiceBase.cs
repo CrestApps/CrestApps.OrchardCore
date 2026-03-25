@@ -68,10 +68,10 @@ public abstract class AICompletionServiceBase
     {
         if (DeploymentResolver != null)
         {
-            var deployment = await DeploymentResolver.ResolveAsync(
+            var deployment = await DeploymentResolver.ResolveOrDefaultAsync(
                 type,
                 deploymentId: deploymentId,
-                providerName: providerName,
+                clientName: providerName,
                 connectionName: connectionName);
 
             if (deployment != null)

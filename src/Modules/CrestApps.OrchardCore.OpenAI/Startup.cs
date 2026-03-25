@@ -25,13 +25,13 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IAIClientProvider, OpenAIClientProvider>();
-        services.AddAIProfile<OpenAICompletionClient>(OpenAIConstants.ImplementationName, OpenAIConstants.ProviderName, o =>
+        services.AddAIProfile<OpenAICompletionClient>(OpenAIConstants.ImplementationName, OpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["OpenAI"];
             o.Description = S["Provides AI profiles using OpenAI."];
         });
 
-        services.AddAIDeploymentProvider(OpenAIConstants.ProviderName, o =>
+        services.AddAIDeploymentProvider(OpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["OpenAI"];
             o.Description = S["OpenAI model deployments."];
@@ -54,7 +54,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, OpenAIProviderConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, OpenAIProviderConnectionDisplayDriver>();
-        services.AddAIConnectionSource(OpenAIConstants.ProviderName, o =>
+        services.AddAIConnectionSource(OpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["OpenAI"];
             o.Description = S["Provides a way to configure OpenAI-compatible connection for any provider."];

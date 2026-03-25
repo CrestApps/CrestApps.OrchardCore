@@ -34,7 +34,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
-        if (!string.Equals(context.Model.Source, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
@@ -51,7 +51,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }

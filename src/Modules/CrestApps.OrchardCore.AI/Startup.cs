@@ -88,7 +88,16 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAIToolsService, DefaultAIToolsService>()
-            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>();
+            .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>()
+            .AddAIDeploymentServices()
+            .AddPermissionProvider<AIDeploymentPermissionProvider>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
+            .AddNavigationProvider<AIDeploymentAdminMenu>()
+            .AddDataMigration<AIDeploymentTypeMigrations>()
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
+            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>();
 
         // Add tools core functionality.
         services
@@ -140,6 +149,7 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
+            .AddGetDeploymentsEndpoint()
             .AddGetConnectionsEndpoint()
             .AddGetVoicesEndpoint();
     }
@@ -152,6 +162,8 @@ public sealed class RecipesStartup : StartupBase
     {
         services.AddRecipeExecutionStep<AIProfileStep>();
         services.AddRecipeExecutionStep<AIProfileTemplateStep>();
+        services.AddRecipeExecutionStep<AIDeploymentStep>();
+        services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
     }
 }
 
@@ -185,55 +197,6 @@ public sealed class OCDeploymentsStartup : StartupBase
         services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
 }
-
-#region Deployments Feature
-
-[Feature(AIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddAIDeploymentServices()
-            .AddPermissionProvider<AIDeploymentPermissionProvider>()
-            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddNavigationProvider<AIDeploymentAdminMenu>()
-            .AddDataMigration<AIDeploymentTypeMigrations>()
-            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
-            .AddNavigationProvider<AISiteSettingsAdminMenu>();
-    }
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes
-            .AddGetDeploymentsEndpoint();
-    }
-}
-
-[Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures(AIConstants.Feature.ChatCore)]
-public sealed class ChatDeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services
-            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>()
-            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>();
-    }
-}
-
-[Feature(AIConstants.Feature.Deployments)]
-[RequireFeatures("OrchardCore.Recipes.Core")]
-public sealed class DeploymentRecipesStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddRecipeExecutionStep<AIDeploymentStep>();
-        services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
-    }
-}
-#endregion
 
 [Feature(AIConstants.Feature.ChatCore)]
 public sealed class ChatCoreStartup : StartupBase

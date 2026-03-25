@@ -30,7 +30,8 @@ internal static class UploadDocumentEndpoint
         HttpRequest request,
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
-        [FromServices] ISourceCatalogManager<ChatInteraction> interactionManager,
+        [FromServices] ICatalogManager<ChatInteraction> interactionManager,
+        [FromServices] IAIDeploymentManager deploymentManager,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
         [FromServices] IAIDocumentProcessingService documentProcessingService,
@@ -79,7 +80,8 @@ internal static class UploadDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(interaction.Source, interaction.ConnectionName);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: interaction.ChatDeploymentId);
+        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, deployment?.ConnectionName ?? interaction.ConnectionName);
 
         interaction.Documents ??= [];
 

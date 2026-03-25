@@ -35,7 +35,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 
 1. Enable the `AI Chat Interactions` feature in Orchard Core admin
 2. Navigate to **Artificial Intelligence > Chat Interactions**
-3. Click **+ New Chat** and select your chat and utility deployments
+3. Click **+ New Chat**, then select your chat and utility deployments
 4. Configure your chat settings and start chatting
 
 :::tip

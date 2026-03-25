@@ -50,7 +50,7 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
-            .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
+            .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
 
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
@@ -85,6 +85,8 @@ public sealed class Startup : StartupBase
             // Allow larger messages for audio transcription payloads.
             options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
+
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -101,14 +103,5 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 }

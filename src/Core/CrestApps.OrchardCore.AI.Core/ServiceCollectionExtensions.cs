@@ -30,9 +30,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<DefaultSpeechVoicePresenter>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
             .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
-            .AddScoped<ISourceCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
-            .AddScoped<INamedSourceCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<AIProviderConnectionStore>()
             .AddScoped<ICatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
@@ -100,6 +98,13 @@ public static class ServiceCollectionExtensions
                 o.AddProfileSource(implementationName, providerName, configure);
             })
             .AddAICompletionClient<TClient>(implementationName);
+    }
+
+    [Obsolete("Use AddAICompletionClient instead. Profile sources are no longer required.")]
+    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string clientName)
+        where TClient : class, IAICompletionClient
+    {
+        return services.AddAICompletionClient<TClient>(clientName);
     }
 
     public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)

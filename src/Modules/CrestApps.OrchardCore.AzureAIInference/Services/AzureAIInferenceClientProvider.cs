@@ -18,7 +18,7 @@ public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
     }
 
     protected override string GetProviderName()
-        => AzureAIInferenceConstants.ProviderName;
+        => AzureAIInferenceConstants.ClientName;
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {

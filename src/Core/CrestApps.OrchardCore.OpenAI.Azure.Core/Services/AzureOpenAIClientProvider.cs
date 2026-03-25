@@ -17,7 +17,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
     private readonly ILoggerFactory _loggerFactory;
 
     protected override string GetProviderName()
-        => AzureOpenAIConstants.ProviderName;
+        => AzureOpenAIConstants.ClientName;
 
     public AzureOpenAIClientProvider(
         IServiceProvider serviceProvider,

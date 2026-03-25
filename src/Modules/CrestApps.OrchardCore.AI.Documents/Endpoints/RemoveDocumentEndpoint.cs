@@ -29,7 +29,7 @@ internal static class RemoveDocumentEndpoint
         [FromBody] RemoveDocumentRequest request,
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
-        [FromServices] ISourceCatalogManager<ChatInteraction> interactionManager,
+        [FromServices] ICatalogManager<ChatInteraction> interactionManager,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore)
     {

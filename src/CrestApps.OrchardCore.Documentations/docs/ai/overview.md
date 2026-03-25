@@ -217,7 +217,7 @@ Non-connection deployments are defined in the `CrestApps_AI:Deployments` section
     "CrestApps_AI": {
       "Deployments": [
         {
-          "ProviderName": "AzureSpeech",
+          "ClientName": "AzureSpeech",
           "Name": "my-speech-to-text",
           "Type": "SpeechToText",
           "IsDefault": true,
@@ -280,16 +280,11 @@ The AI module is built on top of [Microsoft.Extensions.AI](https://www.nuget.org
 
 Simply inject `IAIClientFactory` into your service and use the `CreateChatClientAsync` or `CreateEmbeddingGeneratorAsync` methods to obtain the required client.
 
-### AI Deployments Feature
+### AI Deployments
 
-| | |
-| --- | --- |
-| **Feature Name** | AI Deployments |
-| **Feature ID** | `CrestApps.OrchardCore.AI.Deployments` |
+Typed AI deployments are now part of the base **AI Services** feature (`CrestApps.OrchardCore.AI`).
 
-Manages typed AI model deployments.
-
-The **AI Deployments** feature extends the **AI Services** feature by enabling AI model deployment capabilities. Each deployment is a first-class entity with a `Type` property (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an `IsDefault` flag. Deployments are associated with a provider connection and can be managed through the admin UI under **Artificial Intelligence → Deployments**.
+Each deployment is a first-class entity with a `Type` property (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`) and an `IsDefault` flag. Deployments are associated with a provider connection and can be managed through the admin UI under **Artificial Intelligence → Deployments** without enabling a separate deployments feature.
 
 UI dropdowns for deployment selection display deployments **grouped by connection**, making it easy to find the correct deployment without navigating a cascading connection → deployment hierarchy.
 

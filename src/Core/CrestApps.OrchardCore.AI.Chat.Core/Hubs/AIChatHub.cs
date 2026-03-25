@@ -388,6 +388,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         var aiTemplateService = services.GetRequiredService<IAITemplateService>();
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
+        var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
         var titleSystemMessage = await aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
 
@@ -405,7 +406,18 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             c.DisableTools = true;
         });
 
-        var titleResponse = await completionService.CompleteAsync(profile.Source,
+        // Prefer utility deployment for title generation, fall back to chat.
+        var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
+            utilityDeploymentId: context.UtilityDeploymentId,
+            chatDeploymentId: context.ChatDeploymentId);
+
+        if (deployment == null)
+        {
+            return Str.Truncate(userPrompt, 255);
+        }
+
+        var titleResponse = await completionService.CompleteAsync(
+        deployment,
         [
             new (ChatRole.User, userPrompt),
         ], context);
@@ -622,12 +634,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         {
         });
 
+        var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
         var builder = ZString.CreateStringBuilder();
 
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
+        await foreach (var chunk in completionService.CompleteStreamingAsync(chatDeployment, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {
@@ -660,6 +676,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
     {
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
+        var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
         var messageId = IdGenerator.GenerateId();
 
@@ -667,9 +684,12 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         {
         });
 
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
+        await foreach (var chunk in completionService.CompleteStreamingAsync(chatDeployment, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {

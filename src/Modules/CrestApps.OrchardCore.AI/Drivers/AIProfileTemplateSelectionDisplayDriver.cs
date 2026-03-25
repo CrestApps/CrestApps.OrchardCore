@@ -25,7 +25,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
 
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
         {
-            model.Source = profile.Source;
             var templates = await _templateManager.GetAsync(AITemplateSources.Profile);
 
             var groups = new Dictionary<string, SelectListGroup>();

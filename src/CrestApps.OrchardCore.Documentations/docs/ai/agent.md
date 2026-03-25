@@ -131,7 +131,7 @@ To use a template, create a new AI Profile and select the desired template from 
 ### Defining Agent Profiles via Code
 
 ```csharp
-var profile = await _profileManager.NewAsync("Azure");
+var profile = await _profileManager.NewAsync();
 
 profile.Name = "ResearchAgent";
 profile.DisplayText = "Research Agent";
@@ -154,8 +154,12 @@ await _profileManager.CreateAsync(profile);
           "DisplayText": "Research Agent",
           "Type": "Agent",
           "Description": "Gathers and synthesizes information from available knowledge sources.",
-          "ConnectionName": "openai-cloud",
-          "SystemMessage": "You are a research agent..."
+          "ChatDeploymentId": "research-agent-chat",
+          "Properties": {
+            "AIProfileMetadata": {
+              "SystemMessage": "You are a research agent..."
+            }
+          }
         }
       ]
     }

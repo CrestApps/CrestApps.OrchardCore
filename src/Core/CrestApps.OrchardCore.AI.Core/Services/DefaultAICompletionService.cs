@@ -27,16 +27,11 @@ public sealed class DefaultAICompletionService : IAICompletionService
         _logger = logger;
     }
 
-    public async Task<ChatResponse> CompleteAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> CompleteAsync(AIDeployment deployment, IEnumerable<ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(clientName);
+        ArgumentNullException.ThrowIfNull(deployment);
 
-        if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
-        {
-            throw new UnregisteredCompletionClientException(clientName);
-        }
-
-        var client = _serviceProvider.GetService(clientType) as IAICompletionClient;
+        var client = ResolveClient(deployment);
 
         var response = await client.CompleteAsync(messages, context, cancellationToken)
             ?? throw new InvalidOperationException("Unable to generate a response. Ensure that the connection, and the deployment names are correct.");
@@ -48,16 +43,11 @@ public sealed class DefaultAICompletionService : IAICompletionService
         return response;
     }
 
-    public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(string clientName, IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(AIDeployment deployment, IEnumerable<ChatMessage> messages, AICompletionContext context, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(clientName);
+        ArgumentNullException.ThrowIfNull(deployment);
 
-        if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
-        {
-            throw new UnregisteredCompletionClientException(clientName);
-        }
-
-        var client = _serviceProvider.GetService(clientType) as IAICompletionClient;
+        var client = ResolveClient(deployment);
 
         await foreach (var chunk in client.CompleteStreamingAsync(messages, context, cancellationToken))
         {
@@ -67,5 +57,19 @@ public sealed class DefaultAICompletionService : IAICompletionService
 
             yield return chunk;
         }
+    }
+
+    private IAICompletionClient ResolveClient(AIDeployment deployment)
+    {
+        var clientName = deployment.ClientName
+            ?? throw new InvalidOperationException($"The deployment '{deployment.Name}' does not have a client name assigned.");
+
+        if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
+        {
+            throw new UnregisteredCompletionClientException(clientName);
+        }
+
+        return _serviceProvider.GetService(clientType) as IAICompletionClient
+            ?? throw new InvalidOperationException($"No completion client registered for '{clientName}'.");
     }
 }

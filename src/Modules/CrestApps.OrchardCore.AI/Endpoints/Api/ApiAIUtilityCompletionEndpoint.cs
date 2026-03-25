@@ -30,6 +30,7 @@ internal static class ApiAIUtilityCompletionEndpoint
        [FromServices] IHttpContextAccessor httpContextAccessor,
        [FromServices] IAICompletionService completionService,
        [FromServices] IAICompletionContextBuilder completionContextBuilder,
+       [FromServices] IAIDeploymentManager deploymentManager,
        [FromServices] ILogger<T> logger,
        [FromBody] AIUtilityCompletionRequest requestData)
     {
@@ -63,7 +64,10 @@ internal static class ApiAIUtilityCompletionEndpoint
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
-        var completion = await completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+        var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
         var result = new AIChatResponse
         {

@@ -21,7 +21,7 @@ internal sealed class AIProfileDefaultContextMigrations : DataMigration
     {
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProfile>>();
+            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
             var defaultOptions = scope.ServiceProvider.GetRequiredService<DefaultAIOptions>();
 
             var profiles = await profileCatalog.GetAllAsync();

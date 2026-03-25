@@ -17,6 +17,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 {
     private readonly INamedCatalogManager<AIProfile> _profileManager;
     private readonly IAICompletionService _completionService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
     private readonly ILogger _logger;
@@ -26,6 +27,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     public AICompletionFromProfileTask(
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
+        IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
         IAICompletionContextBuilder completionContextBuilder,
         ILogger<AICompletionFromProfileTask> logger,
@@ -33,6 +35,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     {
         _profileManager = profileManager;
         _completionService = completionService;
+        _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
         _completionContextBuilder = completionContextBuilder;
         _logger = logger;
@@ -91,7 +94,10 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         try
         {
             var context = await _completionContextBuilder.BuildAsync(profile);
-            var completion = await _completionService.CompleteAsync(profile.Source, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+                ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+            var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
             var bestChoice = completion.Messages.FirstOrDefault();
 

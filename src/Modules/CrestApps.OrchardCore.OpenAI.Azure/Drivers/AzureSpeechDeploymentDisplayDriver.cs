@@ -27,7 +27,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
     public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)
     {
-        if (!string.Equals(deployment.ProviderName, AzureOpenAIConstants.AzureSpeechProviderName, StringComparison.Ordinal))
+        if (!string.Equals(deployment.ClientName, AzureOpenAIConstants.AzureSpeechProviderName, StringComparison.Ordinal))
         {
             return null;
         }
@@ -56,7 +56,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)
     {
-        if (!string.Equals(deployment.ProviderName, AzureOpenAIConstants.AzureSpeechProviderName, StringComparison.Ordinal))
+        if (!string.Equals(deployment.ClientName, AzureOpenAIConstants.AzureSpeechProviderName, StringComparison.Ordinal))
         {
             return null;
         }

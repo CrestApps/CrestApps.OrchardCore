@@ -202,13 +202,13 @@ If you need access to multiple DeepSeek models, you can execute the following re
           "Name": "deepseek-chat",
           "Type": "Chat",
           "IsDefault": true,
-          "ProviderName": "OpenAI",
+          "ClientName": "OpenAI",
           "ConnectionName": "deepseek"
         },
         {
           "Name": "deepseek-reasoner",
           "Type": "Chat",
-          "ProviderName": "OpenAI",
+          "ClientName": "OpenAI",
           "ConnectionName": "deepseek"
         }
       ]
@@ -218,5 +218,7 @@ If you need access to multiple DeepSeek models, you can execute the following re
 ```
 
 This configuration allows you to access multiple models provided by DeepSeek, such as `deepseek-chat` (set as the default Chat deployment) and `deepseek-reasoner`.
+
+Use `ClientName` in `AIDeployment` recipes. `ProviderName` is obsolete and only kept for backward compatibility.
 
 By following these steps, you can seamlessly integrate DeepSeek into your AI chat feature, either as a default provider or alongside other AI models.

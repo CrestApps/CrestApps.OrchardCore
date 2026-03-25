@@ -142,12 +142,12 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         ArgumentNullException.ThrowIfNull(deployment);
-        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
+        ArgumentException.ThrowIfNullOrEmpty(deployment.ClientName);
 
         // When the deployment has a connection reference, use the standard path.
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            return CreateSpeechToTextClientAsync(deployment.ProviderName, deployment.ConnectionName, deployment.Name);
+            return CreateSpeechToTextClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
@@ -155,7 +155,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
 
         foreach (var clientProvider in _clientProviders)
         {
-            if (!clientProvider.CanHandle(deployment.ProviderName))
+            if (!clientProvider.CanHandle(deployment.ClientName))
             {
                 continue;
             }
@@ -163,7 +163,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
             return clientProvider.GetSpeechToTextClientAsync(connectionEntry, deployment.Name);
         }
 
-        throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
+        throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ClientName}'.");
     }
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -198,12 +198,12 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
     public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
-        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
+        ArgumentException.ThrowIfNullOrEmpty(deployment.ClientName);
 
         // When the deployment has a connection reference, use the standard path.
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            return CreateTextToSpeechClientAsync(deployment.ProviderName, deployment.ConnectionName, deployment.Name);
+            return CreateTextToSpeechClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
@@ -211,7 +211,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
 
         foreach (var clientProvider in _clientProviders)
         {
-            if (!clientProvider.CanHandle(deployment.ProviderName))
+            if (!clientProvider.CanHandle(deployment.ClientName))
             {
                 continue;
             }
@@ -219,7 +219,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
             return clientProvider.GetTextToSpeechClientAsync(connectionEntry, deployment.Name);
         }
 
-        throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ProviderName}'.");
+        throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ClientName}'.");
     }
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
@@ -227,13 +227,13 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
     {
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            if (_options.Providers.TryGetValue(deployment.ProviderName, out var provider)
+            if (_options.Providers.TryGetValue(deployment.ClientName, out var provider)
                 && provider.Connections.TryGetValue(deployment.ConnectionName, out var connection))
             {
                 return connection;
             }
 
-            throw new ArgumentException($"Connection '{deployment.ConnectionName}' not found within the provider '{deployment.ProviderName}'.");
+            throw new ArgumentException($"Connection '{deployment.ConnectionName}' not found within the provider '{deployment.ClientName}'.");
         }
 
         return AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);

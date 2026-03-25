@@ -39,5 +39,5 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
     }
 
     protected override string ProviderName
-        => AzureAIInferenceConstants.ProviderName;
+        => AzureAIInferenceConstants.ClientName;
 }

@@ -17,7 +17,7 @@ public sealed class AIDocumentsIndexingService
     private readonly IIndexProfileStore _indexProfileStore;
 
     private readonly IIndexingTaskManager _indexingTaskManager;
-    private readonly ISourceCatalog<ChatInteraction> _sourceCatalog;
+    private readonly ICatalog<ChatInteraction> _sourceCatalog;
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
@@ -30,7 +30,7 @@ public sealed class AIDocumentsIndexingService
     public AIDocumentsIndexingService(
         IIndexProfileStore indexProfileStore,
         IIndexingTaskManager indexingTaskManager,
-        ISourceCatalog<ChatInteraction> sourceCatalog,
+        ICatalog<ChatInteraction> sourceCatalog,
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,

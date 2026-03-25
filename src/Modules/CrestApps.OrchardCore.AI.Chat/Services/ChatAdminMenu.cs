@@ -38,7 +38,7 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
                {
                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
-                   if (profile.Source is null || !settings.IsOnAdminMenu || !_aiOptions.ProfileSources.ContainsKey(profile.Source))
+                   if (!settings.IsOnAdminMenu)
                    {
                        continue;
                    }
