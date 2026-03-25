@@ -27,7 +27,7 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
     }
 
     [JsonInclude]
-    [JsonPropertyName(nameof(ProviderName))]
+    [JsonPropertyName("ProviderName")]
     private string _providerNameBackingField
     {
         set => Source = value;
