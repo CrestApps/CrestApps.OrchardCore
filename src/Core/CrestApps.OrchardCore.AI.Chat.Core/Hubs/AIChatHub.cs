@@ -698,16 +698,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             },
             chatSession.Documents,
             Messages = prompts.Select(message => new AIChatResponseMessageDetailed
-                {
-                    Id = message.ItemId,
-                    Role = message.Role.Value,
-                    IsGeneratedPrompt = message.IsGeneratedPrompt,
-                    Title = message.Title,
-                    Content = message.Content,
-                    UserRating = message.UserRating,
-                    References = message.References,
-                    Appearance = message.As<AssistantMessageAppearance>(),
-                })
+            {
+                Id = message.ItemId,
+                Role = message.Role.Value,
+                IsGeneratedPrompt = message.IsGeneratedPrompt,
+                Title = message.Title,
+                Content = message.Content,
+                UserRating = message.UserRating,
+                References = message.References,
+                Appearance = message.As<AssistantMessageAppearance>(),
+            })
         };
 
     private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)

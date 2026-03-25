@@ -1,4 +1,5 @@
 namespace CrestApps.OrchardCore.Omnichannel.Core;
+
 public static class StringExtensions
 {
     public static string GetCleanedPhoneNumber(this string phoneNumber)

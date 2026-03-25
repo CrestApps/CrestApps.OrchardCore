@@ -56,7 +56,7 @@ public sealed class TabularBatch
         }
 
         var allRows = new List<string>(1 + (DataRows?.Count ?? 0)) { HeaderRow };
-        
+
         if (DataRows is not null)
         {
             allRows.AddRange(DataRows);

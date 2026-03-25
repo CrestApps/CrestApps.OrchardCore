@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +7,7 @@ using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 
-public sealed class EnableTenantTool: AIFunction
+public sealed class EnableTenantTool : AIFunction
 {
     public const string TheName = "enableTenant";
 
