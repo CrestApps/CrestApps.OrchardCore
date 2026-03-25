@@ -30,7 +30,7 @@ internal sealed class TestOrchestrator : IOrchestrator
 internal sealed class NullCompletionService : IAICompletionService
 {
     public Task<ChatResponse> CompleteAsync(
-        string clientName,
+        AIDeployment deployment,
         IEnumerable<ChatMessage> messages,
         AICompletionContext context,
         CancellationToken cancellationToken = default)
@@ -39,7 +39,7 @@ internal sealed class NullCompletionService : IAICompletionService
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(
-        string clientName,
+        AIDeployment deployment,
         IEnumerable<ChatMessage> messages,
         AICompletionContext context,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)

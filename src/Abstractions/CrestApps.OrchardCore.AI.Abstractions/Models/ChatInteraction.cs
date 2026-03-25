@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Models;
 /// Represents a chat interaction which combines AI profile configuration and chat session state.
 /// This enables ad-hoc creation and execution of chat profiles without predefined AI Profiles.
 /// </summary>
-public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
+public sealed class ChatInteraction : CatalogItem
 {
     /// <summary>
     /// Gets or sets the title of the chat interaction.
@@ -23,11 +23,6 @@ public sealed class ChatInteraction : CatalogItem, ISourceAwareModel
     /// Gets or sets the user identifier who owns this interaction.
     /// </summary>
     public string Author { get; set; }
-
-    /// <summary>
-    /// Gets or sets the source/provider name for this interaction.
-    /// </summary>
-    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the chat deployment identifier (AI model) to use.

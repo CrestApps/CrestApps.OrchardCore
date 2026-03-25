@@ -3,10 +3,10 @@
 
 @model ShapeViewModel<AIProviderConnection>
 
-<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
-    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ClientName
 </span>
 
-<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
+<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection name"]">
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.DisplayText
 </span>

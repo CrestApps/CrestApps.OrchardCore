@@ -113,8 +113,9 @@ internal static class UploadSessionDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var connectionName = await ResolveConnectionNameAsync(profile, deploymentManager);
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, connectionName);
+        var deployment = await ResolveDeploymentAsync(profile, deploymentManager);
+        var connectionName = deployment?.ConnectionName;
+        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, connectionName);
 
         session.Documents ??= [];
 
@@ -208,18 +209,14 @@ internal static class UploadSessionDocumentEndpoint
         return profileManager != null ? await profileManager.FindByIdAsync(profileId) : null;
     }
 
-    private static async Task<string> ResolveConnectionNameAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
+    private static async Task<AIDeployment> ResolveDeploymentAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
     {
-        var deployment = await deploymentManager.ResolveAsync(
+        return await deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profile.ChatDeploymentId,
-            providerName: profile.Source)
-            ?? await deploymentManager.ResolveAsync(
+            deploymentId: profile.ChatDeploymentId)
+            ?? await deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId,
-                providerName: profile.Source);
-
-        return deployment?.ConnectionName;
+                deploymentId: profile.UtilityDeploymentId);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

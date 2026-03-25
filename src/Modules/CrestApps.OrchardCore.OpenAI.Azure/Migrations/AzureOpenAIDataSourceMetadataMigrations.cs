@@ -56,7 +56,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 var profileSource = dataSource.Properties?["ProfileSource"]?.GetValue<string>();
                 var providerName = dataSource.Properties?["ProviderName"]?.GetValue<string>();
 
-                if (!string.Equals(profileSource, AzureOpenAIConstants.ProviderName, StringComparison.OrdinalIgnoreCase) &&
+                if (!string.Equals(profileSource, AzureOpenAIConstants.ClientName, StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(profileSource, "AzureOpenAIOwnData", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(providerName, "Elasticsearch", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(providerName, "AzureAISearch", StringComparison.OrdinalIgnoreCase))
@@ -109,16 +109,6 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
             // Migrate AI profiles to use the new RAG metadata
             foreach (var profile in await profileStore.GetAllAsync())
             {
-                if (profile.Source != AzureOpenAIConstants.ProviderName)
-                {
-                    continue;
-                }
-
-                if (profile.Source == "AzureOpenAIOwnData")
-                {
-                    profile.Source = "Azure";
-                }
-
                 var dataSourceId = profile.Properties?["AIProfileDataSourceMetadata"]?["DataSourceId"]?.GetValue<string>()
                     ?? profile.Properties?["DataSourceMetadata"]?["DataSourceId"]?.GetValue<string>();
                 if (string.IsNullOrEmpty(dataSourceId))

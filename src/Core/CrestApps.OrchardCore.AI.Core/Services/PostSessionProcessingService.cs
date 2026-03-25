@@ -797,48 +797,17 @@ public sealed class PostSessionProcessingService
     {
         if (_deploymentManager != null)
         {
-            var deployment = await _deploymentManager.ResolveAsync(
-                AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId,
-                providerName: profile.Source)
-                ?? await _deploymentManager.ResolveAsync(
-                    AIDeploymentType.Chat,
-                    deploymentId: profile.ChatDeploymentId,
-                    providerName: profile.Source);
+            var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
+                utilityDeploymentId: profile.UtilityDeploymentId,
+                chatDeploymentId: profile.ChatDeploymentId);
 
             if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.Name))
             {
-                return await _clientFactory.CreateChatClientAsync(profile.Source, deployment.ConnectionName, deployment.Name);
+                return await _clientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
             }
         }
 
-        if (!_providerOptions.Providers.TryGetValue(profile.Source, out var provider))
-        {
-            return null;
-        }
-
-        var connectionName = provider.DefaultConnectionName;
-
-        if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
-        {
-            return null;
-        }
-
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-        var deploymentName = connection.GetUtilityDeploymentName(throwException: false);
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            deploymentName = connection.GetChatDeploymentName(throwException: false);
-        }
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            return null;
-        }
-
-        return await _clientFactory.CreateChatClientAsync(profile.Source, connectionName, deploymentName);
+        return null;
     }
 
     private async Task<IList<AITool>> ResolveToolsAsync(string sessionId, string[] toolNames)

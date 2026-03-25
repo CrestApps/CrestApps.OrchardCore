@@ -73,7 +73,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
     }
 
     protected override string ProviderName
-        => OpenAIConstants.ProviderName;
+        => OpenAIConstants.ClientName;
 
     protected override async ValueTask ConfigureChatOptionsAsync(CompletionServiceConfigureContext configureContext)
     {

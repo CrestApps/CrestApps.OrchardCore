@@ -34,7 +34,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
-        if (!string.Equals(context.Model.Source, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
@@ -56,7 +56,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }

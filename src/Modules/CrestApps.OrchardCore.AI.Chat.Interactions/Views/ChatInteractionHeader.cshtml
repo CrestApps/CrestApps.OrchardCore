@@ -9,11 +9,6 @@
 
 @model ChatInteractionCapsuleViewModel
 
-@if (!AIOptions.Value.ProfileSources.TryGetValue(Model.Interaction.Source, out var source))
-{
-    return;
-}
-
 <div class="card text-bg-theme">
     <div class="card-body d-flex justify-content-between flex-wrap gap-2">
 
@@ -32,7 +27,7 @@
                 <ul class="actions-menu dropdown-menu dropdown-menu-end">
 
                     <li>
-                        <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-route-source="@Model.Interaction.Source" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
+                        <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
                             <i class="fa-solid fa-plus"></i> @T["Empty Chat"]
                         </a>
                     </li>

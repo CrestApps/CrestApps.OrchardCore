@@ -13,25 +13,9 @@ internal sealed class AzureOpenAIOwnDataAIProfilesMigrations : DataMigration
     public int Create()
 #pragma warning restore CA1822 // Mark members as static
     {
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            // Previously, 'Azure' provider was different than 'AzureOpenAIOwnData', the two were merged into one.
-            // So we want to change the source to merge them in the database too to ensure backward compatibility.
-            var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
-
-            foreach (var profile in await profileStore.GetAllAsync())
-            {
-                if (!profile.Source.Equals("AzureOpenAIOwnData", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                profile.Source = AzureOpenAIConstants.ProviderName;
-
-                await profileStore.UpdateAsync(profile);
-            }
-        });
-
+        // This migration previously changed profile.Source from "AzureOpenAIOwnData" to "Azure".
+        // Since Source has been removed from AIProfile (source-agnostic refactoring),
+        // this migration is now a no-op.
         return 1;
     }
 }

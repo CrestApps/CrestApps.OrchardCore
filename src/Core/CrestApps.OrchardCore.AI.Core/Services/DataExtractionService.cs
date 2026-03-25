@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.Core;
 using J2N.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -16,13 +15,11 @@ public sealed class DataExtractionService
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IClock _clock;
-    private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
     public DataExtractionService(
         IAIClientFactory clientFactory,
         IAITemplateService aiTemplateService,
-        IOptions<AIProviderOptions> providerOptions,
         IClock clock,
         ILogger<DataExtractionService> logger,
         IAIDeploymentManager deploymentManager = null)
@@ -31,7 +28,6 @@ public sealed class DataExtractionService
         _deploymentManager = deploymentManager;
         _aiTemplateService = aiTemplateService;
         _clock = clock;
-        _providerOptions = providerOptions.Value;
         _logger = logger;
     }
 
@@ -258,48 +254,17 @@ public sealed class DataExtractionService
     {
         if (_deploymentManager != null)
         {
-            var deployment = await _deploymentManager.ResolveAsync(
-                AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId,
-                providerName: profile.Source)
-                ?? await _deploymentManager.ResolveAsync(
-                    AIDeploymentType.Chat,
-                    deploymentId: profile.ChatDeploymentId,
-                    providerName: profile.Source);
+            var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
+                utilityDeploymentId: profile.UtilityDeploymentId,
+                chatDeploymentId: profile.ChatDeploymentId);
 
             if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.Name))
             {
-                return await _clientFactory.CreateChatClientAsync(profile.Source, deployment.ConnectionName, deployment.Name);
+                return await _clientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
             }
         }
 
-        if (!_providerOptions.Providers.TryGetValue(profile.Source, out var provider))
-        {
-            return null;
-        }
-
-        var connectionName = provider.DefaultConnectionName;
-
-        if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
-        {
-            return null;
-        }
-
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-        var deploymentName = connection.GetUtilityDeploymentName(throwException: false);
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            deploymentName = connection.GetChatDeploymentName(throwException: false);
-        }
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            return null;
-        }
-
-        return await _clientFactory.CreateChatClientAsync(profile.Source, connectionName, deploymentName);
+        return null;
     }
 
     private static string BuildExtractionPrompt(List<DataExtractionEntry> fieldsToExtract, AIChatSession session, IReadOnlyList<AIChatSessionPrompt> prompts)

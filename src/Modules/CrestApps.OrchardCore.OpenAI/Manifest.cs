@@ -18,6 +18,5 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.Area,
-        AIConstants.Feature.Deployments,
     ]
 )]

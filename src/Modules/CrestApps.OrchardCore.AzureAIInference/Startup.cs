@@ -25,14 +25,14 @@ public sealed class Startup : StartupBase
     {
         services
             .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
-            .AddAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ProviderName, o =>
+            .AddAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ClientName, o =>
             {
                 o.DisplayName = S["Azure AI Inference (GitHub Models)"];
                 o.Description = S["Provides AI profiles using Azure AI Inference (GitHub Models)."];
             });
 
         services
-            .AddAIDeploymentProvider(AzureAIInferenceConstants.ProviderName, o =>
+            .AddAIDeploymentProvider(AzureAIInferenceConstants.ClientName, o =>
             {
                 o.DisplayName = S["Azure AI Inference"];
                 o.Description = S["Azure AI Inference model deployments."];
@@ -55,7 +55,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureAIInferenceConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, AzureAIInferenceConnectionDisplayDriver>();
-        services.AddAIConnectionSource(AzureAIInferenceConstants.ProviderName, o =>
+        services.AddAIConnectionSource(AzureAIInferenceConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure AI Inference"];
             o.Description = S["Provides a way to configure Azure AI Inference connections."];

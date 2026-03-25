@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Services;
 
 namespace CrestApps.OrchardCore.AI;
 
-public interface IAIProfileStore : INamedSourceCatalog<AIProfile>
+public interface IAIProfileStore : INamedCatalog<AIProfile>
 {
     /// <summary>
     /// Asynchronously retrieves a collection of AI profiles of the specified type

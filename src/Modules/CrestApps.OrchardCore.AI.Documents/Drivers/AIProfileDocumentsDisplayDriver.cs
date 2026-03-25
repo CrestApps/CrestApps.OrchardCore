@@ -146,8 +146,9 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
-                var connectionName = await ResolveConnectionNameAsync(profile);
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, connectionName);
+                var deployment = await ResolveDeploymentAsync(profile);
+                var connectionName = deployment?.ConnectionName;
+                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, connectionName);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)
@@ -224,18 +225,14 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         return Edit(profile, context);
     }
 
-    private async Task<string> ResolveConnectionNameAsync(AIProfile profile)
+    private async Task<AIDeployment> ResolveDeploymentAsync(AIProfile profile)
     {
-        var deployment = await _deploymentManager.ResolveAsync(
+        return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profile.ChatDeploymentId,
-            providerName: profile.Source)
-            ?? await _deploymentManager.ResolveAsync(
+            deploymentId: profile.ChatDeploymentId)
+            ?? await _deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId,
-                providerName: profile.Source);
-
-        return deployment?.ConnectionName;
+                deploymentId: profile.UtilityDeploymentId);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

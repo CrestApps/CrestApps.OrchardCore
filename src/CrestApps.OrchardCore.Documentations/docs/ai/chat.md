@@ -16,6 +16,8 @@ Provides UI to interact with AI models using the profiles.
 
 The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles.
 
+AI profiles are now source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core opens the profile editor directly instead of asking you to choose a source first. The selected chat and utility deployments now determine which client and model are used.
+
 ### AI Profile and Template Editor Layout
 
 The AI Profile editor groups the most common profile settings into five cards at the top of the page:

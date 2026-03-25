@@ -73,7 +73,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
@@ -141,7 +141,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var settingsHandlers = services.GetRequiredService<IEnumerable<IChatInteractionSettingsHandler>>();
 
@@ -340,7 +340,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
@@ -382,7 +382,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 return;
             }
 
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
 
             var interaction = await interactionManager.FindByIdAsync(itemId);
@@ -605,7 +605,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
@@ -1040,7 +1040,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
@@ -1301,7 +1301,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();

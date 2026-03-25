@@ -30,11 +30,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     {
         var connectionResult = Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConnection_Edit", async model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(interaction.Source, out var profileSource))
-            {
-                return;
-            }
-
             model.ChatDeploymentId = interaction.ChatDeploymentId;
             model.UtilityDeploymentId = interaction.UtilityDeploymentId;
 
@@ -51,10 +46,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(interaction.Source, out _))
-        {
-            return null;
-        }
 
         var model = new EditChatInteractionConnectionViewModel();
 

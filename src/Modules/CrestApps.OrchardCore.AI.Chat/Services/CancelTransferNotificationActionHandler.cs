@@ -40,7 +40,7 @@ internal sealed class CancelTransferNotificationActionHandler : IChatNotificatio
         }
         else if (context.ChatType == ChatContextType.ChatInteraction)
         {
-            var interactionManager = context.Services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = context.Services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var interaction = await interactionManager.FindByIdAsync(context.SessionId);
 
             if (interaction is null)

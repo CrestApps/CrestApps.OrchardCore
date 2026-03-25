@@ -326,12 +326,16 @@ public sealed class DefaultOrchestratorTests
         FakeCompletionService completionService = null,
         FakeToolRegistry toolRegistry = null)
     {
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager
+            .Setup(d => d.ResolveOrDefaultAsync(It.IsAny<AIDeploymentType>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new AIDeployment { ItemId = "test-dep", Name = "test-model", ClientName = "test-client" });
+
         return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
             new FakeAIClientFactory(),
             new FakeAITemplateService(),
-            Mock.Of<IAIDeploymentManager>(),
-            Options.Create(new AIProviderOptions()),
+            deploymentManager.Object,
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
             Options.Create(new DefaultOrchestratorOptions()),
@@ -399,7 +403,7 @@ public sealed class DefaultOrchestratorTests
         public int StreamCallCount { get; private set; }
 
         public Task<ChatResponse> CompleteAsync(
-            string clientName,
+            AIDeployment deployment,
             IEnumerable<ChatMessage> messages,
             AICompletionContext context,
             CancellationToken cancellationToken = default)
@@ -417,7 +421,7 @@ public sealed class DefaultOrchestratorTests
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(
-            string clientName,
+            AIDeployment deployment,
             IEnumerable<ChatMessage> messages,
             AICompletionContext context,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)

@@ -20,7 +20,7 @@ using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 
-[Feature(AIConstants.Feature.Deployments)]
+[Feature(AIConstants.Feature.Area)]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

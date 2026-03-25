@@ -123,9 +123,13 @@ internal static class A2ATaskManagerFactory
 
             var completionService = services.GetRequiredService<IAICompletionService>();
             var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+            var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
             var context = await contextBuilder.BuildAsync(targetProfile);
             context.DisableTools = true;
+
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
 
             var messages = new List<ChatMessage>
             {
@@ -135,7 +139,7 @@ internal static class A2ATaskManagerFactory
             var responseText = new System.Text.StringBuilder();
 
             await foreach (var update in completionService.CompleteStreamingAsync(
-                targetProfile.Source,
+                deployment,
                 messages,
                 context,
                 cancellationToken))

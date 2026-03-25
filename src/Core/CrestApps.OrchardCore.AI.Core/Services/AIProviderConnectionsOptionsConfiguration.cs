@@ -36,7 +36,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
         }
 
         var groups = document.Records.Values
-            .GroupBy(x => x.ProviderName)
+            .GroupBy(x => x.ClientName)
             .Select(x => new
             {
                 ProviderName = x.Key,

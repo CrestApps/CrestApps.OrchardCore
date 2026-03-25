@@ -86,7 +86,6 @@ public sealed class ViewAIProfileTool : AIFunction
             ["name"] = profile.Name,
             ["displayText"] = profile.DisplayText,
             ["type"] = profile.Type.ToString(),
-            ["source"] = profile.Source,
             ["chatDeploymentId"] = profile.ChatDeploymentId,
             ["welcomeMessage"] = profile.WelcomeMessage,
             ["promptSubject"] = profile.PromptSubject,

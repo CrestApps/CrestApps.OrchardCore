@@ -153,7 +153,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                 var profileMetadata = template.As<ProfileTemplateMetadata>();
                 var deployment = await ResolveDeploymentAsync(profileMetadata);
                 var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(
-                    deployment?.ProviderName,
+                    deployment?.ClientName,
                     deployment?.ConnectionName);
                 var processedDocuments = new List<AIDocument>();
 
@@ -230,10 +230,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {
-        return await _deploymentManager.ResolveAsync(
+        return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
             deploymentId: profileMetadata.ChatDeploymentId)
-            ?? await _deploymentManager.ResolveAsync(
+            ?? await _deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
                 deploymentId: profileMetadata.UtilityDeploymentId);
     }

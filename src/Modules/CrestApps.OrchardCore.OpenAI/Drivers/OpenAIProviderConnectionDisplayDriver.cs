@@ -28,7 +28,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
@@ -44,7 +44,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, OpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, OpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }

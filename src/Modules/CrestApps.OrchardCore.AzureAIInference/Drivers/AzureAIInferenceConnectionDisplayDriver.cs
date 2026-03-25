@@ -28,7 +28,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }
@@ -53,7 +53,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
-        if (!string.Equals(connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return null;
         }

@@ -58,11 +58,6 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             }
         }
 
-        if (string.IsNullOrWhiteSpace(context.Model.Source))
-        {
-            context.Result.Fail(new ValidationResult(S["Source is required."], [nameof(AIProfile.Source)]));
-        }
-
         if (context.Model.Type == AIProfileType.TemplatePrompt)
         {
             if (string.IsNullOrWhiteSpace(context.Model.PromptTemplate))

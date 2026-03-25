@@ -5,7 +5,7 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIProfileStore : NamedSourceDocumentCatalog<AIProfile, AIProfileIndex>, IAIProfileStore
+public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIProfileIndex>, IAIProfileStore
 {
     public DefaultAIProfileStore(ISession session)
         : base(session)

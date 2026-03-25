@@ -46,16 +46,16 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
     }
 
     public string Name
-        => AzureOpenAIConstants.ProviderName;
+        => AzureOpenAIConstants.ClientName;
 
     public async Task<Microsoft.Extensions.AI.ChatResponse> CompleteAsync(IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages, AICompletionContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        if (!ProviderOptions.Providers.TryGetValue(AzureOpenAIConstants.ProviderName, out var provider))
+        if (!ProviderOptions.Providers.TryGetValue(AzureOpenAIConstants.ClientName, out var provider))
         {
-            throw new ArgumentException($"Provider '{AzureOpenAIConstants.ProviderName}' not found.");
+            throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
         var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
@@ -64,7 +64,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
             AIDeploymentType.Chat,
             provider,
-            AzureOpenAIConstants.ProviderName,
+            AzureOpenAIConstants.ClientName,
             connectionName,
             deploymentId: context.ChatDeploymentId);
 
@@ -189,9 +189,9 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ArgumentNullException.ThrowIfNull(messages);
         ArgumentNullException.ThrowIfNull(context);
 
-        if (!ProviderOptions.Providers.TryGetValue(AzureOpenAIConstants.ProviderName, out var provider))
+        if (!ProviderOptions.Providers.TryGetValue(AzureOpenAIConstants.ClientName, out var provider))
         {
-            throw new ArgumentException($"Provider '{AzureOpenAIConstants.ProviderName}' not found.");
+            throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
         var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
@@ -200,7 +200,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
             AIDeploymentType.Chat,
             provider,
-            AzureOpenAIConstants.ProviderName,
+            AzureOpenAIConstants.ClientName,
             connectionName,
             deploymentId: context.ChatDeploymentId);
 

@@ -3,18 +3,13 @@ using CrestApps.OrchardCore.YesSql.Core.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Core.Indexes;
 
-public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
+public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex
 {
     /// <summary>
     /// Gets or sets the technical name of the profile.
     /// Maps to <see cref="Models.AIProfile.Name"/> to satisfy <see cref="INameAwareIndex"/>.
     /// </summary>
     public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the source provider name for the profile.
-    /// </summary>
-    public string Source { get; set; }
 
     /// <summary>
     /// Gets or sets the profile type (e.g., Chat, TemplatePrompt, Utility, Agent).

@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListSourceCatalogEntryViewModel<AIProfile>
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<AIProfile>>
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["AI Profiles"])</h1></zone>
 
@@ -23,7 +23,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddProfile">@T["Add Profile"]</button>
+                    <a class="btn btn-secondary create" asp-action="Create">@T["Add Profile"]</a>
                 </div>
             </div>
         </div>
@@ -96,39 +96,6 @@
     </div>
 
 </form>
-
-<!-- Modal -->
-<div class="modal fade" id="modalAddProfile" tabindex="-1" role="dialog" aria-labelledby="available-rule-types-title" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="available-rule-types-title">@T["Available Sources"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                @if (!Model.Sources.Any())
-                {
-                    <p class="p-3 mb-2 bg-warning text-white">@T["You need to enable a feature which provides an AI source."]</p>
-                }
-                else
-                {
-                    <div class="row row-cols-1 row-cols-md-3 g-2">
-                        @foreach (var source in Model.Sources)
-                        {
-                            IShape shape = await New.AIProfile_Link(Source: source);
-                            shape.Metadata.Alternates.Add("AIProfile_Link__" + source);
-
-                            @await DisplayAsync(shape)
-                        }
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script asp-name="list-management-ui" at="Foot"></script>
 

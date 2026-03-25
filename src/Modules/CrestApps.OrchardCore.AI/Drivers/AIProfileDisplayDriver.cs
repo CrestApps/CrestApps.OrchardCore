@@ -124,11 +124,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out _))
-            {
-                return;
-            }
-
             var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
             if (orchestrators.Count > 1)
             {

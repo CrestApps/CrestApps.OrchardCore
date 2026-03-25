@@ -47,7 +47,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 deployment = await _manager.FindByIdAsync(id);
             }
 
-            var sourceName = token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+            var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>();
             var hasSource = !string.IsNullOrEmpty(sourceName);
 
             if (deployment is null)

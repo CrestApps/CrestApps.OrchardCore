@@ -46,22 +46,22 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
     public async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName)
     {
-        var embeddingDeployment = await _deploymentManager.ResolveAsync(
+        var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
-            providerName: providerName,
+            clientName: providerName,
             connectionName: connectionName);
 
         if (embeddingDeployment != null)
         {
             var generator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                embeddingDeployment.ProviderName,
+                embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
                 embeddingDeployment.Name);
 
             if (generator == null)
             {
-                _logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
-                    embeddingDeployment.ProviderName, embeddingDeployment.ConnectionName, embeddingDeployment.Name);
+                _logger.LogWarning("Failed to create embedding generator for client {Client}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
+                    embeddingDeployment.ClientName, embeddingDeployment.ConnectionName, embeddingDeployment.Name);
             }
 
             return generator;
@@ -97,7 +97,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
         if (legacyGenerator == null)
         {
-            _logger.LogWarning("Failed to create embedding generator for provider {Provider}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
+            _logger.LogWarning("Failed to create embedding generator for client {Client}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
                 providerName, connectionName, deploymentName);
         }
 

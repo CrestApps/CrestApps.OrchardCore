@@ -261,7 +261,6 @@ public sealed class PostSessionProcessingServiceTests
     {
         // Arrange: profile references a provider that is not configured.
         var profile = CreateProfile();
-        profile.Source = "UnknownProvider";
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
         {
             s.EnablePostSessionProcessing = true;
@@ -539,7 +538,6 @@ public sealed class PostSessionProcessingServiceTests
             ItemId = "test-profile-id",
             Name = "TestProfile",
             DisplayText = "Test Profile",
-            Source = TestProviderName,
         };
 
         return profile;
@@ -587,6 +585,26 @@ public sealed class PostSessionProcessingServiceTests
                 .ReturnsAsync(chatClient);
         }
 
+        var mockDeploymentManager = new Mock<IAIDeploymentManager>();
+        if (chatClient is not null)
+        {
+            var deployment = new AIDeployment
+            {
+                ItemId = "test-deployment-id",
+                Name = TestDeploymentName,
+                ClientName = TestProviderName,
+                ConnectionName = TestConnectionName,
+                Type = AIDeploymentType.Chat,
+            };
+
+            mockDeploymentManager
+                .Setup(d => d.ResolveOrDefaultAsync(
+                    It.IsAny<AIDeploymentType>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync(deployment);
+        }
+
         var mockToolsService = toolsService is not null
             ? null
             : new Mock<IAIToolsService>();
@@ -604,19 +622,6 @@ public sealed class PostSessionProcessingServiceTests
         }
 
         var providerOptions = new AIProviderOptions();
-        providerOptions.Providers[TestProviderName] = new AIProvider
-        {
-            DefaultConnectionName = TestConnectionName,
-            Connections = new Dictionary<string, AIProviderConnectionEntry>
-            {
-                [TestConnectionName] = new AIProviderConnectionEntry(
-                    new Dictionary<string, object>
-                    {
-                        ["UtilityDeploymentName"] = TestDeploymentName,
-                        ["ChatDeploymentName"] = TestDeploymentName,
-                    }),
-            },
-        };
 
         var defaultOptions = new DefaultAIOptions
         {
@@ -634,7 +639,8 @@ public sealed class PostSessionProcessingServiceTests
             defaultOptions,
             new Mock<IServiceProvider>().Object,
             clock.Object,
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            mockDeploymentManager.Object);
     }
 
     /// <summary>

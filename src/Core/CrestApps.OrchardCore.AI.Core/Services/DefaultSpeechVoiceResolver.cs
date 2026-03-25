@@ -23,13 +23,13 @@ public sealed class DefaultSpeechVoiceResolver : ISpeechVoiceResolver
     public async Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
     {
         ArgumentNullException.ThrowIfNull(deployment);
-        ArgumentException.ThrowIfNullOrEmpty(deployment.ProviderName);
+        ArgumentException.ThrowIfNullOrEmpty(deployment.ClientName);
 
         var connectionEntry = GetConnectionEntry(deployment);
 
         foreach (var clientProvider in _clientProviders)
         {
-            if (!clientProvider.CanHandle(deployment.ProviderName))
+            if (!clientProvider.CanHandle(deployment.ClientName))
             {
                 continue;
             }
@@ -44,14 +44,14 @@ public sealed class DefaultSpeechVoiceResolver : ISpeechVoiceResolver
     {
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            if (_options.Providers.TryGetValue(deployment.ProviderName, out var provider)
+            if (_options.Providers.TryGetValue(deployment.ClientName, out var provider)
                 && provider.Connections.TryGetValue(deployment.ConnectionName, out var connection))
             {
                 return connection;
             }
 
             throw new InvalidOperationException(
-                $"Unable to find connection '{deployment.ConnectionName}' for provider '{deployment.ProviderName}'.");
+                $"Unable to find connection '{deployment.ConnectionName}' for provider '{deployment.ClientName}'.");
         }
 
         return AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);
