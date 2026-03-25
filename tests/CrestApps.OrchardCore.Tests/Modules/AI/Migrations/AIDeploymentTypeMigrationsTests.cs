@@ -196,13 +196,13 @@ public sealed class AIDeploymentTypeMigrationsTests
         var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
         var type = assembly.GetType(
             "CrestApps.OrchardCore.AI.Migrations.AIDeploymentTypeMigrations",
-            throwOnError: true)!;
+            throwOnError: true);
         var method = type.GetMethod(
             "TryPopulateDefaultDeploymentSettings",
             BindingFlags.NonPublic | BindingFlags.Static,
             binder: null,
             [typeof(DefaultAIDeploymentSettings), typeof(IEnumerable<AIProviderConnection>), typeof(IEnumerable<AIDeployment>)],
-            modifiers: null)!;
+            modifiers: null);
 
         return (bool)method.Invoke(null, [settings, connections, deployments])!;
     }
