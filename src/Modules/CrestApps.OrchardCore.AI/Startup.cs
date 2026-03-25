@@ -70,6 +70,7 @@ public sealed class Startup : StartupBase
             .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
+            .AddScoped<PromptTemplateSelectionService>()
             .AddScoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()

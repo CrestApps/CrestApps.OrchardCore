@@ -101,21 +101,6 @@ public abstract class AICompletionServiceBase
         return Task.FromResult<AIDeployment>(null);
     }
 
-    protected async Task<string> GetSystemMessageAsync(AICompletionContext context)
-    {
-        var systemMessage = string.Empty;
-
-        if (!string.IsNullOrEmpty(context.SystemMessage))
-        {
-            systemMessage = context.SystemMessage;
-        }
-
-        if (context.UserMarkdownInResponse)
-        {
-            var markdownInstruction = await AITemplateService.RenderAsync(AITemplateIds.UseMarkdownSyntax);
-            systemMessage += Environment.NewLine + markdownInstruction;
-        }
-
-        return systemMessage;
-    }
+    protected Task<string> GetSystemMessageAsync(AICompletionContext context)
+        => Task.FromResult(context.SystemMessage ?? string.Empty);
 }

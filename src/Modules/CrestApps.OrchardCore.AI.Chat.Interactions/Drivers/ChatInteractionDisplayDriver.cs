@@ -88,14 +88,23 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         // Copilot config at position 4 - handled by ChatInteractionCopilotDisplayDriver.
         // Data source at position 5 - handled by ChatInteractionDataSourceDisplayDriver.
 
-        // General parameters come last in the Settings tab.
-        var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
+        var systemInstructionsResult = Initialize<EditChatInteractionViewModel>("ChatInteractionSystemInstructions_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
             model.ChatDeploymentId = interaction.ChatDeploymentId;
             model.ConnectionName = interaction.ConnectionName;
             model.SystemMessage = interaction.SystemMessage;
+            model.IsNew = context.IsNew;
+        }).Location("Parameters:8#Settings;1");
+
+        // General parameters come after system instructions and prompt templates in the Settings tab.
+        var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
+        {
+            model.ItemId = interaction.ItemId;
+            model.Title = interaction.Title;
+            model.ChatDeploymentId = interaction.ChatDeploymentId;
+            model.ConnectionName = interaction.ConnectionName;
             model.Temperature = interaction.Temperature;
             model.TopP = interaction.TopP;
             model.FrequencyPenalty = interaction.FrequencyPenalty;
@@ -105,8 +114,8 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.ToolNames = interaction.ToolNames?.ToArray();
             model.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
             model.IsNew = context.IsNew;
-        }).Location("Parameters:8#Settings;1");
+        }).Location("Parameters:10#Settings;1");
 
-        return Combine(headerResult, contentResult, titleResult, orchestratorResult, parametersResult);
+        return Combine(headerResult, contentResult, titleResult, orchestratorResult, systemInstructionsResult, parametersResult);
     }
 }

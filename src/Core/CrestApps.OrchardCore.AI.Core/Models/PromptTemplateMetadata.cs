@@ -3,12 +3,21 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 public sealed class PromptTemplateMetadata
 {
     /// <summary>
-    /// Gets or sets the identifier of the selected AI template.
+    /// Gets or sets the ordered list of selected prompt templates.
     /// </summary>
-    public string TemplateId { get; set; }
+    public List<PromptTemplateSelectionEntry> Templates { get; set; } = [];
 
-    /// <summary>
-    /// Gets or sets the template parameters as key-value pairs.
-    /// </summary>
-    public Dictionary<string, object> Parameters { get; set; }
+    public void SetSelections(IEnumerable<PromptTemplateSelectionEntry> selections)
+    {
+        Templates = selections?
+            .Where(selection => !string.IsNullOrWhiteSpace(selection.TemplateId))
+            .Select(selection => new PromptTemplateSelectionEntry
+            {
+                TemplateId = selection.TemplateId,
+                Parameters = selection.Parameters is { Count: > 0 }
+                    ? new Dictionary<string, object>(selection.Parameters, StringComparer.OrdinalIgnoreCase)
+                    : null,
+            })
+            .ToList() ?? [];
+    }
 }

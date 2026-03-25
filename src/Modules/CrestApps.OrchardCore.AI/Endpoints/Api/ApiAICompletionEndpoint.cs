@@ -293,7 +293,6 @@ internal static class ApiAICompletionEndpoint
             c.TopP = 1;
             c.Temperature = 0;
             c.MaxTokens = 64; // 64 token to generate about 255 characters.
-            c.UserMarkdownInResponse = false;
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
             c.DataSourceId = null;

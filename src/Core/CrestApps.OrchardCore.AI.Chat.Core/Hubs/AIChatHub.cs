@@ -399,7 +399,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             c.TopP = 1;
             c.Temperature = 0;
             c.MaxTokens = 64; // 64 token to generate about 255 characters.
-            c.UserMarkdownInResponse = false;
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
             c.DataSourceId = null;
@@ -621,7 +620,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.UserMarkdownInResponse = true;
         });
 
         var builder = ZString.CreateStringBuilder();
@@ -667,7 +665,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.UserMarkdownInResponse = true;
         });
 
         var references = new Dictionary<string, AICompletionReference>();
