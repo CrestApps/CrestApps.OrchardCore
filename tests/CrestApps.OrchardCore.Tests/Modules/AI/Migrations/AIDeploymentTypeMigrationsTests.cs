@@ -1,4 +1,5 @@
 using System.Reflection;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;

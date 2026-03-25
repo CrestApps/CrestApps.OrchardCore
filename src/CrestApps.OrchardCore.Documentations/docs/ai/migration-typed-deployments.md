@@ -141,7 +141,7 @@ Contained-connection deployments (e.g., Azure Speech) can also be defined in `ap
     "CrestApps_AI": {
       "Deployments": [
         {
-          "ProviderName": "AzureSpeech",
+          "ClientName": "AzureSpeech",
           "Name": "my-speech-to-text",
           "Type": "SpeechToText",
           "IsDefault": true,
@@ -247,6 +247,8 @@ context.ChatDeploymentId = "some-id";
 }
 ```
 
+The new `AIProfile` recipe format does not require `Source`. Profiles are source-agnostic and resolve their active client from the selected deployment or the optional `ConnectionName` fallback.
+
 ### AI Deployment Recipes
 
 Create typed deployments via recipes:
@@ -259,21 +261,21 @@ Create typed deployments via recipes:
       "deployments": [
         {
           "Name": "gpt-4o",
-          "ProviderName": "OpenAI",
+          "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Chat",
           "IsDefault": true
         },
         {
           "Name": "gpt-4o-mini",
-          "ProviderName": "OpenAI",
+          "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Utility",
           "IsDefault": true
         },
         {
           "Name": "dall-e-3",
-          "ProviderName": "OpenAI",
+          "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Image",
           "IsDefault": true
@@ -283,6 +285,8 @@ Create typed deployments via recipes:
   ]
 }
 ```
+
+For typed deployments, use `ClientName` in new recipes. The older `ProviderName` property is still read for backward compatibility only.
 
 ---
 

@@ -217,7 +217,7 @@ Non-connection deployments are defined in the `CrestApps_AI:Deployments` section
     "CrestApps_AI": {
       "Deployments": [
         {
-          "ProviderName": "AzureSpeech",
+          "ClientName": "AzureSpeech",
           "Name": "my-speech-to-text",
           "Type": "SpeechToText",
           "IsDefault": true,
