@@ -46,9 +46,23 @@ public sealed class OrchardCoreAITemplateService : DefaultAITemplateService
 
         var enabledFeatures = await GetEnabledFeatureIdsAsync();
 
-        return allTemplates
-            .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId))
-            .ToList();
+        var filteredTemplates = allTemplates
+            .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId));
+
+        var deduplicatedTemplates = new List<AITemplate>();
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var template in filteredTemplates)
+        {
+            if (string.IsNullOrWhiteSpace(template.Id) || !seenIds.Add(template.Id))
+            {
+                continue;
+            }
+
+            deduplicatedTemplates.Add(template);
+        }
+
+        return deduplicatedTemplates;
     }
 
     public override async Task<AITemplate> GetAsync(string id)

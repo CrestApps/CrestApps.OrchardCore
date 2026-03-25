@@ -58,11 +58,11 @@ internal static class AIDeploymentConnectionEntryFactory
                 case string encryptedKey when
                     string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(encryptedKey):
-                {
-                    var protector = dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-                    values[key] = protector.Unprotect(encryptedKey);
-                    break;
-                }
+                    {
+                        var protector = dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+                        values[key] = protector.Unprotect(encryptedKey);
+                        break;
+                    }
             }
         }
     }

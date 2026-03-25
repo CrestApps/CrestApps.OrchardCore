@@ -400,7 +400,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             c.TopP = 1;
             c.Temperature = 0;
             c.MaxTokens = 64; // 64 token to generate about 255 characters.
-            c.UserMarkdownInResponse = false;
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
             c.DataSourceId = null;
@@ -633,7 +632,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.UserMarkdownInResponse = true;
         });
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
@@ -684,7 +682,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.UserMarkdownInResponse = true;
         });
 
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
@@ -721,16 +718,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             },
             chatSession.Documents,
             Messages = prompts.Select(message => new AIChatResponseMessageDetailed
-                {
-                    Id = message.ItemId,
-                    Role = message.Role.Value,
-                    IsGeneratedPrompt = message.IsGeneratedPrompt,
-                    Title = message.Title,
-                    Content = message.Content,
-                    UserRating = message.UserRating,
-                    References = message.References,
-                    Appearance = message.As<AssistantMessageAppearance>(),
-                })
+            {
+                Id = message.ItemId,
+                Role = message.Role.Value,
+                IsGeneratedPrompt = message.IsGeneratedPrompt,
+                Title = message.Title,
+                Content = message.Content,
+                UserRating = message.UserRating,
+                References = message.References,
+                Appearance = message.As<AssistantMessageAppearance>(),
+            })
         };
 
     private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)

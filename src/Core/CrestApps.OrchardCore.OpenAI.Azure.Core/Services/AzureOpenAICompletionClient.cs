@@ -113,7 +113,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             }
         }
 
-        var prompts = await GetPromptsAsync(context, azureMessages);
+        var prompts = GetPrompts(context, azureMessages);
 
         var azureClient = GetChatClient(connectionProperties);
 
@@ -252,7 +252,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         ChatCompletionOptions subSequenceContext = null;
 
-        var prompts = await GetPromptsAsync(context, azureMessages);
+        var prompts = GetPrompts(context, azureMessages);
 
         var systemFunctions = await ConfigureOptionsAsync(chatOptions, context, prompts);
         var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
@@ -548,11 +548,11 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         return chatOptions.Tools.OfType<Microsoft.Extensions.AI.AIFunction>().ToList();
     }
 
-    private async Task<List<ChatMessage>> GetPromptsAsync(AICompletionContext context, List<ChatMessage> azureMessages)
+    private static List<ChatMessage> GetPrompts(AICompletionContext context, List<ChatMessage> azureMessages)
     {
         var prompts = new List<ChatMessage>();
 
-        var systemMessage = await GetSystemMessageAsync(context);
+        var systemMessage = context.SystemMessage;
 
         if (!string.IsNullOrEmpty(systemMessage))
         {

@@ -28,6 +28,8 @@ Templates can come from three discovery locations:
 
 Both file-based and database sources are merged by a unified service, with database templates taking precedence when names conflict.
 
+For prompt-template selection specifically, runtime **System Prompt** templates created in the admin UI are merged with file-based prompt templates by technical name. Database-defined entries take precedence, and duplicate prompt IDs are removed from the picker.
+
 ### Key Benefits
 
 - **Consistency** — Ensure new profiles start with approved configurations (system messages, parameters, tool selections).
@@ -74,7 +76,8 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
    - **Orchestrator Name** — The orchestrator to use (dropdown, defaults to "default").
    - **Welcome Message** — An initial greeting shown to users.
    - **Title Type** — How the session title is generated.
-   - **System Message** — The system prompt for the AI (supports Markdown with EasyMDE editor).
+   - **Prompt Templates** — Add one or more reusable prompt templates from a searchable picker. Each selected template gets its own card, optional JSON parameters, can be removed independently, and can be reused multiple times.
+   - **System Message** — The custom system instructions for the AI (supports Markdown with EasyMDE editor). Selected prompt templates are rendered before this field.
    - **Temperature** — Controls randomness (0.0 = deterministic, 1.0+ = creative).
    - **Top P** — Nucleus sampling threshold.
    - **Frequency Penalty** — Reduces repetition of frequent tokens.
@@ -85,19 +88,19 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 6. Configure **Capabilities** (Profile source only, when the relevant features are enabled):
    - **Tools** — Select which AI tools are available to the profile.
    - **MCP Connections** — Select which MCP connections are available.
-6. Configure **Data Sources**:
+7. Configure **Data Sources**:
    - **Data Source** — Select a data source for retrieval-augmented generation.
    - **Strictness**, **Top N Documents**, **Is In Scope**, **Filter** — RAG parameters.
-7. Configure **Documents** (when the Documents feature is enabled):
+8. Configure **Documents** (when the Documents feature is enabled):
    - **Allow Session Documents** — Whether users can upload documents during chat sessions.
    - **Profile Documents** — Upload documents directly to the template. Documents are processed (text extraction, chunking, and embedding generation) and stored with the template. When the template is applied to a new profile, all attached documents — including their text chunks and embeddings — are cloned to the new profile automatically.
      - **Top N** — Number of top matching document chunks to include in AI context (default: 3).
-8. Configure **Data Processing & Metrics** (when the Chat and Analytics features are enabled):
+9. Configure **Data Processing & Metrics** (when the Chat and Analytics features are enabled):
    - **Session Settings** — Session inactivity timeout, AI resolution detection.
    - **Data Extraction** — Enable data extraction with extraction entries.
    - **Post-Session Processing** — Configure post-session tasks.
    - **Analytics** — Enable session/conversion metrics and define conversion goals.
-9. Click **Save** to store the template.
+10. Click **Save** to store the template.
 
 :::note
 The template editor mirrors the AI Profile editor with the same tabbed layout (Capabilities, Documents, Data Processing & Metrics). External module features (tools, MCP connections, data sources, documents, analytics) add their own tabs and sections to the template editor when their features are enabled.

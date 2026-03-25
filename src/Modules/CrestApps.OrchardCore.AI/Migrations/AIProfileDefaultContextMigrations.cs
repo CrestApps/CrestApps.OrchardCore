@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;

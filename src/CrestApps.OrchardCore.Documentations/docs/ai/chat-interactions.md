@@ -29,6 +29,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
+- Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
 
 ## Getting Started
 

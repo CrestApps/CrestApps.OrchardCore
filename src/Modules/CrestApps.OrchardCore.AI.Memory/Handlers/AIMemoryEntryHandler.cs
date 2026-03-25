@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;

@@ -126,7 +126,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         {
             var chatClient = await BuildClientAsync(connectionName, context, deploymentName);
 
-            var prompts = await GetPromptsAsync(messages, context);
+            var prompts = GetPrompts(messages, context);
 
             var chatOptions = await GetChatOptionsAsync(context, deploymentName, false);
 
@@ -184,7 +184,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         var chatOptions = await GetChatOptionsAsync(context, deploymentName, true);
 
-        var prompts = await GetPromptsAsync(messages, context);
+        var prompts = GetPrompts(messages, context);
 
         await foreach (var update in chatClient.GetStreamingResponseAsync(prompts, chatOptions, cancellationToken))
         {
@@ -194,13 +194,13 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         }
     }
 
-    private async Task<List<ChatMessage>> GetPromptsAsync(IEnumerable<ChatMessage> messages, AICompletionContext context)
+    private static List<ChatMessage> GetPrompts(IEnumerable<ChatMessage> messages, AICompletionContext context)
     {
         var chatMessages = messages.Where(x => (x.Role == ChatRole.User || x.Role == ChatRole.Assistant) && !string.IsNullOrEmpty(x.Text));
 
         var prompts = new List<ChatMessage>();
 
-        var systemMessage = await GetSystemMessageAsync(context);
+        var systemMessage = context.SystemMessage;
 
         if (!string.IsNullOrEmpty(systemMessage))
         {

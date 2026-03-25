@@ -20,7 +20,7 @@
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
     <PackageVersion Include="NuGet.Versioning" Version="7.3.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.4.24" />
+    <PackageVersion Include="OllamaSharp" Version="5.4.25" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />

@@ -64,12 +64,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         set => SetProperty(value);
     }
 
-    public bool IncludeHtmlResponse
-    {
-        get => GetProperty(() => false);
-        set => SetProperty(value);
-    }
-
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         return Outcomes(S["Done"], S["Drew Blank"], S["Failed"]);
@@ -99,11 +93,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         try
         {
-            var context = await _completionContextBuilder.BuildAsync(profile, c =>
-            {
-                c.UserMarkdownInResponse = IncludeHtmlResponse;
-            });
-
+            var context = await _completionContextBuilder.BuildAsync(profile);
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
                 ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 

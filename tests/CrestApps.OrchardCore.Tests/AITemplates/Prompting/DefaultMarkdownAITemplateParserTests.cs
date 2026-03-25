@@ -1,6 +1,4 @@
-using CrestApps.AI.Prompting;
 using CrestApps.AI.Prompting.Parsing;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 

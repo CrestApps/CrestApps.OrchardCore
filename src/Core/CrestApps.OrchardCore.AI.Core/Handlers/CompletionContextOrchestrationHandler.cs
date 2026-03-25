@@ -22,7 +22,6 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
         var completionContext = await _completionContextBuilder.BuildAsync(context.Resource);
 
         context.Context.CompletionContext = completionContext;
-        context.Context.CompletionContext.UserMarkdownInResponse = true;
 
         // Propagate DisableTools from the completion context.
         context.Context.DisableTools = context.Context.CompletionContext.DisableTools;

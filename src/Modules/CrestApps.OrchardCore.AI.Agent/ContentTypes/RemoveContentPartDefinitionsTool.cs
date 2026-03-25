@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
@@ -9,7 +9,7 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class RemoveContentPartDefinitionsTool: AIFunction
+public sealed class RemoveContentPartDefinitionsTool : AIFunction
 {
     public const string TheName = "removeContentPartDefinition";
 
