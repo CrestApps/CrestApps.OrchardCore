@@ -1,7 +1,6 @@
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Rendering;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.Entities;
@@ -93,7 +92,7 @@ public sealed class PromptTemplateSelectionService
             .ToList();
     }
 
-    private static void AddTemplate(ICollection<AITemplate> templates, ISet<string> seenIds, AITemplate template)
+    private static void AddTemplate(List<AITemplate> templates, HashSet<string> seenIds, AITemplate template)
     {
         if (template == null || string.IsNullOrWhiteSpace(template.Id) || !seenIds.Add(template.Id))
         {

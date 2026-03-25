@@ -100,7 +100,4 @@ public abstract class AICompletionServiceBase
     {
         return Task.FromResult<AIDeployment>(null);
     }
-
-    protected Task<string> GetSystemMessageAsync(AICompletionContext context)
-        => Task.FromResult(context.SystemMessage ?? string.Empty);
 }
