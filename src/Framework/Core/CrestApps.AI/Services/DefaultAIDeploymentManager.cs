@@ -97,7 +97,7 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             }
         }
 
-        var globalDefaultId = GetGlobalDefaultId(type);
+        var globalDefaultId = await GetGlobalDefaultIdAsync(type);
 
         if (!string.IsNullOrEmpty(globalDefaultId))
         {
@@ -107,11 +107,11 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
         return null;
     }
 
-    protected virtual string GetGlobalDefaultId(AIDeploymentType type)
+    protected virtual ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)
     {
         var settings = _deploymentSettings.CurrentValue;
 
-        return type switch
+        var result = type switch
         {
             AIDeploymentType.Chat => settings.DefaultChatDeploymentId,
             AIDeploymentType.Utility => settings.DefaultUtilityDeploymentId,
@@ -121,5 +121,7 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentId,
             _ => null,
         };
+
+        return new ValueTask<string>(result);
     }
 }

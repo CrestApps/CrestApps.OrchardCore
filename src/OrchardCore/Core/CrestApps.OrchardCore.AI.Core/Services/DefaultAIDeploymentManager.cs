@@ -25,11 +25,9 @@ public sealed class DefaultAIDeploymentManager : CrestApps.AI.Services.DefaultAI
         _siteService = siteService;
     }
 
-    protected override string GetGlobalDefaultId(AIDeploymentType type)
+    protected override async ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)
     {
-        // In OrchardCore, settings are stored via ISiteService rather than IOptions.
-        var settings = _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>()
-            .GetAwaiter().GetResult();
+        var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
 
         return type switch
         {
