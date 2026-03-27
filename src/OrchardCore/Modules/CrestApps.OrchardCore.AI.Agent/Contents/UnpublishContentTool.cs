@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class UnpublishContentTool: AIFunction
+public sealed class UnpublishContentTool : AIFunction
 {
     public const string TheName = "unpublishContentItem";
 

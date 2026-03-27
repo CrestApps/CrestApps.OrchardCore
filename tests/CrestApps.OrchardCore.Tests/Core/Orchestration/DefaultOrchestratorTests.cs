@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
 public sealed class DefaultOrchestratorTests
@@ -324,12 +325,16 @@ public sealed class DefaultOrchestratorTests
         FakeCompletionService completionService = null,
         FakeToolRegistry toolRegistry = null)
     {
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager
+            .Setup(d => d.ResolveOrDefaultAsync(It.IsAny<AIDeploymentType>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(new AIDeployment { ItemId = "test-dep", Name = "test-model", ClientName = "test-client" });
+
         return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
             new FakeAIClientFactory(),
             new FakeAITemplateService(),
-            Mock.Of<IAIDeploymentManager>(),
-            Options.Create(new AIProviderOptions()),
+            deploymentManager.Object,
             toolRegistry ?? new FakeToolRegistry([]),
             new LuceneTextTokenizer(),
             Options.Create(new DefaultOrchestratorOptions()),
@@ -397,7 +402,7 @@ public sealed class DefaultOrchestratorTests
         public int StreamCallCount { get; private set; }
 
         public Task<ChatResponse> CompleteAsync(
-            string clientName,
+            AIDeployment deployment,
             IEnumerable<ChatMessage> messages,
             AICompletionContext context,
             CancellationToken cancellationToken = default)
@@ -415,7 +420,7 @@ public sealed class DefaultOrchestratorTests
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(
-            string clientName,
+            AIDeployment deployment,
             IEnumerable<ChatMessage> messages,
             AICompletionContext context,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -481,14 +486,13 @@ public sealed class DefaultOrchestratorTests
             => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 
+#pragma warning disable MEAI001
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ITextToSpeechClient)null);
 
         public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
             => new((ITextToSpeechClient)null);
-
-        public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
-            => Task.FromResult(Array.Empty<SpeechVoice>());
+#pragma warning restore MEAI001
     }
 
     /// <summary>

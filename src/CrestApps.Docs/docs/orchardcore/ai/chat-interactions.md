@@ -29,12 +29,13 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - Document upload — upload documents and chat against your own data via retrieval-augmented generation (RAG)
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
+- Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
 
 ## Getting Started
 
 1. Enable the `AI Chat Interactions` feature in Orchard Core admin
 2. Navigate to **Artificial Intelligence > Chat Interactions**
-3. Click **+ New Chat** and select your chat and utility deployments
+3. Click **+ New Chat**, then select your chat and utility deployments
 4. Configure your chat settings and start chatting
 
 :::tip

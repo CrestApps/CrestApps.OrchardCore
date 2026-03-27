@@ -10,15 +10,16 @@ window.chatInteractionManager = function () {
         downloadChartTitle: 'Download chart as image',
         downloadChartButtonText: 'Download',
         codeCopiedText: 'Copied!',
+        assistantLabel: 'Assistant',
 
         messageTemplate: `
             <div class="ai-chat-messages">
                 <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
                     <div>
                         <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
-                        <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                            <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
-                            Assistant
+                        <div v-else-if="message.role !== 'indicator'" :class="getAssistantRoleClasses(message)">
+                            <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
+                            {{ getAssistantLabel(message) }}
                         </div>
                         <div class="lh-base">
                             <h4 v-if="message.title">{{ message.title }}</h4>
@@ -489,7 +490,7 @@ window.chatInteractionManager = function () {
                         }
                     });
 
-                    this.connection.on("ReceiveConversationAssistantToken", (itemId, messageId, token, responseId) => {
+                    this.connection.on("ReceiveConversationAssistantToken", (itemId, messageId, token, responseId, appearance) => {
                         if (!this._conversationAssistantMessage) {
                             this.stopAudio();
                             this.hideTypingIndicator();
@@ -508,6 +509,7 @@ window.chatInteractionManager = function () {
                                 content: "",
                                 htmlContent: "",
                                 isStreaming: true,
+                                appearance: this.normalizeAssistantAppearance(appearance),
                             };
                             this.messages.push(newMessage);
                             this._conversationAssistantMessage = { index: msgIndex, content: '' };
@@ -516,6 +518,9 @@ window.chatInteractionManager = function () {
                         this._conversationAssistantMessage.content += token;
                         var msg = this.messages[this._conversationAssistantMessage.index];
                         if (msg) {
+                            if (!msg.appearance) {
+                                msg.appearance = this.normalizeAssistantAppearance(appearance);
+                            }
                             msg.content = this._conversationAssistantMessage.content;
                             msg.htmlContent = parseMarkdownContent(msg.content, msg);
                             this.$nextTick(() => {
@@ -600,6 +605,10 @@ window.chatInteractionManager = function () {
                     }
                 },
                 addMessageInternal(message) {
+                    if (message.role === 'assistant') {
+                        message.appearance = this.normalizeAssistantAppearance(message.appearance);
+                    }
+
                     if (message.content && !message.htmlContent) {
                         message.htmlContent = parseMarkdownContent(message.content, message);
                     }
@@ -677,6 +686,58 @@ window.chatInteractionManager = function () {
                 },
                 fireEvent(event) {
                     document.dispatchEvent(event);
+                },
+                normalizeAssistantAppearance(appearance) {
+                    if (!appearance) {
+                        return null;
+                    }
+
+                    var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
+                    var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+                    var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+                    var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+
+                    if (!label && !icon && !cssClass && !disableStreamingAnimation) {
+                        return null;
+                    }
+
+                    return {
+                        label: label,
+                        icon: icon,
+                        cssClass: cssClass,
+                        disableStreamingAnimation: disableStreamingAnimation,
+                    };
+                },
+                getAssistantLabel(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.label ? appearance.label : defaultConfig.assistantLabel;
+                },
+                getAssistantRoleClasses(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    var classes = ['ai-chat-msg-role'];
+
+                    if (appearance && appearance.cssClass) {
+                        classes.push(appearance.cssClass);
+                    } else {
+                        classes.push('ai-chat-msg-role-assistant');
+                    }
+
+                    return classes;
+                },
+                getAssistantIconClasses(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+                },
+                getAssistantIcon(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+                },
+                shouldAnimateAssistantIcon(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return !!message &&
+                        message.isStreaming &&
+                        index === this.lastAssistantIndex &&
+                        !(appearance && appearance.disableStreamingAnimation);
                 },
                 isIndicator(message) {
                     return message.role === 'indicator';

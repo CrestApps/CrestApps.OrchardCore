@@ -106,14 +106,14 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
 
         // Try the new deployment resolver first.
-        var embeddingDeployment = await _deploymentManager.ResolveAsync(
+        var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
             deploymentId: profileMetadata.EmbeddingDeploymentId);
 
         if (embeddingDeployment != null)
         {
             var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                embeddingDeployment.ProviderName,
+                embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
                 embeddingDeployment.Name);
 

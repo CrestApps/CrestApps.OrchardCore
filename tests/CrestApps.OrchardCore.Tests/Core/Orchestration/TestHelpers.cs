@@ -2,6 +2,7 @@ using CrestApps.AI;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
 /// <summary>
@@ -29,7 +30,7 @@ internal sealed class TestOrchestrator : IOrchestrator
 internal sealed class NullCompletionService : IAICompletionService
 {
     public Task<ChatResponse> CompleteAsync(
-        string clientName,
+        AIDeployment deployment,
         IEnumerable<ChatMessage> messages,
         AICompletionContext context,
         CancellationToken cancellationToken = default)
@@ -38,7 +39,7 @@ internal sealed class NullCompletionService : IAICompletionService
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(
-        string clientName,
+        AIDeployment deployment,
         IEnumerable<ChatMessage> messages,
         AICompletionContext context,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -92,12 +93,11 @@ internal sealed class NullAIClientFactory : IAIClientFactory
         => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
 
+#pragma warning disable MEAI001
     public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
         => new((ITextToSpeechClient)null);
 
     public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
         => new((ITextToSpeechClient)null);
-
-    public Task<SpeechVoice[]> GetSpeechVoicesAsync(AIDeployment deployment)
-        => Task.FromResult(Array.Empty<SpeechVoice>());
+#pragma warning restore MEAI001
 }

@@ -14,7 +14,7 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
     }
 
     protected override string GetProviderName()
-        => OpenAIConstants.ProviderName;
+        => OpenAIConstants.ClientName;
 
     protected override IChatClient GetChatClient(AIProviderConnectionEntry connection, string deploymentName)
     {

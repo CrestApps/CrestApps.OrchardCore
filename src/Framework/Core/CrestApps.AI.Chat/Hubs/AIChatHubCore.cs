@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.AI.Chat.Hubs;
 
 /// <summary>
@@ -1011,6 +1012,11 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             Title = profile.PromptSubject,
         };
 
+        if (handlerContext.AssistantAppearance is not null)
+        {
+            assistantMessage.Put(handlerContext.AssistantAppearance);
+        }
+
         var builder = ZString.CreateStringBuilder();
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
@@ -1037,6 +1043,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 ResponseId = chunk.ResponseId,
                 Content = chunk.Text,
                 References = references,
+                Appearance = handlerContext.AssistantAppearance,
             };
 
             await writer.WriteAsync(partialMessage, cancellationToken);
@@ -1074,6 +1081,83 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     }
 
     /// <summary>
+    /// Processes a generated prompt for a profile that uses a prompt template.
+    /// </summary>
+    protected virtual async Task ProcessGeneratedPromptAsync(
+        ChannelWriter<CompletionPartialMessage> writer,
+        IServiceProvider services,
+        AIProfile profile,
+        string sessionId,
+        AIProfile parentProfile,
+        CancellationToken cancellationToken)
+    {
+        var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
+        var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
+        var liquidTemplateManager = services.GetRequiredService<ILiquidTemplateManager>();
+        var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
+        var completionService = services.GetRequiredService<IAICompletionService>();
+
+        (var chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
+
+        var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
+            new Dictionary<string, FluidValue>()
+            {
+                ["Profile"] = new ObjectValue(profile),
+                ["Session"] = new ObjectValue(chatSession),
+            });
+
+        var assistantMessage = new AIChatSessionPrompt
+        {
+            ItemId = IdGenerator.GenerateId(),
+            SessionId = chatSession.SessionId,
+            Role = ChatRole.Assistant,
+            IsGeneratedPrompt = true,
+            Title = profile.PromptSubject,
+        };
+
+        var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
+        {
+        });
+
+        var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+        var builder = ZString.CreateStringBuilder();
+
+        var contentItemIds = new HashSet<string>();
+        var references = new Dictionary<string, AICompletionReference>();
+
+        await foreach (var chunk in completionService.CompleteStreamingAsync(chatDeployment, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))
+        {
+            if (string.IsNullOrEmpty(chunk.Text))
+            {
+                continue;
+            }
+
+            builder.Append(chunk.Text);
+
+            var partialMessage = new CompletionPartialMessage
+            {
+                SessionId = sessionId,
+                MessageId = assistantMessage.ItemId,
+                Content = chunk.Text,
+                References = references,
+            };
+
+            await writer.WriteAsync(partialMessage, cancellationToken);
+        }
+
+        assistantMessage.Content = builder.ToString();
+        assistantMessage.ContentItemIds = contentItemIds.ToList();
+        assistantMessage.References = references;
+
+        await promptStore.CreateAsync(assistantMessage);
+
+        await sessionManager.SaveAsync(chatSession);
+    }
+
+    /// <summary>
     /// Processes a utility (one-shot) profile — no session or history needed.
     /// </summary>
     protected virtual async Task ProcessUtilityAsync(
@@ -1085,17 +1169,20 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     {
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
+        var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
 
         var messageId = GenerateId();
 
         var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
         {
-            c.UserMarkdownInResponse = true;
         });
+
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var references = new Dictionary<string, AICompletionReference>();
 
-        await foreach (var chunk in completionService.CompleteStreamingAsync(profile.Source, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
+        await foreach (var chunk in completionService.CompleteStreamingAsync(chatDeployment, [new ChatMessage(ChatRole.User, prompt)], completionContext, cancellationToken))
         {
             if (string.IsNullOrEmpty(chunk.Text))
             {
@@ -1171,7 +1258,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 Content = message.Content,
                 UserRating = message.UserRating,
                 References = message.References,
-            }),
+                Appearance = message.As<AssistantMessageAppearance>(),
+            })
         };
 
     // ═══════════════════════════════════════════════════════════════════
@@ -1504,7 +1592,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 if (!string.IsNullOrEmpty(chunk.Content))
                 {
                     await Clients.Caller.ReceiveConversationAssistantToken(
-                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty, chunk.Appearance);
 
                     sentenceBuffer.Append(chunk.Content);
 

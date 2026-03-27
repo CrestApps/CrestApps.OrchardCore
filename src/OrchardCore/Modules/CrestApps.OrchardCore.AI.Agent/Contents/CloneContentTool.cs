@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class CloneContentTool: AIFunction
+public sealed class CloneContentTool : AIFunction
 {
     public const string TheName = "cloneContentItem";
 

@@ -27,5 +27,6 @@ public sealed class Startup : StartupBase
         // Add display drivers for prompt selection UI.
         services.AddDisplayDriver<AIProfile, AIProfilePromptSelectionDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionPromptSelectionDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePromptSelectionDisplayDriver>();
     }
 }

@@ -1,0 +1,474 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.AI.Prompting.ViewModels
+
+@model AITemplateSelectionViewModel
+
+@if (Model.AvailablePrompts is null || Model.AvailablePrompts.Count == 0)
+{
+    return;
+}
+
+@{
+    var templatesPrefix = Html.NameFor(m => m.PromptTemplates);
+    var containerId = Html.IdFor(m => m.PromptTemplates) + "_container";
+    var addButtonId = Html.IdFor(m => m.PromptTemplates) + "_add";
+    var dropdownMenuId = Html.IdFor(m => m.PromptTemplates) + "_menu";
+    var searchInputId = Html.IdFor(m => m.PromptTemplates) + "_search";
+    var noResultsId = Html.IdFor(m => m.PromptTemplates) + "_noResults";
+    var emptyStateId = Html.IdFor(m => m.PromptTemplates) + "_empty";
+    var promptLookup = Model.AvailablePrompts.ToDictionary(option => option.TemplateId, StringComparer.OrdinalIgnoreCase);
+    var promptOptionsJson = JsonSerializer.Serialize(Model.AvailablePrompts.Select(option => new
+    {
+        option.TemplateId,
+        option.Title,
+        option.Description,
+        option.Category,
+        Parameters = option.Parameters.Select(parameter => new
+        {
+            parameter.Name,
+            parameter.Description,
+        }),
+    }));
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label class="@Orchard.GetLabelClasses()">
+        @T["Prompt templates"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Add one or more reusable prompt templates that will be rendered in order before the custom system instructions."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+
+    <div class="@Orchard.GetEndClasses()">
+        <div class="dropdown mb-3">
+            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="@addButtonId" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-plus"></i> @T["Add prompt template"]
+            </button>
+
+            <div class="dropdown-menu p-2 prompt-template-dropdown" id="@dropdownMenuId" aria-labelledby="@addButtonId">
+                <div class="mb-2">
+                    <input type="search" class="form-control form-control-sm" id="@searchInputId" placeholder="@T["Search prompt templates..."]" aria-label="@T["Search prompt templates"]" />
+                </div>
+
+                <div class="prompt-template-menu-items">
+                    @foreach (var group in Model.AvailablePrompts.GroupBy(option => option.Category).OrderBy(group => group.Key))
+                    {
+                        <div class="dropdown-header px-2">@group.Key</div>
+
+                        @foreach (var option in group)
+                        {
+                            <button type="button"
+                                    class="dropdown-item prompt-template-add-btn text-wrap"
+                                    data-template-id="@option.TemplateId"
+                                    data-template-title="@option.Title"
+                                    data-template-description="@option.Description">
+                                <span class="d-block fw-semibold">@option.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(option.Description))
+                                {
+                                    <small class="text-muted">@option.Description</small>
+                                }
+                            </button>
+                        }
+                    }
+                </div>
+
+                <div class="text-muted small d-none px-2 py-1" id="@noResultsId">@T["No prompt templates match your search."]</div>
+            </div>
+        </div>
+
+        <div id="@containerId" class="prompt-template-card-container">
+            @for (var i = 0; i < Model.PromptTemplates.Count; i++)
+            {
+                var selection = Model.PromptTemplates[i];
+                promptLookup.TryGetValue(selection.TemplateId ?? string.Empty, out var option);
+                var collapseId = $"{containerId}_collapse_{i}";
+                var title = option?.Title ?? selection.TemplateId ?? T["Prompt template"].Value;
+                var category = option?.Category ?? T["Unavailable"].Value;
+                var description = option?.Description;
+                var parameters = option?.Parameters ?? [];
+                var isMissingOption = option is null;
+
+                <div class="card mb-1 prompt-template-card prompt-template-card-collapsed" data-template-id="@selection.TemplateId">
+                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 prompt-template-collapse-toggle"
+                           data-bs-toggle="collapse"
+                           href="#@collapseId"
+                           role="button"
+                           aria-expanded="false"
+                           aria-controls="@collapseId">
+                            <i class="fa-solid fa-chevron-right me-1"></i>
+                            <span class="prompt-template-title fw-semibold">@title</span>
+                        </a>
+
+                        <button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="@T["Remove"]">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+
+                    <div id="@collapseId" class="collapse">
+                        <div class="card-body">
+                            <input type="hidden" name="@Html.NameFor(m => m.PromptTemplates[i].TemplateId)" value="@selection.TemplateId" class="prompt-template-id-input" />
+
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge text-bg-secondary prompt-template-category">@category</span>
+
+                                @if (isMissingOption)
+                                {
+                                    <span class="badge text-bg-warning">@T["Unavailable"]</span>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(description))
+                            {
+                                <div class="text-muted small mb-3 prompt-template-description">@description</div>
+                            }
+
+                            <div class="mb-3 prompt-template-parameters-info @(parameters.Count > 0 ? string.Empty : "d-none")">
+                                <small class="text-muted d-block mb-1">@T["Expected parameters:"]</small>
+                                <ul class="mb-0 small text-muted prompt-template-parameters-list">
+                                    @foreach (var parameter in parameters)
+                                    {
+                                        <li>
+                                            <strong>@parameter.Name</strong>
+                                            @if (!string.IsNullOrWhiteSpace(parameter.Description))
+                                            {
+                                                <span>: @parameter.Description</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <div class="mb-1">
+                                <label class="form-label">@T["Template parameters"]</label>
+                                <textarea name="@Html.NameFor(m => m.PromptTemplates[i].PromptParameters)"
+                                          class="form-control prompt-template-parameters-input"
+                                          rows="3"
+                                          placeholder='@T["e.g., {{\"key1\": \"value1\", \"key2\": \"value2\"}}"]'>@selection.PromptParameters</textarea>
+                                <span class="hint">@T["Optional JSON key-value pairs to pass as template arguments for this prompt instance."]</span>
+                                <div class="text-danger small d-none prompt-template-parameters-error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="text-muted small @(Model.PromptTemplates.Count == 0 ? string.Empty : "d-none")" id="@emptyStateId">
+            @T["No prompt templates selected."]
+        </div>
+
+    </div>
+</div>
+
+<style at="Head">
+    .prompt-template-dropdown {
+        max-height: 24rem;
+        min-width: 22rem;
+        overflow-y: auto;
+    }
+
+    .prompt-template-dropdown .dropdown-item {
+        white-space: normal;
+    }
+
+    .prompt-template-card.prompt-template-card-collapsed .card-header {
+        border-bottom: 0;
+        border-bottom-left-radius: var(--bs-card-inner-border-radius);
+        border-bottom-right-radius: var(--bs-card-inner-border-radius);
+    }
+
+    .prompt-template-card.prompt-template-card-collapsed .prompt-template-collapse-toggle .fa-solid::before {
+        content: "\f054";
+    }
+
+    .prompt-template-card:not(.prompt-template-card-collapsed) .prompt-template-collapse-toggle .fa-solid::before {
+        content: "\f078";
+    }
+</style>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var container = document.getElementById('@containerId');
+        var dropdownMenu = document.getElementById('@dropdownMenuId');
+        var searchInput = document.getElementById('@searchInputId');
+        var noResults = document.getElementById('@noResultsId');
+        var emptyState = document.getElementById('@emptyStateId');
+        var addButton = document.getElementById('@addButtonId');
+        var templatesPrefix = '@templatesPrefix';
+        var promptOptions = @Html.Raw(promptOptionsJson);
+        var localized = {
+            unavailable: @Html.Raw(JsonSerializer.Serialize(T["Unavailable"].Value)),
+            remove: @Html.Raw(JsonSerializer.Serialize(T["Remove"].Value)),
+            expectedParameters: @Html.Raw(JsonSerializer.Serialize(T["Expected parameters:"].Value)),
+            templateParameters: @Html.Raw(JsonSerializer.Serialize(T["Template parameters"].Value)),
+            parameterPlaceholder: @Html.Raw(JsonSerializer.Serialize(T["e.g., {{\"key1\": \"value1\", \"key2\": \"value2\"}}"].Value)),
+            parameterHint: @Html.Raw(JsonSerializer.Serialize(T["Optional JSON key-value pairs to pass as template arguments for this prompt instance."].Value)),
+            jsonValidationError: @Html.Raw(JsonSerializer.Serialize(T["Must be valid JSON with string key-value pairs."].Value))
+        };
+
+        function escapeHtml(value) {
+            return (value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getPromptOption(templateId) {
+            return promptOptions.find(function (option) { return option.TemplateId === templateId; }) || null;
+        }
+
+        function getPromptCategory(option) {
+            return option && option.Category ? option.Category : localized.unavailable;
+        }
+
+        function buildParametersMarkup(option) {
+            if (!option || !option.Parameters || option.Parameters.length === 0) {
+                return '';
+            }
+
+            return option.Parameters.map(function (parameter) {
+                var description = parameter.Description ? ': ' + escapeHtml(parameter.Description) : '';
+                return '<li><strong>' + escapeHtml(parameter.Name) + '</strong>' + description + '</li>';
+            }).join('');
+        }
+
+        function createPromptCard(templateId, promptParameters) {
+            var option = getPromptOption(templateId);
+            var card = document.createElement('div');
+            var title = option && option.Title ? option.Title : templateId;
+            var description = option && option.Description ? option.Description : '';
+            var category = getPromptCategory(option);
+            var parametersMarkup = buildParametersMarkup(option);
+            var unavailableBadge = option ? '' : '<span class="badge text-bg-warning">' + escapeHtml(localized.unavailable) + '</span>';
+
+            card.className = 'card mb-1 prompt-template-card';
+            card.dataset.templateId = templateId;
+            card.innerHTML =
+                '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                    '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 prompt-template-collapse-toggle" data-bs-toggle="collapse" href="#" role="button" aria-expanded="true">' +
+                        '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                        '<span class="prompt-template-title fw-semibold">' + escapeHtml(title) + '</span>' +
+                    '</a>' +
+                    '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="' + escapeHtml(localized.remove) + '">' +
+                        '<i class="fa-solid fa-trash"></i>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="collapse show">' +
+                    '<div class="card-body">' +
+                        '<input type="hidden" class="prompt-template-id-input" value="' + escapeHtml(templateId) + '" />' +
+                        '<div class="d-flex flex-wrap gap-2 mb-2">' +
+                            '<span class="badge text-bg-secondary prompt-template-category">' + escapeHtml(category) + '</span>' +
+                            unavailableBadge +
+                        '</div>' +
+                        (description ? '<div class="text-muted small mb-3 prompt-template-description">' + escapeHtml(description) + '</div>' : '') +
+                        '<div class="mb-3 prompt-template-parameters-info ' + (parametersMarkup ? '' : 'd-none') + '">' +
+                            '<small class="text-muted d-block mb-1">' + escapeHtml(localized.expectedParameters) + '</small>' +
+                            '<ul class="mb-0 small text-muted prompt-template-parameters-list">' + parametersMarkup + '</ul>' +
+                        '</div>' +
+                        '<div class="mb-1">' +
+                            '<label class="form-label">' + escapeHtml(localized.templateParameters) + '</label>' +
+                            '<textarea class="form-control prompt-template-parameters-input" rows="3" placeholder="' + escapeHtml(localized.parameterPlaceholder) + '"></textarea>' +
+                            '<span class="hint">' + escapeHtml(localized.parameterHint) + '</span>' +
+                            '<div class="text-danger small d-none prompt-template-parameters-error"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            card.querySelector('.prompt-template-parameters-input').value = promptParameters || '';
+
+            return card;
+        }
+
+        function updateEmptyState() {
+            if (!emptyState) {
+                return;
+            }
+
+            emptyState.classList.toggle('d-none', container.querySelectorAll('.prompt-template-card').length > 0);
+        }
+
+        function validateParameters(textarea) {
+            if (!textarea) {
+                return;
+            }
+
+            var errorElement = textarea.closest('.mb-1')?.querySelector('.prompt-template-parameters-error');
+            if (!errorElement) {
+                return;
+            }
+
+            var value = textarea.value.trim();
+
+            if (!value) {
+                errorElement.classList.add('d-none');
+                return;
+            }
+
+            try {
+                var parsed = JSON.parse(value);
+
+                if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+                    throw new Error('invalid-object');
+                }
+
+                for (var key in parsed) {
+                    if (typeof parsed[key] !== 'string') {
+                        throw new Error('invalid-value');
+                    }
+                }
+
+                errorElement.classList.add('d-none');
+            } catch {
+                errorElement.textContent = localized.jsonValidationError;
+                errorElement.classList.remove('d-none');
+            }
+        }
+
+        function reindexCards() {
+            var cards = container.querySelectorAll('.prompt-template-card');
+
+            cards.forEach(function (card, index) {
+                var collapseId = '@containerId' + '_collapse_' + index;
+                var collapseToggle = card.querySelector('.prompt-template-collapse-toggle');
+                var collapseBody = card.querySelector('.collapse');
+                var templateIdInput = card.querySelector('.prompt-template-id-input');
+                var parametersInput = card.querySelector('.prompt-template-parameters-input');
+
+                if (collapseToggle) {
+                    collapseToggle.setAttribute('href', '#' + collapseId);
+                    collapseToggle.setAttribute('aria-controls', collapseId);
+                }
+
+                if (collapseBody) {
+                    collapseBody.id = collapseId;
+                }
+
+                if (templateIdInput) {
+                    templateIdInput.name = templatesPrefix + '[' + index + '].TemplateId';
+                }
+
+                if (parametersInput) {
+                    parametersInput.name = templatesPrefix + '[' + index + '].PromptParameters';
+                }
+
+                syncCollapsedState(card);
+            });
+        }
+
+        function syncCollapsedState(card) {
+            if (!card) {
+                return;
+            }
+
+            var collapseBody = card.querySelector('.collapse');
+            var isExpanded = collapseBody?.classList.contains('show') === true;
+
+            card.classList.toggle('prompt-template-card-collapsed', !isExpanded);
+        }
+
+        function addPromptCard(templateId) {
+            container.appendChild(createPromptCard(templateId, ''));
+            reindexCards();
+            updateEmptyState();
+
+            var dropdown = bootstrap.Dropdown.getOrCreateInstance(addButton);
+            dropdown.hide();
+
+            var newCard = container.querySelector('.prompt-template-card:last-child');
+            newCard?.querySelector('.prompt-template-parameters-input')?.focus();
+        }
+
+        if (dropdownMenu) {
+            dropdownMenu.addEventListener('click', function (event) {
+                var addPromptButton = event.target.closest('.prompt-template-add-btn');
+
+                if (!addPromptButton) {
+                    return;
+                }
+
+                addPromptCard(addPromptButton.dataset.templateId);
+            });
+        }
+
+        document.addEventListener('click', function (event) {
+            var removeButton = event.target.closest('.remove-prompt-template-btn');
+
+            if (!removeButton) {
+                return;
+            }
+
+            var card = removeButton.closest('.prompt-template-card');
+
+            if (!card) {
+                return;
+            }
+
+            card.remove();
+            reindexCards();
+            updateEmptyState();
+        });
+
+        document.addEventListener('input', function (event) {
+            if (event.target.classList.contains('prompt-template-parameters-input')) {
+                validateParameters(event.target);
+            }
+        });
+
+        document.addEventListener('shown.bs.collapse', function (event) {
+            if (event.target.classList.contains('collapse')) {
+                syncCollapsedState(event.target.closest('.prompt-template-card'));
+            }
+        });
+
+        document.addEventListener('hidden.bs.collapse', function (event) {
+            if (event.target.classList.contains('collapse')) {
+                syncCollapsedState(event.target.closest('.prompt-template-card'));
+            }
+        });
+
+        if (searchInput && dropdownMenu) {
+            searchInput.addEventListener('input', function () {
+                var query = (this.value || '').trim().toLowerCase();
+                var anyVisible = false;
+                var currentHeader = null;
+                var currentHeaderHasVisibleItems = false;
+
+                dropdownMenu.querySelectorAll('.dropdown-header, .prompt-template-add-btn').forEach(function (element) {
+                    if (element.classList.contains('dropdown-header')) {
+                        if (currentHeader && !currentHeaderHasVisibleItems) {
+                            currentHeader.classList.add('d-none');
+                        }
+
+                        currentHeader = element;
+                        currentHeaderHasVisibleItems = false;
+                        currentHeader.classList.remove('d-none');
+
+                        return;
+                    }
+
+                    var text = (element.dataset.templateTitle || '') + ' ' + (element.dataset.templateDescription || '');
+                    var matches = !query || text.toLowerCase().includes(query);
+                    element.classList.toggle('d-none', !matches);
+
+                    if (matches) {
+                        anyVisible = true;
+                        currentHeaderHasVisibleItems = true;
+                    }
+                });
+
+                if (currentHeader && !currentHeaderHasVisibleItems) {
+                    currentHeader.classList.add('d-none');
+                }
+
+                noResults.classList.toggle('d-none', anyVisible);
+            });
+        }
+
+        container.querySelectorAll('.prompt-template-parameters-input').forEach(validateParameters);
+        reindexCards();
+        updateEmptyState();
+    });
+</script>

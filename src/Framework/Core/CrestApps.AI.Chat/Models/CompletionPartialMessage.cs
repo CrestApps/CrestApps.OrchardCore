@@ -13,4 +13,6 @@ public class CompletionPartialMessage
     public string SessionId { get; set; }
 
     public Dictionary<string, AICompletionReference> References { get; set; }
+
+    public AssistantMessageAppearance Appearance { get; set; }
 }

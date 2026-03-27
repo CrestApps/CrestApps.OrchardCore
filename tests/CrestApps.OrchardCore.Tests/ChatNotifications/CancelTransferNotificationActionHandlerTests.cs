@@ -99,7 +99,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
             ResponseHandlerName = "live-agent-handler",
         };
 
-        var interactionManagerMock = new Mock<ISourceCatalogManager<ChatInteraction>>();
+        var interactionManagerMock = new Mock<ICatalogManager<ChatInteraction>>();
         interactionManagerMock
             .Setup(m => m.FindByIdAsync("interaction-1"))
             .ReturnsAsync(interaction);
@@ -135,7 +135,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
     [Fact]
     public async Task HandleAsync_ChatInteraction_InteractionNotFound_DoesNotThrow()
     {
-        var interactionManagerMock = new Mock<ISourceCatalogManager<ChatInteraction>>();
+        var interactionManagerMock = new Mock<ICatalogManager<ChatInteraction>>();
         interactionManagerMock
             .Setup(m => m.FindByIdAsync("missing"))
             .ReturnsAsync((ChatInteraction)null);
@@ -212,7 +212,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
 
     private static ServiceProvider BuildServiceProvider(
         IAIChatSessionManager sessionManager = null,
-        ISourceCatalogManager<ChatInteraction> interactionManager = null,
+        ICatalogManager<ChatInteraction> interactionManager = null,
         IChatNotificationSender notificationSender = null)
     {
         var services = new ServiceCollection();

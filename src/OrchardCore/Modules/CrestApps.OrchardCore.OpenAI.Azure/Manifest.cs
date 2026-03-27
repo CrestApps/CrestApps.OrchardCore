@@ -17,6 +17,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Deployments,
+        AIConstants.Feature.Area,
     ]
 )]

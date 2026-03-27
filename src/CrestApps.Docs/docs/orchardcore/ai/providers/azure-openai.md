@@ -107,17 +107,15 @@ Define an AI profile with the following step in your recipe:
       "name": "AIProfile",
       "profiles": [
         {
-          "Source": "Azure",
           "Name": "ExampleProfile",
           "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
-          "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ConnectionName": "<!-- Connection name (optional) -->",
-          "ChatDeploymentId": "<!-- Chat Deployment ID (optional) -->",
-          "UtilityDeploymentId": "<!-- Utility Deployment ID (optional) -->",
+          "ConnectionName": "<!-- Optional connection fallback -->",
+          "ChatDeploymentId": "<!-- Optional chat deployment ID -->",
+          "UtilityDeploymentId": "<!-- Optional utility deployment ID -->",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are an AI assistant that helps people find information.",
@@ -188,7 +186,7 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
     "CrestApps_AI": {
       "Deployments": [
         {
-          "ProviderName": "AzureSpeech",
+          "ClientName": "AzureSpeech",
           "Name": "my-speech-to-text",
           "Type": "SpeechToText",
           "IsDefault": true,

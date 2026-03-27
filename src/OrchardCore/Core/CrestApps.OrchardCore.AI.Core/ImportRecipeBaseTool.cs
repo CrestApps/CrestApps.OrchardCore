@@ -122,7 +122,14 @@ public abstract class ImportRecipeBaseTool : AIFunction
             stepSchemas[stepName] = simpleStepBuilder.Build();
         }
 
-        var stepsBuilder = new JsonSchemaBuilder().OneOf(stepSchemas.Values);
+        var stepsBuilder = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("name", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.String)
+                    .Enum(stepSchemas.Keys)))
+            .Required("name")
+            .AdditionalProperties(true);
 
         var schemaBuilder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -136,7 +143,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         var rootSchema = schemaBuilder.Build();
 
-        var result = rootSchema.Evaluate(data, new EvaluationOptions()
+        var result = rootSchema.Evaluate(JsonSerializer.SerializeToElement(data, RecipeSerializerOptions), new EvaluationOptions()
         {
             OutputFormat = OutputFormat.List,
         });

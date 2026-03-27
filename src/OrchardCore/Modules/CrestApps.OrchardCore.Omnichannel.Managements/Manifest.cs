@@ -20,6 +20,7 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Area,
         UsersConstants.Feature.Area,
+        "CrestApps.OrchardCore.Resources",
         "OrchardCore.ContentTypes",
         "OrchardCore.Users",
         "OrchardCore.Workflows",

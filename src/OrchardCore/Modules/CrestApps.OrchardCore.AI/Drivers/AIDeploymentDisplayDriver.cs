@@ -53,14 +53,14 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.Type = deployment.Type;
             model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
-            model.HasContainedConnection = HasContainedConnection(deployment.ProviderName);
+            model.HasContainedConnection = HasContainedConnection(deployment.ClientName);
 
             model.Types = Enum.GetValues<AIDeploymentType>()
                 .Select(t => new SelectListItem(t.ToString(), t.ToString()))
                 .ToList();
 
             if (!model.HasContainedConnection &&
-                _providerOptions.Providers.TryGetValue(deployment.ProviderName, out var providerOptions))
+                _providerOptions.Providers.TryGetValue(deployment.ClientName, out var providerOptions))
             {
                 model.Connections = providerOptions.Connections.Select(x => new SelectListItem(x.Value.GetValue<string>("ConnectionNameAlias") ?? x.Key, x.Key)).ToArray();
 
@@ -93,16 +93,16 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         deployment.Type = model.Type;
         deployment.IsDefault = model.IsDefault;
 
-        if (HasContainedConnection(deployment.ProviderName))
+        if (HasContainedConnection(deployment.ClientName))
         {
             // Contained-connection providers manage their own connection parameters
             // in the deployment's Properties via their own display driver.
             deployment.ConnectionName = null;
             deployment.ConnectionNameAlias = null;
         }
-        else if (!_providerOptions.Providers.TryGetValue(deployment.ProviderName, out var provider))
+        else if (!_providerOptions.Providers.TryGetValue(deployment.ClientName, out var provider))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the provider: {0}.", deployment.ProviderName]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["There are no configured connection for the client name: {0}.", deployment.ClientName]);
         }
         else
         {
@@ -125,7 +125,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         }
 
         var anotherExists = (await _deploymentsCatalog.GetAllAsync())
-            .Any(d => d.ProviderName == deployment.ProviderName &&
+            .Any(d => d.ClientName == deployment.ClientName &&
             d.ConnectionName == deployment.ConnectionName &&
             d.Type == deployment.Type &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)

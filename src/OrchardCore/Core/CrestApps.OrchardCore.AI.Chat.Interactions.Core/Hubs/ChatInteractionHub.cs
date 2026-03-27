@@ -27,6 +27,7 @@ using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 
 public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
@@ -73,7 +74,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
@@ -115,6 +116,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     Title = message.Title,
                     Content = message.Text,
                     References = message.References,
+                    Appearance = message.As<AssistantMessageAppearance>(),
                 })
             });
         });
@@ -140,7 +142,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var settingsHandlers = services.GetRequiredService<IEnumerable<IChatInteractionSettingsHandler>>();
 
@@ -339,7 +341,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         await ShellScope.UsingChildScopeAsync(async scope =>
         {
             var services = scope.ServiceProvider;
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
             var promptStore = services.GetRequiredService<IChatInteractionPromptStore>();
 
@@ -381,7 +383,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 return;
             }
 
-            var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+            var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
             var authorizationService = services.GetRequiredService<IAuthorizationService>();
 
             var interaction = await interactionManager.FindByIdAsync(itemId);
@@ -489,6 +491,11 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 CreatedUtc = clock.UtcNow,
             };
 
+            if (handlerContext.AssistantAppearance is not null)
+            {
+                assistantPrompt.Put(handlerContext.AssistantAppearance);
+            }
+
             var builder = ZString.CreateStringBuilder();
 
             var contentItemIds = new HashSet<string>();
@@ -519,6 +526,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     ResponseId = chunk.ResponseId,
                     Content = chunk.Text,
                     References = references,
+                    Appearance = handlerContext.AssistantAppearance,
                 };
 
                 await writer.WriteAsync(partialMessage, cancellationToken);
@@ -598,7 +606,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
@@ -938,7 +946,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 }
 
                 // Send text token to the client immediately so the user sees it right away.
-                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                await Clients.Caller.ReceiveConversationAssistantToken(itemId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty, chunk.Appearance);
 
                 sentenceBuffer.Append(chunk.Content);
 
@@ -1033,7 +1041,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();
@@ -1294,7 +1302,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
                 var services = scope.ServiceProvider;
-                var interactionManager = services.GetRequiredService<ISourceCatalogManager<ChatInteraction>>();
+                var interactionManager = services.GetRequiredService<ICatalogManager<ChatInteraction>>();
                 var authorizationService = services.GetRequiredService<IAuthorizationService>();
                 var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
                 var clientFactory = services.GetRequiredService<IAIClientFactory>();

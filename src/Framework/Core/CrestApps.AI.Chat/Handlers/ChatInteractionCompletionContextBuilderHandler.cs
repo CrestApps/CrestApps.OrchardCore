@@ -6,11 +6,11 @@ namespace CrestApps.AI.Chat.Handlers;
 
 internal sealed class ChatInteractionCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
-    public ChatInteractionCompletionContextBuilderHandler(IAITemplateService aiTemplateService)
+    public ChatInteractionCompletionContextBuilderHandler(PromptTemplateSelectionService promptTemplateSelectionService)
     {
-        _aiTemplateService = aiTemplateService;
+        _promptTemplateSelectionService = promptTemplateSelectionService;
     }
 
     public async Task BuildingAsync(AICompletionContextBuildingContext context)
@@ -60,12 +60,13 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
     private async Task<string> ResolveSystemMessageAsync(ChatInteraction interaction)
     {
         var promptMetadata = interaction.As<PromptTemplateMetadata>();
+        var hasPromptTemplates = promptMetadata.Templates?.Any(selection => !string.IsNullOrWhiteSpace(selection.TemplateId)) == true;
 
-        if (string.IsNullOrEmpty(promptMetadata.TemplateId))
+        if (!hasPromptTemplates)
         {
             return interaction.SystemMessage;
         }
 
-        return await _aiTemplateService.RenderAsync(promptMetadata.TemplateId, promptMetadata.Parameters);
+        return await _promptTemplateSelectionService.ComposeSystemMessageAsync(interaction.SystemMessage, promptMetadata);
     }
 }

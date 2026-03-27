@@ -42,19 +42,10 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
         {
             model.OrchestratorName = metadata.OrchestratorName;
-            model.InitialResponseHandlerName = metadata.InitialResponseHandlerName;
 
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
                 .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
                 .ToList();
-
-            var handlers = _handlerResolver.GetAll().ToList();
-            model.ResponseHandlers = handlers.Count > 1
-                ? handlers
-                    .Select(h => new SelectListItem(h.Name, h.Name))
-                    .OrderBy(x => x.Text)
-                    .ToList()
-                : [];
         }).Location("Content:2%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
@@ -88,7 +79,24 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         }).Location("Content:1%Parameters;5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
-        return Combine(connectionResult, generalFieldsResult, interactionFieldsResult, instructionFieldsResult, systemInstructionsResult, parametersResult);
+        var results = new List<IDisplayResult>
+        {
+            connectionResult,
+            generalFieldsResult,
+            interactionFieldsResult,
+            instructionFieldsResult,
+            systemInstructionsResult,
+            parametersResult,
+        };
+
+        var responseHandlerResult = GetResponseHandlerResult(template, metadata);
+
+        if (responseHandlerResult != null)
+        {
+            results.Add(responseHandlerResult);
+        }
+
+        return Combine(results.ToArray());
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -178,5 +186,29 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         model.PresencePenalty = metadata.PresencePenalty;
         model.MaxOutputTokens = metadata.MaxOutputTokens;
         model.PastMessagesCount = metadata.PastMessagesCount;
+    }
+
+    private ShapeResult GetResponseHandlerResult(AIProfileTemplate template, ProfileTemplateMetadata metadata)
+    {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
+        var handlers = _handlerResolver.GetAll().ToList();
+
+        if (handlers.Count <= 1)
+        {
+            return null;
+        }
+
+        return Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateResponseHandler_Edit", model =>
+        {
+            model.InitialResponseHandlerName = metadata.InitialResponseHandlerName;
+            model.ResponseHandlers = handlers
+                .Select(h => new SelectListItem(h.Name, h.Name))
+                .OrderBy(x => x.Text)
+                .ToList();
+        }).Location("Content:20%Interactions;3");
     }
 }

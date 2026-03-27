@@ -62,6 +62,12 @@ public sealed class ChatResponseHandlerContext
     public ChatInteraction Interaction { get; init; }
 
     /// <summary>
+    /// Gets or sets the assistant message appearance that should be applied to
+    /// assistant messages streamed by the current handler invocation.
+    /// </summary>
+    public AssistantMessageAppearance AssistantAppearance { get; set; }
+
+    /// <summary>
     /// Gets or sets an extensible property bag for passing additional data to handlers.
     /// </summary>
     public Dictionary<string, object> Properties { get; init; } = new(StringComparer.OrdinalIgnoreCase);

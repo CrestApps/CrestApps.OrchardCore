@@ -1,11 +1,10 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.Models;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Scope;
@@ -26,12 +25,12 @@ internal static class RemoveDocumentEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        RemoveDocumentRequest request,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        ISourceCatalogManager<ChatInteraction> interactionManager,
-        IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore)
+        [FromBody] RemoveDocumentRequest request,
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] ICatalogManager<ChatInteraction> interactionManager,
+        [FromServices] IAIDocumentStore documentStore,
+        [FromServices] IAIDocumentChunkStore chunkStore)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {

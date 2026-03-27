@@ -12,8 +12,10 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.Services;
-using CrestApps.SignalR.Services;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.Services;
+using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -52,7 +54,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
-            .AddScoped<ISourceCatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
+            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
+            .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
 
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
@@ -66,7 +69,9 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
 
-        services.AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>();
+        services
+            .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         // Chat Interaction notification transport.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
@@ -84,6 +89,8 @@ public sealed class Startup : StartupBase
             // Allow larger messages for audio transcription payloads.
             options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
+
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -98,14 +105,5 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
-    }
-}
-
-[RequireFeatures(AIConstants.Feature.Deployments)]
-public sealed class DeploymentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 }

@@ -6,6 +6,7 @@ using CrestApps.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.Localization;
 
@@ -24,12 +25,12 @@ internal static class GetVoicesEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-        string deploymentId,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIDeploymentManager deploymentManager,
-        IAIClientFactory clientFactory,
-        ILocalizationService localizationService)
+        [FromQuery] string deploymentId,
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ISpeechVoiceResolver speechVoiceResolver,
+        [FromServices] ILocalizationService localizationService)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles))
         {
@@ -50,7 +51,7 @@ internal static class GetVoicesEndpoint
 
         try
         {
-            var allVoices = await clientFactory.GetSpeechVoicesAsync(deployment);
+            var allVoices = await speechVoiceResolver.GetSpeechVoicesAsync(deployment);
 
             var supportedCultures = await localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(

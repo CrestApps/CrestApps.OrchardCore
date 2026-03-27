@@ -30,6 +30,32 @@ This is especially useful when recipes are generated programmatically (e.g., by 
 
 At runtime the feature can compose all known step schemas into a single "recipe" schema for an object with a `steps` array.
 
+## Exporting recipe step schemas for AI skills
+
+This repository also includes a temporary exporter utility for synchronizing the runtime recipe schemas into the Orchard Core AgentSkills repository:
+
+```powershell
+dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
+```
+
+By default, the tool first locates the `CrestApps.OrchardCore` repository root by walking up from the running process directory until it finds a marker such as `global.json`, `NuGet.config`, or `CrestApps.OrchardCore.slnx`. It then writes:
+
+- one `<step>.schema.json` file per `IRecipeStep`
+- `recipe.schema.json` for the root recipe contract
+- `index.json` for step-to-file lookup
+
+to the sibling AgentSkills repository path:
+
+`..\CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas`
+
+This keeps the `orchardcore-recipes` skill aligned with the runtime JSON schema definitions used by `RecipeSchemaService`.
+
+If the sibling `CrestApps.AgentSkills` repository is missing, the exporter now fails with an actionable `DirectoryNotFoundException` that tells contributors to clone `https://github.com/CrestApps/CrestApps.AgentSkills.git` next to `CrestApps.OrchardCore`, or to pass an explicit output directory manually.
+
+The `ReplaceContentDefinition` step now reuses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
+
+The exported set now also covers Orchard Core's built-in settings, identity, and localization recipe steps that were previously missing from CrestApps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
+
 ## Creating a Recipe Step
 
 To define a recipe step, implement the `IRecipeStep` interface and register your implementation as a service.

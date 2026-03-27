@@ -28,7 +28,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly AIProviderOptions _providerOptions;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
     private readonly DefaultOrchestratorOptions _options;
@@ -39,7 +38,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
         IAIClientFactory aiClientFactory,
         IAITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager,
-        IOptions<AIProviderOptions> providerOptions,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
         IOptions<DefaultOrchestratorOptions> options,
@@ -49,7 +47,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
         _aiClientFactory = aiClientFactory;
         _aiTemplateService = aiTemplateService;
         _deploymentManager = deploymentManager;
-        _providerOptions = providerOptions.Value;
         _toolRegistry = toolRegistry;
         _tokenizer = tokenizer;
         _options = options.Value;
@@ -64,7 +61,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.CompletionContext);
-        ArgumentException.ThrowIfNullOrEmpty(context.SourceName);
 
         // Get the full tool registry for this context.
         var allTools = await _toolRegistry.GetAllAsync(context.CompletionContext, cancellationToken);
@@ -136,8 +132,10 @@ public sealed class DefaultOrchestrator : IOrchestrator
         context.CompletionContext.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = scopedEntries;
 
         // Execute the completion with the scoped tool set.
+        var chatDeployment = await ResolveChatDeploymentAsync(context);
+
         await foreach (var chunk in _completionService.CompleteStreamingAsync(
-            context.SourceName, context.ConversationHistory, context.CompletionContext, cancellationToken))
+            chatDeployment, context.ConversationHistory, context.CompletionContext, cancellationToken))
         {
             yield return chunk;
         }
@@ -188,6 +186,8 @@ public sealed class DefaultOrchestrator : IOrchestrator
             else
             {
                 // Fall back to the completion service with the default model.
+                var planningDeployment = await ResolveChatDeploymentAsync(context);
+
                 var planningContext = new AICompletionContext
                 {
                     ConnectionName = context.CompletionContext.ConnectionName,
@@ -200,7 +200,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 };
 
                 var response = await _completionService.CompleteAsync(
-                    context.SourceName,
+                    planningDeployment,
                     GetPlanningMessages(context),
                     planningContext,
                     cancellationToken);
@@ -422,75 +422,35 @@ public sealed class DefaultOrchestrator : IOrchestrator
     }
 
     /// <summary>
-    /// Attempts to create a chat client using the utility deployment name.
-    /// Returns <c>null</c> if no utility or default deployment is configured.
+    /// Attempts to create a chat client using the utility deployment,
+    /// falling back to the chat deployment if no utility deployment is configured.
+    /// Returns <c>null</c> if no deployment can be resolved.
     /// </summary>
     private async Task<IChatClient> GetUtilityChatClientAsync(OrchestrationContext context)
     {
-        var providerName = context.SourceName;
-        var connectionName = context.CompletionContext?.ConnectionName;
+        var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
+            utilityDeploymentId: context.CompletionContext?.UtilityDeploymentId,
+            chatDeploymentId: context.CompletionContext?.ChatDeploymentId);
 
-        if (string.IsNullOrEmpty(providerName) ||
-            !_providerOptions.Providers.TryGetValue(providerName, out var provider))
+        if (deployment == null)
         {
             return null;
         }
 
-        if (string.IsNullOrEmpty(connectionName))
-        {
-            connectionName = provider.DefaultConnectionName;
-        }
+        return await _aiClientFactory.CreateChatClientAsync(
+            deployment.ClientName,
+            deployment.ConnectionName ?? context.CompletionContext?.ConnectionName,
+            deployment.Name);
+    }
 
-        // Try the deployment resolver first for a Utility deployment.
-        // ResolveAsync will fall back to Chat if no Utility deployment is found.
-        var utilityDeployment = await _deploymentManager.ResolveAsync(
-            AIDeploymentType.Utility,
-            deploymentId: context.CompletionContext?.UtilityDeploymentId,
-            providerName: providerName,
-            connectionName: connectionName);
-
-        if (utilityDeployment != null)
-        {
-            var resolvedConnectionName = utilityDeployment.ConnectionName ?? connectionName;
-
-            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, utilityDeployment.Name);
-        }
-
-        // Fall back to chat deployment via the resolver.
-        var chatDeployment = await _deploymentManager.ResolveAsync(
+    /// <summary>
+    /// Resolves the chat deployment from the orchestration context.
+    /// </summary>
+    private async Task<AIDeployment> ResolveChatDeploymentAsync(OrchestrationContext context)
+    {
+        return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: context.CompletionContext?.ChatDeploymentId,
-            providerName: providerName,
-            connectionName: connectionName);
-
-        if (chatDeployment != null)
-        {
-            var resolvedConnectionName = chatDeployment.ConnectionName ?? connectionName;
-
-            return await _aiClientFactory.CreateChatClientAsync(providerName, resolvedConnectionName, chatDeployment.Name);
-        }
-
-        // Fall back to legacy dictionary-based resolution.
-        if (string.IsNullOrEmpty(connectionName) ||
-            !provider.Connections.TryGetValue(connectionName, out var connection))
-        {
-            return null;
-        }
-
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-        var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
-        }
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            return null;
-        }
-
-        return await _aiClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+            deploymentId: context.CompletionContext?.ChatDeploymentId)
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the orchestration context.");
     }
 }

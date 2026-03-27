@@ -1,7 +1,8 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.Services;
+using CrestApps.OrchardCore.AI.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -18,7 +19,7 @@ public sealed class AIDocumentsIndexingService
     private readonly IIndexProfileStore _indexProfileStore;
 
     private readonly IIndexingTaskManager _indexingTaskManager;
-    private readonly ISourceCatalog<ChatInteraction> _sourceCatalog;
+    private readonly ICatalog<ChatInteraction> _sourceCatalog;
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
@@ -31,7 +32,7 @@ public sealed class AIDocumentsIndexingService
     public AIDocumentsIndexingService(
         IIndexProfileStore indexProfileStore,
         IIndexingTaskManager indexingTaskManager,
-        ISourceCatalog<ChatInteraction> sourceCatalog,
+        ICatalog<ChatInteraction> sourceCatalog,
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,

@@ -44,48 +44,14 @@ public sealed class RecipeSchemaService
 
     public async ValueTask<JsonSchema> GetRecipeSchemaAsync()
     {
-        var stepSchemas = new Dictionary<string, JsonSchema>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var stepName in GetStepNames())
-        {
-            if (stepSchemas.ContainsKey(stepName))
-            {
-                continue;
-            }
-
-            JsonSchema stepSchema = null;
-
-            foreach (var recipeStep in _recipeSteps)
-            {
-                if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                stepSchema = await recipeStep.GetSchemaAsync();
-                break;
-            }
-
-            stepSchema ??= new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("name", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.String)
-                        .Enum(stepName)))
-                .Required("name")
-                .Build();
-
-            stepSchemas[stepName] = stepSchema;
-        }
-
         var stepsBuilder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
-                    .Enum(stepSchemas.Keys)))
+                    .Enum(GetStepNames())))
             .Required("name")
-            .OneOf(stepSchemas.Values);
+            .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)

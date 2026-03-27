@@ -36,7 +36,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
             .AddScoped<IAIClientProvider, AzureSpeechClientProvider>()
             .AddScoped<IOpenAIChatOptionsConfiguration, AzurePatchOpenAIDataSourceHandler>()
-            .AddAIDeploymentProvider(AzureOpenAIConstants.ProviderName, o =>
+            .AddAIDeploymentProvider(AzureOpenAIConstants.ClientName, o =>
             {
                 o.DisplayName = S["Azure OpenAI"];
                 o.Description = S["Azure OpenAI model deployments."];
@@ -49,7 +49,7 @@ public sealed class Startup : StartupBase
             })
             .AddDisplayDriver<AIDeployment, AzureSpeechDeploymentDisplayDriver>();
 
-        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ProviderName, AzureOpenAIConstants.ProviderName, o =>
+        services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, AzureOpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides AI profiles using Azure OpenAI models."];
@@ -82,7 +82,7 @@ public sealed class ConnectionManagementStartup : StartupBase
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
         services.AddTransient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>();
         services.AddDisplayDriver<AIProviderConnection, AzureOpenAIConnectionDisplayDriver>();
-        services.AddAIConnectionSource(AzureOpenAIConstants.ProviderName, o =>
+        services.AddAIConnectionSource(AzureOpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides a way to configure Azure OpenAI connections."];

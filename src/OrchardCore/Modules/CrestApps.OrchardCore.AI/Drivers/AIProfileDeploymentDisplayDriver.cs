@@ -30,11 +30,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out var profileSource))
-            {
-                return;
-            }
-
             model.ChatDeploymentId = profile.ChatDeploymentId;
             model.UtilityDeploymentId = profile.UtilityDeploymentId;
 
@@ -48,10 +43,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-        if (!_aiOptions.ProfileSources.TryGetValue(profile.Source, out _))
-        {
-            return null;
-        }
 
         var model = new EditProfileDeploymentViewModel();
 

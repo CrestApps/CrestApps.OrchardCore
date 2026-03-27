@@ -3,10 +3,12 @@ using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot;
@@ -34,7 +36,10 @@ public sealed class Startup : StartupBase
         // OrchardCore-specific display drivers.
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
-        services.AddSiteDisplayDriver<CopilotSettingsDisplayDriver>();
+
+        services
+            .AddSiteDisplayDriver<CopilotSettingsDisplayDriver>()
+            .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.AddPermissionProvider<CopilotPermissionProvider>();
     }

@@ -286,7 +286,7 @@
 }
 
 .ai-admin-widget .ai-bot-icon {
-    color: var(--ai-widget-primary, #41b670);
+    color: currentColor;
     display: inline-block;
     animation: none;
 }
@@ -304,7 +304,7 @@
 }
 
 .ai-admin-widget .ai-streaming-icon {
-    color: var(--ai-widget-primary, #41b670);
+    color: currentColor;
     display: inline-block;
     animation: ai-streaming-effect 4s ease-in-out infinite;
 }

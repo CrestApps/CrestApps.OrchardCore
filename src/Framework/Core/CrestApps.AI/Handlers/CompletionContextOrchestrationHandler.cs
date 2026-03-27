@@ -22,7 +22,6 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
         var completionContext = await _completionContextBuilder.BuildAsync(context.Resource);
 
         context.Context.CompletionContext = completionContext;
-        context.Context.CompletionContext.UserMarkdownInResponse = true;
 
         // Propagate DisableTools from the completion context.
         context.Context.DisableTools = context.Context.CompletionContext.DisableTools;
@@ -32,26 +31,8 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
         {
             context.Context.SystemMessageBuilder.Append(context.Context.CompletionContext.SystemMessage);
         }
-
-        // Resolve SourceName from the resource (AIProfile or ChatInteraction).
-        context.Context.SourceName = ResolveSourceName(context.Resource);
     }
 
     public Task BuiltAsync(OrchestrationContextBuiltContext context)
         => Task.CompletedTask;
-
-    private static string ResolveSourceName(object resource)
-    {
-        if (resource is AIProfile profile)
-        {
-            return profile.Source;
-        }
-
-        if (resource is ChatInteraction interaction)
-        {
-            return interaction.Source;
-        }
-
-        return null;
-    }
 }

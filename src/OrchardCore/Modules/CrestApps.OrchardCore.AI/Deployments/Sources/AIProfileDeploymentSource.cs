@@ -37,7 +37,6 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
             var profileInfo = new JsonObject()
             {
                 { "ItemId" , profile.ItemId },
-                { "Source", profile.Source },
                 { "Name", profile.Name },
                 { "DisplayText", profile.DisplayText },
                 { "WelcomeMessage", profile.WelcomeMessage },

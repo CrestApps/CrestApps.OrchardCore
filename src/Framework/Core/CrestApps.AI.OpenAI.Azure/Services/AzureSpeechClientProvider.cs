@@ -33,6 +33,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
     public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
         => throw new NotSupportedException("Azure AI Speech deployments only support speech services.");
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
     public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {
         var (endpoint, authType, apiKey, identityId) = ExtractConnectionParams(connection);
@@ -49,6 +50,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
     }
 #pragma warning restore MEAI001
 
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
     public ValueTask<ITextToSpeechClient> GetTextToSpeechClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {
         var (endpoint, authType, apiKey, identityId) = ExtractConnectionParams(connection);
@@ -63,6 +65,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
 
         return ValueTask.FromResult<ITextToSpeechClient>(client);
     }
+#pragma warning restore MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 
     public async Task<SpeechVoice[]> GetSpeechVoicesAsync(AIProviderConnectionEntry connection, string deploymentName = null)
     {

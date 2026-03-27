@@ -20,10 +20,10 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
         _deploymentSettings = deploymentSettings;
     }
 
-    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string providerName, string connectionName)
+    public async ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string clientName, string connectionName)
     {
         var deployments = (await Catalog.GetAllAsync())
-            .Where(x => x.ProviderName == providerName &&
+            .Where(x => string.Equals(x.ClientName, clientName, StringComparison.OrdinalIgnoreCase) &&
             (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
         foreach (var deployment in deployments)
@@ -47,9 +47,9 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
         return deployments;
     }
 
-    public async ValueTask<AIDeployment> GetDefaultAsync(string providerName, string connectionName, AIDeploymentType type)
+    public async ValueTask<AIDeployment> GetDefaultAsync(string clientName, string connectionName, AIDeploymentType type)
     {
-        var deployments = await GetAllAsync(providerName, connectionName);
+        var deployments = await GetAllAsync(clientName, connectionName);
 
         var candidates = deployments.Where(d => d.Type == type);
 
@@ -57,35 +57,26 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             ?? candidates.FirstOrDefault();
     }
 
-    public async ValueTask<AIDeployment> ResolveAsync(AIDeploymentType type, string deploymentId = null, string providerName = null, string connectionName = null)
+    public async ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null)
     {
-        var result = await ResolveByTypeAsync(type, deploymentId, providerName, connectionName);
-
-        // When resolving a Utility deployment and nothing was found,
-        // fall back to the Chat deployment chain as a last resort.
-        if (result == null && type == AIDeploymentType.Utility)
-        {
-            result = await ResolveByTypeAsync(AIDeploymentType.Chat, deploymentId: null, providerName, connectionName);
-        }
-
-        return result;
+        return await ResolveByTypeAsync(type, deploymentId, clientName, connectionName);
     }
 
-    public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string providerName = null)
+    public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string clientName = null)
     {
         var allDeployments = await GetAllAsync();
 
         var filtered = allDeployments.Where(d => d.Type == type);
 
-        if (!string.IsNullOrEmpty(providerName))
+        if (!string.IsNullOrEmpty(clientName))
         {
-            filtered = filtered.Where(d => string.Equals(d.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(d => string.Equals(d.ClientName, clientName, StringComparison.OrdinalIgnoreCase));
         }
 
         return filtered;
     }
 
-    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentId, string providerName, string connectionName)
+    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentId, string clientName, string connectionName)
     {
         if (!string.IsNullOrEmpty(deploymentId))
         {
@@ -97,9 +88,9 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             }
         }
 
-        if (!string.IsNullOrEmpty(providerName) && !string.IsNullOrEmpty(connectionName))
+        if (!string.IsNullOrEmpty(clientName) && !string.IsNullOrEmpty(connectionName))
         {
-            var deployment = await GetDefaultAsync(providerName, connectionName, type);
+            var deployment = await GetDefaultAsync(clientName, connectionName, type);
 
             if (deployment != null)
             {

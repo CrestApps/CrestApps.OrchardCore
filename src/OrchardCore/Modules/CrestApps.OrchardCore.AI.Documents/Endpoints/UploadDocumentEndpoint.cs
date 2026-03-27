@@ -6,6 +6,7 @@ using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -27,15 +28,16 @@ internal static class UploadDocumentEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpRequest request,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        ISourceCatalogManager<ChatInteraction> interactionManager,
-        IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore,
-        IAIDocumentProcessingService documentProcessingService,
-        IOptions<ChatDocumentsOptions> extractorOptions,
-        ILogger<Startup> logger,
-        IStringLocalizer<Startup> S)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] ICatalogManager<ChatInteraction> interactionManager,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIDocumentStore documentStore,
+        [FromServices] IAIDocumentChunkStore chunkStore,
+        [FromServices] IAIDocumentProcessingService documentProcessingService,
+        [FromServices] IOptions<ChatDocumentsOptions> extractorOptions,
+        [FromServices] ILogger<Startup> logger,
+        [FromServices] IStringLocalizer<Startup> S)
     {
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions))
         {
@@ -78,7 +80,8 @@ internal static class UploadDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(interaction.Source, interaction.ConnectionName);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: interaction.ChatDeploymentId);
+        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, deployment?.ConnectionName ?? interaction.ConnectionName);
 
         interaction.Documents ??= [];
 

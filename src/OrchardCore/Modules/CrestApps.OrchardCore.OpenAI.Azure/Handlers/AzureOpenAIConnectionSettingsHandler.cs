@@ -34,7 +34,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
-        if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
@@ -51,7 +51,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
     private Task PopulateAsync(AIProviderConnection connection, JsonNode data)
     {
-        if (!string.Equals(connection.Source, AzureOpenAIConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(connection.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }

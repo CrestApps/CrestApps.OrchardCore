@@ -5,7 +5,7 @@
 @model ShapeViewModel<ChatInteraction>
 
 <li>
-    <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-route-source="@Model.Value.Source" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
+    <a class="dropdown-item" asp-action="New" asp-controller="Admin" asp-area="@ChatInteractionsConstants.Feature.ChatInteractions">
         <i class="fa-solid fa-plus"></i> @T["Empty Chat"]
     </a>
 </li>

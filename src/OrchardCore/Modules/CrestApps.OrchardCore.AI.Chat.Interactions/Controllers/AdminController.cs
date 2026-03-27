@@ -27,23 +27,21 @@ public sealed class AdminController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly ISourceCatalogManager<ChatInteraction> _interactionManager;
+    private readonly ICatalogManager<ChatInteraction> _interactionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<ChatInteraction> _interactionDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
-    private readonly AIOptions _aiOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
 
     public AdminController(
-        ISourceCatalogManager<ChatInteraction> interactionManager,
+        ICatalogManager<ChatInteraction> interactionManager,
         IAuthorizationService authorizationService,
         IDisplayManager<ChatInteraction> interactionDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
-        IOptions<AIOptions> aiOptions,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer)
     {
@@ -52,7 +50,6 @@ public sealed class AdminController : Controller
         _interactionDisplayManager = interactionDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
-        _aiOptions = aiOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -93,12 +90,11 @@ public sealed class AdminController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<ChatInteraction>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         // Build display shapes for each interaction
@@ -189,8 +185,8 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [Admin("ai/chat/interaction/chat/{source}/{itemId?}", "ChatInteractionsChat")]
-    public async Task<ActionResult> Chat(string source, string itemId)
+    [Admin("ai/chat/interaction/chat/{itemId?}", "ChatInteractionsChat")]
+    public async Task<ActionResult> Chat(string itemId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions))
         {
@@ -220,14 +216,7 @@ public sealed class AdminController : Controller
         else
         {
             // Creating new interaction.
-            if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-            {
-                await _notifier.ErrorAsync(H["Unable to find a source that can handle '{0}'.", source]);
-
-                return RedirectToAction(nameof(Index));
-            }
-
-            interaction = await _interactionManager.NewAsync(source);
+            interaction = await _interactionManager.NewAsync();
 
             if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
             {
@@ -243,17 +232,16 @@ public sealed class AdminController : Controller
         var model = new EditChatInteractionEntryViewModel
         {
             ItemId = interaction.ItemId,
-            Source = interaction.Source,
-            DisplayName = isNew ? _aiOptions.ProfileSources[interaction.Source].DisplayName : (interaction.Title ?? "Untitled"),
+            DisplayName = isNew ? "New Chat" : (interaction.Title ?? "Untitled"),
             Editor = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: isNew),
         };
 
         return View(model);
     }
 
-    [Admin("ai/chat/interaction/new-chat/{source}", "NewInteractionsChat")]
-    public async Task<ActionResult> New(string source)
-        => RedirectToAction(nameof(Chat), new { source });
+    [Admin("ai/chat/interaction/new-chat", "NewInteractionsChat")]
+    public async Task<ActionResult> New()
+        => RedirectToAction(nameof(Chat));
 
     [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
     public async Task<ActionResult> Clone(string itemId)
@@ -270,7 +258,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(interaction.Source, System.Text.Json.JsonSerializer.SerializeToNode(interaction.Properties));
+        var clonedInteraction = await _interactionManager.NewAsync(interaction.Properties);
         clonedInteraction.Title = GetNextTitle(interaction.Title);
         clonedInteraction.ChatDeploymentId = interaction.ChatDeploymentId;
         clonedInteraction.ConnectionName = interaction.ConnectionName;
@@ -297,7 +285,6 @@ public sealed class AdminController : Controller
 
         return RedirectToAction(nameof(Chat), new
         {
-            source = clonedInteraction.Source,
             itemId = clonedInteraction.ItemId,
         });
     }

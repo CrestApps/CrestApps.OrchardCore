@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model AIProfileTemplateConnectionViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="InitialResponseHandlerName" class="@Orchard.GetLabelClasses()">@T["Initial response handler"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="InitialResponseHandlerName" class="form-select">
+            <option value="">@T["Default (AI)"]</option>
+            @foreach (var handler in Model.ResponseHandlers)
+            {
+                <option value="@handler.Value" selected="@(handler.Value == Model.InitialResponseHandlerName)">@handler.Text</option>
+            }
+        </select>
+        <span asp-validation-for="InitialResponseHandlerName" class="text-danger"></span>
+        <span class="hint">@T["The response handler used for new sessions created from profiles using this template. When set to a non-AI handler, prompts bypass AI and are routed to the specified handler from the start."]</span>
+    </div>
+</div>

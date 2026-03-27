@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Documents.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -31,16 +32,16 @@ internal static class UploadSessionDocumentEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpRequest request,
-        IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor,
-        IAIChatSessionManager sessionManager,
-        IAIDeploymentManager deploymentManager,
-        IAIDocumentStore documentStore,
-        IAIDocumentChunkStore chunkStore,
-        IAIDocumentProcessingService documentProcessingService,
-        IOptions<ChatDocumentsOptions> extractorOptions,
-        ILogger<Startup> logger,
-        IStringLocalizer<Startup> S)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAIChatSessionManager sessionManager,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIDocumentStore documentStore,
+        [FromServices] IAIDocumentChunkStore chunkStore,
+        [FromServices] IAIDocumentProcessingService documentProcessingService,
+        [FromServices] IOptions<ChatDocumentsOptions> extractorOptions,
+        [FromServices] ILogger<Startup> logger,
+        [FromServices] IStringLocalizer<Startup> S)
     {
         var httpContext = httpContextAccessor.HttpContext;
 
@@ -112,8 +113,9 @@ internal static class UploadSessionDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var connectionName = await ResolveConnectionNameAsync(profile, deploymentManager);
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(profile.Source, connectionName);
+        var deployment = await ResolveDeploymentAsync(profile, deploymentManager);
+        var connectionName = deployment?.ConnectionName;
+        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, connectionName);
 
         session.Documents ??= [];
 
@@ -207,18 +209,14 @@ internal static class UploadSessionDocumentEndpoint
         return profileManager != null ? await profileManager.FindByIdAsync(profileId) : null;
     }
 
-    private static async Task<string> ResolveConnectionNameAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
+    private static async Task<AIDeployment> ResolveDeploymentAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
     {
-        var deployment = await deploymentManager.ResolveAsync(
+        return await deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profile.ChatDeploymentId,
-            providerName: profile.Source)
-            ?? await deploymentManager.ResolveAsync(
+            deploymentId: profile.ChatDeploymentId)
+            ?? await deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId,
-                providerName: profile.Source);
-
-        return deployment?.ConnectionName;
+                deploymentId: profile.UtilityDeploymentId);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

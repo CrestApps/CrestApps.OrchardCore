@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class PublishContentTool: AIFunction
+public sealed class PublishContentTool : AIFunction
 {
     public const string TheName = "publishContentItem";
 

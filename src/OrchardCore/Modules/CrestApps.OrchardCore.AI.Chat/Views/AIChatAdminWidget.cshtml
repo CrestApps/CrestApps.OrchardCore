@@ -205,18 +205,6 @@
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
     };
 
-    var handlerResolver = ViewContext.HttpContext.RequestServices.GetService<IChatResponseHandlerResolver>();
-    if (handlerResolver != null)
-    {
-        var handlers = handlerResolver.GetAll().ToList();
-        if (handlers.Count > 1)
-        {
-            chatConfig["responseHandlers"] = handlers
-                .Select(h => new { name = h.Name })
-                .ToList();
-        }
-    }
-
     if (sessionDocumentsEnabled)
     {
         chatConfig["sessionDocumentsEnabled"] = true;

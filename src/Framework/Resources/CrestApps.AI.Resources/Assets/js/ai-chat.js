@@ -20,9 +20,9 @@ window.openAIChatManager = function () {
             <div v-for="(message, index) in messages" :key="'msg-' + index" class="ai-chat-message-item">
                 <div>
                     <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">{{ userLabel }}</div>
-                    <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                        <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
-                        {{ assistantLabel }}
+                    <div v-else-if="message.role !== 'indicator'" :class="getAssistantRoleClasses(message)">
+                        <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
+                        {{ getAssistantLabel(message) }}
                     </div>
                     <div class="lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
@@ -383,8 +383,6 @@ window.openAIChatManager = function () {
                     conversationModeEnabled: config.chatMode === 'Conversation',
                     conversationButton: null,
                     isConversationMode: false,
-                    selectedResponseHandler: '',
-                    responseHandlers: config.responseHandlers || [],
                 };
             },
             computed: {
@@ -527,50 +525,6 @@ window.openAIChatManager = function () {
                     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
                     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
                 },
-                renderHandlerSelector() {
-                    if (!this.placeholder || this.responseHandlers.length === 0) {
-                        return;
-                    }
-
-                    var existing = this.placeholder.querySelector('.ai-chat-handler-selector');
-                    if (existing) {
-                        return;
-                    }
-
-                    var container = document.createElement('div');
-                    container.className = 'ai-chat-handler-selector mt-2';
-                    container.style.cssText = 'font-size: 0.85rem;';
-
-                    var label = document.createElement('label');
-                    label.className = 'form-label mb-1';
-                    label.style.fontSize = '0.8rem';
-                    label.textContent = 'Response Handler';
-
-                    var select = document.createElement('select');
-                    select.className = 'form-select form-select-sm';
-
-                    var defaultOption = document.createElement('option');
-                    defaultOption.value = '';
-                    defaultOption.textContent = 'Default (AI)';
-                    select.appendChild(defaultOption);
-
-                    for (var i = 0; i < this.responseHandlers.length; i++) {
-                        var handler = this.responseHandlers[i];
-                        var option = document.createElement('option');
-                        option.value = handler.name;
-                        option.textContent = handler.name;
-                        select.appendChild(option);
-                    }
-
-                    var self = this;
-                    select.addEventListener('change', function () {
-                        self.selectedResponseHandler = this.value;
-                    });
-
-                    container.appendChild(label);
-                    container.appendChild(select);
-                    this.placeholder.appendChild(container);
-                },
                 renderDocumentBar() {
                     if (!this.documentBar) return;
 
@@ -663,6 +617,58 @@ window.openAIChatManager = function () {
                     var div = document.createElement('div');
                     div.textContent = text;
                     return div.innerHTML;
+                },
+                normalizeAssistantAppearance(appearance) {
+                    if (!appearance) {
+                        return null;
+                    }
+
+                    var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
+                    var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+                    var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+                    var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+
+                    if (!label && !icon && !cssClass && !disableStreamingAnimation) {
+                        return null;
+                    }
+
+                    return {
+                        label: label,
+                        icon: icon,
+                        cssClass: cssClass,
+                        disableStreamingAnimation: disableStreamingAnimation,
+                    };
+                },
+                getAssistantLabel(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.label ? appearance.label : this.assistantLabel;
+                },
+                getAssistantRoleClasses(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    var classes = ['ai-chat-msg-role'];
+
+                    if (appearance && appearance.cssClass) {
+                        classes.push(appearance.cssClass);
+                    } else {
+                        classes.push('ai-chat-msg-role-assistant');
+                    }
+
+                    return classes;
+                },
+                getAssistantIconClasses(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+                },
+                getAssistantIcon(message) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+                },
+                shouldAnimateAssistantIcon(message, index) {
+                    var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+                    return !!message &&
+                        message.isStreaming &&
+                        index === this.lastAssistantIndex &&
+                        !(appearance && appearance.disableStreamingAnimation);
                 },
                 async startConnection() {
                     this.connection = new signalR.HubConnectionBuilder()
@@ -790,7 +796,7 @@ window.openAIChatManager = function () {
                         }
                     });
 
-                    this.connection.on("ReceiveConversationAssistantToken", (sessionId, messageId, token, responseId) => {
+                    this.connection.on("ReceiveConversationAssistantToken", (sessionId, messageId, token, responseId, appearance) => {
                         if (!this._conversationAssistantMessage) {
                             this.stopAudio();
                             this.hideTypingIndicator();
@@ -810,6 +816,7 @@ window.openAIChatManager = function () {
                                 htmlContent: "",
                                 isStreaming: true,
                                 userRating: null,
+                                appearance: this.normalizeAssistantAppearance(appearance),
                             };
                             this.messages.push(newMessage);
                             this._conversationAssistantMessage = { index: msgIndex, content: '' };
@@ -818,6 +825,9 @@ window.openAIChatManager = function () {
                         this._conversationAssistantMessage.content += token;
                         var msg = this.messages[this._conversationAssistantMessage.index];
                         if (msg) {
+                            if (!msg.appearance) {
+                                msg.appearance = this.normalizeAssistantAppearance(appearance);
+                            }
                             msg.content = this._conversationAssistantMessage.content;
                             msg.htmlContent = parseMarkdownContent(msg.content, msg);
                             this.$nextTick(() => {
@@ -895,6 +905,10 @@ window.openAIChatManager = function () {
                     }
                 },
                 addMessageInternal(message) {
+                    if (message.role === 'assistant') {
+                        message.appearance = this.normalizeAssistantAppearance(message.appearance);
+                    }
+
                     if (message.content && !message.htmlContent) {
                         message.htmlContent = parseMarkdownContent(message.content, message);
                     }
@@ -1744,20 +1758,13 @@ window.openAIChatManager = function () {
                         return;
                     }
 
-                    const handlerName = this.selectedResponseHandler || null;
-
-                    this.connection.invoke("StartSession", profileId, handlerName).catch(err => console.error(err));
+                    this.connection.invoke("StartSession", profileId, null).catch(err => console.error(err));
                 },
                 initializeApp() {
                     this.inputElement = document.querySelector(config.inputElementSelector);
                     this.buttonElement = document.querySelector(config.sendButtonElementSelector);
                     this.chatContainer = document.querySelector(config.chatContainerElementSelector);
                     this.placeholder = document.querySelector(config.placeholderElementSelector);
-
-                    // Render the handler selector in the placeholder if multiple handlers are available.
-                    if (this.placeholder && this.responseHandlers.length > 0) {
-                        this.renderHandlerSelector();
-                    }
 
                     const sessionId = this.getSessionId();
                     if (!config.widget && sessionId) {

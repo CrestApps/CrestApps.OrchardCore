@@ -5,7 +5,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Services;
 

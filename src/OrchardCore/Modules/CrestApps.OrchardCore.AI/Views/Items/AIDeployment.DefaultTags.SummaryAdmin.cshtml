@@ -14,19 +14,19 @@
     </span>
 }
 
-<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
-    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ClientName
 </span>
 
 @if (!string.IsNullOrEmpty(Model.Value.ConnectionName))
 {
-    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
+    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection name"]">
         <i class="text-secondary" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
     </span>
 }
 else
 {
-    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Contained Connection"]">
-        <i class="text-secondary" aria-hidden="true"></i>@T["Contained Connection"]
+    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Contained connection"]">
+        <i class="text-secondary" aria-hidden="true"></i>@T["Contained connection"]
     </span>
 }

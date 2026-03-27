@@ -3,7 +3,7 @@ using CrestApps.Services;
 
 namespace CrestApps.AI;
 
-public interface IAIProfileManager : INamedSourceCatalogManager<AIProfile>
+public interface IAIProfileManager : INamedCatalogManager<AIProfile>
 {
     /// <summary>
     /// Asynchronously retrieves a collection of AI chat profiles of the specified type.

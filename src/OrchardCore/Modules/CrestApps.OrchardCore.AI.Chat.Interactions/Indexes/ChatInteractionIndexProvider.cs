@@ -23,7 +23,6 @@ internal sealed class ChatInteractionIndexProvider : IndexProvider<ChatInteracti
                 {
                     ItemId = interaction.ItemId,
                     UserId = interaction.OwnerId,
-                    Source = interaction.Source,
                     Title = Str.Truncate(interaction.Title, 255),
                     CreatedUtc = interaction.CreatedUtc,
                 };

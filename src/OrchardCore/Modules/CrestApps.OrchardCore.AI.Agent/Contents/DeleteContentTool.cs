@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
-public sealed class DeleteContentTool: AIFunction
+public sealed class DeleteContentTool : AIFunction
 {
     public const string TheName = "deleteContentItem";
 

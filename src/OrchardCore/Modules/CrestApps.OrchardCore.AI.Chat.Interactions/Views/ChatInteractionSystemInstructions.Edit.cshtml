@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionViewModel
+
+<div class="mb-3" data-ci-system-message-wrapper>
+    <label asp-for="SystemMessage" class="form-label">
+        @T["System instructions"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["Provides instructions to the AI on how to behave, what role to play, and what style to use in responses. This is the 'persona' or 'context' that guides all AI responses."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <textarea asp-for="SystemMessage" class="form-control" rows="4" placeholder="@T["Optional system instructions to guide AI behavior..."]"></textarea>
+</div>

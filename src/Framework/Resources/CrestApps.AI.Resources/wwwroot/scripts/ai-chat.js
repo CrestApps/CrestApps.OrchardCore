@@ -35,7 +35,7 @@ window.openAIChatManager = function () {
     thumbsDownTitle: 'Thumbs down',
     copyTitle: 'Click here to copy response to clipboard.',
     codeCopiedText: 'Copied!',
-    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                        <span :class=\"message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'\"><i class=\"fa fa-robot\"></i></span>\n                        {{ assistantLabel }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
+    messageTemplate: "\n        <div class=\"ai-chat-messages\">\n            <div v-for=\"(message, index) in messages\" :key=\"'msg-' + index\" class=\"ai-chat-message-item\">\n                <div>\n                    <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">{{ userLabel }}</div>\n                    <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                        <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                        {{ getAssistantLabel(message) }}\n                    </div>\n                    <div class=\"lh-base\">\n                        <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                        <div v-html=\"message.htmlContent\"></div>\n                        <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                            <template v-if=\"metricsEnabled && message.role === 'assistant'\">\n                                <span class=\"ai-chat-message-assistant-feedback\" :data-message-id=\"message.id\">\n                                    <button class=\"btn btn-sm btn-link text-success p-0 me-2 button-message-toolbox rate-up-btn\" @click=\"rateMessage(message, true, $event)\" :title=\"thumbsUpTitle\">\n                                        <i class=\"fa-regular fa-thumbs-up\"></i>\n                                    </button>\n                                    <button class=\"btn btn-sm btn-link text-danger p-0 me-2 button-message-toolbox rate-down-btn\" @click=\"rateMessage(message, false, $event)\" :title=\"thumbsDownTitle\">\n                                        <i class=\"fa-regular fa-thumbs-down\"></i>\n                                    </button>\n                                </span>\n                            </template>\n                            <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" :title=\"copyTitle\">\n                                <i class=\"fa-solid fa-copy\"></i>\n                            </button>\n                        </span>\n                    </div>\n                </div>\n            </div>\n            <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                <div class=\"ai-chat-notification-content\">\n                    <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                    <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                    <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                        <i class=\"fa-solid fa-xmark\"></i>\n                    </button>\n                </div>\n                <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                    <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                        <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                        {{ action.label }}\n                    </button>\n                </div>\n            </div>\n        </div>\n    ",
     indicatorTemplate: "\n        <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n            <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n            Assistant\n        </div>\n    "
   };
 
@@ -327,9 +327,7 @@ window.openAIChatManager = function () {
           ttsButton: null,
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
-          isConversationMode: false,
-          selectedResponseHandler: '',
-          responseHandlers: config.responseHandlers || []
+          isConversationMode: false
         };
       },
       computed: {
@@ -539,42 +537,6 @@ window.openAIChatManager = function () {
           if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
           return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         },
-        renderHandlerSelector: function renderHandlerSelector() {
-          if (!this.placeholder || this.responseHandlers.length === 0) {
-            return;
-          }
-          var existing = this.placeholder.querySelector('.ai-chat-handler-selector');
-          if (existing) {
-            return;
-          }
-          var container = document.createElement('div');
-          container.className = 'ai-chat-handler-selector mt-2';
-          container.style.cssText = 'font-size: 0.85rem;';
-          var label = document.createElement('label');
-          label.className = 'form-label mb-1';
-          label.style.fontSize = '0.8rem';
-          label.textContent = 'Response Handler';
-          var select = document.createElement('select');
-          select.className = 'form-select form-select-sm';
-          var defaultOption = document.createElement('option');
-          defaultOption.value = '';
-          defaultOption.textContent = 'Default (AI)';
-          select.appendChild(defaultOption);
-          for (var i = 0; i < this.responseHandlers.length; i++) {
-            var handler = this.responseHandlers[i];
-            var option = document.createElement('option');
-            option.value = handler.name;
-            option.textContent = handler.name;
-            select.appendChild(option);
-          }
-          var self = this;
-          select.addEventListener('change', function () {
-            self.selectedResponseHandler = this.value;
-          });
-          container.appendChild(label);
-          container.appendChild(select);
-          this.placeholder.appendChild(container);
-        },
         renderDocumentBar: function renderDocumentBar() {
           if (!this.documentBar) return;
           if (!config.sessionDocumentsEnabled) {
@@ -660,6 +622,50 @@ window.openAIChatManager = function () {
           var div = document.createElement('div');
           div.textContent = text;
           return div.innerHTML;
+        },
+        normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
+          if (!appearance) {
+            return null;
+          }
+          var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
+          var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+          var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+          var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+          if (!label && !icon && !cssClass && !disableStreamingAnimation) {
+            return null;
+          }
+          return {
+            label: label,
+            icon: icon,
+            cssClass: cssClass,
+            disableStreamingAnimation: disableStreamingAnimation
+          };
+        },
+        getAssistantLabel: function getAssistantLabel(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.label ? appearance.label : this.assistantLabel;
+        },
+        getAssistantRoleClasses: function getAssistantRoleClasses(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          var classes = ['ai-chat-msg-role'];
+          if (appearance && appearance.cssClass) {
+            classes.push(appearance.cssClass);
+          } else {
+            classes.push('ai-chat-msg-role-assistant');
+          }
+          return classes;
+        },
+        getAssistantIconClasses: function getAssistantIconClasses(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+        },
+        getAssistantIcon: function getAssistantIcon(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+        },
+        shouldAnimateAssistantIcon: function shouldAnimateAssistantIcon(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return !!message && message.isStreaming && index === this.lastAssistantIndex && !(appearance && appearance.disableStreamingAnimation);
         },
         startConnection: function startConnection() {
           var _this3 = this;
@@ -783,7 +789,7 @@ window.openAIChatManager = function () {
                       _this3.scrollToBottom();
                     }
                   });
-                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId) {
+                  _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, appearance) {
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
@@ -801,7 +807,8 @@ window.openAIChatManager = function () {
                         content: "",
                         htmlContent: "",
                         isStreaming: true,
-                        userRating: null
+                        userRating: null,
+                        appearance: _this3.normalizeAssistantAppearance(appearance)
                       };
                       _this3.messages.push(newMessage);
                       _this3._conversationAssistantMessage = {
@@ -812,6 +819,9 @@ window.openAIChatManager = function () {
                     _this3._conversationAssistantMessage.content += token;
                     var msg = _this3.messages[_this3._conversationAssistantMessage.index];
                     if (msg) {
+                      if (!msg.appearance) {
+                        msg.appearance = _this3.normalizeAssistantAppearance(appearance);
+                      }
                       msg.content = _this3._conversationAssistantMessage.content;
                       msg.htmlContent = parseMarkdownContent(msg.content, msg);
                       _this3.$nextTick(function () {
@@ -888,6 +898,9 @@ window.openAIChatManager = function () {
         },
         addMessageInternal: function addMessageInternal(message) {
           var _this4 = this;
+          if (message.role === 'assistant') {
+            message.appearance = this.normalizeAssistantAppearance(message.appearance);
+          }
           if (message.content && !message.htmlContent) {
             message.htmlContent = parseMarkdownContent(message.content, message);
           }
@@ -1804,8 +1817,7 @@ window.openAIChatManager = function () {
           if (!profileId || !this.connection) {
             return;
           }
-          var handlerName = this.selectedResponseHandler || null;
-          this.connection.invoke("StartSession", profileId, handlerName)["catch"](function (err) {
+          this.connection.invoke("StartSession", profileId, null)["catch"](function (err) {
             return console.error(err);
           });
         },
@@ -1815,11 +1827,6 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
-
-          // Render the handler selector in the placeholder if multiple handlers are available.
-          if (this.placeholder && this.responseHandlers.length > 0) {
-            this.renderHandlerSelector();
-          }
           var sessionId = this.getSessionId();
           if (!config.widget && sessionId) {
             this.loadSession(sessionId);

@@ -17,7 +17,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
 
     public void Exporting(ExportingAIProviderConnectionContext context)
     {
-        if (!string.Equals(context.Connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return;
         }
@@ -37,7 +37,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
 
     public void Initializing(InitializingAIProviderConnectionContext context)
     {
-        if (!string.Equals(context.Connection.ProviderName, AzureAIInferenceConstants.ProviderName, StringComparison.Ordinal))
+        if (!string.Equals(context.Connection.ClientName, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
         {
             return;
         }

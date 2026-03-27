@@ -31,7 +31,6 @@ public sealed class ProfilesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
-    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -42,7 +41,6 @@ public sealed class ProfilesController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,
-        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<ProfilesController> htmlLocalizer,
         IStringLocalizer<ProfilesController> stringLocalizer)
@@ -51,7 +49,6 @@ public sealed class ProfilesController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _profileDisplayManager = profileDisplayManager;
-        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -85,12 +82,11 @@ public sealed class ProfilesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIProfile>
+        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIProfile>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            Sources = _aiOptions.ProfileSources.Select(x => x.Key).Order(),
         };
 
         foreach (var model in result.Entries)
@@ -127,26 +123,19 @@ public sealed class ProfilesController : Controller
         });
     }
 
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> Create(string source, [FromQuery] string templateId)
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> Create([FromQuery] string templateId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var profile = await _profileManager.NewAsync(source);
+        var profile = await _profileManager.NewAsync();
 
         if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
@@ -164,7 +153,7 @@ public sealed class ProfilesController : Controller
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.BuildEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -173,33 +162,26 @@ public sealed class ProfilesController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("ai/profile/create/{source}", "AIProfilesCreate")]
-    public async Task<ActionResult> CreatePost(string source)
+    [Admin("ai/profile/create", "AIProfilesCreate")]
+    public async Task<ActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        if (!_aiOptions.ProfileSources.TryGetValue(source, out var provider))
-        {
-            await _notifier.ErrorAsync(H["Unable to find a profile-source that can handle the source '{Source}'.", source]);
-
-            return RedirectToAction(nameof(Index));
-        }
-
-        var profile = await _profileManager.NewAsync(source);
+        var profile = await _profileManager.NewAsync();
 
         if (profile == null)
         {
-            await _notifier.ErrorAsync(H["Invalid profile source."]);
+            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
 
             return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
         {
-            DisplayName = provider.DisplayName,
+            DisplayName = S["New Profile"],
             Editor = await _profileDisplayManager.UpdateEditorAsync(profile, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 

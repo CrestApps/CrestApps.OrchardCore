@@ -30,6 +30,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _aICompletionService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAITemplateService _aiTemplateService;
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -45,6 +46,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIChatSessionManager chatSessionManager,
         IAIChatSessionPromptStore promptStore,
         IAICompletionService aICompletionService,
+        IAIDeploymentManager deploymentManager,
         IAITemplateService aiTemplateService,
         IOmnichannelChannelEndpointManager channelEndpointsManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
@@ -58,6 +60,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _chatSessionManager = chatSessionManager;
         _promptStore = promptStore;
         _aICompletionService = aICompletionService;
+        _deploymentManager = deploymentManager;
         _aiTemplateService = aiTemplateService;
         _channelEndpointsManager = channelEndpointsManager;
         _campaignManager = campaignManager;
@@ -172,7 +175,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             context.AdditionalProperties["Session"] = chatSession;
 
-            var completion = await _aICompletionService.CompleteAsync(campaign.ProviderName, transcript, context);
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
+
+            var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context);
 
             bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
 

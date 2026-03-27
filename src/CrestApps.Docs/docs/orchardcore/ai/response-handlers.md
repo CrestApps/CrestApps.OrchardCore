@@ -80,6 +80,15 @@ public sealed class GenesysResponseHandler : IChatResponseHandler
         ChatResponseHandlerContext context,
         CancellationToken cancellationToken = default)
     {
+        // Optional: set this only when you want to override the default bot appearance.
+        context.AssistantAppearance = new AssistantMessageAppearance
+        {
+            Label = "Mike",
+            Icon = "fa-solid fa-headset",
+            CssClass = "text-secondary",
+            DisableStreamingAnimation = true,
+        };
+
         // Forward the prompt to the external system.
         // The external system will respond later via webhook.
         var genesysClient = context.Services.GetRequiredService<IGenesysClient>();
@@ -97,6 +106,14 @@ public sealed class GenesysResponseHandler : IChatResponseHandler
     }
 }
 ```
+
+Setting `context.AssistantAppearance` is optional. If you leave it unset, the chat UI keeps the default assistant/bot appearance.
+
+Use `context.AssistantAppearance` only when your handler needs the streamed assistant message to render as something other than the default AI bot. This is especially useful for live-agent or transferred conversations where you want a custom label such as `Mike` or `Agent`, a headset icon, a different Bootstrap text color, or no streaming spinner/fade animation.
+
+For streaming handlers, setting `context.AssistantAppearance` is enough because the hub sends that same value to the client and persists it on the assistant prompt with `assistantMessage.Put(context.AssistantAppearance)`.
+
+For deferred handlers that return `ChatResponseHandlerResult.Deferred()`, `context.AssistantAppearance` only affects the current handler invocation. Your webhook or callback must also persist the same `AssistantMessageAppearance` on the assistant prompt entity with `prompt.Put(...)` and send it with `ReceiveConversationAssistantToken(...)` so the appearance is both saved and replayed to connected clients.
 
 ### Step 2: Register the Handler
 
@@ -136,6 +153,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Entities;
 
 internal static class GenesysWebhookEndpoint
 {
@@ -171,6 +189,7 @@ internal static class GenesysWebhookEndpoint
             }
 
             // Save the agent's response as an assistant prompt.
+            // For deferred handlers, this is where the appearance becomes durable.
             var prompt = new AIChatSessionPrompt
             {
                 ItemId = IdGenerator.GenerateId(),
@@ -178,15 +197,28 @@ internal static class GenesysWebhookEndpoint
                 Role = ChatRole.Assistant,
                 Content = payload.AgentMessage,
             };
+            prompt.Put(new AssistantMessageAppearance
+            {
+                Label = "Mike",
+                Icon = "fa-solid fa-headset",
+                CssClass = "text-secondary",
+                DisableStreamingAnimation = true,
+            });
             await promptStore.CreateAsync(prompt);
 
-            // Push the new assistant message directly to connected client(s).
+            // Push the new assistant message directly to connected client(s),
+            // including the saved appearance metadata.
             // There is no built-in "ReceiveMessage" client method for deferred webhook replies.
             // The current UI appends assistant messages through the conversation events.
             var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
 
             await chatHubContext.Clients.Group(groupName)
-                .ReceiveConversationAssistantToken(session.SessionId, prompt.ItemId, payload.AgentMessage, prompt.ItemId);
+                .ReceiveConversationAssistantToken(
+                    session.SessionId,
+                    prompt.ItemId,
+                    payload.AgentMessage,
+                    prompt.ItemId,
+                    prompt.As<AssistantMessageAppearance>());
             await chatHubContext.Clients.Group(groupName)
                 .ReceiveConversationAssistantComplete(session.SessionId, prompt.ItemId);
         }
@@ -201,22 +233,35 @@ internal static class GenesysWebhookEndpoint
             }
 
             // Save the agent's response as an assistant prompt.
+            // For deferred handlers, this is where the appearance becomes durable.
             var prompt = new ChatInteractionPrompt
             {
                 ItemId = IdGenerator.GenerateId(),
-                InteractionId = interaction.ItemId,
+                ChatInteractionId = interaction.ItemId,
                 Role = ChatRole.Assistant,
-                Content = payload.AgentMessage,
+                Text = payload.AgentMessage,
             };
+            prompt.Put(new AssistantMessageAppearance
+            {
+                Icon = "fa-solid fa-headset",
+                CssClass = "text-secondary",
+                DisableStreamingAnimation = true,
+            });
             await interactionPromptStore.CreateAsync(prompt);
 
-            // Push the new assistant message directly to connected client(s).
+            // Push the new assistant message directly to connected client(s),
+            // including the saved appearance metadata.
             // Deferred webhook replies are surfaced through the conversation events, not a
             // nonexistent "ReceiveMessage" event.
             var groupName = ChatInteractionHub.GetInteractionGroupName(interaction.ItemId);
 
             await interactionHubContext.Clients.Group(groupName)
-                .ReceiveConversationAssistantToken(interaction.ItemId, prompt.ItemId, payload.AgentMessage, prompt.ItemId);
+                .ReceiveConversationAssistantToken(
+                    interaction.ItemId,
+                    prompt.ItemId,
+                    payload.AgentMessage,
+                    prompt.ItemId,
+                    prompt.As<AssistantMessageAppearance>());
 
             await interactionHubContext.Clients.Group(groupName)
                 .ReceiveConversationAssistantComplete(interaction.ItemId, prompt.ItemId);
@@ -243,7 +288,7 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 :::important
 `ReceiveMessage` is **not** a built-in SignalR client method in the current chat UI, so calling `SendAsync("ReceiveMessage", ...)` will not update the browser. The built-in client methods are:
 
-- `ReceiveConversationAssistantToken` + `ReceiveConversationAssistantComplete` to append a new assistant message directly to the current UI.
+- `ReceiveConversationAssistantToken` + `ReceiveConversationAssistantComplete` to append a new assistant message directly to the current UI. `ReceiveConversationAssistantToken` accepts an optional `AssistantMessageAppearance` so services can override the visible assistant label, icon, text color class, and streaming animation behavior.
 - `LoadSession` / `LoadInteraction` to reload the full transcript after you persist a deferred assistant message.
 - `ReceiveNotification`, `UpdateNotification`, and `RemoveNotification` for transient system messages sent through `IChatNotificationSender`.
 
@@ -575,11 +620,22 @@ public sealed class GenesysWebSocketRelay : IExternalChatRelay
                 Role = ChatRole.Assistant,
                 Content = relayEvent.Content,
             };
+            prompt.Put(new AssistantMessageAppearance
+            {
+                Icon = "fa-solid fa-headset",
+                CssClass = "text-secondary",
+                DisableStreamingAnimation = true,
+            });
             await promptStore.CreateAsync(prompt);
 
             var groupName = AIChatHub.GetSessionGroupName(session.SessionId);
             await hubContext.Clients.Group(groupName)
-                .ReceiveConversationAssistantToken(session.SessionId, prompt.ItemId, relayEvent.Content, prompt.ItemId);
+                .ReceiveConversationAssistantToken(
+                    session.SessionId,
+                    prompt.ItemId,
+                    relayEvent.Content,
+                    prompt.ItemId,
+                    prompt.As<AssistantMessageAppearance>());
             
             await hubContext.Clients.Group(groupName)
                 .ReceiveConversationAssistantComplete(session.SessionId, prompt.ItemId);
@@ -982,9 +1038,11 @@ profile.AlterSettings<ResponseHandlerProfileSettings>(settings =>
 });
 ```
 
-### Via Chat UI
+For custom clients that need to override the profile default at session start, call the chat hub directly and pass the handler name as the second argument to `AIChatHub.StartSession(profileId, initialResponseHandlerName)`.
 
-When multiple response handlers are registered, the chat UI displays a **Response Handler** dropdown in the placeholder area before a session starts. Users can select which handler to use for their session, overriding the profile's default.
+### Built-in chat UI behavior
+
+The built-in CrestApps chat UI never displays a response-handler picker to end users. Sessions always start with the AI profile's configured initial response handler, or the default AI handler when the profile does not specify one.
 
 ## SignalR Groups for Deferred Responses
 

@@ -23,7 +23,7 @@ public sealed class SystemDefinedAIProfileMigrations : DataMigration
 
     public async Task<int> CreateAsync()
     {
-        var profile = await _profileManager.NewAsync("Azure");
+        var profile = await _profileManager.NewAsync();
 
         profile.Name = "UniqueTechnicalName";
         profile.DisplayText = "A Display name for the profile";
@@ -136,16 +136,15 @@ You can create or update AI chat profiles via the Recipes module using the follo
       "name": "AIProfile",
       "profiles": [
         {
-          "Source": "CustomSource",
           "Name": "ExampleProfile",
           "DisplayText": "Example Profile",
           "WelcomeMessage": "What do you want to know?",
-          "FunctionNames": [],
           "Type": "Chat",
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
-          "ChatDeploymentId":"<!-- Deployment ID for chat completions; leave blank for default. -->",
-          "UtilityDeploymentId":"<!-- Deployment ID for utility/auxiliary tasks; leave blank for default. -->",
+          "ConnectionName": "<!-- Optional connection fallback when no deployment IDs are set. -->",
+          "ChatDeploymentId":"<!-- Optional deployment ID for chat completions. -->",
+          "UtilityDeploymentId":"<!-- Optional deployment ID for utility/auxiliary tasks. -->",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are an AI assistant that helps people find information.",
@@ -164,6 +163,8 @@ You can create or update AI chat profiles via the Recipes module using the follo
 }
 ```
 
+The `AIProfile` recipe step no longer requires a `Source` property. Profiles are source-agnostic, and the active provider is resolved from the selected deployment or, when no deployment is set, from the optional `ConnectionName` fallback.
+
 ## Managing AI Deployments via Recipes
 
 You can create or update AI deployments using the following recipe:
@@ -176,7 +177,7 @@ You can create or update AI deployments using the following recipe:
       "deployments": [
         {
           "Name": "<!-- Deployment name as specified by the vendor -->",
-          "ProviderName": "<!-- Provider name (e.g., OpenAI, DeepSeek) -->",
+          "ClientName": "<!-- Client name (for example OpenAI or Azure) -->",
           "ConnectionName": "<!-- Connection name used to configure the provider -->",
           "Type": "<!-- Deployment type: Chat, Utility, Embedding, Image, SpeechToText, or TextToSpeech -->",
           "IsDefault": false
@@ -186,6 +187,8 @@ You can create or update AI deployments using the following recipe:
   ]
 }
 ```
+
+`ClientName` is the current recipe property for typed deployments. `ProviderName` is retained only for backward compatibility.
 
 ### Deleting AI Deployments via Recipes
 

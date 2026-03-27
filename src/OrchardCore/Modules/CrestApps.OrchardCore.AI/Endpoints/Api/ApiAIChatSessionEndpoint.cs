@@ -5,7 +5,9 @@ using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -22,13 +24,13 @@ internal static class ApiAIChatSessionEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
-       IAuthorizationService authorizationService,
-       INamedCatalogManager<AIProfile> profileManager,
-       IAIChatSessionManager sessionManager,
-       IAIChatSessionPromptStore promptStore,
-       ILiquidTemplateManager liquidTemplateManager,
-       IHttpContextAccessor httpContextAccessor,
-       string sessionId)
+       [FromServices] IAuthorizationService authorizationService,
+       [FromServices] INamedCatalogManager<AIProfile> profileManager,
+       [FromServices] IAIChatSessionManager sessionManager,
+       [FromServices] IAIChatSessionPromptStore promptStore,
+       [FromServices] ILiquidTemplateManager liquidTemplateManager,
+       [FromServices] IHttpContextAccessor httpContextAccessor,
+       [FromQuery] string sessionId)
     {
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -67,6 +69,7 @@ internal static class ApiAIChatSessionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
+                Appearance = message.As<AssistantMessageAppearance>(),
             })
         });
     }

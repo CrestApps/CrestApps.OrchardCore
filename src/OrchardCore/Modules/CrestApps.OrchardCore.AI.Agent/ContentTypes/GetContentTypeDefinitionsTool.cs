@@ -8,7 +8,7 @@ using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 
-public sealed class GetContentTypeDefinitionsTool: AIFunction
+public sealed class GetContentTypeDefinitionsTool : AIFunction
 {
     public const string TheName = "getContentTypeDefinition";
 

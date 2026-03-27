@@ -3,7 +3,7 @@ using CrestApps.Services;
 
 namespace CrestApps.AI;
 
-public interface IAIProfileStore : INamedSourceCatalog<AIProfile>
+public interface IAIProfileStore : INamedCatalog<AIProfile>
 {
     /// <summary>
     /// Asynchronously retrieves a collection of AI profiles of the specified type

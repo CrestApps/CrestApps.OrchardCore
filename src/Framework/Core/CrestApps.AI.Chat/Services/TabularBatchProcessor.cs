@@ -15,17 +15,20 @@ namespace CrestApps.AI.Chat.Services;
 public sealed class TabularBatchProcessor : ITabularBatchProcessor
 {
     private readonly IAICompletionService _completionService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAITemplateService _aiTemplateService;
     private readonly RowLevelTabularBatchOptions _settings;
     private readonly ILogger<TabularBatchProcessor> _logger;
 
     public TabularBatchProcessor(
         IAICompletionService completionService,
+        IAIDeploymentManager deploymentManager,
         IAITemplateService aiTemplateService,
         IOptions<RowLevelTabularBatchOptions> settings,
         ILogger<TabularBatchProcessor> logger)
     {
         _completionService = completionService;
+        _deploymentManager = deploymentManager;
         _aiTemplateService = aiTemplateService;
         _settings = settings.Value;
         _logger = logger;
@@ -265,15 +268,17 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 FrequencyPenalty = sourceContext.FrequencyPenalty,
                 PresencePenalty = sourceContext.PresencePenalty,
                 MaxTokens = sourceContext.MaxTokens,
-                UserMarkdownInResponse = false, // We want structured output
                 DisableTools = true, // Disable tools for batch processing
             };
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.BatchTimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: sourceContext.ChatDeploymentId)
+                ?? throw new InvalidOperationException("Unable to resolve a chat deployment for batch processing.");
+
             var response = await _completionService.CompleteAsync(
-                context.Source,
+                deployment,
                 [new ChatMessage(ChatRole.User, batchPrompt)],
                 completionContext,
                 linkedCts.Token);

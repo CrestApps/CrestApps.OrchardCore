@@ -68,10 +68,10 @@ public abstract class AICompletionServiceBase
     {
         if (DeploymentResolver != null)
         {
-            var deployment = await DeploymentResolver.ResolveAsync(
+            var deployment = await DeploymentResolver.ResolveOrDefaultAsync(
                 type,
                 deploymentId: deploymentId,
-                providerName: providerName,
+                clientName: providerName,
                 connectionName: connectionName);
 
             if (deployment != null)
@@ -99,23 +99,5 @@ public abstract class AICompletionServiceBase
     protected virtual Task<AIDeployment> GetDeploymentAsync(AICompletionContext content)
     {
         return Task.FromResult<AIDeployment>(null);
-    }
-
-    protected async Task<string> GetSystemMessageAsync(AICompletionContext context)
-    {
-        var systemMessage = string.Empty;
-
-        if (!string.IsNullOrEmpty(context.SystemMessage))
-        {
-            systemMessage = context.SystemMessage;
-        }
-
-        if (context.UserMarkdownInResponse)
-        {
-            var markdownInstruction = await AITemplateService.RenderAsync(AITemplateIds.UseMarkdownSyntax);
-            systemMessage += Environment.NewLine + markdownInstruction;
-        }
-
-        return systemMessage;
     }
 }

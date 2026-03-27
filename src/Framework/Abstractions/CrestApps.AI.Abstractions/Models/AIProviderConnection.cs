@@ -29,6 +29,18 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
 
     public bool IsDefault { get; set; }
 
+    /// <summary>
+    /// Gets or sets the technical name of the AI client implementation associated with this connection.
+    /// This maps to a registered key in <c>AIOptions.Clients</c>.
+    /// </summary>
+    [JsonIgnore]
+    public string ClientName
+    {
+        get => Source;
+        set => Source = value;
+    }
+
+    [Obsolete("Use ClientName instead. Retained for backward compatibility.")]
     [JsonIgnore]
     public string ProviderName
     {

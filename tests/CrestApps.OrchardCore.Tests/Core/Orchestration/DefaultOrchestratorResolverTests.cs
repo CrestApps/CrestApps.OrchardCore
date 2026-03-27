@@ -4,6 +4,7 @@ using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Orchestration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
