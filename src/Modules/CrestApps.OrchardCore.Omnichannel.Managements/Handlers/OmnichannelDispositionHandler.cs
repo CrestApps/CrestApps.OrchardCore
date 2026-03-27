@@ -74,13 +74,6 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
             disposition.DisplayText = descriptionText;
         }
 
-        var captureDate = data[nameof(OmnichannelDisposition.CaptureDate)]?.GetValue<bool>();
-
-        if (captureDate.HasValue)
-        {
-            disposition.CaptureDate = captureDate.Value;
-        }
-
         var properties = data[nameof(OmnichannelDisposition.Properties)]?.AsObject();
 
         if (properties != null)

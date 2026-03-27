@@ -36,7 +36,6 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
         {
             model.DisplayText = disposition.DisplayText;
             model.Description = disposition.Description;
-            model.CaptureDate = disposition.CaptureDate;
         }).Location("Content:1");
     }
 
@@ -53,7 +52,6 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
 
         disposition.DisplayText = model.DisplayText?.Trim();
         disposition.Description = model.Description?.Trim();
-        disposition.CaptureDate = model.CaptureDate;
 
         return Edit(disposition, context);
     }

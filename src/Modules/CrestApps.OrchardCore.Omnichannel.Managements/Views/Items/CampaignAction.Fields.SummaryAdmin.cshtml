@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Services
+@using Microsoft.Extensions.Options
+@using OrchardCore.DisplayManagement.Views
+
+@inject ICatalog<OmnichannelDisposition> DispositionCatalog
+@inject IOptions<CampaignActionOptions> CampaignActionOptions
+
+@model ShapeViewModel<CampaignAction>
+
+@{
+    var disposition = await DispositionCatalog.FindByIdAsync(Model.Value.DispositionId);
+    var dispositionText = disposition?.DisplayText ?? Model.Value.DispositionId;
+    var actionTypeDisplayName = CampaignActionOptions.Value.ActionTypes.TryGetValue(Model.Value.Source, out var actionType)
+        ? actionType.DisplayName?.Value ?? Model.Value.Source
+        : Model.Value.Source;
+}
+
+<div>
+    <h5 class="mb-0">@dispositionText</h5>
+    @if (!string.IsNullOrWhiteSpace(actionTypeDisplayName))
+    {
+        <span class="text-muted">@actionTypeDisplayName</span>
+    }
+</div>
