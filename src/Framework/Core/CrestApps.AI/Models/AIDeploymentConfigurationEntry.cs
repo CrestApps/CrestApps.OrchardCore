@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
 
 namespace CrestApps.AI.Models;
 

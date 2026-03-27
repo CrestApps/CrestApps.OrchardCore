@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;

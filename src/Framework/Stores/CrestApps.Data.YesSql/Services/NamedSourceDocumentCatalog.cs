@@ -37,7 +37,7 @@ public class NamedSourceDocumentCatalog<T, TIndex> : SourceDocumentCatalog<T, TI
 
     protected override async ValueTask SavingAsync(T record)
     {
-        var item = await Session.QueryIndex<TIndex>(x => x.Name == record.Name && x.ItemId != record.ItemId).FirstOrDefaultAsync();
+        var item = await Session.QueryIndex<TIndex>(x => x.Name == record.Name && x.ItemId != record.ItemId, collection: CollectionName).FirstOrDefaultAsync();
 
         if (item is not null)
         {

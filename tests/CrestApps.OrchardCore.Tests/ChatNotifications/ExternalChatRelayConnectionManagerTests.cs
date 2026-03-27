@@ -1,9 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

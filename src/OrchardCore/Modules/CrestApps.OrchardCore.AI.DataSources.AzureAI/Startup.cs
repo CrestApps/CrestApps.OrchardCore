@@ -1,8 +1,8 @@
 using CrestApps.AI;
+using CrestApps.AI.DataSources.AzureAI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
-using CrestApps.AI.DataSources.AzureAI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;

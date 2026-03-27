@@ -1,8 +1,6 @@
-using CrestApps.OrchardCore.Core.Services;
 using CrestApps.AI;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -3,7 +3,6 @@ using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 

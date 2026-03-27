@@ -3,9 +3,6 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Rendering;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 

@@ -2,7 +2,6 @@ using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 

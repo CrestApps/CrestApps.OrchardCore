@@ -6,12 +6,12 @@ using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Services;
 using CrestApps.Support;
 using Cysharp.Text;
@@ -22,12 +22,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
-using OrchardCore.Entities;
-using CrestApps.OrchardCore.AI.Models;
-using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;

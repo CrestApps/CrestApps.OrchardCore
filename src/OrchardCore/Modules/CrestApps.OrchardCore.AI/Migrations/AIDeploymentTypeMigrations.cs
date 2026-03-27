@@ -1,7 +1,5 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,9 +105,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 2;
     }
 
-    #pragma warning disable CA1822 // Mark members as static
+#pragma warning disable CA1822 // Mark members as static
     public int UpdateFrom2()
-    #pragma warning restore CA1822 // Mark members as static
+#pragma warning restore CA1822 // Mark members as static
     {
         ShellScope.AddDeferredTask(async scope =>
         {

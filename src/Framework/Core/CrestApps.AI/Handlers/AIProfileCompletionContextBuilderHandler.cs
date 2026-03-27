@@ -1,6 +1,5 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.AI.Handlers;
 

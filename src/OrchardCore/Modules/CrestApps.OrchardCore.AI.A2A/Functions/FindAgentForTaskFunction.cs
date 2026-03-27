@@ -1,10 +1,9 @@
 using System.Text.Json;
 using CrestApps.AI;
 using CrestApps.AI.Extensions;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.Services;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

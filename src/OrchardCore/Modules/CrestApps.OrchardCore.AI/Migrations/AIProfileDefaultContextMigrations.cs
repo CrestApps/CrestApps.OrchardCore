@@ -1,5 +1,4 @@
 using CrestApps.AI.Models;
-using CrestApps.AI;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;

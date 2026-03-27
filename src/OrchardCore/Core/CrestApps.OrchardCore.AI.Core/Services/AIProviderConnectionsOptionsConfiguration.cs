@@ -1,8 +1,6 @@
 using CrestApps.AI;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Core.Services;
 using CrestApps.AI.Models;
-using CrestApps.Models;
+using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Documents;

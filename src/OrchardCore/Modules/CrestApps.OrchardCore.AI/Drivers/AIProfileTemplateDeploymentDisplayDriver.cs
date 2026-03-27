@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -6,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 

@@ -1,7 +1,6 @@
 using CrestApps.AI;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;

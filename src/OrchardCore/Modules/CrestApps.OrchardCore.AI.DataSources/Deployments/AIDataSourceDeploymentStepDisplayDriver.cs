@@ -1,5 +1,4 @@
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;

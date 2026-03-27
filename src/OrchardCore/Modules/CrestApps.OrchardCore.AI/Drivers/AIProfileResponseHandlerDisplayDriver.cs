@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
 using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;

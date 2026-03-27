@@ -13,7 +13,7 @@ public sealed class ChatDocumentsOptions
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(extension);
 
-        var normalized = extension.StartsWith('.') ? extension : "." + extension;
+        var normalized = extension.StartsWith('.') ? extension : '.' + extension;
 
         _allowedFileExtensions.Add(normalized);
 

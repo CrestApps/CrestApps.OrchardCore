@@ -9,7 +9,6 @@ using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
-using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;

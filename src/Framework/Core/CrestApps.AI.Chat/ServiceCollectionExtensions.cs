@@ -4,7 +4,6 @@ using CrestApps.AI.Chat.Tools;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Extensions;
-using CrestApps.Handlers;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

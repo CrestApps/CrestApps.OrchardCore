@@ -1,8 +1,8 @@
 using CrestApps.AI;
+using CrestApps.AI.DataSources.Elasticsearch;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
-using CrestApps.AI.DataSources.Elasticsearch;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;

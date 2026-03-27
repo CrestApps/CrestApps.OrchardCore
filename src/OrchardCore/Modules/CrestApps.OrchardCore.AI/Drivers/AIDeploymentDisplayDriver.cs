@@ -1,7 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
 using CrestApps.AI;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;

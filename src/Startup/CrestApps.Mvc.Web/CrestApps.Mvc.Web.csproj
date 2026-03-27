@@ -29,4 +29,8 @@
     <ProjectReference Include="../../Framework/Stores/CrestApps.Data.YesSql/CrestApps.Data.YesSql.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="App_Data\" />
+  </ItemGroup>
+
 </Project>

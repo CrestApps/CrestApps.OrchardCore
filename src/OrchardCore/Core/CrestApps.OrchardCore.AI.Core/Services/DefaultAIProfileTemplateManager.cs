@@ -1,6 +1,5 @@
 using CrestApps.AI.Models;
 using CrestApps.Services;
-using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;

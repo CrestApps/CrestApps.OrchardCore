@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.AI.Extensions;
-using CrestApps.OrchardCore.AI.Core.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

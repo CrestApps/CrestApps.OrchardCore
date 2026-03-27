@@ -1,7 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
-using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;

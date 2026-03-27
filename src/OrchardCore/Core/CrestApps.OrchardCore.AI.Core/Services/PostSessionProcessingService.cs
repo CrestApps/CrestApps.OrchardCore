@@ -3,9 +3,6 @@ using System.Text.RegularExpressions;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
-
-using CrestApps.OrchardCore.Core;
-using J2N.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

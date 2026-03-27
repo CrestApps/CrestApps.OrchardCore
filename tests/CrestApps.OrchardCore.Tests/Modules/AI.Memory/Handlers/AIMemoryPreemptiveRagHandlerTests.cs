@@ -1,16 +1,15 @@
 using System.Security.Claims;
 using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI;
-using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
-using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

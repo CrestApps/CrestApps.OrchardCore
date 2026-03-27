@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using OrchardCore.Entities;
+using CrestApps.OrchardCore.AI.A2A.Models;
 
 namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 

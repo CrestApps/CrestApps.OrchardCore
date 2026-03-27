@@ -1,10 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.AI;
-using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 

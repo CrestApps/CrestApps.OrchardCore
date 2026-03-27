@@ -1,5 +1,3 @@
-using CrestApps.AI.Chat.Hubs;
-
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 
 /// <summary>

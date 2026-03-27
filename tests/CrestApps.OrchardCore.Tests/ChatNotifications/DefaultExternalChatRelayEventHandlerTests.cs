@@ -1,8 +1,7 @@
 using CrestApps.AI;
-using CrestApps.OrchardCore.AI;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
-using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;

@@ -4,7 +4,6 @@ using CrestApps.AI.Orchestration;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.AI;
-using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

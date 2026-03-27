@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Memory.Models;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.Settings;
 

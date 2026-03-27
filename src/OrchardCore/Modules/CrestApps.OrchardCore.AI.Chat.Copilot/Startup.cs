@@ -1,5 +1,4 @@
 using CrestApps.AI.Chat.Copilot;
-using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
