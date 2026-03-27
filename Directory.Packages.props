@@ -2,19 +2,18 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[3.0.0-preview-18937, )</OrchardCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-18959, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.1.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="CrestApps.AgentSkills.OrchardCore" Version="1.0.0-preview-0004" />
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0004" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
     <PackageVersion Include="FluentFTP" Version="54.0.2" />
     <PackageVersion Include="JsonSchema.Net" Version="9.1.3" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
-    <PackageVersion Include="Markdig" Version="1.1.1" />
+    <PackageVersion Include="Markdig" Version="1.1.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.4.0-preview.1.26160.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.4.0-preview.1.26160.2" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
@@ -97,7 +96,7 @@
     <PackageVersion Include="Microsoft.CognitiveServices.Speech" Version="1.48.2" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
     <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="10.4.1" />
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.4.1" />
     <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
@@ -125,7 +124,7 @@
   <ItemGroup>
     <!-- Aspire Packages -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.0" />
-    <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.1.0" />
+    <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.2.0" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.2.0" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.1.1" />
   </ItemGroup>
