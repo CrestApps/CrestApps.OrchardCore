@@ -23,6 +23,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
+using CrestApps.OrchardCore.AI.Models;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;

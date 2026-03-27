@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI.Models;

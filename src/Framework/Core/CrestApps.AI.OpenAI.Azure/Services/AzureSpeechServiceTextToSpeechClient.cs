@@ -8,6 +8,10 @@ using CrestApps.AI.Models;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using TextToSpeechOptions = CrestApps.AI.Models.TextToSpeechOptions;
+using TextToSpeechResponse = CrestApps.AI.Models.TextToSpeechResponse;
+using TextToSpeechResponseUpdate = CrestApps.AI.Models.TextToSpeechResponseUpdate;
+using TextToSpeechResponseUpdateKind = CrestApps.AI.Models.TextToSpeechResponseUpdateKind;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.AI.OpenAI.Azure.Services;

@@ -1,12 +1,13 @@
 using System.Text.Json.Nodes;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace CrestApps.OrchardCore.AI.Core.Services;
+namespace CrestApps.AI.Services;
 
 internal static class AIDeploymentConnectionEntryFactory
 {
+    private const string ConnectionProtectorName = "AIProviderConnection";
+
     public static AIProviderConnectionEntry Create(AIDeployment deployment, IDataProtectionProvider dataProtectionProvider)
     {
         var values = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -62,7 +63,7 @@ internal static class AIDeploymentConnectionEntryFactory
                     string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(encryptedKey):
                     {
-                        var protector = dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+                        var protector = dataProtectionProvider.CreateProtector(ConnectionProtectorName);
                         values[key] = protector.Unprotect(encryptedKey);
                         break;
                     }

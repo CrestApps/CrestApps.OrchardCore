@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OpenAICompletionClient = CrestApps.OrchardCore.OpenAI.Core.Services.OpenAICompletionClient;
 
 namespace CrestApps.OrchardCore.OpenAI;
 

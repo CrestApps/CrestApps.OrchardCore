@@ -4,6 +4,7 @@ using CrestApps.AI.Orchestration;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.AI;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -487,16 +488,13 @@ public sealed class DefaultOrchestratorTests
 #pragma warning restore MEAI001
 
 #pragma warning disable MEAI001
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((CrestApps.AI.ITextToSpeechClient)null);
 
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((CrestApps.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
     }
-
-    /// <summary>
-    /// A fake prompt template service that returns null for all operations.
     /// </summary>
     private sealed class FakeAITemplateService : IAITemplateService
     {

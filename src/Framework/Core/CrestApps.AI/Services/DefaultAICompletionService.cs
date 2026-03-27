@@ -86,5 +86,4 @@ public class DefaultAICompletionService : IAICompletionService
         return _serviceProvider.GetService(clientType) as IAICompletionClient
             ?? throw new InvalidOperationException($"No completion client registered for '{clientName}'.");
     }
-    }
 }

@@ -15,7 +15,7 @@
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePrompts" class="form-select" data-ci-prompt-selector data-json="@JsonSerializer.Serialize(Model.PromptDescriptions)" data-params="@JsonSerializer.Serialize(Model.PromptParameterDescriptors)">
+    <select asp-for="SelectedPromptId" asp-items="Model.AvailablePromptItems" class="form-select" data-ci-prompt-selector data-json="@JsonSerializer.Serialize(Model.PromptDescriptions)" data-params="@JsonSerializer.Serialize(Model.PromptParameterDescriptors)">
         <option value="">@T["No prompt template"]</option>
     </select>
     <div class="mt-2 text-muted small d-none" data-ci-prompt-description></div>

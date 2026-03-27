@@ -1,3 +1,5 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Rendering;
 using CrestApps.AI.Prompting.Services;

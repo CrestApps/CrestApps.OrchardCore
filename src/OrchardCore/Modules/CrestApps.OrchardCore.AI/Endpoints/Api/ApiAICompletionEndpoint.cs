@@ -4,6 +4,7 @@ using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
+using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Services;
 using CrestApps.Support;
 using Cysharp.Text;

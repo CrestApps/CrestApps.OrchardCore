@@ -1,5 +1,6 @@
-using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
+using TextToSpeechResponse = CrestApps.AI.Models.TextToSpeechResponse;
+using TextToSpeechResponseUpdate = CrestApps.AI.Models.TextToSpeechResponseUpdate;
 
 namespace CrestApps.AI;
 

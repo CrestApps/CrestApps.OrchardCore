@@ -1,5 +1,6 @@
+using CrestApps.AI;
+using CrestApps.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;

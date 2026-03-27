@@ -5,7 +5,7 @@ using CrestApps.Services;
 
 namespace CrestApps.AI.Models;
 
-public sealed class AIProfile : CatalogItem, INameAwareModel, IDisplayTextAwareModel, ICloneable<AIProfile>
+public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTextAwareModel, ICloneable<AIProfile>
 {
     /// <summary>
     /// Gets or sets the technical name of the profile.
@@ -125,6 +125,7 @@ public sealed class AIProfile : CatalogItem, INameAwareModel, IDisplayTextAwareM
         {
             ItemId = ItemId,
             Name = Name,
+            Source = Source,
             DisplayText = DisplayText,
             Type = Type,
             Description = Description,

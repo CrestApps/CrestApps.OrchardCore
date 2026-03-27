@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.AI;
 
 public static class AIDeploymentManagerExtensions
 {

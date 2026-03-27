@@ -2,15 +2,18 @@ using System.Diagnostics;
 using System.Threading.Channels;
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Prompting.Rendering;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
 using CrestApps.Extensions;
+using CrestApps.OrchardCore.AI.Models;
 using Cysharp.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using TextToSpeechOptions = CrestApps.AI.Models.TextToSpeechOptions;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.AI.Chat.Hubs;
@@ -216,12 +219,27 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             c.TopP = 1;
             c.Temperature = 0;
             c.MaxTokens = 64;
-            c.UserMarkdownInResponse = false;
             c.DataSourceId = null;
             c.DisableTools = true;
         });
 
-        var titleResponse = await completionService.CompleteAsync(profile.Source,
+        var deploymentManager = services.GetService<IAIDeploymentManager>();
+
+        if (deploymentManager is null)
+        {
+            return null;
+        }
+
+        var chatDeployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
+            utilityDeploymentId: context.UtilityDeploymentId,
+            chatDeploymentId: context.ChatDeploymentId);
+
+        if (chatDeployment is null)
+        {
+            return null;
+        }
+
+        var titleResponse = await completionService.CompleteAsync(chatDeployment,
         [
             new(ChatRole.User, userPrompt),
         ], context);
@@ -1093,22 +1111,22 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
-        var liquidTemplateManager = services.GetRequiredService<ILiquidTemplateManager>();
+        var aiTemplateEngine = services.GetRequiredService<IAITemplateEngine>();
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
 
         (var chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
 
-        var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
-            new Dictionary<string, FluidValue>()
+        var generatedPrompt = await aiTemplateEngine.RenderAsync(profile.PromptTemplate,
+            new Dictionary<string, object>()
             {
-                ["Profile"] = new ObjectValue(profile),
-                ["Session"] = new ObjectValue(chatSession),
+                ["Profile"] = profile,
+                ["Session"] = chatSession,
             });
 
         var assistantMessage = new AIChatSessionPrompt
         {
-            ItemId = IdGenerator.GenerateId(),
+            ItemId = GenerateId(),
             SessionId = chatSession.SessionId,
             Role = ChatRole.Assistant,
             IsGeneratedPrompt = true,
@@ -1592,7 +1610,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 if (!string.IsNullOrEmpty(chunk.Content))
                 {
                     await Clients.Caller.ReceiveConversationAssistantToken(
-                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty, chunk.Appearance);
+                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
 
                     sentenceBuffer.Append(chunk.Content);
 

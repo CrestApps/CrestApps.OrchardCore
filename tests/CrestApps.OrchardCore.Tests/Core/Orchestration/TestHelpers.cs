@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
@@ -94,10 +95,10 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 #pragma warning restore MEAI001
 
 #pragma warning disable MEAI001
-    public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-        => new((ITextToSpeechClient)null);
+    public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+        => new((CrestApps.AI.ITextToSpeechClient)null);
 
-    public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-        => new((ITextToSpeechClient)null);
+    public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+        => new((CrestApps.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
 }

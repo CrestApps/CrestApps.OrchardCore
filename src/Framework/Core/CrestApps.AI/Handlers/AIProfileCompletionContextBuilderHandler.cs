@@ -1,5 +1,6 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.AI.Handlers;
 
@@ -49,10 +50,23 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
 
     private async Task<string> ResolveSystemMessageAsync(AIProfile profile, AIProfileMetadata metadata)
     {
-        if (profile.TryGetSettings<PromptTemplateMetadata>(out var promptMetadata)
-            && !string.IsNullOrEmpty(promptMetadata.TemplateId))
+        if (profile.TryGetSettings<PromptTemplateMetadata>(out var promptMetadata))
         {
-            return await _aiTemplateService.RenderAsync(promptMetadata.TemplateId, promptMetadata.Parameters);
+            var validTemplates = promptMetadata.Templates?
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                .ToList();
+
+            if (validTemplates is { Count: > 0 })
+            {
+                var rendered = new List<string>(validTemplates.Count);
+
+                foreach (var template in validTemplates)
+                {
+                    rendered.Add(await _aiTemplateService.RenderAsync(template.TemplateId, template.Parameters));
+                }
+
+                return string.Join("\n\n", rendered);
+            }
         }
 
         return metadata.SystemMessage;

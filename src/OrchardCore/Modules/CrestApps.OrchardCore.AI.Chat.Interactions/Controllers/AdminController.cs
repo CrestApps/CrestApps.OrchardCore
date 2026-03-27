@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using CrestApps.AI;
 using CrestApps.AI.Models;
@@ -258,7 +259,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(interaction.Properties);
+        var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
         clonedInteraction.Title = GetNextTitle(interaction.Title);
         clonedInteraction.ChatDeploymentId = interaction.ChatDeploymentId;
         clonedInteraction.ConnectionName = interaction.ConnectionName;

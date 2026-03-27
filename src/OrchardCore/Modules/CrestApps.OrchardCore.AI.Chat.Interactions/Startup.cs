@@ -14,8 +14,8 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.SignalR.Core.Services;
+using CrestApps.Services;
+using CrestApps.SignalR.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -54,7 +54,6 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
-            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
             .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
 

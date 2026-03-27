@@ -1,3 +1,5 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.Models;
 using CrestApps.Services;

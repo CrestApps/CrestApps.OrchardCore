@@ -1,3 +1,5 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;

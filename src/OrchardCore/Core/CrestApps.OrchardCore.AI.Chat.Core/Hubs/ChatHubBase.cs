@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
+using TextToSpeechOptions = CrestApps.AI.Models.TextToSpeechOptions;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.AI.Chat.Core.Hubs;

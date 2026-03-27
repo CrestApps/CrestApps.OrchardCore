@@ -1,16 +1,17 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
+using CrestApps.OrchardCore.AI.Core.Models;
 
 namespace CrestApps.AI.Chat.Handlers;
 
 internal sealed class ChatInteractionCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
+    private readonly IAITemplateService _aiTemplateService;
 
-    public ChatInteractionCompletionContextBuilderHandler(PromptTemplateSelectionService promptTemplateSelectionService)
+    public ChatInteractionCompletionContextBuilderHandler(IAITemplateService aiTemplateService)
     {
-        _promptTemplateSelectionService = promptTemplateSelectionService;
+        _aiTemplateService = aiTemplateService;
     }
 
     public async Task BuildingAsync(AICompletionContextBuildingContext context)
@@ -60,13 +61,34 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
     private async Task<string> ResolveSystemMessageAsync(ChatInteraction interaction)
     {
         var promptMetadata = interaction.As<PromptTemplateMetadata>();
-        var hasPromptTemplates = promptMetadata.Templates?.Any(selection => !string.IsNullOrWhiteSpace(selection.TemplateId)) == true;
+        var validTemplates = promptMetadata.Templates?
+            .Where(selection => !string.IsNullOrWhiteSpace(selection.TemplateId))
+            .ToList();
 
-        if (!hasPromptTemplates)
+        if (validTemplates is not { Count: > 0 })
         {
             return interaction.SystemMessage;
         }
 
-        return await _promptTemplateSelectionService.ComposeSystemMessageAsync(interaction.SystemMessage, promptMetadata);
+        var parts = new List<string>(validTemplates.Count);
+
+        foreach (var template in validTemplates)
+        {
+            var rendered = await _aiTemplateService.RenderAsync(template.TemplateId, template.Parameters);
+
+            if (!string.IsNullOrWhiteSpace(rendered))
+            {
+                parts.Add(rendered);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.SystemMessage))
+        {
+            parts.Add(interaction.SystemMessage);
+        }
+
+        return parts.Count == 0
+            ? null
+            : string.Join(Environment.NewLine + Environment.NewLine, parts);
     }
 }

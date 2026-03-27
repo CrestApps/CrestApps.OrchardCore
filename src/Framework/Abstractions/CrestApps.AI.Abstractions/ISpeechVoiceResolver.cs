@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
-namespace CrestApps.OrchardCore.AI;
+namespace CrestApps.AI;
 
 /// <summary>
 /// Resolves the available speech voices for a deployment by delegating to the matching AI client provider.

@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using CrestApps.AI;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.Localization;

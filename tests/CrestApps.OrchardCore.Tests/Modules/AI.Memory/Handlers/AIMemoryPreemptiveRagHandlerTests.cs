@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -309,11 +310,11 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
 #pragma warning restore MEAI001
 
 #pragma warning disable MEAI001
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+            => new((CrestApps.AI.ITextToSpeechClient)null);
 
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((CrestApps.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
     }
 

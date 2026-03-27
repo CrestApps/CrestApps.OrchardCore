@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
