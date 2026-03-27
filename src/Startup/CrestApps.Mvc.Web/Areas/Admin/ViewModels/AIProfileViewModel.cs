@@ -57,7 +57,6 @@ public sealed class AIProfileViewModel
     public List<PostSessionTaskItem> PostSessionTasks { get; set; } = [];
 
     // Dropdowns
-    public List<SelectListItem> Sources { get; set; } = [];
     public List<SelectListItem> Orchestrators { get; set; } = [];
     public List<SelectListItem> ChatDeployments { get; set; } = [];
     public List<SelectListItem> UtilityDeployments { get; set; } = [];

@@ -21,7 +21,6 @@ public sealed class AIProfileController : Controller
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly FileSystemFileStore _fileStore;
-    private readonly AIOptions _aiOptions;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly AIToolDefinitionOptions _toolOptions;
 
@@ -32,7 +31,6 @@ public sealed class AIProfileController : Controller
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         FileSystemFileStore fileStore,
-        IOptions<AIOptions> aiOptions,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
@@ -42,7 +40,6 @@ public sealed class AIProfileController : Controller
         _documentStore = documentStore;
         _chunkStore = chunkStore;
         _fileStore = fileStore;
-        _aiOptions = aiOptions.Value;
         _orchestratorOptions = orchestratorOptions.Value;
         _toolOptions = toolOptions.Value;
     }
@@ -69,11 +66,6 @@ public sealed class AIProfileController : Controller
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Source))
-        {
-            ModelState.AddModelError(nameof(model.Source), "Provider is required.");
         }
 
         if (!ModelState.IsValid)
@@ -119,11 +111,6 @@ public sealed class AIProfileController : Controller
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(model.Source))
-        {
-            ModelState.AddModelError(nameof(model.Source), "Provider is required.");
-        }
-
         if (!ModelState.IsValid)
         {
             await PopulateDropdownsAsync(model);
@@ -162,10 +149,6 @@ public sealed class AIProfileController : Controller
 
     private async Task PopulateDropdownsAsync(AIProfileViewModel model)
     {
-        model.Sources = [new SelectListItem("— Select Provider —", "")];
-        model.Sources.AddRange(_aiOptions.ProfileSources.Select(s =>
-            new SelectListItem(s.Value.DisplayName?.Value ?? s.Key, s.Key)));
-
         var allDeployments = await _deploymentCatalog.GetAllAsync();
 
         model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];

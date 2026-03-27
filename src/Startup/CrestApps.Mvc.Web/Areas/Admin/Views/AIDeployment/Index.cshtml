@@ -37,7 +37,7 @@ else
                         <td><strong>@deployment.Name</strong></td>
                         <td><span class="badge bg-secondary">@deployment.Type</span></td>
                         <td>
-                            <span class="badge bg-info">@(deployment.ProviderName ?? "—")</span>
+                            <span class="badge bg-info">@(deployment.ClientName ?? "—")</span>
                         </td>
                         <td>@(string.IsNullOrEmpty(deployment.ConnectionName) ? "Standalone" : deployment.ConnectionName)</td>
                         <td>

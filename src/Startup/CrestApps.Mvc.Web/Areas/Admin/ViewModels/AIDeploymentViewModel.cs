@@ -9,7 +9,7 @@ public sealed class AIDeploymentViewModel
     public string Name { get; set; }
     public AIDeploymentType Type { get; set; }
     public string ConnectionName { get; set; }
-    public string ProviderName { get; set; }
+    public string ClientName { get; set; }
     public bool IsDefault { get; set; }
 
     // Standalone deployment fields (e.g., Azure AI Services).
@@ -29,7 +29,7 @@ public sealed class AIDeploymentViewModel
             Name = deployment.Name,
             Type = deployment.Type,
             ConnectionName = deployment.ConnectionName,
-            ProviderName = deployment.ProviderName,
+            ClientName = deployment.ClientName,
             IsDefault = deployment.IsDefault,
         };
 
@@ -48,7 +48,7 @@ public sealed class AIDeploymentViewModel
         deployment.Name = Name;
         deployment.Type = Type;
         deployment.ConnectionName = ConnectionName;
-        deployment.ProviderName = ProviderName;
+        deployment.ClientName = ClientName;
         deployment.IsDefault = IsDefault;
 
         deployment.Properties ??= new Dictionary<string, object>();

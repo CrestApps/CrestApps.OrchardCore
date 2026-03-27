@@ -75,7 +75,7 @@ public sealed class AIDeploymentController : Controller
         }
 
         // Clear connection for standalone providers.
-        if (_standaloneProviders.Contains(model.ProviderName ?? string.Empty))
+        if (_standaloneProviders.Contains(model.ClientName ?? string.Empty))
         {
             model.ConnectionName = null;
         }
@@ -132,7 +132,7 @@ public sealed class AIDeploymentController : Controller
         }
 
         // Clear connection for standalone providers.
-        if (_standaloneProviders.Contains(model.ProviderName ?? string.Empty))
+        if (_standaloneProviders.Contains(model.ClientName ?? string.Empty))
         {
             model.ConnectionName = null;
         }

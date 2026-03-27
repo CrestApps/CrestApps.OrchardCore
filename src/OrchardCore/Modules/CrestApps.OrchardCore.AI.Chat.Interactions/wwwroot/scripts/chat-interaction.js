@@ -29,8 +29,10 @@ window.chatInteractionManager = function () {
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                            <i :class=\"'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')\"></i>\n                            Assistant\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <i class=\"fa fa-robot ai-streaming-icon\" style=\"display: inline-block;\"></i>\n                Assistant\n            </div>\n        ",
+    codeCopiedText: 'Copied!',
+    assistantLabel: 'Assistant',
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <i class=\"fa-solid fa-xmark\"></i>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
     clearHistoryTitle: 'Clear History',
@@ -84,8 +86,8 @@ window.chatInteractionManager = function () {
     } else {
       highlighted = escapeHtmlEntities(code);
     }
-    var langLabel = lang ? " data-lang=\"".concat(lang, "\"") : '';
-    return "<pre".concat(langLabel, "><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-solid fa-copy\"></i></button><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre>");
+    var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -254,7 +256,9 @@ window.chatInteractionManager = function () {
       renderer: renderer
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
-    return DOMPurify.sanitize(html);
+    return DOMPurify.sanitize(html, {
+      ADD_ATTR: ['target']
+    });
   }
   var initialize = function initialize(instanceConfig) {
     var config = Object.assign({}, defaultConfig, instanceConfig);
@@ -297,8 +301,33 @@ window.chatInteractionManager = function () {
           prompt: '',
           initialFieldValues: new Map(),
           settingsDirty: false,
-          saveSettingsTimeout: null
+          saveSettingsTimeout: null,
+          isRecording: false,
+          mediaRecorder: null,
+          preRecordingPrompt: '',
+          micButton: null,
+          speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation',
+          ttsVoiceName: config.ttsVoiceName || null,
+          audioChunks: [],
+          audioPlayQueue: [],
+          isPlayingAudio: false,
+          currentAudioElement: null,
+          conversationModeEnabled: config.chatMode === 'Conversation',
+          conversationButton: null,
+          isConversationMode: false,
+          notifications: []
         };
+      },
+      computed: {
+        lastAssistantIndex: function lastAssistantIndex() {
+          for (var i = this.messages.length - 1; i >= 0; i--) {
+            if (this.messages[i].role === 'assistant') {
+              return i;
+            }
+          }
+          return -1;
+        }
       },
       methods: {
         handleBeforeUnload: function handleBeforeUnload() {
@@ -342,6 +371,134 @@ window.chatInteractionManager = function () {
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    if (_this.isRecording) {
+                      _this.stopRecording();
+                    }
+                  });
+                  _this.connection.on("ReceiveTranscript", function (itemId, text, isFinal) {
+                    if (_this.isConversationMode) {
+                      if (!isFinal && text) {
+                        _this._conversationPartialTranscript = text;
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        var html = '<p class="ai-partial-transcript">' + escaped + '</p>';
+
+                        // Show partial transcript as a live user message.
+                        if (!_this._conversationPartialMessage) {
+                          _this.hidePlaceholder();
+                          _this._conversationPartialMessage = {
+                            role: 'user',
+                            content: text,
+                            htmlContent: html,
+                            isPartial: true
+                          };
+                          _this.messages.push(_this._conversationPartialMessage);
+                        } else {
+                          _this._conversationPartialMessage.content = text;
+                          _this._conversationPartialMessage.htmlContent = html;
+                        }
+                        _this.scrollToBottom();
+                      }
+                      return;
+                    }
+                    if (text && !_this._audioInputSent) {
+                      _this.prompt = _this.preRecordingPrompt + text;
+                      if (_this.inputElement) {
+                        _this.inputElement.value = _this.prompt;
+                        _this.inputElement.dispatchEvent(new Event('input'));
+                      }
+                    }
+                  });
+                  _this.connection.on("ReceiveConversationUserMessage", function (itemId, text) {
+                    if (text) {
+                      _this.stopAudio();
+
+                      // If there's an interrupted assistant message still streaming,
+                      // mark it as done to stop the spinner animation.
+                      if (_this._conversationAssistantMessage) {
+                        var oldMsg = _this.messages[_this._conversationAssistantMessage.index];
+                        if (oldMsg) {
+                          oldMsg.isStreaming = false;
+                        }
+                        _this._conversationAssistantMessage = null;
+                      }
+
+                      // Replace the partial transcript message with the final one.
+                      if (_this._conversationPartialMessage) {
+                        var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        _this._conversationPartialMessage.content = text;
+                        _this._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
+                        _this._conversationPartialMessage.isPartial = false;
+                        _this._conversationPartialMessage = null;
+                      } else {
+                        _this.addMessage({
+                          role: 'user',
+                          content: text
+                        });
+                      }
+                      _this.scrollToBottom();
+                    }
+                  });
+                  _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, appearance) {
+                    if (!_this._conversationAssistantMessage) {
+                      _this.stopAudio();
+                      _this.hideTypingIndicator();
+
+                      // Ensure no stale streaming indicators remain from prior messages.
+                      for (var j = 0; j < _this.messages.length; j++) {
+                        if (_this.messages[j].isStreaming) {
+                          _this.messages[j].isStreaming = false;
+                        }
+                      }
+                      var msgIndex = _this.messages.length;
+                      var newMessage = {
+                        id: messageId,
+                        role: "assistant",
+                        content: "",
+                        htmlContent: "",
+                        isStreaming: true,
+                        appearance: _this.normalizeAssistantAppearance(appearance)
+                      };
+                      _this.messages.push(newMessage);
+                      _this._conversationAssistantMessage = {
+                        index: msgIndex,
+                        content: ''
+                      };
+                    }
+                    _this._conversationAssistantMessage.content += token;
+                    var msg = _this.messages[_this._conversationAssistantMessage.index];
+                    if (msg) {
+                      if (!msg.appearance) {
+                        msg.appearance = _this.normalizeAssistantAppearance(appearance);
+                      }
+                      msg.content = _this._conversationAssistantMessage.content;
+                      msg.htmlContent = parseMarkdownContent(msg.content, msg);
+                      _this.$nextTick(function () {
+                        renderChartsInMessage(msg);
+                        _this.scrollToBottom();
+                      });
+                    }
+                  });
+                  _this.connection.on("ReceiveConversationAssistantComplete", function (itemId, messageId) {
+                    if (_this._conversationAssistantMessage) {
+                      var msg = _this.messages[_this._conversationAssistantMessage.index];
+                      if (msg) {
+                        msg.isStreaming = false;
+                      }
+                      _this._conversationAssistantMessage = null;
+                    }
+                  });
+                  _this.connection.on("ReceiveAudioChunk", function (itemId, base64Audio, contentType) {
+                    if (base64Audio) {
+                      var binaryString = atob(base64Audio);
+                      var bytes = new Uint8Array(binaryString.length);
+                      for (var i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                      }
+                      _this.audioChunks.push(bytes);
+                    }
+                  });
+                  _this.connection.on("ReceiveAudioComplete", function (itemId) {
+                    _this.playCollectedAudio();
                   });
                   _this.connection.on("HistoryCleared", function (itemId) {
                     // Clear messages and show placeholder
@@ -354,11 +511,21 @@ window.chatInteractionManager = function () {
                       clearHistoryBtn.classList.add('d-none');
                     }
                   });
+                  _this.connection.on("ReceiveNotification", function (notification) {
+                    _this.receiveNotification(notification);
+                  });
+                  _this.connection.on("UpdateNotification", function (notification) {
+                    _this.updateNotification(notification);
+                  });
+                  _this.connection.on("RemoveNotification", function (notificationType) {
+                    _this.removeNotification(notificationType);
+                  });
                   _this.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
                   });
                   _this.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
+                    _this.reloadCurrentInteraction();
                   });
                   _this.connection.onclose(function (error) {
                     if (_this.isNavigatingAway) {
@@ -386,6 +553,9 @@ window.chatInteractionManager = function () {
         },
         addMessageInternal: function addMessageInternal(message) {
           var _this2 = this;
+          if (message.role === 'assistant') {
+            message.appearance = this.normalizeAssistantAppearance(message.appearance);
+          }
           if (message.content && !message.htmlContent) {
             message.htmlContent = parseMarkdownContent(message.content, message);
           }
@@ -503,6 +673,50 @@ window.chatInteractionManager = function () {
         fireEvent: function fireEvent(event) {
           document.dispatchEvent(event);
         },
+        normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
+          if (!appearance) {
+            return null;
+          }
+          var label = typeof appearance.label === 'string' ? appearance.label.trim() : '';
+          var icon = typeof appearance.icon === 'string' ? appearance.icon.trim() : '';
+          var cssClass = typeof appearance.cssClass === 'string' ? appearance.cssClass.trim() : '';
+          var disableStreamingAnimation = !!appearance.disableStreamingAnimation;
+          if (!label && !icon && !cssClass && !disableStreamingAnimation) {
+            return null;
+          }
+          return {
+            label: label,
+            icon: icon,
+            cssClass: cssClass,
+            disableStreamingAnimation: disableStreamingAnimation
+          };
+        },
+        getAssistantLabel: function getAssistantLabel(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.label ? appearance.label : defaultConfig.assistantLabel;
+        },
+        getAssistantRoleClasses: function getAssistantRoleClasses(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          var classes = ['ai-chat-msg-role'];
+          if (appearance && appearance.cssClass) {
+            classes.push(appearance.cssClass);
+          } else {
+            classes.push('ai-chat-msg-role-assistant');
+          }
+          return classes;
+        },
+        getAssistantIconClasses: function getAssistantIconClasses(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return [this.shouldAnimateAssistantIcon(message, index) ? 'ai-streaming-icon' : 'ai-bot-icon', appearance && appearance.cssClass ? appearance.cssClass : ''];
+        },
+        getAssistantIcon: function getAssistantIcon(message) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return appearance && appearance.icon ? appearance.icon : 'fa fa-robot';
+        },
+        shouldAnimateAssistantIcon: function shouldAnimateAssistantIcon(message, index) {
+          var appearance = message ? this.normalizeAssistantAppearance(message.appearance) : null;
+          return !!message && message.isStreaming && index === this.lastAssistantIndex && !(appearance && appearance.disableStreamingAnimation);
+        },
         isIndicator: function isIndicator(message) {
           return message.role === 'indicator';
         },
@@ -520,6 +734,16 @@ window.chatInteractionManager = function () {
                   }
                   return _context2.a(2);
                 case 1:
+                  // Stop any active recording before sending.
+                  if (_this4.isRecording) {
+                    _this4.stopRecording();
+                  }
+
+                  // Prevent stale ReceiveTranscript events from repopulating the prompt.
+                  _this4._audioInputSent = true;
+
+                  // Flush any pending settings save before sending a message
+                  // to prevent concurrent hub calls that can cause database deadlocks.
                   _context2.n = 2;
                   return _this4.flushPendingSave();
                 case 2:
@@ -553,6 +777,7 @@ window.chatInteractionManager = function () {
           this.autoScroll = true;
           var content = '';
           var references = {};
+          var lastResponseId = null;
           var messageIndex = this.messages.length;
           var currentItemId = this.getItemId();
           this.stream = this.connection.stream("SendMessage", currentItemId, trimmedPrompt).subscribe({
@@ -582,6 +807,14 @@ window.chatInteractionManager = function () {
                 }
               }
               if (chunk.content) {
+                // When the responseId changes (e.g., after an internal tool call),
+                // insert a line break to visually separate response segments.
+                if (chunk.responseId && lastResponseId && chunk.responseId !== lastResponseId) {
+                  content += '\n\n';
+                }
+                if (chunk.responseId) {
+                  lastResponseId = chunk.responseId;
+                }
                 var processedContent = chunk.content;
                 for (var _i2 = 0, _Object$entries2 = Object.entries(references); _i2 < _Object$entries2.length; _i2++) {
                   var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
@@ -610,6 +843,11 @@ window.chatInteractionManager = function () {
               if (!msg || !msg.content) {
                 // No content received at all.
                 _this5.hideTypingIndicator();
+              }
+
+              // Trigger text-to-speech only in conversation mode.
+              if (_this5.isConversationMode && _this5.textToSpeechEnabled && msg && msg.content) {
+                _this5.synthesizeSpeech(msg.content);
               }
               (_this5$stream = _this5.stream) === null || _this5$stream === void 0 || _this5$stream.dispose();
               _this5.stream = null;
@@ -761,6 +999,297 @@ window.chatInteractionManager = function () {
             this.debouncedSaveSettings();
           }
         },
+        synthesizeSpeech: function synthesizeSpeech(text) {
+          var _this6 = this;
+          if (!this.textToSpeechEnabled || !text || !this.connection) {
+            return;
+          }
+          this.audioChunks = [];
+          this.isPlayingAudio = true;
+          this.connection.invoke("SynthesizeSpeech", this.getItemId(), text, this.ttsVoiceName)["catch"](function (err) {
+            console.error("TTS synthesis error:", err);
+            _this6.isPlayingAudio = false;
+          });
+        },
+        playCollectedAudio: function playCollectedAudio() {
+          if (this.audioChunks.length === 0) {
+            if (!this.isPlayingAudio && this.audioPlayQueue.length === 0) {
+              this.isPlayingAudio = false;
+            }
+            return;
+          }
+          var totalLength = this.audioChunks.reduce(function (sum, chunk) {
+            return sum + chunk.length;
+          }, 0);
+          var combined = new Uint8Array(totalLength);
+          var offset = 0;
+          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
+            _step8;
+          try {
+            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+              var chunk = _step8.value;
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+          } catch (err) {
+            _iterator8.e(err);
+          } finally {
+            _iterator8.f();
+          }
+          this.audioChunks = [];
+          var blob = new Blob([combined], {
+            type: 'audio/mp3'
+          });
+
+          // If audio is currently playing, queue this blob for later.
+          if (this.isPlayingAudio && this.currentAudioElement) {
+            this.audioPlayQueue.push(blob);
+            return;
+          }
+          this.playAudioBlob(blob);
+        },
+        playAudioBlob: function playAudioBlob(blob) {
+          var _this7 = this;
+          var url = URL.createObjectURL(blob);
+          var audio = new Audio(url);
+          this.currentAudioElement = audio;
+          this.isPlayingAudio = true;
+          audio.addEventListener('ended', function () {
+            URL.revokeObjectURL(url);
+            _this7.currentAudioElement = null;
+            _this7.playNextInQueue();
+          });
+          audio.addEventListener('error', function () {
+            URL.revokeObjectURL(url);
+            _this7.currentAudioElement = null;
+            _this7.playNextInQueue();
+          });
+          audio.play()["catch"](function (err) {
+            console.error("Audio playback error:", err);
+            URL.revokeObjectURL(url);
+            _this7.currentAudioElement = null;
+            _this7.isPlayingAudio = false;
+          });
+        },
+        playNextInQueue: function playNextInQueue() {
+          if (this.audioPlayQueue.length > 0) {
+            var nextBlob = this.audioPlayQueue.shift();
+            this.playAudioBlob(nextBlob);
+          } else {
+            this.isPlayingAudio = false;
+            this.conversationModeOnAudioEnded();
+          }
+        },
+        stopAudio: function stopAudio() {
+          if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement.currentTime = 0;
+            this.currentAudioElement = null;
+          }
+          this.audioChunks = [];
+          this.audioPlayQueue = [];
+          this.isPlayingAudio = false;
+        },
+        toggleConversationMode: function toggleConversationMode() {
+          if (this.isConversationMode) {
+            this.stopConversationMode();
+          } else {
+            this.startConversationMode();
+          }
+        },
+        startConversationMode: function startConversationMode() {
+          var _this8 = this;
+          if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
+            return;
+          }
+          this.isConversationMode = true;
+          this.updateConversationButton();
+          this._conversationPartialTranscript = '';
+          this._conversationAssistantMessage = null;
+          this._conversationPartialMessage = null;
+
+          // Remove any previous conversation ended notification.
+          this.removeNotification('conversation-ended');
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this8.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this8._conversationSubject = new signalR.Subject();
+            _this8._conversationStream = stream;
+
+            // Create an AnalyserNode for volume-based interrupt detection.
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              _this8._conversationAudioCtx = new AudioCtx();
+              _this8._conversationAnalyser = _this8._conversationAudioCtx.createAnalyser();
+              _this8._conversationAnalyser.fftSize = 256;
+              var micSource = _this8._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this8._conversationAnalyser);
+            }
+            var pendingChunk = Promise.resolve();
+            var analyser = _this8._conversationAnalyser;
+            var interruptVolumeThreshold = 30;
+            _this8.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                // During TTS playback, check mic volume to detect
+                // user interruption (speaking above threshold).
+                if (_this8.isPlayingAudio && analyser) {
+                  var freqData = new Uint8Array(analyser.frequencyBinCount);
+                  analyser.getByteFrequencyData(freqData);
+                  var sum = 0;
+                  for (var k = 0; k < freqData.length; k++) {
+                    sum += freqData[k];
+                  }
+                  var avg = sum / freqData.length;
+                  if (avg >= interruptVolumeThreshold) {
+                    // User is speaking — interrupt TTS playback.
+                    _this8.stopAudio();
+                  }
+                }
+
+                // Always send audio to STT — browser echo cancellation
+                // handles speaker echo; continuous audio avoids gaps
+                // that increase recognition latency.
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context3) {
+                    while (1) switch (_context3.n) {
+                      case 0:
+                        _context3.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context3.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte) {
+                          return str + String.fromCharCode(_byte);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        try {
+                          _this8._conversationSubject.next(base64);
+                        } catch (err) {
+                          // Subject may have been completed already.
+                        }
+                      case 2:
+                        return _context3.a(2);
+                    }
+                  }, _callee3);
+                })));
+              }
+            });
+            _this8.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                try {
+                  _this8._conversationSubject.complete();
+                } catch (err) {
+                  // Already completed.
+                }
+              });
+            });
+            var itemId = _this8.getItemId();
+            var language = document.documentElement.lang || 'en-US';
+            _this8.connection.send("StartConversation", itemId, _this8._conversationSubject, mimeType, language);
+            _this8.mediaRecorder.start(1000);
+            _this8.isRecording = true;
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+            _this8.isConversationMode = false;
+            _this8.updateConversationButton();
+          });
+        },
+        stopConversationMode: function stopConversationMode() {
+          if (!this.isConversationMode) {
+            return;
+          }
+          this.isConversationMode = false;
+          this.updateConversationButton();
+
+          // Signal the server to cancel all in-progress STT/TTS streams immediately.
+          if (this.connection) {
+            this.connection.invoke("StopConversation")["catch"](function () {});
+          }
+          if (this.isRecording && this.mediaRecorder) {
+            this.mediaRecorder.stop();
+            this.isRecording = false;
+          }
+          this.stopAudio();
+          this._conversationPartialTranscript = '';
+          this._conversationPartialMessage = null;
+
+          // Clean up the AudioContext used for volume monitoring.
+          if (this._conversationAudioCtx) {
+            this._conversationAudioCtx.close()["catch"](function () {});
+            this._conversationAudioCtx = null;
+            this._conversationAnalyser = null;
+          }
+
+          // Mark any in-flight assistant message as done to stop the spinner.
+          if (this._conversationAssistantMessage) {
+            var msg = this.messages[this._conversationAssistantMessage.index];
+            if (msg) {
+              msg.isStreaming = false;
+            }
+            this._conversationAssistantMessage = null;
+          }
+
+          // Safety net: clear all lingering streaming indicators.
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
+
+          // Show a "conversation ended" notification system message.
+          this.receiveNotification({
+            type: 'conversation-ended',
+            content: 'Conversation ended.',
+            icon: 'fa-solid fa-circle-check',
+            dismissible: true
+          });
+        },
+        updateConversationButton: function updateConversationButton() {
+          if (!this.conversationButton) {
+            return;
+          }
+          if (this.isConversationMode) {
+            this.conversationButton.classList.add('active', 'btn-primary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
+            var endHtml = this.conversationButton.getAttribute('data-end-html');
+            if (endHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(endHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          } else {
+            this.conversationButton.classList.remove('active', 'btn-primary');
+            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
+            var startHtml = this.conversationButton.getAttribute('data-start-html');
+            if (startHtml) {
+              this.conversationButton.replaceChildren(DOMPurify.sanitize(startHtml, {
+                RETURN_DOM_FRAGMENT: true
+              }));
+            }
+          }
+        },
+        conversationModeSendPrompt: function conversationModeSendPrompt() {
+          // Legacy: only used by AudioInput mode's ReceiveTranscript.
+        },
+        conversationModeOnAudioEnded: function conversationModeOnAudioEnded() {
+          // Legacy: in conversation mode, continuation is handled
+          // by the persistent stream.
+        },
         showTypingIndicator: function showTypingIndicator() {
           this.addMessage({
             role: 'indicator',
@@ -776,12 +1305,12 @@ window.chatInteractionManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this6 = this;
+          var _this9 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this6.chatContainer.scrollTop = _this6.chatContainer.scrollHeight - _this6.chatContainer.clientHeight;
+            _this9.chatContainer.scrollTop = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -789,6 +1318,44 @@ window.chatInteractionManager = function () {
         },
         getItemId: function getItemId() {
           return this.inputElement.getAttribute('data-interaction-id');
+        },
+        receiveNotification: function receiveNotification(notification) {
+          // Replace existing notification with same type, or add new one.
+          var idx = this.notifications.findIndex(function (n) {
+            return n.type === notification.type;
+          });
+          if (idx >= 0) {
+            this.notifications.splice(idx, 1, notification);
+          } else {
+            this.notifications.push(notification);
+          }
+          this.scrollToBottom();
+        },
+        updateNotification: function updateNotification(notification) {
+          var idx = this.notifications.findIndex(function (n) {
+            return n.type === notification.type;
+          });
+          if (idx >= 0) {
+            this.notifications.splice(idx, 1, notification);
+            this.scrollToBottom();
+          }
+        },
+        removeNotification: function removeNotification(notificationType) {
+          this.notifications = this.notifications.filter(function (n) {
+            return n.type !== notificationType;
+          });
+        },
+        dismissNotification: function dismissNotification(notificationType) {
+          this.removeNotification(notificationType);
+        },
+        handleNotificationAction: function handleNotificationAction(notificationType, actionName) {
+          if (!this.connection) {
+            return;
+          }
+          var itemId = this.getItemId();
+          this.connection.invoke('HandleNotificationAction', itemId, notificationType, actionName)["catch"](function (err) {
+            return console.error('Failed to handle notification action:', err);
+          });
         },
         setItemId: function setItemId(itemId) {
           this.inputElement.setAttribute('data-interaction-id', itemId || '');
@@ -800,67 +1367,71 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this7 = this;
+          var _this0 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+          var itemId = this.getItemId();
+          if (itemId) {
+            this.loadInteraction(itemId);
+          }
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this7.stream) {
+            if (!_this0.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this7.chatContainer.scrollHeight - _this7.chatContainer.clientHeight - _this7.chatContainer.scrollTop <= threshold;
-            _this7.autoScroll = atBottom;
+            var atBottom = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight - _this0.chatContainer.scrollTop <= threshold;
+            _this0.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this7.stream != null) {
+            if (_this0.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this7.buttonElement.click();
+              _this0.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this7.handleUserInput(e);
+            _this0.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this7.buttonElement.removeAttribute('disabled');
+              _this0.buttonElement.removeAttribute('disabled');
             } else {
-              _this7.buttonElement.setAttribute('disabled', true);
+              _this0.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this7.prompt = _this7.inputElement.value;
-              if (_this7.inputElement.value.trim()) {
-                _this7.buttonElement.removeAttribute('disabled');
+              _this0.prompt = _this0.inputElement.value;
+              if (_this0.inputElement.value.trim()) {
+                _this0.buttonElement.removeAttribute('disabled');
               } else {
-                _this7.buttonElement.setAttribute('disabled', true);
+                _this0.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this7.stream != null) {
-              _this7.stream.dispose();
-              _this7.stream = null;
-              _this7.streamingFinished();
-              _this7.hideTypingIndicator();
+            if (_this0.stream != null) {
+              _this0.stream.dispose();
+              _this0.stream = null;
+              _this0.streamingFinished();
+              _this0.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this7.messages.length > 0) {
-                var lastMsg = _this7.messages[_this7.messages.length - 1];
+              if (_this0.messages.length > 0) {
+                var lastMsg = _this0.messages[_this0.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this7.messages.pop();
+                  _this0.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this7.sendMessage();
+            _this0.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -871,7 +1442,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this7.loadInteraction(itemId);
+              _this0.loadInteraction(itemId);
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -885,13 +1456,18 @@ window.chatInteractionManager = function () {
               if (!btn) {
                 return;
               }
-              var pre = btn.closest('pre');
-              if (!pre) {
+              var block = btn.closest('.ai-code-block') || btn.closest('pre');
+              if (!block) {
                 return;
               }
-              var codeEl = pre.querySelector('code');
+              var codeEl = block.querySelector('code');
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
+                var copiedText = config.codeCopiedText || 'Copied!';
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                setTimeout(function () {
+                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                }, 2000);
               }
             });
           }
@@ -906,24 +1482,24 @@ window.chatInteractionManager = function () {
             // Checkboxes & selects save immediately
             if (isCheckbox || isSelect) {
               input.addEventListener('change', function () {
-                _this7.settingsDirty = true;
-                _this7.debouncedSaveSettings();
+                _this0.settingsDirty = true;
+                _this0.debouncedSaveSettings();
               });
               return;
             }
 
             // Text / textarea / number inputs → save on blur if changed
             input.addEventListener('focus', function () {
-              _this7.initialFieldValues.set(input, input.value);
+              _this0.initialFieldValues.set(input, input.value);
             });
             input.addEventListener('blur', function () {
-              var initialValue = _this7.initialFieldValues.get(input);
+              var initialValue = _this0.initialFieldValues.get(input);
               var hasChanged = initialValue !== undefined && input.value !== initialValue;
               if (hasChanged) {
-                _this7.settingsDirty = true;
-                _this7.debouncedSaveSettings();
+                _this0.settingsDirty = true;
+                _this0.debouncedSaveSettings();
               }
-              _this7.initialFieldValues["delete"](input);
+              _this0.initialFieldValues["delete"](input);
             });
           });
 
@@ -931,8 +1507,8 @@ window.chatInteractionManager = function () {
           var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
           toolCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this7.settingsDirty = true;
-              _this7.debouncedSaveSettings();
+              _this0.settingsDirty = true;
+              _this0.debouncedSaveSettings();
             });
           });
 
@@ -940,8 +1516,8 @@ window.chatInteractionManager = function () {
           var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
           groupToggleCheckboxes.forEach(function (toggle) {
             toggle.addEventListener('change', function () {
-              _this7.settingsDirty = true;
-              _this7.debouncedSaveSettings();
+              _this0.settingsDirty = true;
+              _this0.debouncedSaveSettings();
             });
           });
 
@@ -949,10 +1525,28 @@ window.chatInteractionManager = function () {
           var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
           mcpCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this7.settingsDirty = true;
-              _this7.debouncedSaveSettings();
+              _this0.settingsDirty = true;
+              _this0.debouncedSaveSettings();
             });
           });
+
+          // Add event listeners for agent checkboxes with debouncing (850ms)
+          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
+          agentCheckboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+              _this0.settingsDirty = true;
+              _this0.debouncedSaveSettings();
+            });
+          });
+
+          // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
+          var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
+          if (agentGlobalToggle) {
+            agentGlobalToggle.addEventListener('change', function () {
+              _this0.settingsDirty = true;
+              _this0.debouncedSaveSettings();
+            });
+          }
 
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -960,15 +1554,42 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this7.clearHistory(itemId);
+                _this0.clearHistory(itemId);
               }
             });
+          }
+
+          // Initialize speech-to-text microphone button.
+          if (this.speechToTextEnabled && config.micButtonElementSelector) {
+            this.micButton = document.querySelector(config.micButtonElementSelector);
+            if (this.micButton) {
+              this.micButton.style.display = '';
+              this.micButton.addEventListener('click', function () {
+                _this0.toggleRecording();
+              });
+            }
+          }
+
+          // Initialize conversation mode button.
+          if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+            this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
+            if (this.conversationButton) {
+              this.conversationButton.addEventListener('click', function () {
+                _this0.toggleConversationMode();
+              });
+            }
           }
         },
         loadInteraction: function loadInteraction(itemId) {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
             return console.error(err);
           });
+        },
+        reloadCurrentInteraction: function reloadCurrentInteraction() {
+          var itemId = this.getItemId();
+          if (itemId) {
+            this.loadInteraction(itemId);
+          }
         },
         clearHistory: function clearHistory(itemId) {
           var self = this;
@@ -994,7 +1615,7 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this8 = this;
+          var _this1 = this;
           // Clear any existing timeout to reset the debounce timer
           if (this.saveSettingsTimeout) {
             clearTimeout(this.saveSettingsTimeout);
@@ -1007,11 +1628,11 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this8.settingsDirty) {
-              _this8.saveSettings();
-              _this8.settingsDirty = false;
+            if (_this1.settingsDirty) {
+              _this1.saveSettings();
+              _this1.settingsDirty = false;
             }
-            _this8.saveSettingsTimeout = null;
+            _this1.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
@@ -1042,6 +1663,18 @@ window.chatInteractionManager = function () {
           });
           return connectionIds;
         },
+        getSelectedAgentNames: function getSelectedAgentNames() {
+          var agentNames = [];
+          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
+          agentCheckboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              agentNames.push(hiddenInput.value);
+            }
+          });
+          return agentNames;
+        },
         saveSettings: function saveSettings() {
           var itemId = this.getItemId();
           if (!itemId) {
@@ -1052,7 +1685,7 @@ window.chatInteractionManager = function () {
           // Collect all form inputs with the "ChatInteraction." prefix generically.
           // This avoids coupling the JS to specific field names — new fields added by
           // any module are automatically included.
-          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])');
           inputs.forEach(function (input) {
             // Extract field name: "ChatInteraction.Title" → "title"
             var fieldName = input.name.replace('ChatInteraction.', '');
@@ -1066,9 +1699,10 @@ window.chatInteractionManager = function () {
             }
           });
 
-          // Add tool and MCP connection collections (special handling).
+          // Add tool, MCP connection, and agent collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          settings.agentNames = this.getSelectedAgentNames();
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
             return console.error('Error saving settings:', err);
           });
@@ -1098,22 +1732,132 @@ window.chatInteractionManager = function () {
         },
         copyResponse: function copyResponse(message) {
           navigator.clipboard.writeText(message);
+        },
+        startRecording: function startRecording() {
+          var _this10 = this;
+          if (this.isRecording || !this.connection) {
+            return;
+          }
+          navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          }).then(function (stream) {
+            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+            _this10.mediaRecorder = new MediaRecorder(stream, {
+              mimeType: mimeType,
+              audioBitsPerSecond: 128000
+            });
+            _this10.preRecordingPrompt = _this10.prompt;
+            _this10._audioInputSent = false;
+            var subject = new signalR.Subject();
+            var itemId = _this10.getItemId();
+            var pendingChunk = Promise.resolve();
+            _this10.mediaRecorder.addEventListener('dataavailable', function (e) {
+              if (e.data && e.data.size > 0) {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                  var data, uint8Array, binaryString, base64;
+                  return _regenerator().w(function (_context4) {
+                    while (1) switch (_context4.n) {
+                      case 0:
+                        _context4.n = 1;
+                        return e.data.arrayBuffer();
+                      case 1:
+                        data = _context4.v;
+                        uint8Array = new Uint8Array(data);
+                        binaryString = uint8Array.reduce(function (str, _byte2) {
+                          return str + String.fromCharCode(_byte2);
+                        }, '');
+                        base64 = btoa(binaryString);
+                        subject.next(base64);
+                      case 2:
+                        return _context4.a(2);
+                    }
+                  }, _callee4);
+                })));
+              }
+            });
+            _this10.mediaRecorder.addEventListener('stop', function () {
+              stream.getTracks().forEach(function (track) {
+                return track.stop();
+              });
+              pendingChunk.then(function () {
+                return subject.complete();
+              });
+            });
+            var language = document.documentElement.lang || 'en-US';
+            _this10.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this10.mediaRecorder.start(1000);
+            _this10.isRecording = true;
+            _this10.updateMicButton();
+          })["catch"](function (err) {
+            console.error('Microphone access denied:', err);
+          });
+        },
+        stopRecording: function stopRecording() {
+          if (!this.isRecording || !this.mediaRecorder) {
+            return;
+          }
+          this.mediaRecorder.stop();
+          this.isRecording = false;
+          this.updateMicButton();
+        },
+        toggleRecording: function toggleRecording() {
+          if (this.isRecording) {
+            this.stopRecording();
+          } else {
+            this.startRecording();
+          }
+        },
+        updateMicButton: function updateMicButton() {
+          if (!this.micButton) {
+            return;
+          }
+          if (this.isRecording) {
+            this.micButton.classList.add('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+          } else {
+            this.micButton.classList.remove('stt-recording');
+            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+          }
+        }
+      },
+      watch: {
+        isPlayingAudio: function isPlayingAudio() {
+          // Reserved for future use — volume-based interrupt detection
+          // no longer mutes tracks; browser echo cancellation handles echo.
+        },
+        isConversationMode: function isConversationMode(active) {
+          if (this.micButton) {
+            this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
+          }
+          if (this.buttonElement) {
+            this.buttonElement.style.display = active ? 'none' : '';
+          }
+          if (this.inputElement) {
+            this.inputElement.disabled = active;
+            if (active) {
+              this.inputElement.placeholder = '';
+            }
+          }
         }
       },
       mounted: function mounted() {
-        var _this9 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee3() {
-          return _regenerator().w(function (_context3) {
-            while (1) switch (_context3.n) {
+        var _this11 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
+          return _regenerator().w(function (_context5) {
+            while (1) switch (_context5.n) {
               case 0:
-                _context3.n = 1;
-                return _this9.startConnection();
+                _context5.n = 1;
+                return _this11.startConnection();
               case 1:
-                _this9.initializeApp();
+                _this11.initializeApp();
               case 2:
-                return _context3.a(2);
+                return _context5.a(2);
             }
-          }, _callee3);
+          }, _callee5);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
       },

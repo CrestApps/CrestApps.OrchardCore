@@ -54,13 +54,6 @@
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="Source" class="form-label">Provider <span class="text-danger">*</span></label>
-                                <select asp-for="Source" class="form-select" asp-items="Model.Sources" required></select>
-                                <div class="form-text">The AI provider to use (e.g., OpenAI, Azure OpenAI, Ollama).</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
                                 <label asp-for="TitleType" class="form-label">Title Type</label>
                                 <select asp-for="TitleType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AISessionTitleType>()">
                                     <option value="">— Default —</option>

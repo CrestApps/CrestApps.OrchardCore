@@ -298,7 +298,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     /// the AI response. This is OrchardCore-specific because it depends on
     /// <see cref="ILiquidTemplateManager"/>.
     /// </summary>
-    private async Task ProcessGeneratedPromptAsync(
+    protected override async Task ProcessGeneratedPromptAsync(
         ChannelWriter<CompletionPartialMessage> writer,
         IServiceProvider services,
         AIProfile profile,
