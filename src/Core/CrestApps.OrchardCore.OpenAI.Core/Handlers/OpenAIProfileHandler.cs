@@ -8,7 +8,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 
-public sealed class OpenAIProfileHandler : ModelHandlerBase<AIProfile>
+public sealed class OpenAIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     internal readonly IStringLocalizer S;
 

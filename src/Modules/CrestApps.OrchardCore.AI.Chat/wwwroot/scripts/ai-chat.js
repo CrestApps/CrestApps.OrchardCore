@@ -60,12 +60,16 @@ window.openAIChatManager = function () {
           chatHistorySection: null,
           widgetIsInitialized: false,
           isSteaming: false,
+          isNavigatingAway: false,
           stream: null,
           messages: [],
           prompt: ''
         };
       },
       methods: {
+        handleBeforeUnload: function handleBeforeUnload() {
+          this.isNavigatingAway = true;
+        },
         startConnection: function startConnection() {
           var _this = this;
           return _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
@@ -271,7 +275,9 @@ window.openAIChatManager = function () {
               _this5.processReferences(references, messageIndex);
               _this5.streamingFinished();
               _this5.hideTypingIndicator();
-              _this5.addMessage(_this5.getServiceDownMessage());
+              if (!_this5.isNavigatingAway) {
+                _this5.addMessage(_this5.getServiceDownMessage());
+              }
               (_this5$stream2 = _this5.stream) === null || _this5$stream2 === void 0 || _this5$stream2.dispose();
               _this5.stream = null;
               console.error("Stream error:", err);
@@ -570,8 +576,10 @@ window.openAIChatManager = function () {
             }
           }, _callee2);
         }))();
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
       },
       beforeUnmount: function beforeUnmount() {
+        window.removeEventListener('beforeunload', this.handleBeforeUnload);
         if (this.stream) {
           this.stream.dispose();
           this.stream = null;

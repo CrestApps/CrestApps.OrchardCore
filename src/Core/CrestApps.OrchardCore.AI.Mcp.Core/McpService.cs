@@ -17,7 +17,7 @@ public sealed class McpService
         _logger = logger;
     }
 
-    public async Task<IMcpClient> GetOrCreateClientAsync(McpConnection connection)
+    public Task<McpClient> GetOrCreateClientAsync(McpConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
 
@@ -40,6 +40,6 @@ public sealed class McpService
             return null;
         }
 
-        return await McpClientFactory.CreateAsync(transport);
+        return McpClient.CreateAsync(transport);
     }
 }

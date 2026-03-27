@@ -1,14 +1,47 @@
+## Table of Contents
+
+- [AI Services Feature](#ai-services-feature)
+  - [Configuration](#configuration)
+  - [Provider Configuration](#provider-configuration)
+  - [Microsoft.AI.Extensions](#microsoftaiextensions)
+  - [AI Deployments Feature](#ai-deployments-feature)
+  - [AI Chat Services Feature](#ai-chat-services-feature)
+  - [AI Chat WebAPI](#ai-chat-webapi)
+  - [AI Connection Management](#ai-connection-management)
+  - [AI Data Source Management](#ai-data-source-management)
+  - [Defining Chat Profiles Using Code](#defining-chat-profiles-using-code)
+- [AI Tool Management Feature](#ai-tool-management-feature)
+  - [Extending AI Chat with Custom Functions](#extending-ai-chat-with-custom-functions)
+  - [Using AI Tool Sources](#using-ai-tool-sources)
+  - [Configuring AI Profiles with Custom Functions](#configuring-ai-profiles-with-custom-functions)
+- [Adding Custom AI Profile Sources](#adding-custom-ai-profile-sources)
+  - [Implementing a Custom Completion Client](#implementing-a-custom-completion-client)
+  - [Supporting Multiple Deployments](#supporting-multiple-deployments)
+  - [Adding AI Profiles via Recipes](#adding-ai-profiles-via-recipes)
+  - [Deleting AI Deployments via Recipes](#deleting-ai-deployments-via-recipes)
+- [AI Chat with Workflows](#ai-chat-with-workflows)
+  - [AI Completion using Profile Task](#ai-completion-using-profile-task)
+  - [AI Completion using Direct Config Task](#ai-completion-using-direct-config-task)
+- [Deployments with AI Chat](#deployments-with-ai-chat)
+- [Compatibility](#compatibility)
+
 ## AI Services Feature
 
-The **AI Services** feature enables interaction with AI models by providing essential services. Once activated, a new **Artificial Intelligence** menu item appears in the admin menu, offering options to manage AI profiles.
+The **AI Services** feature provides the foundational infrastructure for interacting with AI models through configurable profiles and service integrations.
 
-An **AI Profile** defines how the AI chatbot engages with users, including configuring the chatbot's welcome message, system message, and response behavior.
+Once enabled, a new **Artificial Intelligence** menu item appears in the admin dashboard, allowing administrators to create and manage **AI Profiles**.
 
-Note: This feature does not provide any completion client implementations (e.g., OpenAI, DeepSeek, etc.). It only provides a user interface to manage AI profiles along with the core services.
+An **AI Profile** defines how the AI system interacts with users — including its welcome message, system message, and response behavior.
+
+> **Note:** This feature does **not** include any AI completion client implementations such as **OpenAI**. It only provides the **user interface** and **core services** for managing AI profiles. You must install and configure a compatible provider module (e.g., `OpenAI`, `Azure`, `AzureAIInference`, or `Ollama`) separately.
+
+---
 
 ### Configuration
 
-Before utilizing any AI features, ensure the necessary settings are configured. This can be done using various setting providers. Below is an example of how to configure the services in the `appsettings.json` file:
+Before using the AI Services feature, ensure the required settings are properly configured. This can be done through the `appsettings.json` file or other configuration sources.
+
+Below is an example configuration:
 
 ```json
 {
@@ -26,10 +59,10 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
         "EnableDistributedCaching": true
       },
       "Providers": {
-        "<!-- Provider name goes here -->": {
-          "DefaultConnectionName": "<!-- The default connection name -->",
+        "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
+          "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "DefaultDeploymentName": "<!-- The default deployment name -->",
-          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name if you want to use Embedding services -->"
+          "DefaultEmbeddingDeploymentName": "<!-- The default embedding deployment name (optional, for embedding services) -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               "DefaultDeploymentName": "<!-- The default deployment name for this connection -->"
@@ -42,6 +75,37 @@ Before utilizing any AI features, ensure the necessary settings are configured. 
   }
 }
 ```
+
+---
+
+### Provider Configuration
+
+The following providers are supported **out of the box**:
+
+* **OpenAI** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
+* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.AzureAIInference/README.md)
+* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.Ollama/README.md)
+
+> **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**.
+> For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
+
+Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
+
+---
+
+### Provider Configuration
+
+The following providers are supported **out of the box**:
+
+* **OpenId** — [View configuration guide](../CrestApps.OrchardCore.OpenAI/README.md)
+* **Azure** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Azure/README.md)
+* **AzureAIInference** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.AzureAIInference/README.md)
+* **Ollama** — [View configuration guide](../CrestApps.OrchardCore.OpenAI.Ollama/README.md)
+
+Each provider requires its own connection and deployment settings. The `DefaultConnectionName` determines which connection is used when multiple connections are configured.
+
+---
 
 ### Microsoft.AI.Extensions
 
@@ -73,13 +137,25 @@ The **AI Connection Management** feature enhances **AI Services** by providing a
 
 2. **Add a New Connection**  
    - Click **"Add Connection"**, select a provider, and enter the required details.  
-   - Example: Connecting to **Google Gemini**  
-     - Generate an **API Key** from [Google AI Studio](https://aistudio.google.com).  
-     - Enter the **Endpoint**:  
-       ```
-       https://generativelanguage.googleapis.com/v1beta/openai/
-       ```  
-     - Specify the **Model**, e.g., **gemini-2.0-flash**.  
+   - Example configurations are in the next section.
+
+#### Example Configurations for Common Providers
+
+> [!IMPORTANT]  
+> You need to use a paid plan for all of these even when using models that are free from the web. Otherwise, you'll get various errors along the lines of `insufficient_quota`.
+
+- DeepSeek
+  - **Deployment name** (the model to use): e.g. `deepseek-chat`.
+  - **Endpoint**: `https://api.deepseek.com/v1/`.
+  - **API Key**: Generate one in [DeepSeek Platform](https://platform.deepseek.com).
+- Google Gemini
+  - **Deployment name**: e.g. `gemini-2.0-flash`.
+  - **Endpoint**: `https://generativelanguage.googleapis.com/v1beta/openai/`.
+  - **API Key**: Generate one in [Google AI Studio](https://aistudio.google.com).
+- OpenAI
+  - **Deployment name**: e.g. `gpt-4o-mini`.
+  - **Endpoint**: `https://api.openai.com/v1/`.
+  - **API Key**: Generate one in [OpenAI Platform](https://platform.openai.com/account/api-keys).
 
 #### Creating AI Profiles  
 
@@ -215,7 +291,6 @@ public sealed class GetWeatherFunction : AIFunction
     public GetWeatherFunction()
     {
         Name = TheName;
-        Description = "Retrieves weather information for a specified location.";
 
         JsonSchema = JsonSerializer.Deserialize<JsonElement>(
         """
@@ -235,7 +310,7 @@ public sealed class GetWeatherFunction : AIFunction
 
     public override string Name { get; }
 
-    public override string Description => "Retrieves weather information for a specified location."
+    public override string Description => "Retrieves weather information for a specified location.";
 
     public override JsonElement JsonSchema { get; }
 
@@ -269,13 +344,13 @@ public sealed class GetWeatherFunction : AIFunction
 To register the custom function, add it as a service in the `Startup` class:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.Name);
+services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName);
 ```
 
 Alternatively, you can register it with configuration options:
 
 ```csharp
-services.AddAITool<GetWeatherFunction>(GetWeatherFunction.Name, options =>
+services.AddAITool<GetWeatherFunction>(GetWeatherFunction.TheName, options =>
 {
     options.Title = "Weather Getter";
     options.Description = "Retrieves weather information for a specified location.";
@@ -583,29 +658,77 @@ You can also create or update AI deployments using the following recipe:
 }
 ```
 
+#### Deleting AI Deployments via Recipes
+
+You can delete model deployments using the `DeleteAIDeployments` recipe step. This step supports deleting specific deployments by name or deleting all deployments.
+
+- Delete all deployments:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployments",
+      "IncludeAll": true
+    }
+  ]
+}
+```
+
+- Delete specific deployments by name:
+
+```json
+{
+  "steps": [
+    {
+      "name": "DeleteAIDeployments",
+      "DeploymentNames": [
+        "gpt-4o-mini",
+        "my-custom-deployment"
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+- Deployment names are matched case-insensitively.
+- If `IncludeAll` is `true`, all deployments will be removed and `DeploymentNames` is ignored.
+- Ensure the `AI Deployments` feature and the `OrchardCore.Recipes` feature are enabled.
+
 ---
 
 ### AI Chat with Workflows
 
-When used with the **Workflows** feature, the **AI Services** feature introduces a new activity to interact with AI chat services:
+When combined with the **Workflows** feature, the **AI Services** module introduces new activities that allow workflows to interact directly with AI chat services.
 
-#### Chat Utility Completion Task
+#### AI Completion using Profile Task
 
-This activity allows you to send a message to the AI chat service and store the response in a workflow property. To use it, search for the **Chat Utility Completion** task in your workflow and specify a unique **Result Property Name**. The generated response will be stored in this property.
+This activity lets you request AI completions using an existing **AI Profile**, and store the response in a workflow property.
+To use it, search for the **AI Completion using Profile** task in your workflow and specify a unique **Result Property Name**.
+The generated response will be saved in this property.
 
-For example, if the **Result Property Name** is `AI-CrestApps-Step1`, access the response later with:
+For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
 
 ```liquid
 {{ Workflow.Output["AI-CrestApps-Step1"].Content }}
 ```
 
-If you want the response in HTML format, enable the `Include HTML Content` option, and access it with:
+To prevent naming conflicts with other workflow tasks, it's recommended to prefix your **Result Property Name** with `AI-`.
+
+#### AI Completion using Direct Config Task
+
+This activity allows you to request AI completions by defining the configuration directly within the workflow, without relying on a predefined AI Profile.
+To use it, search for the **AI Completion using Direct Config** task in your workflow and specify a unique **Result Property Name**.
+The generated response will be saved in this property.
+
+For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
 
 ```liquid
-{{ Workflow.Output["AI-CrestApps-Step1"].HtmlContent }}
+{{ Workflow.Output["AI-CrestApps-Step1"].Content }}
 ```
 
-To avoid conflicts with other workflow tasks, it's recommended to prefix the **Result Property Name** with `AI-`.
+As with other AI tasks, it's recommended to prefix your **Result Property Name** with `AI-` to avoid conflicts.
 
 ---
 

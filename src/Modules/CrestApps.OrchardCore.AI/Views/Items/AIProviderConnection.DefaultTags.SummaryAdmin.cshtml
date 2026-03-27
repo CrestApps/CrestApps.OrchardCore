@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProviderConnection>
+
+<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ProviderName
+</span>
+
+<span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection Name"]">
+    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.DisplayText
+</span>

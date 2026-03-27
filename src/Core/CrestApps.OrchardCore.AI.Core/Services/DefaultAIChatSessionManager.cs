@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -13,13 +14,13 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
-    private readonly YesSql.ISession _session;
+    private readonly ISession _session;
 
     public DefaultAIChatSessionManager(
         IClock clock,
         IHttpContextAccessor httpContextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
-        YesSql.ISession session)
+        ISession session)
     {
         _clock = clock;
         _httpContextAccessor = httpContextAccessor;
@@ -27,9 +28,10 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _session = session;
     }
 
-    public async Task<AIChatSession> NewAsync(AIProfile profile)
+    public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(context);
 
         var chatSession = new AIChatSession
         {
@@ -44,7 +46,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             chatSession.UserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         }
-        else
+        else if (!context.AllowRobots)
         {
             var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
 
@@ -76,7 +78,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null, collection: AIConstants.CollectionName);
+        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId && i.Title != null && i.ProfileId != null, collection: AIConstants.CollectionName);
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -109,7 +111,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId, collection: AIConstants.CollectionName)
+            return await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null, collection: AIConstants.CollectionName)
                 .FirstOrDefaultAsync();
         }
         else
@@ -132,5 +134,62 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         ArgumentNullException.ThrowIfNull(chatSession);
 
         return _session.SaveAsync(chatSession, collection: AIConstants.CollectionName);
+    }
+
+    public async Task<bool> DeleteAsync(string sessionId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return false;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
+            i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
+            collection: AIConstants.CollectionName)
+            .FirstOrDefaultAsync();
+
+        if (chatSession == null)
+        {
+            return false;
+        }
+
+        _session.Delete(chatSession, collection: AIConstants.CollectionName);
+
+        return true;
+    }
+
+    public async Task<int> DeleteAllAsync(string profileId)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(profileId);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
+        {
+            return 0;
+        }
+
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
+            i => i.UserId == userId && i.ProfileId == profileId,
+            collection: AIConstants.CollectionName)
+            .ListAsync();
+
+        var totalDeleted = 0;
+
+        foreach (var session in sessions)
+        {
+            _session.Delete(session, collection: AIConstants.CollectionName);
+            totalDeleted++;
+        }
+
+        return totalDeleted;
     }
 }

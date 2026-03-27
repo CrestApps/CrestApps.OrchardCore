@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -12,11 +11,11 @@ public abstract class AICompletionServiceBase
         ProviderOptions = providerOptions;
     }
 
-    protected virtual string GetDefaultConnectionName(AIProvider provider, AIProfile profile)
+    protected virtual string GetDefaultConnectionName(AIProvider provider, string connectionName)
     {
-        if (!string.IsNullOrEmpty(profile.ConnectionName))
+        if (!string.IsNullOrEmpty(connectionName))
         {
-            return profile.ConnectionName;
+            return connectionName;
         }
 
         return provider.DefaultConnectionName;
@@ -52,17 +51,13 @@ public abstract class AICompletionServiceBase
         return Task.FromResult<AIDeployment>(null);
     }
 
-    protected static string GetSystemMessage(AICompletionContext context, AIProfileMetadata metadata)
+    protected static string GetSystemMessage(AICompletionContext context)
     {
         var systemMessage = string.Empty;
 
         if (!string.IsNullOrEmpty(context.SystemMessage))
         {
             systemMessage = context.SystemMessage;
-        }
-        else if (!string.IsNullOrEmpty(metadata.SystemMessage))
-        {
-            systemMessage = metadata.SystemMessage;
         }
 
         if (context.UserMarkdownInResponse)

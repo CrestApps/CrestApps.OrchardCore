@@ -13,7 +13,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
-internal sealed class AzureOpenAIConnectionSettingsHandler : ModelHandlerBase<AIProviderConnection>
+internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 

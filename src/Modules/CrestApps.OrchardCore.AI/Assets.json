@@ -4,5 +4,11 @@
       "Assets/js/admin-ui.js"
     ],
     "output": "wwwroot/scripts/admin-ui.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/technical-name-generator.js"
+    ],
+    "output": "wwwroot/scripts/technical-name-generator.js"
   }
 ]

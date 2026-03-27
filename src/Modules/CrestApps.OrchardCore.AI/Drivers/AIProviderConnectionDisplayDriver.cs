@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -11,14 +12,17 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProviderConnection>
 {
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
 
     public AIProviderConnectionDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<AIProviderConnectionDisplayDriver> stringLocalizer)
     {
         _connectionsCatalog = connectionsCatalog;
+        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
@@ -34,19 +38,16 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
     public override IDisplayResult Edit(AIProviderConnection connection, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<AIProviderConnectionFieldsViewModel>("AIProviderConnectionFields_Edit", model =>
         {
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
-            model.Type = connection.Type;
             model.DefaultDeploymentName = connection.DefaultDeploymentName;
+            model.DefaultEmbeddingDeploymentName = connection.DefaultEmbeddingDeploymentName;
             model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
-            model.Types =
-            [
-                new(S["Chat"], nameof(AIProviderConnectionType.Chat)),
-                new(S["Embedding"], nameof(AIProviderConnectionType.Embedding)),
-            ];
 
         }).Location("Content:1");
     }
@@ -73,7 +74,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Display text is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayText), S["The Title is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.DefaultDeploymentName))
@@ -81,18 +82,12 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultDeploymentName), S["Default deployment name is required."]);
         }
 
-        if (!model.Type.HasValue)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Type), S["A connection type is required."]);
-        }
-        else
-        {
-            model.Type = model.Type.Value;
-        }
-
         connection.DisplayText = model.DisplayText;
         connection.DefaultDeploymentName = model.DefaultDeploymentName;
+        connection.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
         connection.IsDefault = model.IsDefault;
+
+        _shellReleaseManager.RequestRelease();
 
         return Edit(connection, context);
     }

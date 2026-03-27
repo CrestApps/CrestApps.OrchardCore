@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -22,7 +21,7 @@ public sealed class ProfilesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
 
-    private readonly INamedSourceCatalogManager<AIProfile> _profileManager;
+    private readonly IAIProfileManager _profileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfile> _profileDisplayManager;
@@ -33,7 +32,7 @@ public sealed class ProfilesController : Controller
     internal readonly IStringLocalizer S;
 
     public ProfilesController(
-        INamedSourceCatalogManager<AIProfile> profileManager,
+        IAIProfileManager profileManager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<AIProfile> profileDisplayManager,

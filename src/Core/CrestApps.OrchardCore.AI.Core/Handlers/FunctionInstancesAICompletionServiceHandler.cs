@@ -1,6 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
@@ -16,16 +14,16 @@ public sealed class FunctionInstancesAICompletionServiceHandler : IAICompletionS
     public async Task ConfigureAsync(CompletionServiceConfigureContext context)
     {
         if (!context.IsFunctionInvocationSupported ||
-            !context.Profile.TryGet<AIProfileFunctionInstancesMetadata>(out var metadata) ||
-            metadata.InstanceIds is null ||
-            metadata.InstanceIds.Length == 0)
+            context.CompletionContext is null ||
+            context.CompletionContext.InstanceIds is null ||
+            context.CompletionContext.InstanceIds.Length == 0)
         {
             return;
         }
 
         context.ChatOptions.Tools ??= [];
 
-        foreach (var instanceId in metadata.InstanceIds)
+        foreach (var instanceId in context.CompletionContext.InstanceIds)
         {
             var tool = await _toolsService.GetByInstanceIdAsync(instanceId);
 

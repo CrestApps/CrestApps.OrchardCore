@@ -2,17 +2,17 @@ namespace CrestApps.OrchardCore.AI.Core.Models;
 
 public sealed class DefaultAIOptions
 {
-    public float Temperature = 0;
+    public float? Temperature { get; set; } = 0;
 
-    public int MaxOutputTokens = 800;
+    public int? MaxOutputTokens { get; set; }
 
-    public float TopP = 1;
+    public float? TopP { get; set; } = 1;
 
-    public float FrequencyPenalty = 0;
+    public float? FrequencyPenalty { get; set; } = 0;
 
-    public float PresencePenalty = 0;
+    public float? PresencePenalty { get; set; } = 0;
 
-    public int PastMessagesCount = 10;
+    public int PastMessagesCount { get; set; } = 10;
 
     public int MaximumIterationsPerRequest { get; set; } = 10;
 

@@ -11,7 +11,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIToolInstanceHandler : ModelHandlerBase<AIToolInstance>
+public sealed class AIToolInstanceHandler : CatalogEntryHandlerBase<AIToolInstance>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IServiceProvider _serviceProvider;

@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionDataSourceViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">
+        @T["Data Source"]
+        <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="@T["Select a data source for your own data. This connects to Azure AI Search, Elasticsearch, or MongoDB where your indexed data is stored."]" aria-label="@T["Information about data source parameter"]">
+            <i class="fa-solid fa-circle-question"></i>
+        </span>
+    </label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select" name="ChatInteraction.DataSourceId">
+            <option value="">@T["Select a data source"]</option>
+        </select>
+        <span class="hint">@T["The data source where your indexed data is stored."]</span>
+    </div>
+</div>

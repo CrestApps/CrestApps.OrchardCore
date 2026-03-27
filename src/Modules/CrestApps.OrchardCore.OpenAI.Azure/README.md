@@ -1,3 +1,23 @@
+## Table of Contents
+
+- [Azure OpenAI Services Integration](#azure-openai-services-integration)
+  - [Configuration](#configuration)
+  - [How to Retrieve Azure OpenAI Credentials](#how-to-retrieve-azure-openai-credentials)
+- [Azure OpenAI Chat Feature](#azure-openai-chat-feature)
+  - [Recipe Configuration](#recipe-configuration)
+- [Azure OpenAI – Bring Your Own Data](#azure-openai--bring-your-own-data)
+  - [AI Profile with Data Source Recipe Example](#ai-profile-with-data-source-recipe-example)
+- [Azure AI Search-Powered Data Source](#azure-ai-search-powered-data-source)
+  - [Azure AI Search-Powered Data Source Recipe Example](#azure-ai-search-powered-data-source-recipe-example)
+- [Elasticsearch-Powered Data Source](#elasticsearch-powered-data-source)
+  - [Elasticsearch-Powered Data Source Recipe Example](#elasticsearch-powered-data-source-recipe-example)
+  - [Configuration](#configuration-1)
+  - [Generating an API Key in Kibana](#generating-an-api-key-in-kibana)
+- [MongoDB-Powered Data Source](#mongodb-powered-data-source)
+  - [MongoDB-Powered Data Source Recipe Example](#mongodb-powered-data-source-recipe-example)
+- [Registering a Custom Data Source](#registering-a-custom-data-source)
+- [Implementing the Data Source Handler](#implementing-the-data-source-handler)
+
 # Features
 
 ## Azure OpenAI Services Integration

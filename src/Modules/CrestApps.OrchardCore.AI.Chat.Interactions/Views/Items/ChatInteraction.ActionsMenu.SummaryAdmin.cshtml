@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ChatInteraction>
+
+<li>
+    <a asp-action="Delete"
+       asp-route-itemId="@Model.Value.ItemId"
+       class="dropdown-item text-danger"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-message="@T["Are you sure you want to delete this chat interaction?"]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["Cancel"]">@T["Delete"]</a>
+</li>

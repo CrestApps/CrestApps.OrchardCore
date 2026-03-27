@@ -4,9 +4,10 @@ public static class AIConstants
 {
     public const string TitleGeneratorSystemMessage =
     """
-    - Generate a short topic title about the user prompt.
-    - Response using title case.
-    - Response must be under 255 characters in length.
+    - Create a concise title that reflects the main topic of the user's prompt.
+    - Use Title Case.
+    - Do not use markdown, symbols, or decorative formatting.
+    - Keep the title under 255 characters.
     """;
 
     public const string DefaultBlankMessage = "AI drew blank and no message was generated!";
@@ -39,6 +40,10 @@ public static class AIConstants
         public const string DataSources = "CrestApps.OrchardCore.AI.DataSources";
 
         public const string ChatApi = "CrestApps.OrchardCore.AI.Chat.Api";
+
+        public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";
+
+        public const string ChatDocuments = "CrestApps.OrchardCore.AI.Chat.Interactions.Documents";
     }
 
     public static class RouteNames
@@ -50,5 +55,11 @@ public static class AIConstants
         public const string AIChatSessionRouteName = "AIChatSession";
 
         public const string GetDeploymentsByConnectionRouteName = "GetDeploymentsByConnection";
+
+        public const string GetConnectionsByProviderRouteName = "GetConnectionsByProvider";
+
+        public const string ChatInteractionUploadDocument = "ChatInteractionUploadDocument";
+
+        public const string ChatInteractionRemoveDocument = "ChatInteractionRemoveDocument";
     }
 }

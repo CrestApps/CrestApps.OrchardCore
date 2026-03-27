@@ -46,7 +46,7 @@
 
 <div class="container-fluid mb-3">
 
-    <div class="text-bg-light rounded-5 border w-100">
+    <div class="text-bg-light rounded border w-100">
         <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
         <div class="d-flex justify-content-between px-3 my-2">
@@ -72,7 +72,7 @@
             </div>
 
             <div>
-                <button class="btn btn-dark rounded-circle" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                     <i class="fa-solid fa-arrow-up"></i>
                 </button>
             </div>

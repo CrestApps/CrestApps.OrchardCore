@@ -12,7 +12,7 @@ using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 
-internal sealed class AzureAIInferenceConnectionSettingsHandler : ModelHandlerBase<AIProviderConnection>
+internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 

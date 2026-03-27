@@ -1,0 +1,70 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using OrchardCore
+
+@model EditChatInteractionToolsViewModel
+
+<div class="mb-3">
+    @foreach (var tools in Model.Tools)
+    {
+        var groupKey = tools.Key;
+        var groupId = groupKey.Replace(" ", "-");
+
+        <div class="mb-3">
+
+            <h6>@groupKey</h6>
+
+            <div class="form-check">
+                <input class="form-check-input group-toggle"
+                       type="checkbox"
+                       id="selectAll_@groupId"
+                       data-group="@groupId" />
+                <label class="form-check-label" for="selectAll_@groupId">
+                    @T["Select All"]
+                </label>
+            </div>
+
+            <div class="ms-3">
+                @for (var i = 0; i < tools.Value.Length; i++)
+                {
+                    <div class="form-check">
+                        <input type="hidden" asp-for="@Model.Tools[groupKey][i].ItemId" />
+                        <input asp-for="@Model.Tools[groupKey][i].IsSelected"
+                               type="checkbox"
+                               class="form-check-input group-checkbox"
+                               data-group="@groupId"
+                               id="tool_@(groupId)_@i" />
+
+                        <label class="form-check-label"
+                               asp-for="@Model.Tools[groupKey][i].IsSelected">
+                            @tools.Value[i].DisplayText
+                        </label>
+                        <span class="hint dashed small">@tools.Value[i].Description</span>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+
+        document.querySelectorAll('.group-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function () {
+                const groupName = this.dataset.group;
+                const checkboxes = document.querySelectorAll(`.group-checkbox[data-group="${groupName}"]`);
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        });
+
+        document.querySelectorAll('.group-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const groupName = this.dataset.group;
+                const all = document.querySelectorAll(`.group-checkbox[data-group="${groupName}"]`);
+                const allChecked = [...all].every(cb => cb.checked);
+                const toggle = document.querySelector(`.group-toggle[data-group="${groupName}"]`);
+                toggle.checked = allChecked;
+            });
+        });
+    });
+</script>

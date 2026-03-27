@@ -43,6 +43,14 @@ Provides services for all AI modules and provide the interface for managing AI p
 #### AI Chat Module
 Provides interface for interacting with AI chat models like **ChatGPT** and others. See the [AI Chat Module README](src/Modules/CrestApps.OrchardCore.AI.Chat/README.md) for more details.  
 
+#### AI Chat Interactions Module
+Enables ad-hoc AI chat experiences with configurable parameters, document upload, and RAG (Retrieval Augmented Generation) support. Users can chat with AI models without predefined profiles and upload documents to chat against their own data. See the [AI Chat Interactions README](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/README.md) for more details.
+
+**Extension modules:**
+- [AI Chat Interactions - Documents](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/README-Documents.md) - Document upload and RAG support
+- [AI Chat Interactions - PDF](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.Pdf/README.md) - PDF document support
+- [AI Chat Interactions - OpenXml](src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions.OpenXml/README.md) - Word, Excel, PowerPoint support
+
 #### Orchard Core AI Agent Module
 Enhances the **AI Module** by providing AI Agents to perform tasks on your Orchard Core site. For more details, see the [Orchard Core AI Agent Module README](src/Modules/CrestApps.OrchardCore.AI.Agent/README.md).
 
@@ -94,6 +102,9 @@ Enables you to restrict content items based on user roles. See the [Content Acce
 #### Resources Module
 Provides additional resources to accelerate development. See the [Resources Module README](src/Modules/CrestApps.OrchardCore.Resources/README.md).  
 
+#### CrestApps Recipes Module
+Provides a structured way to define and retrieve recipe steps. See the [CrestApps Recipes Module README](src/Modules/CrestApps.OrchardCore.Recipes/README.md).  
+
 ## Getting Started
 
 ### Running Locally
@@ -128,10 +139,10 @@ Follow these steps to get started with CrestApps:
 
 This project is actively maintained and evolves alongside Orchard Core.
 
-* If you're using Orchard Core versions from `2.1` up to `2.2`, please use package version `1.2.0-beta-0014`.
-* For Orchard Core `3.0.0-preview-18752` and later, use version `2.0.0-beta-0006` or newer.
+* If you're using Orchard Core versions from `2.1` up to `2.3`, please use package version `1.2.x`.
+* For Orchard Core `3.0.0-preview-18823` and later, please use version `2.0.0-beta-0007` or newer.
 
-**Note:** The reason for this split is that Orchard Core `3.0.0-preview-18669` upgraded to YesSql `5.4.1`, which introduced a binary breaking change. As a result, we had to divide development into two branches to maintain compatibility.
+**Note:** In Orchard Core v3 multiple breaking changes were introduced to improve the framework. As a result, we had to divide development into two branches to maintain compatibility.
 
 ### Production Packages
 Stable releases are available on [NuGet.org](https://www.nuget.org/).  

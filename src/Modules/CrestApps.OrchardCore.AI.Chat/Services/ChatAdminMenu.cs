@@ -31,21 +31,21 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
         var profiles = await _profilesCatalog.GetAsync(AIProfileType.Chat);
 
         builder
-           .Add(S["Artificial Intelligence"], ai =>
+           .Add(S["Artificial Intelligence"], artificialIntelligence =>
            {
                var i = 1;
                foreach (var profile in profiles.OrderBy(p => p.DisplayText))
                {
                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
-                   if (!settings.IsOnAdminMenu || !_aiOptions.ProfileSources.ContainsKey(profile.Source))
+                   if (profile.Source is null || !settings.IsOnAdminMenu || !_aiOptions.ProfileSources.ContainsKey(profile.Source))
                    {
                        continue;
                    }
 
                    var name = profile.DisplayText ?? profile.Name;
-                   ai
-                   .Add(new LocalizedString(name, name), $"chat{i++}", chat => chat
+                   artificialIntelligence
+                       .Add(new LocalizedString(name, name), $"chat{i++}", chat => chat
                        .AddClass(profile.Name.HtmlClassify())
                        .Action("Index", "Admin", AIConstants.Feature.Chat, new RouteValueDictionary
                        {

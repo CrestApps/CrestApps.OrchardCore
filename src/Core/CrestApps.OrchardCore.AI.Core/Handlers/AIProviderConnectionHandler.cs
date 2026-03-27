@@ -12,7 +12,7 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
-public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderConnection>
+public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIOptions _aiOptions;
@@ -104,13 +104,6 @@ public sealed class AIProviderConnectionHandler : ModelHandlerBase<AIProviderCon
         if (!string.IsNullOrEmpty(defaultDeploymentName))
         {
             connection.DefaultDeploymentName = defaultDeploymentName;
-        }
-
-        var typeText = data[nameof(AIProviderConnection.Type)]?.GetValue<string>()?.Trim();
-
-        if (!string.IsNullOrEmpty(typeText) && Enum.TryParse<AIProviderConnectionType>(typeText, out var type))
-        {
-            connection.Type = type;
         }
 
         var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();

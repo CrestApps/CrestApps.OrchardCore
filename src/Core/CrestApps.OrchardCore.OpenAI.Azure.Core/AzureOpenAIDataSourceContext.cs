@@ -1,15 +1,17 @@
-using CrestApps.OrchardCore.AI.Models;
-
 namespace CrestApps.OrchardCore.OpenAI.Azure.Core;
 
 public sealed class AzureOpenAIDataSourceContext
 {
-    public readonly AIProfile Profile;
-
-    public AzureOpenAIDataSourceContext(AIProfile profile)
+    public AzureOpenAIDataSourceContext(string dataSourceId, string dataSourceType)
     {
-        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(dataSourceId);
+        ArgumentNullException.ThrowIfNull(dataSourceType);
 
-        Profile = profile;
+        DataSourceId = dataSourceId;
+        DataSourceType = dataSourceType;
     }
+
+    public string DataSourceId { get; }
+
+    public string DataSourceType { get; }
 }

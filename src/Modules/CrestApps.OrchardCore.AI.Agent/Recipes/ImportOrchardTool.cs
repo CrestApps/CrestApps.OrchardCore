@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Agent.Schemas;
-using CrestApps.OrchardCore.AI.Agent.Services;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Services;
 
 namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 

@@ -1,3 +1,12 @@
+## Table of Contents
+
+- [OpenAI Chat Feature](#openai-chat-feature)
+  - [Configuration](#configuration)
+  - [Using AI Deployments](#using-ai-deployments)
+  - [Configuring Other AI Providers](#configuring-other-ai-providers)
+  - [Configuring a Provider Example: DeepSeek](#configuring-a-provider-example-deepseek)
+  - [Configuring Multiple Models](#configuring-multiple-models)
+
 ## OpenAI Chat Feature  
 
 The **OpenAI AI Chat** feature enhances the **AI Services** functionality by integrating OpenAI-compatible models. It provides a suite of services to interact with these models, enabling advanced AI capabilities.  

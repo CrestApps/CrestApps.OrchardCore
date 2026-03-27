@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Core
+@using CrestApps.OrchardCore.Users.Models
+@using OrchardCore.Entities
+@using OrchardCore.Users.Models
+
+@inject IUserCacheService UserCacheService
+@inject IDisplayNameProvider DisplayNameProvider
+
+@{
+    string username = Model.UserName;
+
+    if (string.IsNullOrEmpty(username))
+    {
+        return;
+    }
+
+    var user = await UserCacheService.GetUserAsync(username);
+}
+
+@if (user is User u && u.TryGet<UserAvatarPart>(out var mediaPart) && mediaPart.Avatar?.Paths?.Length > 0)
+{
+    var displayName = await DisplayNameProvider.GetAsync(user);
+
+    <div class="user-profile-avatar">
+        <img src="@Orchard.AssetUrl(mediaPart.Avatar.Paths[0], width: 75)" class="user-avatar rounded-circle" alt="@displayName" />
+    </div>
+}
+else
+{
+    <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i>
+}

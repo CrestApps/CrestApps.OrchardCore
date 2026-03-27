@@ -24,12 +24,16 @@ internal sealed class CatalogItemMigrations : DataMigration
             var storeCollectionOptions = scope.ServiceProvider.GetRequiredService<IOptions<StoreCollectionOptions>>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
 
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<ProfileStoreMigrations>>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<CatalogItemMigrations>>();
             var dialect = store.Configuration.SqlDialect;
 
             var collections = storeCollectionOptions.Value.Collections.ToHashSet();
 
             collections.Add("");
+
+            await using var connection = dbConnectionAccessor.CreateConnection();
+
+            await connection.OpenAsync();
 
             foreach (var collection in collections)
             {
@@ -47,11 +51,6 @@ internal sealed class CatalogItemMigrations : DataMigration
                 sqlBuilder.AddSelector("," + quotedContentColumnName);
                 sqlBuilder.From(quotedTableName);
                 sqlBuilder.WhereAnd($" {quotedTypeColumnName} LIKE 'CrestApps.OrchardCore.Models.DictionaryDocument`1[[%' ");
-
-                await using var connection = dbConnectionAccessor.CreateConnection();
-
-                await connection.OpenAsync();
-                var transaction = await connection.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
 
                 try
                 {
@@ -100,19 +99,12 @@ internal sealed class CatalogItemMigrations : DataMigration
                             );
                         }
                     }
-
-                    await transaction.CommitAsync();
                 }
                 catch (Exception e)
                 {
                     logger.LogError(e, "An error occurred while updating indexing tasks Category to Content.");
 
-                    await transaction.RollbackAsync();
                     throw;
-                }
-                finally
-                {
-                    await connection.CloseAsync();
                 }
             }
         });

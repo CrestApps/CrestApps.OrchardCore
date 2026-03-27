@@ -56,6 +56,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentStepSubscriptionFlowDisplayDriver>();
         services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<SubscriptionFlow>, EnhancedConfirmationSubscriptionFlowDisplayDriver>();
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
 

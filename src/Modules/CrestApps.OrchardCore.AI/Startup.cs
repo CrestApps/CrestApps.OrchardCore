@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
 using CrestApps.OrchardCore.AI.Endpoints;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
+using CrestApps.OrchardCore.AI.Handlers;
 using CrestApps.OrchardCore.AI.Indexes;
 using CrestApps.OrchardCore.AI.Migrations;
 using CrestApps.OrchardCore.AI.Models;
@@ -30,6 +31,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -64,9 +66,18 @@ public sealed class Startup : StartupBase
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>();
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<ProfileStoreMigrations>();
         services.AddDataMigration<CatalogItemMigrations>();
 #pragma warning restore CS0618 // Type or member is obsolete
+
+        services.AddDataMigration<AIProfileDefaultContextMigrations>();
+
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes
+            .AddGetConnectionsEndpoint();
     }
 }
 
@@ -88,7 +99,9 @@ public sealed class WorkflowsStartup : StartupBase
         {
             o.MemberAccessStrategy.Register<AIResponseMessage>();
         });
-        services.AddActivity<AICompletionTask, AICompletionTaskDisplayDriver>();
+
+        services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
     }
 }
 
@@ -99,6 +112,7 @@ public sealed class OCDeploymentsStartup : StartupBase
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
+        services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
     }
 }
 
@@ -110,6 +124,7 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIDataSourceServices();
+        services.AddScoped<IAICompletionContextBuilderHandler, DataSourceAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
         services.AddNavigationProvider<AIDataProviderAdminMenu>();
@@ -149,10 +164,6 @@ public sealed class DeploymentsStartup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddDataMigration<DeploymentStoreMigrations>();
-#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -181,6 +192,7 @@ public sealed class DeploymentRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIDeploymentStep>();
+        services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
     }
 }
 #endregion
@@ -216,6 +228,7 @@ public sealed class ToolsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<IAICompletionContextBuilderHandler, ToolInstancesAICompletionContextBuilderHandler>();
         services.AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, InvokableToolMetadataDisplayDriver>();
         services.AddDisplayDriver<AIToolInstance, AIProfileToolMetadataDisplayDriver>();
