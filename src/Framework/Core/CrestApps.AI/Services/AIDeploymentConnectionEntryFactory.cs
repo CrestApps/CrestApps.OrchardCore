@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.DataProtection;
 
 namespace CrestApps.AI.Services;
 
-internal static class AIDeploymentConnectionEntryFactory
+public static class AIDeploymentConnectionEntryFactory
 {
     private const string ConnectionProtectorName = "AIProviderConnection";
 
