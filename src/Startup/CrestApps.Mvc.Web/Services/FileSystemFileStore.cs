@@ -49,7 +49,8 @@ public sealed class FileSystemFileStore
 
     private string GetSafePath(string fileName)
     {
-        var fullPath = Path.GetFullPath(Path.Combine(_basePath, fileName));
+        var relativePath = NormalizeRelativePath(fileName);
+        var fullPath = Path.GetFullPath(Path.Combine(_basePath, relativePath));
 
         if (!fullPath.StartsWith(_basePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(fullPath, _basePath, StringComparison.OrdinalIgnoreCase))
@@ -58,5 +59,30 @@ public sealed class FileSystemFileStore
         }
 
         return fullPath;
+    }
+
+    private static string NormalizeRelativePath(string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName) || Path.IsPathRooted(fileName))
+        {
+            throw new ArgumentException("The file name contains an invalid path.");
+        }
+
+        var segments = fileName.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+
+        if (segments.Length == 0)
+        {
+            throw new ArgumentException("The file name contains an invalid path.");
+        }
+
+        foreach (var segment in segments)
+        {
+            if (segment is "." or "..")
+            {
+                throw new ArgumentException("The file name contains an invalid path.");
+            }
+        }
+
+        return Path.Combine(segments);
     }
 }
