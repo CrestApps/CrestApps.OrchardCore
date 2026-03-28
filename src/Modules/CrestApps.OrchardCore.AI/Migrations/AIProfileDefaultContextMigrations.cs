@@ -14,9 +14,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 /// </summary>
 internal sealed class AIProfileDefaultContextMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {

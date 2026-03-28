@@ -24,9 +24,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
     private const int _batchSize = 50;
     private const string _sessionDocumentType = "CrestApps.OrchardCore.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
 
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {

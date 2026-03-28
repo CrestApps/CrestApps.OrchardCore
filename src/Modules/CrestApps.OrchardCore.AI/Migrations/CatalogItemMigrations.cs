@@ -14,9 +14,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 [Obsolete("This class will be removed before the v1 is released.")]
 internal sealed class CatalogItemMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {

@@ -14,9 +14,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIDeploymentTypeMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Member does not access instance data — called by convention from DataMigration base class
-    public Task<int> CreateAsync()
-#pragma warning restore CA1822
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
@@ -48,12 +46,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 deploymentDoc.Records.Values);
         });
 
-        return Task.FromResult(1);
+        return 1;
     }
 
-#pragma warning disable CA1822 // Mark members as static
-    public int UpdateFrom1()
-#pragma warning restore CA1822 // Mark members as static
+    public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
@@ -104,9 +100,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return 2;
     }
 
-    #pragma warning disable CA1822 // Mark members as static
-    public int UpdateFrom2()
-    #pragma warning restore CA1822 // Mark members as static
+    public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
