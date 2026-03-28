@@ -13,8 +13,8 @@ Previously, AI model deployments were configured as string properties on `AIProv
 
 In the new architecture, **AIDeployment** is a first-class typed entity with:
 
-- **`Type`** — The deployment purpose: `Chat`, `Utility`, `Embedding`, `Image`, or `SpeechToText`
-- **`IsDefault`** — Whether this deployment is the default for its type within its connection
+- **`Type`** — One or more deployment purposes: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, or `TextToSpeech`
+- **`IsDefault`** — Whether this deployment is the default for each selected type within its connection
 - **Independent identity** — Each deployment has its own record and can be referenced by ID
 
 AI Profiles and Chat Interactions now reference deployments by ID (`ChatDeploymentId`, `UtilityDeploymentId`) rather than relying on a connection name to resolve deployment names.
@@ -55,7 +55,7 @@ After migration, review the auto-created deployments at **Artificial Intelligenc
 
 After the automatic migration runs:
 
-1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct types and default flags.
+1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct type selections and default flags.
 2. **Set global defaults** — Go to **Settings > Artificial Intelligence > Default Deployments** and configure global defaults for Chat, Utility, Embedding, Image, and voice-related deployment types as needed. These serve as fallbacks when a profile or interaction doesn't specify a deployment.
 3. **Update profiles (optional)** — Existing profiles continue to work. However, you can now set separate `ChatDeploymentId` and `UtilityDeploymentId` on each profile for more granular control.
 
@@ -103,8 +103,8 @@ After the automatic migration runs:
                   "IsDefault": true
                 },
                 {
-                  "Name": "gpt-4o-mini",
-                  "Type": "Utility",
+                  "Name": "gpt-4.1-mini",
+                  "Type": ["Chat", "Utility"],
                   "IsDefault": true
                 },
                 {
@@ -126,6 +126,8 @@ After the automatic migration runs:
   }
 }
 ```
+
+If you prefer, the `Type` property can also be expressed as a comma-separated flags string such as `"Chat, Utility"`, but JSON arrays are easier to read and maintain.
 
 :::info
 Both formats are supported simultaneously. If both are present, the `Deployments` array takes precedence. We recommend migrating to the new format when convenient.

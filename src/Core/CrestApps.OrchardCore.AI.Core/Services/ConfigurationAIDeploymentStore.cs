@@ -351,9 +351,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
             return null;
         }
 
-        var typeStr = element.TryGetProperty("Type", out var typeProp) ? typeProp.GetString() : null;
-
-        if (string.IsNullOrEmpty(typeStr) || !Enum.TryParse<AIDeploymentType>(typeStr, ignoreCase: true, out var type))
+        if (!TryGetDeploymentType(element, out var type))
         {
             _logger.LogWarning("Deployment entry '{Name}' in connection '{ConnectionId}' of provider '{ProviderName}' has an invalid or missing Type. Skipping.", name, connectionId, providerName);
             return null;
@@ -387,10 +385,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
             Properties = BuildStandaloneDeploymentProperties(deploymentObject),
         };
 
-        var typeName = GetStringValue(deploymentObject["Type"]);
-
-        if (!string.IsNullOrWhiteSpace(typeName) &&
-            Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var deploymentType))
+        if (TryGetDeploymentType(deploymentObject["Type"], out var deploymentType))
         {
             entry.Type = deploymentType;
         }
@@ -424,7 +419,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
             return null;
         }
 
-        if (!Enum.IsDefined(entry.Type))
+        if (!entry.Type.IsValidSelection())
         {
             _logger.LogWarning("Deployment entry '{Name}' for provider '{ProviderName}' has an invalid Type. Skipping.", entry.Name, entry.ProviderName);
             return null;
@@ -446,6 +441,96 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
                 ? (JsonObject)entry.Properties.DeepClone()
                 : null,
         };
+    }
+
+    private static bool TryGetDeploymentType(JsonElement element, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (!element.TryGetProperty("Type", out var typeElement))
+        {
+            return false;
+        }
+
+        return TryParseDeploymentTypeElement(typeElement, out type);
+    }
+
+    private static bool TryParseDeploymentTypeElement(JsonElement typeElement, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in typeElement.EnumerateArray())
+            {
+                var typeName = item.GetString();
+
+                if (string.IsNullOrWhiteSpace(typeName) ||
+                    !Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var parsedType) ||
+                    parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        if (typeElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var typeNameValue = typeElement.GetString();
+
+        return !string.IsNullOrWhiteSpace(typeNameValue) &&
+            Enum.TryParse(typeNameValue, ignoreCase: true, out type) &&
+            type.IsValidSelection();
+    }
+
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeNode is null)
+        {
+            return false;
+        }
+
+        if (typeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                var typeName = GetStringValue(item);
+
+                if (string.IsNullOrWhiteSpace(typeName) ||
+                    !Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var parsedType) ||
+                    parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        var singleTypeName = GetStringValue(typeNode);
+
+        return !string.IsNullOrWhiteSpace(singleTypeName) &&
+            Enum.TryParse(singleTypeName, ignoreCase: true, out type) &&
+            type.IsValidSelection();
     }
 
     private static JsonObject BuildStandaloneDeploymentProperties(JsonObject deploymentObject)

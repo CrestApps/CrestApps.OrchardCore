@@ -38,7 +38,7 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
     public async ValueTask<IEnumerable<AIDeployment>> GetByTypeAsync(AIDeploymentType type)
     {
         var deployments = (await Catalog.GetAllAsync())
-            .Where(x => x.Type == type);
+            .Where(x => x.SupportsType(type));
 
         foreach (var deployment in deployments)
         {
@@ -52,7 +52,7 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
     {
         var deployments = await GetAllAsync(clientName, connectionName);
 
-        var candidates = deployments.Where(d => d.Type == type);
+        var candidates = deployments.Where(d => d.SupportsType(type));
 
         return candidates.FirstOrDefault(d => d.IsDefault)
             ?? candidates.FirstOrDefault();
@@ -67,7 +67,7 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
     {
         var allDeployments = await GetAllAsync();
 
-        var filtered = allDeployments.Where(d => d.Type == type);
+        var filtered = allDeployments.Where(d => d.SupportsType(type));
 
         if (!string.IsNullOrEmpty(clientName))
         {

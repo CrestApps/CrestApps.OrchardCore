@@ -65,6 +65,27 @@ public sealed class AIDeploymentTypeMigrationsTests
     }
 
     [Fact]
+    public void FindDefaultChatDeploymentId_WhenMultiTypeDeploymentMatches_ShouldReturnDeploymentId()
+    {
+        var profile = CreateProfile("legacy-connection");
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "chat-utility-default",
+                ClientName = "OpenAI",
+                ConnectionName = "legacy-connection",
+                Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
+                IsDefault = true,
+            },
+        };
+
+        var result = InvokeFindDefaultChatDeploymentId(profile, deployments);
+
+        Assert.Equal("chat-utility-default", result);
+    }
+
+    [Fact]
     public void TryPopulateDefaultDeploymentSettings_WhenSettingsAreNull_ShouldBackfillAvailableDeploymentTypes()
     {
         var settings = new DefaultAIDeploymentSettings();
@@ -127,6 +148,34 @@ public sealed class AIDeploymentTypeMigrationsTests
         Assert.Equal("default-utility", settings.DefaultUtilityDeploymentId);
         Assert.Equal("default-stt", settings.DefaultSpeechToTextDeploymentId);
         Assert.Equal("default-tts", settings.DefaultTextToSpeechDeploymentId);
+    }
+
+    [Fact]
+    public void TryPopulateDefaultDeploymentSettings_WhenDeploymentSupportsMultipleTypes_ShouldReuseSameDeploymentId()
+    {
+        var settings = new DefaultAIDeploymentSettings();
+        var connections = new[]
+        {
+            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini", isDefault: true),
+        };
+        var deployments = new[]
+        {
+            new AIDeployment
+            {
+                ItemId = "chat-utility-default",
+                ClientName = "OpenAI",
+                ConnectionName = "default-connection",
+                ConnectionNameAlias = "Default",
+                Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
+                IsDefault = true,
+            },
+        };
+
+        var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
+        Assert.True(result);
+        Assert.Equal("chat-utility-default", settings.DefaultChatDeploymentId);
+        Assert.Equal("chat-utility-default", settings.DefaultUtilityDeploymentId);
     }
 
     [Fact]
