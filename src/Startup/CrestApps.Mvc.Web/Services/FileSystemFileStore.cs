@@ -6,13 +6,13 @@ public sealed class FileSystemFileStore
 
     public FileSystemFileStore(string basePath)
     {
-        _basePath = basePath;
-        Directory.CreateDirectory(basePath);
+        _basePath = Path.GetFullPath(basePath);
+        Directory.CreateDirectory(_basePath);
     }
 
     public async Task<string> SaveFileAsync(string fileName, Stream content)
     {
-        var filePath = Path.Combine(_basePath, fileName);
+        var filePath = GetSafePath(fileName);
         var directory = Path.GetDirectoryName(filePath);
         Directory.CreateDirectory(directory);
 
@@ -24,7 +24,7 @@ public sealed class FileSystemFileStore
 
     public Task<Stream> GetFileAsync(string fileName)
     {
-        var filePath = Path.Combine(_basePath, fileName);
+        var filePath = GetSafePath(fileName);
 
         if (!File.Exists(filePath))
         {
@@ -36,7 +36,7 @@ public sealed class FileSystemFileStore
 
     public Task<bool> DeleteFileAsync(string fileName)
     {
-        var filePath = Path.Combine(_basePath, fileName);
+        var filePath = GetSafePath(fileName);
 
         if (File.Exists(filePath))
         {
@@ -45,5 +45,18 @@ public sealed class FileSystemFileStore
         }
 
         return Task.FromResult(false);
+    }
+
+    private string GetSafePath(string fileName)
+    {
+        var fullPath = Path.GetFullPath(Path.Combine(_basePath, fileName));
+
+        if (!fullPath.StartsWith(_basePath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(fullPath, _basePath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("The file name contains an invalid path.");
+        }
+
+        return fullPath;
     }
 }
