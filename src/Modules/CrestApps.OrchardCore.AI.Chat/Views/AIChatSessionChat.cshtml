@@ -4,7 +4,6 @@
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
-@using CrestApps.OrchardCore.Services
 @using CrestApps.OrchardCore.SignalR.Core.Services
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
@@ -20,7 +19,7 @@
 
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
-@inject INamedCatalog<AIProfile> ProfilesCatalog
+@inject IAIProfileStore ProfilesCatalog
 @inject HubRouteManager HubRouteManager
 @inject IAIChatSessionPromptStore PromptStore
 @{
@@ -32,7 +31,7 @@
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var documentBarHtmlId = $"{baseId}_DocumentBar";
 
-    var promptGeneratedProfiles = await ProfilesCatalog.GetAsync(AIProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
 
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();

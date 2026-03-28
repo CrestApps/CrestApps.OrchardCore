@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -58,7 +57,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     {
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
+            var profileCatalog = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
 
