@@ -40,6 +40,20 @@ const sidebars = {
             'orchardcore/ai/copilot',
             'orchardcore/ai/agent',
             'orchardcore/ai/prompt-templates',
+            'orchardcore/ai/profile-templates',
+            'orchardcore/ai/memory',
+            'orchardcore/ai/chat-notifications',
+            'orchardcore/ai/response-handlers',
+            'orchardcore/ai/migration-typed-deployments',
+            {
+              type: 'category',
+              label: 'A2A (Agent-to-Agent)',
+              items: [
+                'orchardcore/ai/a2a/index',
+                'orchardcore/ai/a2a/client',
+                'orchardcore/ai/a2a/host',
+              ],
+            },
             {
               type: 'category',
               label: 'AI Providers',
@@ -113,6 +127,7 @@ const sidebars = {
           items: [
             'orchardcore/samples/index',
             'orchardcore/samples/mcp-client',
+            'orchardcore/samples/a2a-client',
           ],
         },
       ],

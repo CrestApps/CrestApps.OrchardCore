@@ -1,7 +1,7 @@
 ---
 sidebar_label: AI Templates
 sidebar_position: 10
-slug: /ai/profile-templates
+slug: /orchardcore/ai/profile-templates
 title: AI Templates
 description: Reusable templates for creating AI Profiles or system prompts with pre-configured settings, parameters, tools, and data sources — managed via admin UI, markdown files, or App_Data directories.
 ---
