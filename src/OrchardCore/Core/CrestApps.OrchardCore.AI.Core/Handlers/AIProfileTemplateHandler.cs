@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Settings;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Handlers;
@@ -144,13 +145,13 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
 
             // Snapshot existing properties before merge so named entries can be
             // merged by name (upsert) instead of being fully replaced.
-            var existingSnapshot = currentJson.DeepClone().AsObject();
+            var existingSnapshot = currentJson.Clone();
 
             // Merge incoming properties.
-            foreach (var prop in properties)
+            currentJson.Merge(properties, new JsonMergeSettings
             {
-                currentJson[prop.Key] = prop.Value?.DeepClone();
-            }
+                MergeArrayHandling = MergeArrayHandling.Replace,
+            });
 
             AIPropertiesMergeHelper.MergeNamedEntries(currentJson, existingSnapshot);
 

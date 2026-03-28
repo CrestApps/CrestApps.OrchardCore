@@ -55,7 +55,7 @@ internal static class AIPropertiesMergeHelper
             return;
         }
 
-        var existingSettings = existingNode.Deserialize<TSettings>(JSOptions.Default);
+        var existingSettings = existingNode.Deserialize<TSettings>(JSOptions.CaseInsensitive);
 
         if (existingSettings is null)
         {
@@ -70,7 +70,7 @@ internal static class AIPropertiesMergeHelper
         }
 
         var mergedNode = mergedContainer[typeName];
-        var mergedSettings = mergedNode?.Deserialize<TSettings>(JSOptions.Default) ?? new TSettings();
+        var mergedSettings = mergedNode?.Deserialize<TSettings>(JSOptions.CaseInsensitive) ?? new TSettings();
         var incomingEntries = getEntries(mergedSettings);
 
         var result = new List<TEntry>(existingEntries);
@@ -98,6 +98,6 @@ internal static class AIPropertiesMergeHelper
         }
 
         setEntries(mergedSettings, result);
-        mergedContainer[typeName] = JsonSerializer.SerializeToNode(mergedSettings, JSOptions.Default);
+        mergedContainer[typeName] = JsonSerializer.SerializeToNode(mergedSettings, JSOptions.CaseInsensitive);
     }
 }

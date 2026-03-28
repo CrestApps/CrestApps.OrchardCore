@@ -179,7 +179,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
             // Snapshot existing properties before merge so named entries can be
             // merged by name (upsert) instead of being fully replaced.
-            var existingPropertiesSnapshot = currentJson.DeepClone().AsObject();
+            var existingPropertiesSnapshot = currentJson.Clone();
 
             // Merge incoming properties.
             currentJson.Merge(properties, new JsonMergeSettings
