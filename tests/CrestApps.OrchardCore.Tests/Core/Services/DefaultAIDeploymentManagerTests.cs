@@ -97,6 +97,25 @@ public sealed class DefaultAIDeploymentManagerTests
     }
 
     [Fact]
+    public async Task GetDefaultAsync_WithMultiTypeDefault_ReturnsDeployment()
+    {
+        var deployments = new[]
+        {
+            CreateDeployment("dep-multi", "gpt-4.1-mini", AIDeploymentType.Chat | AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1"),
+        };
+
+        _storeMock.Setup(m => m.GetAllAsync())
+            .ReturnsAsync(deployments);
+
+        var result = await _manager.GetDefaultAsync("openai", "conn-1", AIDeploymentType.Utility);
+
+        Assert.NotNull(result);
+        Assert.Equal("dep-multi", result.ItemId);
+        Assert.True(result.SupportsType(AIDeploymentType.Chat));
+        Assert.True(result.SupportsType(AIDeploymentType.Utility));
+    }
+
+    [Fact]
     public async Task GetDefaultAsync_WithNoDefault_ReturnsNull()
     {
         var deployments = new[]
@@ -257,6 +276,7 @@ public sealed class DefaultAIDeploymentManagerTests
         {
             CreateDeployment("dep-chat-1", "gpt-4", AIDeploymentType.Chat, clientName: "openai"),
             CreateDeployment("dep-chat-2", "gpt-4o", AIDeploymentType.Chat, clientName: "azure"),
+            CreateDeployment("dep-chat-utility", "gpt-4.1-mini", AIDeploymentType.Chat | AIDeploymentType.Utility, clientName: "openai"),
             CreateDeployment("dep-embed-1", "ada-002", AIDeploymentType.Embedding, clientName: "openai"),
             CreateDeployment("dep-img-1", "dall-e-3", AIDeploymentType.Image, clientName: "openai"),
         };
@@ -266,10 +286,11 @@ public sealed class DefaultAIDeploymentManagerTests
 
         var result = (await _manager.GetAllByTypeAsync(AIDeploymentType.Chat)).ToList();
 
-        Assert.Equal(2, result.Count);
-        Assert.All(result, d => Assert.Equal(AIDeploymentType.Chat, d.Type));
+        Assert.Equal(3, result.Count);
+        Assert.All(result, d => Assert.True(d.SupportsType(AIDeploymentType.Chat)));
         Assert.Contains(result, d => d.ItemId == "dep-chat-1");
         Assert.Contains(result, d => d.ItemId == "dep-chat-2");
+        Assert.Contains(result, d => d.ItemId == "dep-chat-utility");
     }
 
     private static AIDeployment CreateDeployment(

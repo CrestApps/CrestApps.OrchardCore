@@ -20,7 +20,7 @@ public sealed class AIDeploymentConfigurationEntry
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment type (Chat, Utility, Embedding, Image, SpeechToText, TextToSpeech).
+    /// Gets or sets the deployment capability types (Chat, Utility, Embedding, Image, SpeechToText, TextToSpeech).
     /// </summary>
     public AIDeploymentType Type { get; set; }
 

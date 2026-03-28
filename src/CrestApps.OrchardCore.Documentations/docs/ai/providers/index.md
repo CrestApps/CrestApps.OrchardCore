@@ -141,6 +141,7 @@ Deployments are now first-class typed entities. Each deployment has a `Type` pro
 | `Embedding` | Vector embeddings for RAG / semantic search |
 | `Image` | Image generation |
 | `SpeechToText` | Speech-to-text transcription |
+| `TextToSpeech` | Text-to-speech synthesis |
 
 When configuring connections via `appsettings.json`, deployments are defined as a `Deployments` array on each connection:
 
@@ -151,7 +152,7 @@ When configuring connections via `appsettings.json`, deployments are defined as 
       "ApiKey": "...",
       "Deployments": [
         { "Name": "gpt-4o", "Type": "Chat", "IsDefault": true },
-        { "Name": "gpt-4o-mini", "Type": "Utility", "IsDefault": true },
+        { "Name": "gpt-4.1-mini", "Type": ["Chat", "Utility"], "IsDefault": true },
         { "Name": "text-embedding-3-large", "Type": "Embedding", "IsDefault": true }
       ]
     }
@@ -159,6 +160,8 @@ When configuring connections via `appsettings.json`, deployments are defined as 
 }
 ```
 
-The `IsDefault` flag marks a deployment as the default for its type within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for type → global default → null/error.
+The `Type` property can be either a single value or an array of values when one deployment supports multiple capabilities. In the admin UI, the same concept is exposed as per-type checkboxes on a single deployment record.
+
+The `IsDefault` flag marks a deployment as the default for each selected type within that connection. The system resolves deployments using a fallback chain: explicit assignment → connection default for type → global default → null/error.
 
 Global defaults can be configured under **Settings → Artificial Intelligence → Default AI Deployment Settings**.
