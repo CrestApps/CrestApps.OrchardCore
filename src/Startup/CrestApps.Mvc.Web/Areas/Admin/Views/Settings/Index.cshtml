@@ -1,0 +1,86 @@
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.SettingsViewModel
+@{
+    ViewData["Title"] = "AI Settings";
+}
+
+<h2><i class="bi bi-gear"></i> AI Settings</h2>
+<hr />
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @message
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Save" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Memory</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-label">Enable preemptive memory retrieval</label>
+                        </div>
+                        <div class="form-text">When enabled, the system automatically retrieves relevant memories before processing user requests (RAG).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Orchestration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="MaximumIterationsPerRequest" class="form-label">Maximum iterations per request</label>
+                        <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="100" style="max-width: 200px;" />
+                        <span asp-validation-for="MaximumIterationsPerRequest" class="text-danger"></span>
+                        <div class="form-text">The maximum number of orchestrator iterations allowed per request. Default is 10.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Caching</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableDistributedCaching" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableDistributedCaching" class="form-check-label">Enable distributed caching</label>
+                        </div>
+                        <div class="form-text">Cache AI responses across nodes for improved performance.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Diagnostics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableOpenTelemetry" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableOpenTelemetry" class="form-check-label">Enable OpenTelemetry</label>
+                        </div>
+                        <div class="form-text">Enable distributed tracing and diagnostics for AI operations.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</form>

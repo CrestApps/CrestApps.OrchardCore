@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore Azure OpenAI Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      OrchardCore-specific Azure OpenAI constants that extend the framework-independent CrestApps.AI.OpenAI.Azure.Core.
+    </Description>
+    <PackageTags>$(PackageTags) Azure OpenAI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
+  </ItemGroup>
+
+</Project>

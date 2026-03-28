@@ -1,0 +1,108 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
+using CrestApps.AI.Prompting.Services;
+using Microsoft.Extensions.Logging;
+
+namespace CrestApps.OrchardCore.AI.Core.Handlers;
+
+/// <summary>
+/// Orchestration context handler that enriches the system message with descriptions
+/// of available AI agents. This gives the model awareness of which agents exist and
+/// what they can do, enabling it to make informed routing decisions.
+/// <para>
+/// This follows the industry-standard pattern used by OpenAI, LangChain, and CrewAI
+/// where agent/tool descriptions are included in the system prompt so the model
+/// can decide which capabilities to invoke.
+/// </para>
+/// </summary>
+internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationContextBuilderHandler
+{
+    private readonly IAIProfileManager _profileManager;
+    private readonly IAITemplateService _templateService;
+    private readonly ILogger _logger;
+
+    public AgentOrchestrationContextBuilderHandler(
+        IAIProfileManager profileManager,
+        IAITemplateService templateService,
+        ILogger<AgentOrchestrationContextBuilderHandler> logger)
+    {
+        _profileManager = profileManager;
+        _templateService = templateService;
+        _logger = logger;
+    }
+
+    public Task BuildingAsync(OrchestrationContextBuildingContext context)
+        => Task.CompletedTask;
+
+    public async Task BuiltAsync(OrchestrationContextBuiltContext context)
+    {
+        var completionContext = context.OrchestrationContext.CompletionContext;
+
+        if (completionContext is null)
+        {
+            return;
+        }
+
+        var requestedAgentNames = completionContext.AgentNames;
+        var agents = await _profileManager.GetAsync(AIProfileType.Agent);
+
+        if (!agents.Any())
+        {
+            return;
+        }
+
+        var availableAgents = new List<AgentInfo>();
+
+        foreach (var agent in agents)
+        {
+            if (string.IsNullOrEmpty(agent.Name) || string.IsNullOrEmpty(agent.Description))
+            {
+                continue;
+            }
+
+            var agentMetadata = agent.As<AgentMetadata>();
+            var isAlwaysAvailable = agentMetadata?.Availability == AgentAvailability.AlwaysAvailable;
+
+            if (isAlwaysAvailable ||
+                (requestedAgentNames is { Length: > 0 } &&
+                 requestedAgentNames.Contains(agent.Name, StringComparer.OrdinalIgnoreCase)))
+            {
+                availableAgents.Add(new AgentInfo
+                {
+                    Name = agent.Name,
+                    Description = agent.Description,
+                });
+            }
+        }
+
+        if (availableAgents.Count == 0)
+        {
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Enriching system message with {AgentCount} available agent(s).", availableAgents.Count);
+        }
+
+        var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["agents"] = availableAgents,
+        };
+
+        var header = await _templateService.RenderAsync(AITemplateIds.AgentAvailability, arguments);
+
+        if (!string.IsNullOrEmpty(header))
+        {
+            context.OrchestrationContext.SystemMessageBuilder.AppendLine();
+            context.OrchestrationContext.SystemMessageBuilder.Append(header);
+        }
+    }
+
+    private sealed class AgentInfo
+    {
+        public string Name { get; set; }
+
+        public string Description { get; set; }
+    }
+}

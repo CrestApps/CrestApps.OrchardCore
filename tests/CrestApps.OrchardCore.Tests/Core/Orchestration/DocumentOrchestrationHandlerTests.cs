@@ -1,8 +1,8 @@
+using CrestApps.AI;
+using CrestApps.AI.Handlers;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 

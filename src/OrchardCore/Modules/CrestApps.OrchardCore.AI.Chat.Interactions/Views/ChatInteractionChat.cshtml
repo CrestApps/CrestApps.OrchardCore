@@ -1,0 +1,145 @@
+@using CrestApps.OrchardCore.AI
+@using CrestApps.AI
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.SignalR.Services
+@using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.AI.Models
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.Entities
+@using OrchardCore.Settings
+@using System.Text.Json
+
+@model ChatInteractionCapsuleViewModel
+
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject HubRouteManager HubRouteManager
+@inject ISiteService SiteService
+@{
+    var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+    var micBtnHtmlId = $"{baseId}_MicBtn";
+
+    var site = await SiteService.GetSiteSettingsAsync();
+    var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+    var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+    var chatMode = chatModeSettings.ChatMode;
+    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
+        && !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation
+        && !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
+    var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
+    var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+}
+
+<div class="d-flex flex-column h-100">
+    <div class="flex-grow-1 overflow-y-auto rounded-2 border bg-theme p-3 mb-3" id="@chatContainerHtmlId">
+        <div class="w-100 ai-chat-messages">
+            <div id="@placeholderHtmlId" class="text-center p-3@(Model.Prompts.Count > 0 ? " d-none" : string.Empty)">
+                <h1>
+                    @T["What do you want to know?"]
+                </h1>
+            </div>
+
+            <div id="@chatAppHtmlId"></div>
+        </div>
+    </div>
+
+    <div class="flex-shrink-0">
+        <div class="text-bg-light rounded border w-100">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+
+            <div class="d-flex justify-content-between px-3 my-2">
+                <div></div>
+
+                <div>
+                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    @if (conversationModeEnabled)
+                    {
+                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+                            <i class="fa-solid fa-wave-square"></i>
+                        </button>
+                    }
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId"disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@{
+    var prompts = new List<object>();
+
+    if (Model.Prompts != null)
+    {
+        foreach (var prompt in Model.Prompts)
+        {
+            prompts.Add(new
+            {
+                Id = prompt.ItemId,
+                prompt.Role,
+                Content = prompt.Text,
+                prompt.Title,
+                prompt.IsGeneratedPrompt,
+                prompt.References,
+            });
+        }
+    }
+}
+
+<style at="Head">
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+
+    .chat-parameters-content .nav-link {
+        padding: 0.5rem !important;
+    }
+</style>
+
+<style asp-name="AIChatApp" at="Head"></style>
+<style asp-name="highlightjs" at="Head"></style>
+@if (speechToTextEnabled)
+{
+    <style asp-name="SpeechToText" at="Head"></style>
+}
+<script asp-name="ChatInteractionApp" at="Foot"></script>
+<script depends-on="ChatInteractionApp" at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var configEl = document.getElementById('@($"{baseId}_Config")');
+        if (configEl) {
+            chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+        }
+    });
+</script>
+@{
+    var chatInteractionConfig = new Dictionary<string, object>
+    {
+        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext),
+        ["appElementSelector"] = $"#{chatAppHtmlId}",
+        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
+        ["inputElementSelector"] = $"#{userPromptHtmlId}",
+        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
+        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
+        ["messages"] = prompts,
+        ["untitledText"] = T["Untitled"].Value,
+        ["clearHistoryTitle"] = T["Clear History"].Value,
+        ["clearHistoryMessage"] = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,
+        ["clearHistoryOkText"] = T["Yes"].Value,
+        ["clearHistoryCancelText"] = T["Cancel"].Value,
+        ["chatMode"] = chatMode.ToString(),
+        ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
+        ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+    };
+}
+<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

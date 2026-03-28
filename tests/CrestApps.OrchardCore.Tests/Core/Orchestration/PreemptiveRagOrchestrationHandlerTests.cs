@@ -1,16 +1,12 @@
+using CrestApps.AI;
+using CrestApps.AI.Handlers;
+using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
 using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Entities;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -229,18 +225,13 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
             Options.Create(new AIProviderOptions()),
             NullLogger<PreemptiveSearchQueryProvider>.Instance);
 
-        var siteMock = new Mock<ISiteService>();
-        var siteModelMock = new Mock<ISite>();
-        siteModelMock.Setup(s => s.As<DefaultOrchestratorSettings>())
-            .Returns(new DefaultOrchestratorSettings { EnablePreemptiveRag = enablePreemptiveRag });
-        siteMock.Setup(s => s.GetSiteSettingsAsync())
-            .ReturnsAsync(siteModelMock.Object);
+        var settings = Options.Create(new DefaultOrchestratorSettings { EnablePreemptiveRag = enablePreemptiveRag });
 
         return new PreemptiveRagOrchestrationHandler(
             handlers,
             queryProvider,
             templateService,
-            siteMock.Object,
+            settings,
             NullLogger<PreemptiveRagOrchestrationHandler>.Instance);
     }
 

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 

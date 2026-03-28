@@ -1,0 +1,87 @@
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.ChatInteractionViewModel
+@{
+    ViewData["Title"] = "New Chat Interaction";
+}
+
+<h2><i class="bi bi-plus-lg"></i> New Chat Interaction</h2>
+<hr />
+<p class="text-muted">Configure AI parameters and start chatting. Unlike AI Profile chat, you can fully customize the behavior here.</p>
+
+<form asp-action="Create" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="Title" class="form-label">Title</label>
+                <input asp-for="Title" class="form-control" placeholder="e.g., Code Helper, Creative Writer" />
+                <div class="form-text">An optional title for this chat interaction.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ChatDeploymentId" class="form-label">Deployment</label>
+                <select asp-for="ChatDeploymentId" class="form-select" asp-items="Model.Deployments">
+                    <option value="">— Select deployment —</option>
+                </select>
+                <div class="form-text">The AI model deployment to use for this chat.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="SystemMessage" class="form-label">System message</label>
+                <textarea asp-for="SystemMessage" class="form-control" rows="4" placeholder="You are a helpful assistant..."></textarea>
+                <div class="form-text">Instructions for the AI on how to behave.</div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="Temperature" class="form-label">Temperature</label>
+                        <input asp-for="Temperature" type="number" class="form-control" step="0.1" min="0" max="2" placeholder="0.7" />
+                        <div class="form-text">Controls randomness (0–2).</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="TopP" class="form-label">Top P</label>
+                        <input asp-for="TopP" type="number" class="form-control" step="0.1" min="0" max="1" placeholder="1.0" />
+                        <div class="form-text">Nucleus sampling (0–1).</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="MaxTokens" class="form-label">Max tokens</label>
+                        <input asp-for="MaxTokens" type="number" class="form-control" min="1" placeholder="4096" />
+                        <div class="form-text">Max response length.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty</label>
+                        <input asp-for="FrequencyPenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="PresencePenalty" class="form-label">Presence penalty</label>
+                        <input asp-for="PresencePenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label asp-for="PastMessagesCount" class="form-label">Past messages</label>
+                        <input asp-for="PastMessagesCount" type="number" class="form-control" min="0" placeholder="10" />
+                        <div class="form-text">Messages to include in context.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-chat-left-text"></i> Create &amp; Start Chat
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>

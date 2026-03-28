@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>CrestApps.OrchardCore</RootNamespace>
+		<Title>CrestApps OrchardCore Abstractions</Title>
+		<Description>
+			$(CrestAppsDescription)
+
+			OrchardCore-specific abstractions that extend the framework-independent CrestApps.Abstractions.
+		</Description>
+		<PackageTags>$(PackageTags) OrchardCoreCMS Abstractions</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NuGet.Versioning" />
+		<PackageReference Include="OrchardCore.Abstractions" />
+		<PackageReference Include="OrchardCore.Indexing.Abstractions" />
+		<PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.Abstractions/CrestApps.Abstractions.csproj" />
+		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

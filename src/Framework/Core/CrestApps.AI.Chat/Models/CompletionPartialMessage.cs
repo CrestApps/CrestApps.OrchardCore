@@ -1,0 +1,19 @@
+using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Models;
+
+namespace CrestApps.AI.Chat.Models;
+
+public class CompletionPartialMessage
+{
+    public string MessageId { get; set; }
+
+    public string ResponseId { get; set; }
+
+    public string Content { get; set; }
+
+    public string SessionId { get; set; }
+
+    public Dictionary<string, AICompletionReference> References { get; set; }
+
+    public AssistantMessageAppearance Appearance { get; set; }
+}

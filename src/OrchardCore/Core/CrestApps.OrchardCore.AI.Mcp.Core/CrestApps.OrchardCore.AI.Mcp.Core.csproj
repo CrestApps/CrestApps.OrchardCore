@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore AI MCP Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      OrchardCore-specific MCP services that extend the framework-independent CrestApps.AI.Mcp.Core.
+    </Description>
+    <PackageTags>$(PackageTags) AI MCP ModelContextProtocol</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
+  </ItemGroup>
+
+</Project>

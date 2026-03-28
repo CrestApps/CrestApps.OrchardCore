@@ -1,0 +1,88 @@
+@model CrestApps.AI.Models.AIProfile
+@{
+    var session = ViewData["Session"] as CrestApps.AI.Models.AIChatSession;
+    var prompts = ViewData["Prompts"] as IReadOnlyList<CrestApps.AI.Models.AIChatSessionPrompt>;
+    ViewData["Title"] = "Chat - " + (Model.DisplayText ?? Model.Name);
+    var sessionId = session?.SessionId ?? "";
+    var messages = prompts?.Where(p => !p.IsGeneratedPrompt).Select(m => new { role = m.Role.Value, content = m.Content, id = m.ItemId }) ?? [];
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+    .chat-page-wrapper {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+    .ai-chat-messages { padding: 1rem; }
+    .ai-chat-message-item { margin-bottom: 1rem; }
+    .ai-chat-msg-role { font-size: 0.75rem; font-weight: 600; margin-bottom: 2px; }
+    .ai-chat-msg-role-user { color: #0d6efd; }
+    .ai-chat-msg-role-assistant { color: #6f42c1; }
+    .ai-chat-msg-role-assistant i.ai-streaming-icon { animation: pulse 1.5s infinite; }
+    .ai-chat-msg-role-assistant i.ai-bot-icon { color: #6f42c1; }
+    .message-buttons-container { display: inline-flex; gap: 4px; margin-top: 4px; }
+    @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-chat-dots"></i> @(Model.DisplayText ?? Model.Name)</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="chat-page-wrapper">
+    <div class="border rounded flex-grow-1 d-flex flex-column">
+        <div id="chat-container" class="flex-grow-1 overflow-auto">
+            <div id="chat-placeholder">
+                @if (!string.IsNullOrEmpty(Model.WelcomeMessage))
+                {
+                    <div class="p-3 text-muted">
+                        <i class="bi bi-robot"></i> @Model.WelcomeMessage
+                    </div>
+                }
+            </div>
+            <div id="chat-app"></div>
+        </div>
+        <div class="border-top p-3">
+            <div class="d-flex gap-2">
+                <textarea id="chat-input"
+                          class="form-control"
+                          rows="1"
+                          placeholder="Type a message..."
+                          data-session-id="@sessionId"
+                          data-profile-id="@Model.ItemId"></textarea>
+                <button type="button" id="send-btn" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src="~/js/ai-chat.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.openAIChatManager.initialize({
+                signalRHubUrl: '/hubs/ai-chat',
+                appElementSelector: '#chat-app',
+                chatContainerElementSelector: '#chat-container',
+                inputElementSelector: '#chat-input',
+                sendButtonElementSelector: '#send-btn',
+                placeholderElementSelector: '#chat-placeholder',
+                messages: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(messages)),
+                metricsEnabled: false
+            });
+        });
+    </script>
+}

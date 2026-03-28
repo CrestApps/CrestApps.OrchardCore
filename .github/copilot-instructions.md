@@ -121,7 +121,6 @@ src/
 │   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
 │   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
 │   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
-│   ├── CrestApps.OrchardCore.SignalR.Core/         # SignalR core services
 │   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
 │   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
 ├── Modules/                    # All CrestApps Orchard Core modules

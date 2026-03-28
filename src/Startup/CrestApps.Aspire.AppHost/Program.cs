@@ -77,6 +77,9 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientS
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
+builder.AddProject<Projects.CrestApps_Mvc_Web>("MvcWeb")
+    .WithHttpsEndpoint(5004, name: "HttpsMvcWeb");
+
 var app = builder.Build();
 
 await app.RunAsync();
