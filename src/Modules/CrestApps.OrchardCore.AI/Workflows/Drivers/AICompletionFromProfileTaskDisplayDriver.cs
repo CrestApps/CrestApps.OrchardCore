@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,17 +13,17 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDriver<AICompletionFromProfileTask, AICompletionFromProfileTaskViewModel>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
 
     public AICompletionFromProfileTaskDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<AICompletionFromProfileTaskDisplayDriver> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
     }
@@ -35,7 +34,7 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
 
-        model.Profiles = (await _profilesCatalog.GetAllAsync())
+        model.Profiles = (await _profileStore.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
 
@@ -51,7 +50,7 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
         }
         else
         {
-            var profile = await _profilesCatalog.FindByIdAsync(model.ProfileId);
+            var profile = await _profileStore.FindByIdAsync(model.ProfileId);
 
             if (profile is null)
             {

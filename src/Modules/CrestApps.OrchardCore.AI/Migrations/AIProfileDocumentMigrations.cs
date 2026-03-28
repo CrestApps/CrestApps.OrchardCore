@@ -27,9 +27,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
     private const string _dictionaryDocumentTypePrefix =
         "CrestApps.OrchardCore.Models.DictionaryDocument`1[[CrestApps.OrchardCore.AI.Models.AIProfile, CrestApps.OrchardCore.AI.Abstractions, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null]], CrestApps.OrchardCore.Abstractions";
 
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {

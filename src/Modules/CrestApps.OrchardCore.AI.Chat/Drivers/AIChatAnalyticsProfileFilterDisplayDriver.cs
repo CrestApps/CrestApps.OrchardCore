@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,12 +13,12 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 /// </summary>
 public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AIChatAnalyticsFilter>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
 
     public AIChatAnalyticsProfileFilterDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog)
+        IAIProfileStore profileStore)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
     }
 
     public override IDisplayResult Edit(AIChatAnalyticsFilter filter, BuildEditorContext context)
@@ -28,7 +26,7 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
         return Initialize<ChatAnalyticsProfileFilterViewModel>("ChatAnalyticsProfileFilter_Edit", async model =>
         {
             model.ProfileId = filter.ProfileId;
-            model.Profiles = (await _profilesCatalog.GetAsync(AIProfileType.Chat))
+            model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
                 .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
         }).Location("Content:2");
     }

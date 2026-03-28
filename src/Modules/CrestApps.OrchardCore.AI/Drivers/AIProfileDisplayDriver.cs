@@ -3,7 +3,6 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -19,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -30,7 +29,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     internal readonly IStringLocalizer S;
 
     public AIProfileDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IOptions<AIOptions> aiOptions,
         DefaultAIOptions defaultAIOptions,
@@ -39,7 +38,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
@@ -180,7 +179,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["Technical name is required."]);
             }
-            else if (await _profilesCatalog.FindByNameAsync(name) is not null)
+            else if (await _profileStore.FindByNameAsync(name) is not null)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(mainFieldsModel.Name), S["A profile with this name already exists. The name must be unique."]);
             }

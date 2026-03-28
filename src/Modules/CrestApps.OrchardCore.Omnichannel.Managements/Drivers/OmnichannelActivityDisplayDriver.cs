@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -28,7 +29,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignsCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
-    private readonly INamedCatalog<AIProfile> _aiProfileCatalog;
+    private readonly IAIProfileStore _aiProfileStore;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
@@ -43,7 +44,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
-        INamedCatalog<AIProfile> aiProfileCatalog,
+        IAIProfileStore aiProfileStore,
         IContentDefinitionManager contentDefinitionManager,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
@@ -56,7 +57,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _dispositionsCatalog = dispositionsCatalog;
         _campaignsCatalog = campaignsCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
-        _aiProfileCatalog = aiProfileCatalog;
+        _aiProfileStore = aiProfileStore;
         _contentDefinitionManager = contentDefinitionManager;
         _displayNameProvider = displayNameProvider;
         _clock = clock;

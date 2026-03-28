@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
@@ -28,7 +27,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
+            var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
 
             foreach (var profile in await profileStore.GetAllAsync())
             {
