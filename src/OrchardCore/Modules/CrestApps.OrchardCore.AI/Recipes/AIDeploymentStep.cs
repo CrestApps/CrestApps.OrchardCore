@@ -101,9 +101,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
             }
 
-            var typeValue = token[nameof(AIDeployment.Type)]?.GetValue<string>();
-
-            if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var deploymentType))
+            if (TryGetDeploymentType(token[nameof(AIDeployment.Type)], out var deploymentType))
             {
                 deployment.Type = deploymentType;
             }
@@ -135,5 +133,39 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
     private sealed class AIModelDeploymentStepModel
     {
         public JsonArray Deployments { get; set; }
+    }
+
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeNode is null)
+        {
+            return false;
+        }
+
+        if (typeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                    parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        var typeValue = typeNode.GetValue<string>();
+
+        return !string.IsNullOrEmpty(typeValue) &&
+            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
+            type.IsValidSelection();
     }
 }

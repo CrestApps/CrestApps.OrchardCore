@@ -48,12 +48,13 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         {
             model.Name = deployment.Name;
             model.ConnectionName = deployment.ConnectionName;
-            model.Type = deployment.Type;
+            model.SelectedTypes = deployment.Type.GetSupportedTypes().Select(static type => type.ToString()).ToArray();
             model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
             model.HasContainedConnection = HasContainedConnection(deployment.ClientName);
 
             model.Types = Enum.GetValues<AIDeploymentType>()
+                .Where(static type => type != AIDeploymentType.None)
                 .Select(t => new SelectListItem(t.ToString(), t.ToString()))
                 .ToList();
 
@@ -88,7 +89,15 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             deployment.Name = name;
         }
 
-        deployment.Type = model.Type;
+        if (!TryGetSelectedTypes(model.SelectedTypes, out var deploymentTypes))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedTypes), S["At least one deployment type is required."]);
+        }
+        else
+        {
+            deployment.Type = deploymentTypes;
+        }
+
         deployment.IsDefault = model.IsDefault;
 
         if (HasContainedConnection(deployment.ClientName))
@@ -125,13 +134,12 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         var anotherExists = (await _deploymentsCatalog.GetAllAsync())
             .Any(d => d.ClientName == deployment.ClientName &&
             d.ConnectionName == deployment.ConnectionName &&
-            d.Type == deployment.Type &&
             d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
             && d.ItemId != deployment.ItemId);
 
         if (anotherExists)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionName), S["The selected connection already has an existing deployment with the specified name and type."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The selected connection already has an existing deployment with the specified name."]);
         }
 
         return Edit(deployment, context);
@@ -139,4 +147,28 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
     private bool HasContainedConnection(string providerName)
         => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.SupportsContainedConnection;
+
+    private static bool TryGetSelectedTypes(IEnumerable<string> selectedTypes, out AIDeploymentType deploymentTypes)
+    {
+        deploymentTypes = AIDeploymentType.None;
+
+        if (selectedTypes is null)
+        {
+            return false;
+        }
+
+        foreach (var typeName in selectedTypes.Where(static value => !string.IsNullOrWhiteSpace(value)))
+        {
+            if (!Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var parsedType) ||
+                parsedType == AIDeploymentType.None)
+            {
+                deploymentTypes = AIDeploymentType.None;
+                return false;
+            }
+
+            deploymentTypes |= parsedType;
+        }
+
+        return deploymentTypes.IsValidSelection();
+    }
 }

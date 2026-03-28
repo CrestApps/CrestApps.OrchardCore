@@ -17,7 +17,7 @@ public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
     ValueTask<IEnumerable<AIDeployment>> GetAllAsync(string clientName, string connectionName);
 
     /// <summary>
-    /// Asynchronously retrieves all deployments of the specified type.
+    /// Asynchronously retrieves all deployments supporting the specified type.
     /// </summary>
     /// <param name="type">The deployment type to filter by.</param>
     /// <returns>
@@ -29,14 +29,14 @@ public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
     /// <summary>
     /// Resolves the default deployment of a given type for a specific connection.
     /// Returns the deployment marked as IsDefault for that type on the connection,
-    /// or the first deployment of that type on the connection if none is marked as default.
+    /// or the first deployment supporting that type on the connection if none is marked as default.
     /// </summary>
     ValueTask<AIDeployment> GetDefaultAsync(string clientName, string connectionName, AIDeploymentType type);
 
     /// <summary>
     /// Resolves a deployment using the full fallback chain:
     /// 1. If deploymentId is provided, returns that specific deployment.
-    /// 2. If connectionName is provided, returns the default deployment of the given type for that connection.
+    /// 2. If connectionName is provided, returns the default deployment supporting the given type for that connection.
     /// 3. Falls back to the global default deployment for the given type (from DefaultAIDeploymentSettings).
     /// Returns <see langword="null"/> if no deployment can be resolved.
     /// </summary>

@@ -10,7 +10,7 @@ public class EditDeploymentViewModel
 
     public string ConnectionName { get; set; }
 
-    public AIDeploymentType Type { get; set; }
+    public string[] SelectedTypes { get; set; }
 
     public bool IsDefault { get; set; }
 

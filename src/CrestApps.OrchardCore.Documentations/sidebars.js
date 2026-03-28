@@ -1,0 +1,125 @@
+// @ts-check
+
+/** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
+const sidebars = {
+  docsSidebar: [
+    'intro',
+    'getting-started',
+    {
+      type: 'category',
+      label: 'Artificial Intelligence Suite',
+      collapsed: false,
+      items: [
+        'ai/index',
+        'ai/overview',
+        'ai/chat',
+        'ai/chat-analytics',
+        'ai/chat-interactions',
+        'ai/profiles-code',
+        'ai/profile-templates',
+        'ai/tools',
+        'ai/workflows',
+        'ai/consuming-ai-services',
+        'ai/copilot',
+        'ai/agent',
+        'ai/prompt-templates',
+        'ai/response-handlers',
+        'ai/chat-notifications',
+        'ai/migration-typed-deployments',
+        {
+          type: 'category',
+          label: 'AI Providers',
+          items: [
+            'ai/providers/index',
+            'ai/providers/azure-ai-inference',
+            'ai/providers/azure-openai',
+            'ai/providers/ollama',
+            'ai/providers/openai',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Data Sources',
+          items: [
+            'ai/data-sources/index',
+            'ai/data-sources/azure-ai',
+            'ai/data-sources/elasticsearch',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Documents',
+          items: [
+            'ai/documents/index',
+            'ai/documents/azure-ai',
+            'ai/documents/elasticsearch',
+            'ai/documents/openxml',
+            'ai/documents/pdf',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Model Context Protocol (MCP)',
+          items: [
+            'ai/mcp/index',
+            'ai/mcp/client',
+            'ai/mcp/server',
+            'ai/mcp/ftp',
+            'ai/mcp/sftp',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Agent-to-Agent Protocol (A2A)',
+          items: [
+            'ai/a2a/index',
+            'ai/a2a/client',
+            'ai/a2a/host',
+          ],
+        },
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Omnichannel Communications',
+      items: [
+        'omnichannel/index',
+        'omnichannel/event-grid',
+        'omnichannel/management',
+        'omnichannel/sms',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Standard Modules',
+      items: [
+        'modules/index',
+        'modules/content-access-control',
+        'modules/recipes',
+        'modules/resources',
+        'modules/roles',
+        'modules/signalr',
+        'modules/users',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Samples',
+      items: [
+        'samples/index',
+        'samples/mcp-client',
+        'samples/a2a-client',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Changelog',
+      items: [
+        'changelog/index',
+        'changelog/v2.0.0',
+      ],
+    },
+  ],
+};
+
+export default sidebars;

@@ -281,7 +281,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         }
 
         return deployments
-            .Where(deployment => deployment.Type == type)
+            .Where(deployment => deployment.SupportsType(type))
             .OrderByDescending(deployment => deployment.IsDefault)
             .ThenBy(deployment => deployment.ConnectionNameAlias ?? deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
@@ -307,7 +307,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         var candidates = deployments
             .Where(deployment =>
-                deployment.Type == type &&
+                deployment.SupportsType(type) &&
                 (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionId, StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||

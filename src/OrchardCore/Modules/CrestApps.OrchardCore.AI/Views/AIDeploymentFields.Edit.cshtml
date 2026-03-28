@@ -29,12 +29,26 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Type" class="@Orchard.GetLabelClasses()">@T["Type"]</label>
-    <div class="@Orchard.GetEndClasses()">
-        <select asp-for="Type" asp-items="Model.Types" class="form-select"></select>
-        <span asp-validation-for="Type" class="text-danger"></span>
-        <span class="hint">@T["The capability type of this deployment."]</span>
-    </div>
+    <fieldset class="mb-0">
+        <legend class="@Orchard.GetLabelClasses()">@T["Types"]</legend>
+        <div class="@Orchard.GetEndClasses()">
+            @foreach (var type in Model.Types)
+            {
+                var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
+                <div class="form-check">
+                    <input id="@(Html.IdFor(m => m.SelectedTypes))_@type.Value"
+                           name="@Html.NameFor(m => m.SelectedTypes)"
+                           type="checkbox"
+                           value="@type.Value"
+                           class="form-check-input"
+                           checked="@isChecked" />
+                    <label class="form-check-label" for="@(Html.IdFor(m => m.SelectedTypes))_@type.Value">@type.Text</label>
+                </div>
+            }
+            <span asp-validation-for="SelectedTypes" class="text-danger"></span>
+            <span class="hint">@T["Select one or more capability types for this deployment."]</span>
+        </div>
+    </fieldset>
 </div>
 
 @if (!Model.HasContainedConnection)
@@ -54,7 +68,7 @@
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IsDefault">
             <label class="form-check-label" asp-for="IsDefault">@T["Is default"]</label>
-            <span class="hint dashed">@T["When enabled, this deployment is the default for its type within its connection."]</span>
+            <span class="hint dashed">@T["When enabled, this deployment is the default for each selected type within its connection."]</span>
         </div>
     </div>
 </div>

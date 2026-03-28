@@ -46,7 +46,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
-        if (!Enum.IsDefined(context.Model.Type))
+        if (!context.Model.Type.IsValidSelection())
         {
             context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
         }
@@ -126,9 +126,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.ConnectionName = provider.DefaultConnectionName;
         }
 
-        var typeValue = data[nameof(AIDeployment.Type)]?.GetValue<string>();
-
-        if (!string.IsNullOrEmpty(typeValue) && Enum.TryParse<AIDeploymentType>(typeValue, ignoreCase: true, out var type))
+        if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))
         {
             deployment.Type = type;
         }
@@ -152,5 +150,39 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         }
 
         return Task.CompletedTask;
+    }
+
+    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    {
+        type = AIDeploymentType.None;
+
+        if (typeNode is null)
+        {
+            return false;
+        }
+
+        if (typeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                    parsedType == AIDeploymentType.None)
+                {
+                    type = AIDeploymentType.None;
+                    return false;
+                }
+
+                type |= parsedType;
+            }
+
+            return type.IsValidSelection();
+        }
+
+        var typeValue = typeNode.GetValue<string>();
+
+        return !string.IsNullOrEmpty(typeValue) &&
+            Enum.TryParse(typeValue, ignoreCase: true, out type) &&
+            type.IsValidSelection();
     }
 }
