@@ -18,9 +18,22 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label asp-for="Type" class="form-label">Deployment type <span class="text-danger">*</span></label>
-                        <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIDeploymentType>()"></select>
-                        <div class="form-text">The capability this deployment provides.</div>
+                        <label class="form-label">Deployment types <span class="text-danger">*</span></label>
+                        @foreach (var type in Model.Types)
+                        {
+                            var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
+                            <div class="form-check">
+                                <input id="SelectedTypes_@type.Value"
+                                       name="SelectedTypes"
+                                       type="checkbox"
+                                       value="@type.Value"
+                                       class="form-check-input"
+                                       @(isChecked ? "checked" : "") />
+                                <label class="form-check-label" for="SelectedTypes_@type.Value">@type.Text</label>
+                            </div>
+                        }
+                        <span asp-validation-for="SelectedTypes" class="text-danger"></span>
+                        <div class="form-text">Select one or more capability types for this deployment.</div>
                     </div>
                 </div>
                 <div class="col-md-6">

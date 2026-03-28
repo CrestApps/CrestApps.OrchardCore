@@ -1,0 +1,289 @@
+@model CrestApps.AI.Models.ChatInteraction
+@{
+    var prompts = ViewData["Prompts"] as IReadOnlyCollection<CrestApps.AI.Models.ChatInteractionPrompt>;
+    ViewData["Title"] = "Chat - " + (Model.Title ?? "Untitled Chat");
+    var messages = prompts?
+        .Where(p => p.Role.Value is "user" or "assistant")
+        .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId }) ?? [];
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+    .chat-page-wrapper {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+    .ai-chat-messages { padding: 1rem; }
+    .ai-chat-message-item { margin-bottom: 1rem; }
+    .ai-chat-msg-role { font-size: 0.75rem; font-weight: 600; margin-bottom: 2px; }
+    .ai-chat-msg-role-user { color: #0d6efd; }
+    .ai-chat-msg-role-assistant { color: #6f42c1; }
+    .ai-chat-msg-role-assistant i.ai-streaming-icon { animation: pulse 1.5s infinite; }
+    .ai-chat-msg-role-assistant i.ai-bot-icon { color: #6f42c1; }
+    .message-buttons-container { display: inline-flex; gap: 4px; margin-top: 4px; }
+    @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .chat-settings-panel {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-chat-left-dots"></i> @(Model.Title ?? "Untitled Chat")</h2>
+    <div>
+        <button id="toggle-settings" class="btn btn-outline-secondary btn-sm me-2" type="button" data-bs-toggle="collapse" data-bs-target="#settingsPanel">
+            <i class="bi bi-gear"></i> Settings
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Settings panel (collapsible) -->
+    <div class="col-md-4 collapse" id="settingsPanel">
+        <div class="card chat-settings-panel">
+            <div class="card-header">
+                <strong>Interaction settings</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">System message</label>
+                    <p class="small text-muted">@(string.IsNullOrEmpty(Model.SystemMessage) ? "Not set" : Model.SystemMessage)</p>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Temperature</label>
+                    <span class="small text-muted">@(Model.Temperature?.ToString("0.0") ?? "Default")</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Top P</label>
+                    <span class="small text-muted">@(Model.TopP?.ToString("0.0") ?? "Default")</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Max tokens</label>
+                    <span class="small text-muted">@(Model.MaxTokens?.ToString() ?? "Default")</span>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Past messages</label>
+                    <span class="small text-muted">@(Model.PastMessagesCount?.ToString() ?? "Default")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat area -->
+    <div id="chat-column" class="col">
+        <div class="chat-page-wrapper">
+            <div class="border rounded flex-grow-1 d-flex flex-column" style="min-height: 500px;">
+                <div id="chat-container" class="flex-grow-1 overflow-auto">
+                    <div id="chat-placeholder">
+                        <div class="p-3 text-muted">
+                            <i class="bi bi-robot"></i> Start chatting! Your messages are sent directly to the AI with the parameters you configured.
+                        </div>
+                    </div>
+                    <div id="chat-app"></div>
+                </div>
+                <div class="border-top p-3">
+                    <div class="d-flex gap-2">
+                        <textarea id="chat-input"
+                                  class="form-control"
+                                  rows="1"
+                                  placeholder="Type a message..."
+                                  data-item-id="@Model.ItemId"></textarea>
+                        <button type="button" id="send-btn" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const itemId = '@Model.ItemId';
+            const hubUrl = '/hubs/chat-interaction';
+            const existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(messages));
+
+            // --- Markdown rendering ---
+            const renderer = new marked.Renderer();
+            renderer.link = function (data) {
+                return `<a href="${DOMPurify.sanitize(data.href)}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+            };
+            marked.setOptions({
+                renderer: renderer,
+                highlight: function (code, lang) {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                }
+            });
+
+            function renderMarkdown(text) {
+                return DOMPurify.sanitize(marked.parse(text || ''));
+            }
+
+            // --- Vue app for messages ---
+            const app = Vue.createApp({
+                data() {
+                    return {
+                        messages: existingMessages.map(m => ({
+                            ...m,
+                            htmlContent: renderMarkdown(m.content),
+                            isStreaming: false
+                        }))
+                    };
+                },
+                methods: {
+                    addMessage(role, content, isStreaming = false) {
+                        this.messages.push({
+                            role,
+                            content,
+                            htmlContent: renderMarkdown(content),
+                            isStreaming
+                        });
+                        this.$nextTick(() => this.scrollToBottom());
+                    },
+                    appendToLast(token) {
+                        const last = this.messages[this.messages.length - 1];
+                        if (last && last.role === 'assistant') {
+                            last.content += token;
+                            last.htmlContent = renderMarkdown(last.content);
+                        }
+                    },
+                    finishStreaming() {
+                        const last = this.messages[this.messages.length - 1];
+                        if (last) {
+                            last.isStreaming = false;
+                            last.htmlContent = renderMarkdown(last.content);
+                        }
+                        this.$nextTick(() => this.scrollToBottom());
+                    },
+                    scrollToBottom() {
+                        const container = document.getElementById('chat-container');
+                        if (container) container.scrollTop = container.scrollHeight;
+                    },
+                    copyResponse(content) {
+                        navigator.clipboard.writeText(content);
+                    }
+                },
+                template: `
+                    <div class="ai-chat-messages">
+                        <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
+                            <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
+                            <div v-else class="ai-chat-msg-role ai-chat-msg-role-assistant">
+                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
+                                Assistant
+                            </div>
+                            <div class="lh-base">
+                                <div v-html="message.htmlContent"></div>
+                                <span class="message-buttons-container" v-if="message.role === 'assistant' && !message.isStreaming">
+                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="Copy response">
+                                        <i class="fa-solid fa-copy"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            });
+
+            const vm = app.mount('#chat-app');
+
+            // --- SignalR connection ---
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl)
+                .withAutomaticReconnect()
+                .build();
+
+            let isSending = false;
+
+            connection.start().then(() => {
+                console.log('Connected to ChatInteraction hub.');
+            }).catch(err => {
+                console.error('SignalR connection error:', err);
+            });
+
+            // Handle errors from the hub
+            connection.on('ReceiveError', function (error) {
+                vm.addMessage('assistant', '⚠️ ' + error);
+            });
+
+            // --- Send message ---
+            const inputEl = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+            const placeholder = document.getElementById('chat-placeholder');
+
+            async function sendMessage() {
+                const prompt = inputEl.value.trim();
+                if (!prompt || isSending) return;
+
+                isSending = true;
+                sendBtn.disabled = true;
+                inputEl.value = '';
+
+                if (placeholder) placeholder.style.display = 'none';
+
+                vm.addMessage('user', prompt);
+                vm.addMessage('assistant', '', true);
+
+                try {
+                    const stream = connection.stream('SendMessage', itemId, prompt);
+                    stream.subscribe({
+                        next(chunk) {
+                            if (chunk && chunk.content) {
+                                vm.appendToLast(chunk.content);
+                            }
+                        },
+                        complete() {
+                            vm.finishStreaming();
+                            isSending = false;
+                            sendBtn.disabled = false;
+                            inputEl.focus();
+                        },
+                        error(err) {
+                            console.error('Stream error:', err);
+                            vm.finishStreaming();
+                            vm.addMessage('assistant', '⚠️ An error occurred while streaming the response.');
+                            isSending = false;
+                            sendBtn.disabled = false;
+                        }
+                    });
+                } catch (err) {
+                    console.error('SendMessage error:', err);
+                    vm.finishStreaming();
+                    vm.addMessage('assistant', '⚠️ Failed to send message.');
+                    isSending = false;
+                    sendBtn.disabled = false;
+                }
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            inputEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Auto-resize textarea
+            inputEl.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        });
+    </script>
+}

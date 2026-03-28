@@ -7,7 +7,7 @@ public sealed class AIDeploymentViewModel
 {
     public string ItemId { get; set; }
     public string Name { get; set; }
-    public AIDeploymentType Type { get; set; }
+    public string[] SelectedTypes { get; set; } = [];
     public string ConnectionName { get; set; }
     public string ClientName { get; set; }
     public bool IsDefault { get; set; }
@@ -20,6 +20,7 @@ public sealed class AIDeploymentViewModel
     public List<SelectListItem> Connections { get; set; } = [];
     public List<SelectListItem> Providers { get; set; } = [];
     public List<SelectListItem> AuthenticationTypes { get; set; } = [];
+    public List<SelectListItem> Types { get; set; } = [];
 
     public static AIDeploymentViewModel FromDeployment(AIDeployment deployment)
     {
@@ -27,7 +28,9 @@ public sealed class AIDeploymentViewModel
         {
             ItemId = deployment.ItemId,
             Name = deployment.Name,
-            Type = deployment.Type,
+            SelectedTypes = deployment.Type.GetSupportedTypes()
+                .Select(static type => type.ToString())
+                .ToArray(),
             ConnectionName = deployment.ConnectionName,
             ClientName = deployment.ClientName,
             IsDefault = deployment.IsDefault,
@@ -46,7 +49,7 @@ public sealed class AIDeploymentViewModel
     public void ApplyTo(AIDeployment deployment)
     {
         deployment.Name = Name;
-        deployment.Type = Type;
+        deployment.Type = GetDeploymentType();
         deployment.ConnectionName = ConnectionName;
         deployment.ClientName = ClientName;
         deployment.IsDefault = IsDefault;
@@ -75,5 +78,26 @@ public sealed class AIDeploymentViewModel
         {
             deployment.Properties.Remove("AuthenticationType");
         }
+    }
+
+    public AIDeploymentType GetDeploymentType()
+    {
+        var deploymentType = AIDeploymentType.None;
+
+        if (SelectedTypes is null)
+        {
+            return deploymentType;
+        }
+
+        foreach (var typeName in SelectedTypes.Where(static value => !string.IsNullOrWhiteSpace(value)))
+        {
+            if (Enum.TryParse<AIDeploymentType>(typeName, ignoreCase: true, out var parsedType)
+                && parsedType != AIDeploymentType.None)
+            {
+                deploymentType |= parsedType;
+            }
+        }
+
+        return deploymentType;
     }
 }

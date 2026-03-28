@@ -1,3 +1,4 @@
+@using CrestApps.AI.Models
 @model IReadOnlyCollection<CrestApps.AI.Models.AIDeployment>
 @{
     ViewData["Title"] = "AI Deployments";
@@ -35,7 +36,12 @@ else
                 {
                     <tr>
                         <td><strong>@deployment.Name</strong></td>
-                        <td><span class="badge bg-secondary">@deployment.Type</span></td>
+                        <td>
+                            @foreach (var type in deployment.Type.GetSupportedTypes())
+                            {
+                                <span class="badge bg-secondary me-1">@type</span>
+                            }
+                        </td>
                         <td>
                             <span class="badge bg-info">@(deployment.ClientName ?? "—")</span>
                         </td>

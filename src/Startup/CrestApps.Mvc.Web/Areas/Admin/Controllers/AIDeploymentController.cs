@@ -68,6 +68,11 @@ public sealed class AIDeploymentController : Controller
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
+        if (!model.GetDeploymentType().IsValidSelection())
+        {
+            ModelState.AddModelError(nameof(model.SelectedTypes), "At least one deployment type is required.");
+        }
+
         if (!ModelState.IsValid)
         {
             await PopulateDropdownsAsync(model);
@@ -116,6 +121,11 @@ public sealed class AIDeploymentController : Controller
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
+        }
+
+        if (!model.GetDeploymentType().IsValidSelection())
+        {
+            ModelState.AddModelError(nameof(model.SelectedTypes), "At least one deployment type is required.");
         }
 
         if (!ModelState.IsValid)
@@ -169,5 +179,9 @@ public sealed class AIDeploymentController : Controller
         model.Connections.AddRange(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)));
         model.Providers = _providers;
         model.AuthenticationTypes = _authTypes;
+        model.Types = Enum.GetValues<AIDeploymentType>()
+            .Where(static type => type != AIDeploymentType.None)
+            .Select(static t => new SelectListItem(t.ToString(), t.ToString()))
+            .ToList();
     }
 }

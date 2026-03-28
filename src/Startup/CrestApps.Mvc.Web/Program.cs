@@ -9,10 +9,12 @@ using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.Data.YesSql;
+using CrestApps.Data.YesSql.Services;
 using CrestApps.Mvc.Web.Hubs;
 using CrestApps.Mvc.Web.Indexes;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Mvc.Web.Tools;
+using CrestApps.Services;
 using CrestApps.SignalR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using NLog.Web;
@@ -114,6 +116,8 @@ builder.Services.AddSingleton(sp =>
     store.RegisterIndexes<SearchIndexProfileIndexProvider>();
     store.RegisterIndexes<AIDataSourceIndexProvider>();
     store.RegisterIndexes<AIMemoryEntryIndexProvider>();
+    store.RegisterIndexes<ChatInteractionIndexProvider>();
+    store.RegisterIndexes<ChatInteractionPromptIndexProvider>();
 
     return store;
 });
@@ -133,7 +137,10 @@ builder.Services
     .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>()
     .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
     .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
-    .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>();
+    .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
+    .AddDocumentCatalog<ChatInteraction, ChatInteractionIndex>()
+    .AddScoped<ICatalogManager<ChatInteraction>, CatalogManager<ChatInteraction>>()
+    .AddScoped<IChatInteractionPromptStore, YesSqlChatInteractionPromptStore>();
 
 // Local file store for uploaded documents.
 builder.Services.AddSingleton(new FileSystemFileStore(
@@ -269,6 +276,20 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIMemoryEntryIndex.ItemId), c => c.WithLength(26))
             .Column<string>(nameof(AIMemoryEntryIndex.UserId), c => c.WithLength(255))
             .Column<string>(nameof(AIMemoryEntryIndex.Name), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<ChatInteractionIndex>(t => t
+            .Column<string>(nameof(ChatInteractionIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(ChatInteractionIndex.UserId), c => c.WithLength(255))
+            .Column<string>(nameof(ChatInteractionIndex.Title), c => c.WithLength(255))
+            .Column<DateTime>(nameof(ChatInteractionIndex.CreatedUtc))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<ChatInteractionPromptIndex>(t => t
+            .Column<string>(nameof(ChatInteractionPromptIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(ChatInteractionPromptIndex.ChatInteractionId), c => c.WithLength(26))
+            .Column<string>(nameof(ChatInteractionPromptIndex.Role), c => c.WithLength(50))
+            .Column<DateTime>(nameof(ChatInteractionPromptIndex.CreatedUtc))));
 
     await transaction.CommitAsync();
 }
