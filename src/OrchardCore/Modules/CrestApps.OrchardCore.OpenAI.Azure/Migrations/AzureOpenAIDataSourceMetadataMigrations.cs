@@ -47,7 +47,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
         ShellScope.AddDeferredTask(async scope =>
         {
             var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
-            var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
+            var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
 
             // Migrate data sources to use first-class index properties
             foreach (var dataSource in await dataSourceStore.GetAllAsync())

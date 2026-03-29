@@ -1,3 +1,4 @@
+using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileStore = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
+            var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
 
             foreach (var profile in await profileStore.GetAllAsync())
             {

@@ -116,6 +116,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileIndexMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
+        services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();
         services.AddIndexProvider<AIProfileIndexProvider>();
 
         // AI Profile Template services.

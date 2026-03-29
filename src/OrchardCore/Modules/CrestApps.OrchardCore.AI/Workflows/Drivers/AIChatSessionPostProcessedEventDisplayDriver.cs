@@ -12,18 +12,18 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 
 public sealed class AIChatSessionPostProcessedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventViewModel>
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
 
     public AIChatSessionPostProcessedEventDisplayDriver(
-        INamedCatalog<AIProfile> profilesCatalog)
+        IAIProfileStore profileStore)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
     }
 
     protected override async ValueTask EditActivityAsync(AIChatSessionPostProcessedEvent activity, AIChatSessionPostProcessedEventViewModel model)
     {
         model.ProfileId = activity.ProfileId;
-        model.Profiles = (await _profilesCatalog.GetAsync(AIProfileType.Chat))
+        model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
             .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
     }
 

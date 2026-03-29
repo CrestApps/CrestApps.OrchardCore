@@ -64,6 +64,10 @@ The suite also includes rich management capabilities in Orchard Core, such as AI
 3. Configure at least one [AI provider](./providers/) with connection credentials
 4. Create an AI Profile and start interacting with AI models
 
+### Legacy tenant data compatibility
+
+When upgrading from older `2.0.0` previews or switching between branches that stored AI records under the legacy Orchard-layer assemblies, the AI module now rewrites `AI_Document` type names to the current framework-layer `CrestApps.AI.*` assemblies on startup. This keeps existing AI profiles, chat sessions, and chat prompts readable without requiring a manual database reset.
+
 ### Quick Start Configuration
 
 Add the following to your `appsettings.json` to get started with OpenAI:

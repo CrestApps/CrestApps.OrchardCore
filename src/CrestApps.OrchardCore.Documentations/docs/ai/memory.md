@@ -112,6 +112,8 @@ Navigate to **Settings → Artificial Intelligence → Memory** and configure:
 - **Index profile** — the master memory index used for storing memories
 - **Default top N** — the default number of matching memories returned by searches
 
+You can leave **Index profile** empty while you are still setting up unrelated AI features such as Copilot. Memory retrieval and indexing stay inactive until you select a valid memory index profile.
+
 Preemptive memory retrieval itself is controlled separately under **Settings → Artificial Intelligence → General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
 :::warning

@@ -11,11 +11,10 @@
 @using Microsoft.Extensions.DependencyInjection
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.Services
+@using CrestApps.SignalR.Services
 @using Microsoft.Extensions.Options
 @using System.Text.Json
-
-@inject INamedCatalog<AIProfile> ProfileCatalog
-@inject IAIProfileManager ProfileManager
+@inject IAIProfileStore ProfileCatalog
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
@@ -43,7 +42,7 @@
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = await ProfileManager.GetAsync(AIProfileType.TemplatePrompt);
+    var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";

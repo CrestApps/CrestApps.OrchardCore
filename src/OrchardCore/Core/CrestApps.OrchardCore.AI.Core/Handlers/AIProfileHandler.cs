@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -26,13 +26,13 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         _liquidTemplateManager = liquidTemplateManager;
         _clock = clock;
         S = stringLocalizer;
@@ -52,7 +52,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         }
         else
         {
-            var profile = await _profilesCatalog.FindByNameAsync(context.Model.Name);
+            var profile = await _profileStore.FindByNameAsync(context.Model.Name);
 
             if (profile is not null && profile.ItemId != context.Model.ItemId)
             {

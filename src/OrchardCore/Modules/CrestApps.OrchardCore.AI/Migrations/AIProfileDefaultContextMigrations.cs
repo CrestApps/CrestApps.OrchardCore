@@ -1,4 +1,6 @@
+using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
@@ -13,16 +15,14 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 /// </summary>
 internal sealed class AIProfileDefaultContextMigrations : DataMigration
 {
-#pragma warning disable CA1822 // Mark members as static
-    public int Create()
-#pragma warning restore CA1822 // Mark members as static
+    public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
-            var profileCatalog = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIProfile>>();
+            var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
             var defaultOptions = scope.ServiceProvider.GetRequiredService<DefaultAIOptions>();
 
-            var profiles = await profileCatalog.GetAllAsync();
+            var profiles = await profileStore.GetAllAsync();
 
             foreach (var profile in profiles)
             {
@@ -61,7 +61,7 @@ internal sealed class AIProfileDefaultContextMigrations : DataMigration
                     }
                 });
 
-                await profileCatalog.UpdateAsync(profile);
+                await profileStore.UpdateAsync(profile);
             }
         });
 

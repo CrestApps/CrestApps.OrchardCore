@@ -62,21 +62,19 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.IndexProfileName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The index profile field is required."]);
-        }
-        else
-        {
-            var indexProfile = await _indexProfileStore.FindByNameAsync(model.IndexProfileName);
+        settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
+            ? null
+            : model.IndexProfileName;
 
-            if (indexProfile == null || indexProfile.Type != AIConstants.AIDocumentsIndexingTaskType)
+        if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
+        {
+            var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+
+            if (indexProfile is null || !string.Equals(indexProfile.Type, AIConstants.AIDocumentsIndexingTaskType, StringComparison.OrdinalIgnoreCase))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
             }
         }
-
-        settings.IndexProfileName = model.IndexProfileName;
 
         return Edit(site, settings, context);
     }

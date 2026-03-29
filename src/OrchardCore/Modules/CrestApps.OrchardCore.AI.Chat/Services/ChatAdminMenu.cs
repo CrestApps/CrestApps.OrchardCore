@@ -12,24 +12,24 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 
 public sealed class ChatAdminMenu : AdminNavigationProvider
 {
-    private readonly INamedCatalog<AIProfile> _profilesCatalog;
+    private readonly IAIProfileStore _profileStore;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public ChatAdminMenu(
-        INamedCatalog<AIProfile> profilesCatalog,
+        IAIProfileStore profileStore,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<ChatAdminMenu> stringLocalizer)
     {
-        _profilesCatalog = profilesCatalog;
+        _profileStore = profileStore;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
 
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var profiles = await _profilesCatalog.GetAsync(AIProfileType.Chat);
+        var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
 
         builder
            .Add(S["Artificial Intelligence"], artificialIntelligence =>
