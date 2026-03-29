@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -62,21 +63,17 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.IndexProfileName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The index profile field is required."]);
-        }
-        else
-        {
-            var indexProfile = await _indexProfileStore.FindByNameAsync(model.IndexProfileName);
+        settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
+            ? null
+            : model.IndexProfileName;
 
-            if (indexProfile == null || indexProfile.Type != AIConstants.AIDocumentsIndexingTaskType)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
-            }
+        if (!await OptionalIndexProfileSelectionValidator.IsValidAsync(
+            _indexProfileStore,
+            settings.IndexProfileName,
+            AIConstants.AIDocumentsIndexingTaskType))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
         }
-
-        settings.IndexProfileName = model.IndexProfileName;
 
         return Edit(site, settings, context);
     }

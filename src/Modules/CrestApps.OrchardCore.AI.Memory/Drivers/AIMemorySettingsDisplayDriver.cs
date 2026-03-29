@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -60,21 +61,18 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.IndexProfileName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The index profile field is required."]);
-        }
-        else
-        {
-            var indexProfile = await _indexProfileStore.FindByNameAsync(model.IndexProfileName);
+        settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
+            ? null
+            : model.IndexProfileName;
 
-            if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
-            }
+        if (!await OptionalIndexProfileSelectionValidator.IsValidAsync(
+            _indexProfileStore,
+            settings.IndexProfileName,
+            MemoryConstants.IndexingTaskType))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
         }
 
-        settings.IndexProfileName = model.IndexProfileName;
         settings.TopN = Math.Clamp(model.TopN, 1, 20);
 
         return Edit(site, settings, context);

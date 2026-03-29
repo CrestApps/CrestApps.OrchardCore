@@ -75,7 +75,7 @@ The orchestrator supports various document-related operations:
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. You can leave the document index empty until you are ready to enable document retrieval; after this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
 5. Start using the Documents tab in your chat interactions.
 
@@ -184,7 +184,7 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 
 1. **Set up an indexing provider**: Enable Elasticsearch or Azure AI Search in the Orchard Core admin.
 2. **Create an index**: Navigate to **Search > Indexing** and create a new index (e.g., "AI Documents").
-3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
+3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. You can leave the document index empty until you are ready to enable document retrieval; after this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
 6. Open a chat session — the attach button and drag-and-drop zone are now available.
@@ -233,6 +233,7 @@ This ensures the AI document indexes stay free of orphaned entries when their pa
 
 If you see this warning, navigate to **Settings > Artificial Intelligence** and select an index profile.
 If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
+Leaving the setting empty is supported while you are configuring other AI features, but document retrieval remains unavailable until a valid index profile is selected.
 
 ### "Embedding Search Service Not Available" Warning
 
