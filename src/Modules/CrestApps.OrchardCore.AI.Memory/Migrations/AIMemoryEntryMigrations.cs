@@ -44,7 +44,7 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
             collection: MemoryConstants.CollectionName
         );
 
-        return 1;
+        return 2;
     }
 
     public async Task<int> UpdateFrom1Async()
