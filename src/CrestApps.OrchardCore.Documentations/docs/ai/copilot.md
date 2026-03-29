@@ -63,7 +63,8 @@ Use this mode when you want the orchestrator to authenticate to Copilot via GitH
    - GitHub Settings → Developer settings → OAuth Apps → **New OAuth App**
    - **Authorization callback URL**: `https://your-domain.com/copilot/OAuthCallback`
    - Copy the **Client ID** and **Client Secret**
-2. In Orchard Core: go to **Settings → Copilot** and enter the client ID/secret.
+2. In Orchard Core: go to **Settings → Artificial Intelligence → Copilot** and enter the client ID/secret.
+3. If AI Memory or AI Documents features are enabled but not configured yet, you can still save Copilot settings first and come back later to choose those index profiles.
 
 #### Required OAuth scopes
 

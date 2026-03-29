@@ -60,13 +60,13 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.IndexProfileName))
+        settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
+            ? null
+            : model.IndexProfileName;
+
+        if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The index profile field is required."]);
-        }
-        else
-        {
-            var indexProfile = await _indexProfileStore.FindByNameAsync(model.IndexProfileName);
+            var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
 
             if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
             {
@@ -74,7 +74,6 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
             }
         }
 
-        settings.IndexProfileName = model.IndexProfileName;
         settings.TopN = Math.Clamp(model.TopN, 1, 20);
 
         return Edit(site, settings, context);
