@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -65,12 +64,14 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
             ? null
             : model.IndexProfileName;
 
-        if (!await OptionalIndexProfileSelectionValidator.IsValidAsync(
-            _indexProfileStore,
-            settings.IndexProfileName,
-            MemoryConstants.IndexingTaskType))
+        if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
+            var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+
+            if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
+            }
         }
 
         settings.TopN = Math.Clamp(model.TopN, 1, 20);
