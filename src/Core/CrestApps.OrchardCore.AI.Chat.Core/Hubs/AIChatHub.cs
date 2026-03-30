@@ -807,16 +807,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                     return;
                 }
 
-                var ttsDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+                var textToSpeechDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
-                if (ttsDeployment is null)
+                if (textToSpeechDeployment is null)
                 {
                     await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured or available."].Value);
                     return;
                 }
 
                 using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
-                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
                     ? chatModeSettings.VoiceName
@@ -1072,7 +1072,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         AIProfile profile,
         string sessionId,
         string prompt,
-        ITextToSpeechClient ttsClient,
+        ITextToSpeechClient textToSpeechClient,
         string voiceName,
         IServiceProvider services,
         CancellationToken cancellationToken)
@@ -1092,7 +1092,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         string responseId = null;
 
         // Start TTS consumer that sends audio per sentence (text is sent immediately below).
-        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, () => effectiveSessionId, sentenceChannel.Reader, voiceName, cancellationToken);
+        var ttsTask = StreamSentencesAsSpeechAsync(textToSpeechClient, () => effectiveSessionId, sentenceChannel.Reader, voiceName, cancellationToken);
 
         var sentenceBuffer = ZString.CreateStringBuilder();
 
@@ -1287,7 +1287,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
     private async Task StreamTranscriptionAsync(
         string traceId,
         Stopwatch sw,
-        ISpeechToTextClient sttClient,
+        ISpeechToTextClient speechToTextClient,
         string sessionId,
         IAsyncEnumerable<string> audioChunks,
         string audioFormat,
@@ -1302,7 +1302,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // Start streaming transcription in the background.
-        var transcriptionTask = TranscribeAudioInputAsync(traceId, sw, sessionId, pipe, audioFormat, speechLanguage, sttClient, errorCts, cancellationToken);
+        var transcriptionTask = TranscribeAudioInputAsync(traceId, sw, sessionId, pipe, audioFormat, speechLanguage, speechToTextClient, errorCts, cancellationToken);
 
         // Write audio chunks to the pipe as they arrive from SignalR.
         try
@@ -1358,7 +1358,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         Pipe pipe,
         string audioFormat,
         string speechLanguage,
-        ISpeechToTextClient sttClient,
+        ISpeechToTextClient speechToTextClient,
         CancellationTokenSource errorCts,
         CancellationToken cancellationToken)
     {
@@ -1386,7 +1386,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
             var updateCount = 0;
 
-            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            await foreach (var update in speechToTextClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
             {
                 if (string.IsNullOrEmpty(update.Text))
                 {
