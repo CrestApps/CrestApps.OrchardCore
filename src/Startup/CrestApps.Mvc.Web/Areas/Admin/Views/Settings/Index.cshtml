@@ -19,6 +19,73 @@
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-header">
+                    <h5 class="card-title mb-0">Default Deployments</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Select the default deployment for each capability. These are used as a
+                        fallback when a specific deployment is not configured at the profile or
+                        connection level.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultChatDeploymentId" class="form-label">Default chat deployment</label>
+                        <select asp-for="DefaultChatDeploymentId" asp-items="Model.ChatDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for chat sessions and chat interactions when no specific chat deployment is configured.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultUtilityDeploymentId" class="form-label">Default utility deployment</label>
+                        <select asp-for="DefaultUtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for auxiliary tasks such as planning, intent detection, query rewriting, and chart generation.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultEmbeddingDeploymentId" class="form-label">Default embedding deployment</label>
+                        <select asp-for="DefaultEmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for embedding generation in document indexing, data sources, and vector search.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultImageDeploymentId" class="form-label">Default image deployment</label>
+                        <select asp-for="DefaultImageDeploymentId" asp-items="Model.ImageDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for image generation.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultSpeechToTextDeploymentId" class="form-label">Default speech-to-text deployment</label>
+                        <select asp-for="DefaultSpeechToTextDeploymentId" asp-items="Model.SpeechToTextDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for speech-to-text transcription.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultTextToSpeechDeploymentId" class="form-label">Default text-to-speech deployment</label>
+                        <select asp-for="DefaultTextToSpeechDeploymentId" asp-items="Model.TextToSpeechDeployments" class="form-select">
+                            <option value="">— None —</option>
+                        </select>
+                        <div class="form-text">The default deployment used for text-to-speech synthesis.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultTextToSpeechVoiceId" class="form-label">Default text-to-speech voice</label>
+                        <input asp-for="DefaultTextToSpeechVoiceId" class="form-control" placeholder="e.g. alloy" />
+                        <div class="form-text">The default voice used for text-to-speech when a profile does not specify one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="card-title mb-0">Memory</h5>
                 </div>
                 <div class="card-body">

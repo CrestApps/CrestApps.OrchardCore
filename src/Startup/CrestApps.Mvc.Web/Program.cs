@@ -35,6 +35,21 @@ var appDataPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(appDataPath);
 
 // ---------------------------------------------------------------------------
+// Default AI Deployment Settings — persisted in a dedicated JSON file so that
+// IOptionsMonitor<DefaultAIDeploymentSettings> reflects admin changes
+// automatically via the configuration reload-on-change mechanism.
+// ---------------------------------------------------------------------------
+var deploymentDefaultsService = new JsonFileDeploymentDefaultsService(appDataPath);
+
+builder.Configuration.AddJsonFile(
+    deploymentDefaultsService.FilePath, optional: true, reloadOnChange: true);
+
+builder.Services.Configure<DefaultAIDeploymentSettings>(
+    builder.Configuration.GetSection(JsonFileDeploymentDefaultsService.SectionKey));
+
+builder.Services.AddSingleton(deploymentDefaultsService);
+
+// ---------------------------------------------------------------------------
 // Authentication & Authorization
 // ---------------------------------------------------------------------------
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
