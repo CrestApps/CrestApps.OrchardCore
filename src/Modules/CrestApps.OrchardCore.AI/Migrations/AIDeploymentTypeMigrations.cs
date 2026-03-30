@@ -128,9 +128,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
-            var profileCatalog = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
-            var templateCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIProfileTemplate>>();
-            var interactionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<ChatInteraction>>();
 
             var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
             var deploymentsUpdated = false;
@@ -156,52 +153,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
-            await TryConvertDefaultDeploymentSettingsAsync(siteService, deploymentNameMap);
-
-            foreach (var profile in await profileCatalog.GetAllAsync())
-            {
-                var updated = false;
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.ChatDeploymentName, value => profile.ChatDeploymentName = value);
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.UtilityDeploymentName, value => profile.UtilityDeploymentName = value);
-
-                if (!updated)
-                {
-                    continue;
-                }
-
-                await profileCatalog.UpdateAsync(profile);
-            }
-
-            foreach (var template in await templateCatalog.GetAllAsync())
-            {
-                var metadata = template.As<ProfileTemplateMetadata>();
-
-                var updated = false;
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.ChatDeploymentName, value => metadata.ChatDeploymentName = value);
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.UtilityDeploymentName, value => metadata.UtilityDeploymentName = value);
-
-                if (!updated)
-                {
-                    continue;
-                }
-
-                template.Put(metadata);
-                await templateCatalog.UpdateAsync(template);
-            }
-
-            foreach (var interaction in await interactionCatalog.GetAllAsync())
-            {
-                var updated = false;
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.ChatDeploymentName, value => interaction.ChatDeploymentName = value);
-                updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.UtilityDeploymentName, value => interaction.UtilityDeploymentName = value);
-
-                if (!updated)
-                {
-                    continue;
-                }
-
-                await interactionCatalog.UpdateAsync(interaction);
-            }
+            await TryConvertStoredDeploymentSelectorsAsync(scope.ServiceProvider, siteService, deploymentNameMap);
         });
 
         return 4;
@@ -219,7 +171,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
-            await TryConvertDefaultDeploymentSettingsAsync(siteService, deploymentNameMap);
+            await TryConvertStoredDeploymentSelectorsAsync(scope.ServiceProvider, siteService, deploymentNameMap);
         });
 
         return 5;
@@ -307,6 +259,63 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         }
 
         await siteService.UpdateSiteSettingsAsync(site);
+    }
+
+    private static async Task TryConvertStoredDeploymentSelectorsAsync(
+        IServiceProvider serviceProvider,
+        ISiteService siteService,
+        IReadOnlyDictionary<string, string> deploymentNameMap)
+    {
+        await TryConvertDefaultDeploymentSettingsAsync(siteService, deploymentNameMap);
+
+        var profileCatalog = serviceProvider.GetRequiredService<IAIProfileStore>();
+        var templateCatalog = serviceProvider.GetRequiredService<INamedSourceCatalog<AIProfileTemplate>>();
+        var interactionCatalog = serviceProvider.GetRequiredService<ICatalog<ChatInteraction>>();
+
+        foreach (var profile in await profileCatalog.GetAllAsync())
+        {
+            var updated = false;
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.ChatDeploymentName, value => profile.ChatDeploymentName = value);
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, profile.UtilityDeploymentName, value => profile.UtilityDeploymentName = value);
+
+            if (!updated)
+            {
+                continue;
+            }
+
+            await profileCatalog.UpdateAsync(profile);
+        }
+
+        foreach (var template in await templateCatalog.GetAllAsync())
+        {
+            var metadata = template.As<ProfileTemplateMetadata>();
+
+            var updated = false;
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.ChatDeploymentName, value => metadata.ChatDeploymentName = value);
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.UtilityDeploymentName, value => metadata.UtilityDeploymentName = value);
+
+            if (!updated)
+            {
+                continue;
+            }
+
+            template.Put(metadata);
+            await templateCatalog.UpdateAsync(template);
+        }
+
+        foreach (var interaction in await interactionCatalog.GetAllAsync())
+        {
+            var updated = false;
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.ChatDeploymentName, value => interaction.ChatDeploymentName = value);
+            updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, interaction.UtilityDeploymentName, value => interaction.UtilityDeploymentName = value);
+
+            if (!updated)
+            {
+                continue;
+            }
+
+            await interactionCatalog.UpdateAsync(interaction);
+        }
     }
 
     private static bool TryPopulateDefaultDeploymentSettings(

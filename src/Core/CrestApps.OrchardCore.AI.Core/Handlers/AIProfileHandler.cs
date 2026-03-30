@@ -147,20 +147,36 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             profile.TitleType = titleType.Value;
         }
 
+        var chatDeploymentName = data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(chatDeploymentName))
+        {
+            profile.ChatDeploymentName = chatDeploymentName;
+        }
+        else
+        {
 #pragma warning disable CS0618 // Type or member is obsolete
-        profile.ChatDeploymentName = await NormalizeDeploymentSelectorAsync(
-            data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim(),
-            data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-                ?? data["DeploymentId"]?.GetValue<string>()?.Trim(),
-            profile.ChatDeploymentName);
+            var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
 
+            profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
+        }
+
+        var utilityDeploymentName = data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(utilityDeploymentName))
+        {
+            profile.UtilityDeploymentName = utilityDeploymentName;
+        }
+        else
+        {
 #pragma warning disable CS0618 // Type or member is obsolete
-        profile.UtilityDeploymentName = await NormalizeDeploymentSelectorAsync(
-            data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim(),
-            data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim(),
-            profile.UtilityDeploymentName);
+            var utilityDeploymentId = data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
+
+            profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
+        }
 
         var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
 
@@ -212,18 +228,16 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         }
     }
 
-    private async Task<string> NormalizeDeploymentSelectorAsync(string deploymentName, string deploymentId, string currentValue)
+    private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
     {
-        if (!string.IsNullOrWhiteSpace(deploymentName))
-        {
-            return deploymentName;
-        }
-
         if (!string.IsNullOrWhiteSpace(deploymentId))
         {
             var deployment = await _deploymentCatalog.FindByIdAsync(deploymentId);
 
-            return deployment?.Name ?? deploymentId;
+            if (deployment != null)
+            {
+                return deployment.Name;
+            }
         }
 
         return currentValue;
