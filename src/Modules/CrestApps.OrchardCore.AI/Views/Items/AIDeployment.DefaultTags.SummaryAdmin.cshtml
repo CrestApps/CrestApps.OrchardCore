@@ -7,13 +7,6 @@
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Type
 </span>
 
-@if (Model.Value.IsDefault)
-{
-    <span class="badge ta-badge bg-success-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Default"]">
-        <i class="text-secondary" aria-hidden="true"></i>@T["Default"]
-    </span>
-}
-
 <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ClientName
 </span>

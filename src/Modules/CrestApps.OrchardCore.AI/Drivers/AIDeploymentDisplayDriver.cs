@@ -49,7 +49,6 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.Name = deployment.Name;
             model.ConnectionName = deployment.ConnectionName;
             model.SelectedTypes = deployment.Type.GetSupportedTypes().Select(static type => type.ToString()).ToArray();
-            model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
             model.HasContainedConnection = HasContainedConnection(deployment.ClientName);
 
@@ -97,8 +96,6 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         {
             deployment.Type = deploymentTypes;
         }
-
-        deployment.IsDefault = model.IsDefault;
 
         if (HasContainedConnection(deployment.ClientName))
         {

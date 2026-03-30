@@ -39,7 +39,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 4. Configure your chat settings and start chatting
 
 :::tip
-Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system uses the fallback chain: connection default → global default (configured in **Settings > Artificial Intelligence > Default Deployments**). For chat interactions, the global fallback is **Default Chat Deployment**.
+Deployment dropdowns are grouped by connection, making it easy to find the right model. If you don't select a deployment, the system first uses the site default configured in **Settings > Artificial Intelligence > Default Deployments** and then falls back to the first deployment that matches the requested type. For chat interactions, the site fallback is **Default Chat Deployment**.
 :::
 
 ## Orchestration
@@ -68,17 +68,19 @@ Chat Interactions supports configurable chat modes that control how users intera
 
 ### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Audio Input** requires a resolvable speech-to-text deployment. The system first uses **Settings → Artificial Intelligence → Default Deployments** and then falls back to the first available deployment that supports speech-to-text.
+- **Conversation** requires resolvable speech-to-text and text-to-speech deployments using that same fallback behavior.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
 
 ### Configuring Chat Mode
 
 1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
-2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required default deployments are configured.
+2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required deployment types can be resolved.
 3. Save the settings.
 
 The selected chat mode applies to all Chat Interaction UIs. Unlike AI Profiles, there is no per-session voice selection — Conversation mode uses the default voice configured in site settings (or the provider's default).
+
+In the Chat Interaction deployment editor, leaving **Chat deployment** or **Utility deployment** on **Default** now shows a warning when the corresponding site default has not been configured yet. Use **Settings → Artificial Intelligence → Default Deployments** to define those shared fallback models explicitly.
 
 Once configured:
 

@@ -637,37 +637,24 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 }
 
                 var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (speechToTextDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured or available."].Value);
                     return;
                 }
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                var textToSpeechDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+
+                if (textToSpeechDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured or available."].Value);
                     return;
                 }
 
-                var sttDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
-
-                if (sttDeployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
-                    return;
-                }
-
-                var ttsDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-
-                if (ttsDeployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
-                    return;
-                }
-
-                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
-                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
                 var effectiveVoiceName = deploymentSettings.DefaultTextToSpeechVoiceId;
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
@@ -679,7 +666,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 {
                     await RunConversationLoopAsync(
                         itemId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
+                        speechToTextClient, textToSpeechClient, effectiveVoiceName, services, conversationCts.Token);
                 }
                 finally
                 {
@@ -1062,25 +1049,16 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     return;
                 }
 
-                var site = await siteService.GetSiteSettingsAsync();
-                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (speechToTextDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
-                    return;
-                }
-
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
-
-                if (deployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured or available."].Value);
                     return;
                 }
 
 #pragma warning disable MEAI001
-                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
 #pragma warning restore MEAI001
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
@@ -1091,7 +1069,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                         traceId, sw.ElapsedMilliseconds);
                 }
 
-                await StreamTranscriptionAsync(traceId, sw, sttClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
+                await StreamTranscriptionAsync(traceId, sw, speechToTextClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
 
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
@@ -1333,31 +1311,22 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 }
 
                 var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var textToSpeechDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                if (textToSpeechDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured or available."].Value);
                     return;
                 }
 
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-
-                if (deployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
-                    return;
-                }
-
-                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(voiceName)
                     ? voiceName
                     : deploymentSettings.DefaultTextToSpeechVoiceId;
 
-                using (ttsClient)
-                {
-                    await StreamSpeechAsync(ttsClient, itemId, text, effectiveVoiceName, cancellationToken);
-                }
+                await StreamSpeechAsync(textToSpeechClient, itemId, text, effectiveVoiceName, cancellationToken);
+
             });
         }
         catch (Exception ex)

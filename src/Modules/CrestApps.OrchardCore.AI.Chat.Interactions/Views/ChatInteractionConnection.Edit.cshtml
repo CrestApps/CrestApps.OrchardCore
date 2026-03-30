@@ -4,6 +4,13 @@
 
 @model EditChatInteractionConnectionViewModel
 
+@if (Model.ShowMissingDefaultChatDeploymentWarning)
+{
+    <div class="alert alert-warning orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)" role="alert">
+        @T["Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended chat deployment."]
+    </div>
+}
+
 <div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
     <label asp-for="ChatDeploymentId" class="form-label">
         @T["Chat deployment"]
@@ -16,6 +23,13 @@
     </select>
     <span asp-validation-for="ChatDeploymentId" class="text-danger"></span>
 </div>
+
+@if (Model.ShowMissingDefaultUtilityDeploymentWarning)
+{
+    <div class="alert alert-warning orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)" role="alert">
+        @T["Default utility deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended utility deployment."]
+    </div>
+}
 
 <div class="mb-3 orchestrator-dependent orchestrator-dependent-@(DefaultOrchestrator.OrchestratorName)">
     <label asp-for="UtilityDeploymentId" class="form-label">

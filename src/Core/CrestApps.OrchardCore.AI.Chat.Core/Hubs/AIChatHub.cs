@@ -799,37 +799,24 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
                 var site = await siteService.GetSiteSettingsAsync();
                 var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (speechToTextDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured or available."].Value);
                     return;
                 }
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
-                {
-                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
-                    return;
-                }
-
-                var sttDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
-
-                if (sttDeployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
-                    return;
-                }
-
-                var ttsDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
+                var ttsDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
                 if (ttsDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured or available."].Value);
                     return;
                 }
 
-                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
-                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
                     ? chatModeSettings.VoiceName
@@ -845,7 +832,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
                     await RunConversationLoopAsync(
                         profile, sessionId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
+                        speechToTextClient, textToSpeechClient, effectiveVoiceName, services, conversationCts.Token);
 
                 }
                 finally
@@ -882,8 +869,8 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         IAsyncEnumerable<string> audioChunks,
         string audioFormat,
         string speechLanguage,
-        ISpeechToTextClient sttClient,
-        ITextToSpeechClient ttsClient,
+        ISpeechToTextClient speechToTextClient,
+        ITextToSpeechClient textToSpeechClient,
         string voiceName,
         IServiceProvider services,
         CancellationToken cancellationToken)
@@ -897,7 +884,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         // is async and returns at its first await, allowing the caller to proceed to the audio loop.
         var transcriptionTask = TranscribeConversationAsync(
             pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
-            sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
+            speechToTextClient, textToSpeechClient, voiceName, services, errorCts, cancellationToken);
 
         // Write audio chunks to the pipe as they arrive.
         try
@@ -930,8 +917,8 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         string sessionId,
         string audioFormat,
         string speechLanguage,
-        ISpeechToTextClient sttClient,
-        ITextToSpeechClient ttsClient,
+        ISpeechToTextClient speechToTextClient,
+        ITextToSpeechClient textToSpeechClient,
         string voiceName,
         IServiceProvider services,
         CancellationTokenSource errorCts,
@@ -963,7 +950,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 _logger.LogDebug("TranscribeConversationAsync: Starting STT stream. Language={Language}, Format={Format}.", speechLanguage, audioFormat);
             }
 
-            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            await foreach (var update in speechToTextClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
             {
                 if (string.IsNullOrEmpty(update.Text))
                 {
@@ -1032,7 +1019,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                     currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     currentResponseTask = ProcessConversationPromptAsync(
                         profile, effectiveSessionId, fullText,
-                        ttsClient, voiceName, services, currentResponseCts.Token);
+                        textToSpeechClient, voiceName, services, currentResponseCts.Token);
                 }
             }
 
@@ -1066,7 +1053,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 {
                     await ProcessConversationPromptAsync(
                         profile, effectiveSessionId, remainingText,
-                        ttsClient, voiceName, services, cancellationToken);
+                        textToSpeechClient, voiceName, services, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -1247,25 +1234,16 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                     return;
                 }
 
-                var site = await siteService.GetSiteSettingsAsync();
-                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (speechToTextDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured."].Value);
-                    return;
-                }
-
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
-
-                if (deployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured speech-to-text deployment was not found."].Value);
+                    await Clients.Caller.ReceiveError(S["No speech-to-text deployment is configured or available."].Value);
                     return;
                 }
 
 #pragma warning disable MEAI001
-                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
 #pragma warning restore MEAI001
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
@@ -1276,7 +1254,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                         traceId, sw.ElapsedMilliseconds);
                 }
 
-                await StreamTranscriptionAsync(traceId, sw, sttClient, sessionId ?? string.Empty, audioChunks, audioFormat, speechLanguage, cancellationToken);
+                await StreamTranscriptionAsync(traceId, sw, speechToTextClient, sessionId ?? string.Empty, audioChunks, audioFormat, speechLanguage, cancellationToken);
 
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
@@ -1517,22 +1495,15 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
                 var site = await siteService.GetSiteSettingsAsync();
                 var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
+                var textToSpeechDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                if (textToSpeechDeployment is null)
                 {
-                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured."].Value);
+                    await Clients.Caller.ReceiveError(S["No text-to-speech deployment is configured or available."].Value);
                     return;
                 }
 
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-
-                if (deployment is null)
-                {
-                    await Clients.Caller.ReceiveError(S["The configured text-to-speech deployment was not found."].Value);
-                    return;
-                }
-
-                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(voiceName)
                     ? voiceName
@@ -1540,10 +1511,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                         ? chatModeSettings.VoiceName
                         : deploymentSettings.DefaultTextToSpeechVoiceId;
 
-                using (ttsClient)
-                {
-                    await StreamSpeechAsync(ttsClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
-                }
+                await StreamSpeechAsync(textToSpeechClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
             });
         }
         catch (Exception ex)

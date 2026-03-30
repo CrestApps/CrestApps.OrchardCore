@@ -229,8 +229,8 @@ services.AddScoped<IOrchestrationContextBuilderHandler, MyOrchestrationHandler>(
 When an AI Profile, Chat Interaction, or other resource requests a deployment, the system resolves it using a typed fallback chain:
 
 1. **Explicit deployment** — The `ChatDeploymentId` or `UtilityDeploymentId` explicitly assigned on the profile/resource
-2. **Connection default for type** — The deployment marked `IsDefault: true` for that type on the associated connection
-3. **Global default** — The default deployment configured in **Settings → Artificial Intelligence → Default AI Deployment Settings** (e.g., `DefaultUtilityDeploymentId`, `DefaultEmbeddingDeploymentId`, `DefaultImageDeploymentId`)
+2. **Global default** — The default deployment configured in **Settings → Artificial Intelligence → Default Deployments** (for example `DefaultChatDeploymentId`, `DefaultUtilityDeploymentId`, `DefaultEmbeddingDeploymentId`, or `DefaultImageDeploymentId`)
+3. **First matching deployment** — The first deployment that supports the requested type in the current scope
 4. **null/error** — If no deployment is found at any level
 
 Each deployment is a first-class typed entity with a `Type` property (`Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`). This allows the system to automatically resolve the correct model based on the task being performed.
