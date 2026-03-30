@@ -379,7 +379,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
     {
         var entry = new AIDeploymentConfigurationEntry
         {
-            ProviderName = GetStringValue(deploymentObject["ProviderName"]) ?? providerName,
+            ProviderName = GetStringValue(deploymentObject["ClientName"]) ?? GetStringValue(deploymentObject["ProviderName"]) ?? providerName,
             Name = GetStringValue(deploymentObject["Name"]),
             IsDefault = GetBooleanValue(deploymentObject["IsDefault"]),
             Properties = BuildStandaloneDeploymentProperties(deploymentObject),

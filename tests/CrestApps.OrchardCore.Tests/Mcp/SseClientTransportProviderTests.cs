@@ -2,7 +2,6 @@ using System.Text;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;
-using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;

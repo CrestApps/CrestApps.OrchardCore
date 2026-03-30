@@ -2,10 +2,8 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<h2 class="mb-4">Dashboard</h2>
-
-<div class="row g-4">
-    <div class="col-md-3">
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 row-cols-xl-3 g-4">
+    <div class="col">
         <div class="card h-100 border-success">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
@@ -19,35 +17,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-primary">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-person-gear fs-2 text-primary me-3"></i>
-                    <h5 class="card-title mb-0">AI Profiles</h5>
-                </div>
-                <p class="card-text">Create and manage AI profiles with system prompts, parameters, and provider configurations.</p>
-                <a asp-area="Admin" asp-controller="AIProfile" asp-action="Index" class="btn btn-primary">
-                    <i class="bi bi-arrow-right"></i> Manage Profiles
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card h-100 border-info">
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-chat-dots fs-2 text-info me-3"></i>
-                    <h5 class="card-title mb-0">AI Chat</h5>
-                </div>
-                <p class="card-text">Start real-time conversations with AI assistants using SignalR streaming.</p>
-                <a asp-area="Admin" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
-                    <i class="bi bi-arrow-right"></i> Start Chat
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card h-100 border-warning">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
@@ -61,24 +31,49 @@
             </div>
         </div>
     </div>
-</div>
-
-<div class="row g-4 mt-1">
-    <div class="col-md-3">
-        <div class="card h-100 border-secondary">
+    <div class="col">
+        <div class="card h-100 border-primary">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-file-earmark-text fs-2 text-secondary me-3"></i>
-                    <h5 class="card-title mb-0">AI Templates</h5>
+                    <i class="bi bi-person-gear fs-2 text-primary me-3"></i>
+                    <h5 class="card-title mb-0">AI Profiles</h5>
                 </div>
-                <p class="card-text">Create reusable system prompt and profile templates for consistent AI behavior.</p>
-                <a asp-area="Admin" asp-controller="AITemplate" asp-action="Index" class="btn btn-secondary">
-                    <i class="bi bi-arrow-right"></i> Manage Templates
+                <p class="card-text">Create and manage AI profiles with system prompts, parameters, and provider configurations.</p>
+                <a asp-area="Admin" asp-controller="AIProfile" asp-action="Index" class="btn btn-primary">
+                    <i class="bi bi-arrow-right"></i> Manage Profiles
                 </a>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-chat-dots fs-2 text-info me-3"></i>
+                    <h5 class="card-title mb-0">AI Chat</h5>
+                </div>
+                <p class="card-text">Start real-time conversations with AI assistants using SignalR streaming.</p>
+                <a asp-area="Admin" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
+                    <i class="bi bi-arrow-right"></i> Start Chat
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card h-100 border-danger">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-chat-left-dots fs-2 text-danger me-3"></i>
+                    <h5 class="card-title mb-0">Chat Interactions</h5>
+                </div>
+                <p class="card-text">Manage reusable interaction sessions and orchestration-driven conversation flows.</p>
+                <a asp-area="Admin" asp-controller="ChatInteraction" asp-action="Index" class="btn btn-danger">
+                    <i class="bi bi-arrow-right"></i> Manage Interactions
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col">
         <div class="card h-100 border-dark">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
@@ -92,7 +87,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card h-100" style="border-color: #6f42c1;">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
@@ -106,20 +101,94 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card h-100" style="border-color: #20c997;">
+    <div class="col">
+        <div class="card h-100 border-secondary">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-gear fs-2 me-3" style="color: #20c997;"></i>
-                    <h5 class="card-title mb-0">Settings</h5>
+                    <i class="bi bi-file-earmark-text fs-2 text-secondary me-3"></i>
+                    <h5 class="card-title mb-0">AI Templates</h5>
                 </div>
-                <p class="card-text">Configure memory, orchestration, caching, and diagnostics settings.</p>
-                <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="btn text-white" style="background-color: #20c997;">
-                    <i class="bi bi-arrow-right"></i> Manage Settings
+                <p class="card-text">Create reusable system prompt and profile templates for consistent AI behavior.</p>
+                <a asp-area="Admin" asp-controller="AITemplate" asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-right"></i> Manage Templates
                 </a>
             </div>
         </div>
     </div>
+</div>
+
+<section class="mt-5">
+    <h3 class="mb-3">Agent to Agent Protocol</h3>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 row-cols-xl-3 g-4">
+        <div class="col">
+            <div class="card h-100 border-info">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-diagram-3 fs-2 text-info me-3"></i>
+                        <h5 class="card-title mb-0">Agent to Agent Hosts</h5>
+                    </div>
+                    <p class="card-text">Manage remote A2A hosts and make their agents available to MVC orchestration.</p>
+                    <a asp-area="Admin" asp-controller="A2AConnection" asp-action="Index" class="btn btn-info text-white">
+                        <i class="bi bi-arrow-right"></i> Manage A2A Hosts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="mt-5">
+    <h3 class="mb-3">Model Context Protocol (MCP)</h3>
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 row-cols-xl-3 g-4">
+        <div class="col">
+            <div class="card h-100 border-primary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-hdd-network fs-2 text-primary me-3"></i>
+                        <h5 class="card-title mb-0">MCP Connections</h5>
+                    </div>
+                    <p class="card-text">Configure remote SSE MCP servers and local stdio MCP tools for orchestration.</p>
+                    <a asp-area="Admin" asp-controller="McpConnection" asp-action="Index" class="btn btn-primary">
+                        <i class="bi bi-arrow-right"></i> Manage MCP Connections
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 border-secondary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-chat-square-text fs-2 text-secondary me-3"></i>
+                        <h5 class="card-title mb-0">MCP Prompts</h5>
+                    </div>
+                    <p class="card-text">Define MCP prompts with optional arguments so external clients can discover reusable prompt templates.</p>
+                    <a asp-area="Admin" asp-controller="McpPrompt" asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-right"></i> Manage MCP Prompts
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 border-dark">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-folder2-open fs-2 text-dark me-3"></i>
+                        <h5 class="card-title mb-0">MCP Resources</h5>
+                    </div>
+                    <p class="card-text">Register FTP and SFTP-backed MCP resources, including template-based URI patterns for dynamic resources.</p>
+                    <a asp-area="Admin" asp-controller="McpResource" asp-action="Index" class="btn btn-dark">
+                        <i class="bi bi-arrow-right"></i> Manage MCP Resources
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="mt-5">
+    <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-gear"></i> Open Settings
+    </a>
 </div>
 
 @if (!User.Identity.IsAuthenticated)

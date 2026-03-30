@@ -1,4 +1,5 @@
 using CrestApps.AI.Chat;
+using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Indexes;
@@ -16,15 +17,18 @@ public sealed class ChatInteractionController : Controller
     private readonly ICatalogManager<ChatInteraction> _interactionManager;
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
+    private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
 
     public ChatInteractionController(
         ICatalogManager<ChatInteraction> interactionManager,
         IChatInteractionPromptStore promptStore,
-        ICatalog<AIDeployment> deploymentCatalog)
+        ICatalog<AIDeployment> deploymentCatalog,
+        ICatalog<A2AConnection> a2aConnectionCatalog)
     {
         _interactionManager = interactionManager;
         _promptStore = promptStore;
         _deploymentCatalog = deploymentCatalog;
+        _a2aConnectionCatalog = a2aConnectionCatalog;
     }
 
     public async Task<IActionResult> Index()
@@ -65,6 +69,7 @@ public sealed class ChatInteractionController : Controller
         interaction.PresencePenalty = model.PresencePenalty;
         interaction.MaxTokens = model.MaxTokens;
         interaction.PastMessagesCount = model.PastMessagesCount;
+        interaction.A2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         interaction.CreatedUtc = DateTime.UtcNow;
 
         await _interactionManager.CreateAsync(interaction);
@@ -116,6 +121,31 @@ public sealed class ChatInteractionController : Controller
         model.Deployments = deployments
             .Where(d => d.Type.Supports(AIDeploymentType.Chat))
             .Select(d => new SelectListItem(d.Name, d.ItemId))
+            .ToList();
+
+        var connections = await _a2aConnectionCatalog.GetAllAsync();
+        var selectedConnectionIds = new HashSet<string>(model.SelectedA2AConnectionIds ?? [], StringComparer.Ordinal);
+        model.AvailableA2AConnections = connections
+            .OrderBy(connection => connection.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(connection => new A2AConnectionSelectionItem
+            {
+                ItemId = connection.ItemId,
+                DisplayText = connection.DisplayText,
+                Endpoint = connection.Endpoint,
+                IsSelected = selectedConnectionIds.Contains(connection.ItemId),
+            })
+            .ToList();
+    }
+
+    private async Task<List<string>> GetValidA2AConnectionIdsAsync(IEnumerable<string> selectedIds)
+    {
+        var allIds = (await _a2aConnectionCatalog.GetAllAsync())
+            .Select(connection => connection.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return (selectedIds ?? [])
+            .Where(id => !string.IsNullOrWhiteSpace(id) && allIds.Contains(id))
+            .Distinct(StringComparer.Ordinal)
             .ToList();
     }
 }

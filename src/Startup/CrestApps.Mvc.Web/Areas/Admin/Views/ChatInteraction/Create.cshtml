@@ -30,6 +30,30 @@
                 <div class="form-text">Instructions for the AI on how to behave.</div>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">Agent to agent hosts</label>
+                @if (Model.AvailableA2AConnections.Count == 0)
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle"></i> No A2A host connections are configured. Add them under <strong>Agent to Agent Hosts</strong> first.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var connection in Model.AvailableA2AConnections)
+                    {
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="interaction_a2a_@connection.ItemId"
+                                   @(connection.IsSelected ? "checked" : "") />
+                            <label class="form-check-label" for="interaction_a2a_@connection.ItemId">
+                                <strong>@connection.DisplayText</strong><br />
+                                <small class="text-muted">@connection.Endpoint</small>
+                            </label>
+                        </div>
+                    }
+                }
+            </div>
+
             <div class="row">
                 <div class="col-md-4">
                     <div class="mb-3">

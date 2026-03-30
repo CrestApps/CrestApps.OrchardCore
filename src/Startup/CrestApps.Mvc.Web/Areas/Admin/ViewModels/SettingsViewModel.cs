@@ -1,3 +1,5 @@
+using CrestApps.AI.Models;
+using CrestApps.AI.Mcp.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -13,6 +15,20 @@ public sealed class SettingsViewModel
     public bool EnableDistributedCaching { get; set; } = true;
 
     public bool EnableOpenTelemetry { get; set; }
+
+    public string DocumentIndexProfileName { get; set; }
+
+    public int DocumentTopN { get; set; } = 3;
+
+    public int DataSourceDefaultStrictness { get; set; } = AIDataSourceSettings.MinStrictness;
+
+    public int DataSourceDefaultTopNDocuments { get; set; } = AIDataSourceSettings.MinTopNDocuments;
+
+    public McpServerAuthenticationType McpServerAuthenticationType { get; set; } = McpServerAuthenticationType.OpenId;
+
+    public string McpServerApiKey { get; set; }
+
+    public bool McpServerRequireAccessPermission { get; set; } = true;
 
     // Default deployment settings.
     public string DefaultChatDeploymentId { get; set; }
@@ -47,4 +63,7 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];
 }

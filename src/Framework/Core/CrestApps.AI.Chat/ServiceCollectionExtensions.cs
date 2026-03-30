@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDefaultDocumentProcessingServices(this IServiceCollection services)
     {
+        services.TryAddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
+
         // Register the tabular batch processor (used by heavy processing tools)
         services.TryAddScoped<ITabularBatchProcessor, TabularBatchProcessor>();
 
@@ -42,7 +44,26 @@ public static class ServiceCollectionExtensions
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, DocumentOrchestrationHandler>());
 
+        services.AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(
+            ".txt",
+            new ExtractorExtension(".csv", false),
+            ".md",
+            ".json",
+            ".xml",
+            ".html",
+            ".htm",
+            ".log",
+            ".yaml",
+            ".yml");
+        services.AddIngestionDocumentReader<OpenXmlIngestionDocumentReader>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
+        services.AddIngestionDocumentReader<PdfIngestionDocumentReader>(".pdf");
+
         // Register document system tools (available when documents are attached).
+        services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
+            .WithTitle("Search Documents")
+            .WithDescription("Searches uploaded or attached documents using semantic vector search.")
+            .WithPurpose(AIToolPurposes.DocumentProcessing);
+
         services.AddAITool<ReadDocumentTool>(ReadDocumentTool.TheName)
             .WithTitle("Read Document")
             .WithDescription("Reads the full text content of a specific document.")

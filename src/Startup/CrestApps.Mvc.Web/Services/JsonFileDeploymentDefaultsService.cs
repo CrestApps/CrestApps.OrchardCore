@@ -50,7 +50,7 @@ public sealed class JsonFileDeploymentDefaultsService
 
         var wrapper = JsonSerializer.Deserialize<JsonElement>(json, _jsonOptions);
 
-        if (wrapper.TryGetProperty(JsonNamingPolicy.CamelCase.ConvertName(SectionKey), out var section))
+        if (TryGetSection(wrapper, out var section))
         {
             return section.Deserialize<DefaultAIDeploymentSettings>(_jsonOptions) ?? new DefaultAIDeploymentSettings();
         }
@@ -64,13 +64,32 @@ public sealed class JsonFileDeploymentDefaultsService
     /// </summary>
     public async Task SaveAsync(DefaultAIDeploymentSettings settings)
     {
+        var sectionKey = JsonNamingPolicy.CamelCase.ConvertName(SectionKey);
         var wrapper = new Dictionary<string, DefaultAIDeploymentSettings>
         {
-            [SectionKey] = settings,
+            [sectionKey] = settings,
         };
 
         var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
 
         await File.WriteAllTextAsync(_filePath, json);
+    }
+
+    private static bool TryGetSection(JsonElement wrapper, out JsonElement section)
+    {
+        if (wrapper.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in wrapper.EnumerateObject())
+            {
+                if (string.Equals(property.Name, SectionKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    section = property.Value;
+                    return true;
+                }
+            }
+        }
+
+        section = default;
+        return false;
     }
 }

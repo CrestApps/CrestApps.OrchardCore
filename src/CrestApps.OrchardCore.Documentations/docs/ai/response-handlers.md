@@ -1074,7 +1074,7 @@ The `ChatResponseHandlerContext` provides rich context to handlers:
 
 ## Default AI Handler
 
-The built-in AI handler (`AIChatResponseHandler`) wraps the existing orchestration pipeline. It:
+The built-in AI handler (`AIChatResponseHandler`) is registered by the shared `CrestApps.AI` orchestration services, so it is available to Orchard Core, the MVC sample, and other hosts that use the framework. It wraps the existing orchestration pipeline and:
 
 1. Builds the orchestration context using `IOrchestrationContextBuilder`.
 2. Resolves the orchestrator via `IOrchestratorResolver`.

@@ -1,5 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
+using CrestApps.AI.Tools;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
@@ -10,7 +12,6 @@ using CrestApps.OrchardCore.AI.DataSources.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
-using CrestApps.OrchardCore.AI.DataSources.Tools;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Builder;
@@ -45,6 +46,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddScoped<IAIDataSourceSettingsProvider, OrchardCoreAIDataSourceSettingsProvider>();
 
         services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
 

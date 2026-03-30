@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.AI.A2A.Services;
+namespace CrestApps.AI.A2A.Services;
 
 internal sealed class A2AAdminMenu : AdminNavigationProvider
 {
@@ -19,8 +19,8 @@ internal sealed class A2AAdminMenu : AdminNavigationProvider
                 .Add(S["Agent to Agent Hosts"], S["Agent to Agent Hosts"].PrefixPosition(), a2a => a2a
                     .AddClass("ai-a2a-connections")
                     .Id("aiA2AConnections")
-                    .Action("Index", "Connections", A2AConstants.Feature.Area)
-                    .Permission(A2APermissions.ManageA2AConnections)
+                    .Action("Index", "Connections", global::CrestApps.OrchardCore.AI.A2A.A2AConstants.Feature.Area)
+                    .Permission(global::CrestApps.OrchardCore.AI.A2A.A2APermissions.ManageA2AConnections)
                     .LocalNav()
                 )
             );

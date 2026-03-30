@@ -101,6 +101,57 @@
 
             <div class="card mb-4">
                 <div class="card-header">
+                    <h5 class="card-title mb-0">Documents</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure the default AI Documents index used to store embedded chunks for profile and session documents.
+                        Uploading files alone is not enough for knowledge-base search; the app also needs an <strong>AI Documents</strong> index profile.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="DocumentIndexProfileName" class="form-label">Default AI Documents index</label>
+                        <select asp-for="DocumentIndexProfileName" asp-items="Model.DocumentIndexProfiles" class="form-select"></select>
+                        <div class="form-text">Choose the AI Documents index profile that stores embedded document chunks for retrieval during chat.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DocumentTopN" class="form-label">Default document Top N</label>
+                        <input asp-for="DocumentTopN" class="form-control" type="number" min="1" max="20" style="max-width: 200px;" />
+                        <span asp-validation-for="DocumentTopN" class="text-danger"></span>
+                        <div class="form-text">The default number of matching document chunks to include when a profile does not override it.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Data sources</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceDefaultStrictness" class="form-label">Default strictness</label>
+                                <input asp-for="DataSourceDefaultStrictness" class="form-control" type="number" min="1" max="5" />
+                                <span asp-validation-for="DataSourceDefaultStrictness" class="text-danger"></span>
+                                <div class="form-text">The default strictness threshold applied when a profile does not specify its own data source strictness.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceDefaultTopNDocuments" class="form-label">Default retrieved documents</label>
+                                <input asp-for="DataSourceDefaultTopNDocuments" class="form-control" type="number" min="3" max="20" />
+                                <span asp-validation-for="DataSourceDefaultTopNDocuments" class="text-danger"></span>
+                                <div class="form-text">The default number of data source documents retrieved when a profile does not override it.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="card-title mb-0">Orchestration</h5>
                 </div>
                 <div class="card-body">
@@ -143,6 +194,36 @@
                 </div>
             </div>
 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Model Context Protocol (MCP) server</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure how external MCP clients access the MVC application's MCP endpoint at <code>/mcp</code>.
+                    </p>
+                    <div class="mb-3">
+                        <label asp-for="McpServerAuthenticationType" class="form-label">Authentication type</label>
+                        <select asp-for="McpServerAuthenticationType" class="form-select" id="mcpServerAuthenticationType">
+                            @foreach (var authenticationType in Enum.GetValues<CrestApps.AI.Mcp.Models.McpServerAuthenticationType>())
+                            {
+                                <option value="@((int)authenticationType)">@authenticationType</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3" id="mcpServerApiKeyFields">
+                        <label asp-for="McpServerApiKey" class="form-label">API key</label>
+                        <input asp-for="McpServerApiKey" class="form-control" />
+                        <span asp-validation-for="McpServerApiKey" class="text-danger"></span>
+                        <div class="form-text">Clients may send this as <code>Bearer key</code>, <code>ApiKey key</code>, or the raw value in the <code>Authorization</code> header.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input asp-for="McpServerRequireAccessPermission" class="form-check-input" type="checkbox" />
+                        <label asp-for="McpServerRequireAccessPermission" class="form-check-label">Require administrator access for OpenId mode</label>
+                    </div>
+                </div>
+            </div>
+
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg"></i> Save Settings
@@ -151,3 +232,17 @@
         </div>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const authenticationType = document.getElementById('mcpServerAuthenticationType');
+        const apiKeyFields = document.getElementById('mcpServerApiKeyFields');
+
+        function updateVisibility() {
+            apiKeyFields.style.display = authenticationType.value === '@((int)CrestApps.AI.Mcp.Models.McpServerAuthenticationType.ApiKey)' ? '' : 'none';
+        }
+
+        authenticationType.addEventListener('change', updateVisibility);
+        updateVisibility();
+    });
+</script>

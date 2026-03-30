@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.AI.A2A.Models;
+using CrestApps.AI.A2A.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

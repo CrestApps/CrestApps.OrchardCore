@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -15,17 +16,23 @@ public sealed class AIDocumentController : Controller
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIProfileManager _profileManager;
     private readonly FileSystemFileStore _fileStore;
+    private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly MvcAIDocumentIndexingService _documentIndexingService;
 
     public AIDocumentController(
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
         IAIProfileManager profileManager,
-        FileSystemFileStore fileStore)
+        FileSystemFileStore fileStore,
+        IAIDocumentProcessingService documentProcessingService,
+        MvcAIDocumentIndexingService documentIndexingService)
     {
         _documentStore = documentStore;
         _chunkStore = chunkStore;
         _profileManager = profileManager;
         _fileStore = fileStore;
+        _documentProcessingService = documentProcessingService;
+        _documentIndexingService = documentIndexingService;
     }
 
     [HttpPost("upload")]
@@ -44,30 +51,7 @@ public sealed class AIDocumentController : Controller
             return NotFound(new { error = "Profile not found." });
         }
 
-        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".txt", ".md", ".csv", ".json", ".xml", ".html", ".pdf", ".docx", ".xlsx", ".pptx",
-        };
-
         var ext = Path.GetExtension(file.FileName);
-
-        if (!allowedExtensions.Contains(ext))
-        {
-            return BadRequest(new { error = $"File type '{ext}' is not supported." });
-        }
-
-        // Read file content as text for simple text-based files.
-        var text = string.Empty;
-        var textExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".txt", ".md", ".csv", ".json", ".xml", ".html",
-        };
-
-        if (textExtensions.Contains(ext))
-        {
-            using var reader = new StreamReader(file.OpenReadStream());
-            text = await reader.ReadToEndAsync();
-        }
 
         // Save the file to the file store.
         var storagePath = $"documents/{profileId}/{UniqueId.GenerateId()}{ext}";
@@ -76,44 +60,32 @@ public sealed class AIDocumentController : Controller
             await _fileStore.SaveFileAsync(storagePath, stream);
         }
 
-        // Create the document record.
-        var document = new AIDocument
-        {
-            ItemId = UniqueId.GenerateId(),
-            ReferenceId = profileId,
-            ReferenceType = "profile",
-            FileName = file.FileName,
-            ContentType = file.ContentType,
-            FileSize = file.Length,
-            UploadedUtc = DateTime.UtcNow,
-        };
+        var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(null, null);
+        var result = await _documentProcessingService.ProcessFileAsync(
+            file,
+            profileId,
+            AIReferenceTypes.Document.Profile,
+            embeddingGenerator);
 
-        await _documentStore.CreateAsync(document);
-
-        if (!string.IsNullOrEmpty(text))
+        if (!result.Success)
         {
-            await _chunkStore.CreateAsync(new AIDocumentChunk
-            {
-                ItemId = UniqueId.GenerateId(),
-                AIDocumentId = document.ItemId,
-                ReferenceId = profileId,
-                ReferenceType = "profile",
-                Content = text,
-                Index = 0,
-            });
+            return BadRequest(new { error = result.Error });
         }
+
+        await _documentStore.CreateAsync(result.Document);
+
+        foreach (var chunk in result.Chunks)
+        {
+            await _chunkStore.CreateAsync(chunk);
+        }
+
+        await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
 
         // Update the profile's document metadata.
         profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.Documents ??= [];
-            m.Documents.Add(new ChatDocumentInfo
-            {
-                DocumentId = document.ItemId,
-                FileName = document.FileName,
-                ContentType = document.ContentType,
-                FileSize = document.FileSize,
-            });
+            m.Documents.Add(result.DocumentInfo);
         });
 
         await _profileManager.UpdateAsync(profile);
@@ -121,10 +93,10 @@ public sealed class AIDocumentController : Controller
 
         return Ok(new
         {
-            id = document.ItemId,
-            fileName = document.FileName,
-            contentType = document.ContentType,
-            fileSize = document.FileSize,
+            id = result.Document.ItemId,
+            fileName = result.Document.FileName,
+            contentType = result.Document.ContentType,
+            fileSize = result.Document.FileSize,
         });
     }
 
@@ -143,6 +115,9 @@ public sealed class AIDocumentController : Controller
 
         if (document != null)
         {
+            var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(documentId);
+            await _documentIndexingService.DeleteChunksAsync(chunks.Select(chunk => chunk.ItemId));
+            await _chunkStore.DeleteByDocumentIdAsync(documentId);
             await _documentStore.DeleteAsync(document);
         }
 

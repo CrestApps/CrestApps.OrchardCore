@@ -95,6 +95,11 @@ public sealed class ProfileTemplateMetadata
     public string[] ToolNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the A2A connection identifiers to associate with the profile.
+    /// </summary>
+    public string[] A2AConnectionIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the agent profile names to associate with the profile.
     /// </summary>
     public string[] AgentNames { get; set; } = [];

@@ -16,7 +16,9 @@ Model Context Protocol (MCP) implementation for CrestApps AI services.
 </ItemGroup>
 
 <ItemGroup>
-<PackageReference Include="ModelContextProtocol" />
+  <PackageReference Include="ModelContextProtocol" />
+  <PackageReference Include="FluentFTP" />
+  <PackageReference Include="SSH.NET" />
 </ItemGroup>
 
 <ItemGroup>

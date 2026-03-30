@@ -13,6 +13,8 @@ public sealed class ChatInteractionViewModel
     public float? PresencePenalty { get; set; }
     public int? MaxTokens { get; set; }
     public int? PastMessagesCount { get; set; }
+    public string[] SelectedA2AConnectionIds { get; set; } = [];
 
     public List<SelectListItem> Deployments { get; set; } = [];
+    public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
 }

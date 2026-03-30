@@ -403,6 +403,7 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         interaction.PastMessagesCount = JsonHelper.GetInt(settings, "pastMessagesCount");
         interaction.ToolNames = JsonHelper.GetStringArray(settings, "toolNames");
         interaction.McpConnectionIds = JsonHelper.GetStringArray(settings, "mcpConnectionIds");
+        interaction.A2AConnectionIds = JsonHelper.GetStringArray(settings, "a2aConnectionIds");
     }
 
     protected static class JsonHelper

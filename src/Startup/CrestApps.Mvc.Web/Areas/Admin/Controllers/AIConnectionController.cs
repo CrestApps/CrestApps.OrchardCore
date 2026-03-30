@@ -1,9 +1,11 @@
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 
@@ -12,6 +14,8 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class AIConnectionController : Controller
 {
     private readonly ICatalog<AIProviderConnection> _catalog;
+    private readonly MvcAIProviderOptionsStore _providerOptionsStore;
+    private readonly IOptionsMonitorCache<AIProviderOptions> _providerOptionsCache;
 
     private static readonly List<SelectListItem> _providers =
     [
@@ -28,9 +32,14 @@ public sealed class AIConnectionController : Controller
         new("Managed Identity", "ManagedIdentity"),
     ];
 
-    public AIConnectionController(ICatalog<AIProviderConnection> catalog)
+    public AIConnectionController(
+        ICatalog<AIProviderConnection> catalog,
+        MvcAIProviderOptionsStore providerOptionsStore,
+        IOptionsMonitorCache<AIProviderOptions> providerOptionsCache)
     {
         _catalog = catalog;
+        _providerOptionsStore = providerOptionsStore;
+        _providerOptionsCache = providerOptionsCache;
     }
 
     public async Task<IActionResult> Index()
@@ -84,6 +93,7 @@ public sealed class AIConnectionController : Controller
 
         await _catalog.CreateAsync(connection);
         await _catalog.SaveChangesAsync();
+        await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -131,6 +141,7 @@ public sealed class AIConnectionController : Controller
 
         await _catalog.UpdateAsync(existing);
         await _catalog.SaveChangesAsync();
+        await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -148,7 +159,14 @@ public sealed class AIConnectionController : Controller
 
         await _catalog.DeleteAsync(connection);
         await _catalog.SaveChangesAsync();
+        await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task RefreshProviderOptionsAsync()
+    {
+        _providerOptionsStore.Replace(await _catalog.GetAllAsync());
+        _providerOptionsCache.TryRemove(Options.DefaultName);
     }
 }

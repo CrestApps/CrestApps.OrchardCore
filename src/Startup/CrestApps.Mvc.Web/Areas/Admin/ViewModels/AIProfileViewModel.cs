@@ -1,3 +1,5 @@
+using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -15,10 +17,15 @@ public sealed class AIProfileViewModel
     public string ChatDeploymentId { get; set; }
     public string UtilityDeploymentId { get; set; }
     public string OrchestratorName { get; set; }
-    public string WelcomeMessage { get; set; }
     public string PromptTemplate { get; set; }
     public string PromptSubject { get; set; }
+    public string Description { get; set; }
     public AISessionTitleType? TitleType { get; set; }
+
+    // Chat-type interaction fields
+    public string WelcomeMessage { get; set; }
+    public bool AddInitialPrompt { get; set; }
+    public string InitialPrompt { get; set; }
 
     // AI Parameters (from AIProfileMetadata)
     public string SystemMessage { get; set; }
@@ -39,10 +46,20 @@ public sealed class AIProfileViewModel
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
 
+    // A2A Connections
+    public string[] SelectedA2AConnectionIds { get; set; } = [];
+    public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+
+    // MCP Connections
+    public string[] SelectedMcpConnectionIds { get; set; } = [];
+    public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+
     // Documents
     public List<DocumentItem> AttachedDocuments { get; set; } = [];
     public int? DocumentTopN { get; set; }
     public bool AllowSessionDocuments { get; set; }
+    public bool HasDocumentIndexConfiguration { get; set; }
+    public string DocumentIndexProfileName { get; set; }
 
     // Data Extraction
     public bool EnableDataExtraction { get; set; }
@@ -79,6 +96,8 @@ public sealed class AIProfileViewModel
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
         var memorySettings = profile.GetSettings<MemorySettings>();
+        var a2aMetadata = profile.As<AIProfileA2AMetadata>();
+        var mcpMetadata = profile.As<AIProfileMcpMetadata>();
 
         return new AIProfileViewModel
         {
@@ -93,7 +112,11 @@ public sealed class AIProfileViewModel
             WelcomeMessage = profile.WelcomeMessage,
             PromptTemplate = profile.PromptTemplate,
             PromptSubject = profile.PromptSubject,
+            Description = profile.Description,
             TitleType = profile.TitleType,
+
+            AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt),
+            InitialPrompt = metadata.InitialPrompt,
 
             SystemMessage = metadata.SystemMessage,
             Temperature = metadata.Temperature,
@@ -109,6 +132,8 @@ public sealed class AIProfileViewModel
             IsRemovable = settings.IsRemovable,
 
             SelectedToolNames = toolMetadata?.Names ?? [],
+            SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
+            SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
 
             DocumentTopN = docMetadata?.DocumentTopN,
             AllowSessionDocuments = sessionDocMetadata?.AllowSessionDocuments ?? false,
@@ -149,14 +174,18 @@ public sealed class AIProfileViewModel
         profile.ChatDeploymentId = ChatDeploymentId;
         profile.UtilityDeploymentId = UtilityDeploymentId;
         profile.OrchestratorName = OrchestratorName;
-        profile.WelcomeMessage = WelcomeMessage;
         profile.PromptTemplate = PromptTemplate;
         profile.PromptSubject = PromptSubject;
+        profile.Description = Description;
         profile.TitleType = TitleType;
+
+        // Welcome message is only used when initial prompt is not enabled.
+        profile.WelcomeMessage = AddInitialPrompt ? null : WelcomeMessage;
 
         profile.AlterSettings<AIProfileMetadata>(m =>
         {
             m.SystemMessage = SystemMessage;
+            m.InitialPrompt = AddInitialPrompt ? InitialPrompt?.Trim() : null;
             m.Temperature = Temperature;
             m.TopP = TopP;
             m.FrequencyPenalty = FrequencyPenalty;
@@ -178,6 +207,22 @@ public sealed class AIProfileViewModel
         profile.WithSettings(new FunctionInvocationMetadata
         {
             Names = toolNames?.Length > 0 ? toolNames : null,
+        });
+
+        profile.Put(new AIProfileA2AMetadata
+        {
+            ConnectionIds = SelectedA2AConnectionIds?
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray() ?? [],
+        });
+
+        profile.Put(new AIProfileMcpMetadata
+        {
+            ConnectionIds = SelectedMcpConnectionIds?
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray() ?? [],
         });
 
         profile.AlterSettings<DocumentsMetadata>(m =>

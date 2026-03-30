@@ -36,6 +36,8 @@ public sealed class AITemplateViewModel
     // Tool selection for Profile templates.
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
+    public string[] SelectedA2AConnectionIds { get; set; } = [];
+    public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
 
     // Dropdowns for Profile templates.
     public List<SelectListItem> ChatDeployments { get; set; } = [];
@@ -86,6 +88,7 @@ public sealed class AITemplateViewModel
                 model.PromptTemplate = metadata.PromptTemplate;
                 model.PromptSubject = metadata.PromptSubject;
                 model.SelectedToolNames = metadata.ToolNames ?? [];
+                model.SelectedA2AConnectionIds = metadata.A2AConnectionIds ?? [];
             }
         }
 
@@ -130,6 +133,10 @@ public sealed class AITemplateViewModel
                 PromptTemplate = PromptTemplate,
                 PromptSubject = PromptSubject,
                 ToolNames = toolNames?.Length > 0 ? toolNames : [],
+                A2AConnectionIds = SelectedA2AConnectionIds?
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray() ?? [],
             });
         }
     }

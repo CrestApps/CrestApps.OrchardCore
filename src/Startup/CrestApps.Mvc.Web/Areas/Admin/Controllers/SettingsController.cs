@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Services;
@@ -14,22 +15,37 @@ public sealed class SettingsController : Controller
 {
     private readonly JsonFileSettingsService _settingsService;
     private readonly JsonFileDeploymentDefaultsService _deploymentDefaultsService;
+    private readonly JsonFileInteractionDocumentSettingsService _interactionDocumentSettingsService;
+    private readonly JsonFileAIDataSourceSettingsService _aiDataSourceSettingsService;
+    private readonly JsonFileMcpServerSettingsService _mcpServerSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISearchIndexProfileStore _indexProfileStore;
 
     public SettingsController(
         JsonFileSettingsService settingsService,
         JsonFileDeploymentDefaultsService deploymentDefaultsService,
-        IAIDeploymentManager deploymentManager)
+        JsonFileInteractionDocumentSettingsService interactionDocumentSettingsService,
+        JsonFileAIDataSourceSettingsService aiDataSourceSettingsService,
+        JsonFileMcpServerSettingsService mcpServerSettingsService,
+        IAIDeploymentManager deploymentManager,
+        ISearchIndexProfileStore indexProfileStore)
     {
         _settingsService = settingsService;
         _deploymentDefaultsService = deploymentDefaultsService;
+        _interactionDocumentSettingsService = interactionDocumentSettingsService;
+        _aiDataSourceSettingsService = aiDataSourceSettingsService;
+        _mcpServerSettingsService = mcpServerSettingsService;
         _deploymentManager = deploymentManager;
+        _indexProfileStore = indexProfileStore;
     }
 
     public async Task<IActionResult> Index()
     {
         var settings = await _settingsService.GetAsync();
         var deploymentDefaults = await _deploymentDefaultsService.GetAsync();
+        var documentSettings = await _interactionDocumentSettingsService.GetAsync();
+        var dataSourceSettings = await _aiDataSourceSettingsService.GetAsync();
+        var mcpServerSettings = await _mcpServerSettingsService.GetAsync();
 
         var model = new SettingsViewModel
         {
@@ -45,6 +61,14 @@ public sealed class SettingsController : Controller
             DefaultSpeechToTextDeploymentId = deploymentDefaults.DefaultSpeechToTextDeploymentId,
             DefaultTextToSpeechDeploymentId = deploymentDefaults.DefaultTextToSpeechDeploymentId,
             DefaultTextToSpeechVoiceId = deploymentDefaults.DefaultTextToSpeechVoiceId,
+
+            DocumentIndexProfileName = documentSettings.IndexProfileName,
+            DocumentTopN = documentSettings.TopN,
+            DataSourceDefaultStrictness = dataSourceSettings.DefaultStrictness,
+            DataSourceDefaultTopNDocuments = dataSourceSettings.DefaultTopNDocuments,
+            McpServerAuthenticationType = mcpServerSettings.AuthenticationType,
+            McpServerApiKey = mcpServerSettings.ApiKey,
+            McpServerRequireAccessPermission = mcpServerSettings.RequireAccessPermission,
         };
 
         await PopulateDeploymentDropdownsAsync(model);
@@ -59,6 +83,27 @@ public sealed class SettingsController : Controller
         if (model.MaximumIterationsPerRequest < 1)
         {
             ModelState.AddModelError(nameof(model.MaximumIterationsPerRequest), "Must be at least 1.");
+        }
+
+        if (model.DocumentTopN < 1)
+        {
+            ModelState.AddModelError(nameof(model.DocumentTopN), "Must be at least 1.");
+        }
+
+        if (model.DataSourceDefaultStrictness < AIDataSourceSettings.MinStrictness || model.DataSourceDefaultStrictness > AIDataSourceSettings.MaxStrictness)
+        {
+            ModelState.AddModelError(nameof(model.DataSourceDefaultStrictness), $"Must be between {AIDataSourceSettings.MinStrictness} and {AIDataSourceSettings.MaxStrictness}.");
+        }
+
+        if (model.DataSourceDefaultTopNDocuments < AIDataSourceSettings.MinTopNDocuments || model.DataSourceDefaultTopNDocuments > AIDataSourceSettings.MaxTopNDocuments)
+        {
+            ModelState.AddModelError(nameof(model.DataSourceDefaultTopNDocuments), $"Must be between {AIDataSourceSettings.MinTopNDocuments} and {AIDataSourceSettings.MaxTopNDocuments}.");
+        }
+
+        if (model.McpServerAuthenticationType == McpServerAuthenticationType.ApiKey &&
+            string.IsNullOrWhiteSpace(model.McpServerApiKey))
+        {
+            ModelState.AddModelError(nameof(model.McpServerApiKey), "API key is required when the MCP server uses API key authentication.");
         }
 
         if (!ModelState.IsValid)
@@ -92,6 +137,25 @@ public sealed class SettingsController : Controller
 
         await _deploymentDefaultsService.SaveAsync(deploymentDefaults);
 
+        await _interactionDocumentSettingsService.SaveAsync(new InteractionDocumentSettings
+        {
+            IndexProfileName = model.DocumentIndexProfileName?.Trim(),
+            TopN = model.DocumentTopN,
+        });
+
+        await _aiDataSourceSettingsService.SaveAsync(new AIDataSourceSettings
+        {
+            DefaultStrictness = model.DataSourceDefaultStrictness,
+            DefaultTopNDocuments = model.DataSourceDefaultTopNDocuments,
+        });
+
+        await _mcpServerSettingsService.SaveAsync(new McpServerOptions
+        {
+            AuthenticationType = model.McpServerAuthenticationType,
+            ApiKey = model.McpServerApiKey?.Trim(),
+            RequireAccessPermission = model.McpServerRequireAccessPermission,
+        });
+
         TempData["SuccessMessage"] = "Settings saved successfully.";
 
         return RedirectToAction(nameof(Index));
@@ -116,6 +180,11 @@ public sealed class SettingsController : Controller
 
         model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
+
+        model.DocumentIndexProfiles = [new SelectListItem("— None —", "")];
+        model.DocumentIndexProfiles = model.DocumentIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name)));
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)

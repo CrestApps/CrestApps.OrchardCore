@@ -17,6 +17,7 @@
     <Project Path="src/Framework/Core/CrestApps.Azure/CrestApps.Azure.csproj" />
     <Project Path="src/Framework/Core/CrestApps.Core/CrestApps.Core.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />

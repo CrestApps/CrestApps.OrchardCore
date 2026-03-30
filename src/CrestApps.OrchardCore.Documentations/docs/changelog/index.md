@@ -11,4 +11,5 @@ This section contains release notes, migration guides, and breaking changes for 
 
 | Version | Highlights |
 |---------|------------|
+| [Unreleased](unreleased) | Shared framework-level A2A client restored and MVC A2A management/capability selection added |
 | [2.0.0](v2.0.0) | Major release — new modules, orchestrator architecture, Omnichannel Communications, MCP protocol support |

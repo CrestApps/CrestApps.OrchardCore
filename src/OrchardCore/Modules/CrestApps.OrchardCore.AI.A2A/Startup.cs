@@ -1,12 +1,12 @@
 using A2A;
 using A2A.AspNetCore;
 using CrestApps.AI;
+using CrestApps.AI.A2A;
+using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
-using CrestApps.OrchardCore.AI.A2A.Functions;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
+using CrestApps.AI.A2A.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -24,23 +24,15 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCrestAppsA2AClient();
         services.AddDisplayDriver<AIProfile, AIProfileA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionA2AConnectionsDisplayDriver>();
-        services.AddScoped<IToolRegistryProvider, A2AToolRegistryProvider>();
         services.AddNavigationProvider<A2AAdminMenu>();
         services.AddPermissionProvider<A2APermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionHandler>();
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionSettingsHandler>();
         services.AddDisplayDriver<A2AConnection, A2AConnectionDisplayDriver>();
-        services.AddScoped<IAICompletionContextBuilderHandler, A2AAICompletionContextBuilderHandler>();
-        services.AddSingleton<IA2AAgentCardCacheService, DefaultA2AAgentCardCacheService>();
-        services.AddScoped<IA2AConnectionAuthService, DefaultA2AConnectionAuthService>();
-
-        // Register AI system functions for agent and tool discovery.
-        services.AddAITool<ListAvailableAgentsFunction>(ListAvailableAgentsFunction.TheName);
-        services.AddAITool<FindAgentForTaskFunction>(FindAgentForTaskFunction.TheName);
-        services.AddAITool<FindToolsForTaskFunction>(FindToolsForTaskFunction.TheName);
     }
 }
 

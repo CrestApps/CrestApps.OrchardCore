@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -16,17 +17,20 @@ public sealed class AITemplateController : Controller
 {
     private readonly ICatalog<AIProfileTemplate> _catalog;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
+    private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly AIToolDefinitionOptions _toolOptions;
 
     public AITemplateController(
         ICatalog<AIProfileTemplate> catalog,
         ICatalog<AIDeployment> deploymentCatalog,
+        ICatalog<A2AConnection> a2aConnectionCatalog,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
         _catalog = catalog;
         _deploymentCatalog = deploymentCatalog;
+        _a2aConnectionCatalog = a2aConnectionCatalog;
         _orchestratorOptions = orchestratorOptions.Value;
         _toolOptions = toolOptions.Value;
     }
@@ -72,6 +76,7 @@ public sealed class AITemplateController : Controller
             CreatedUtc = DateTime.UtcNow,
         };
 
+        model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         model.ApplyTo(template);
 
         await _catalog.CreateAsync(template);
@@ -117,6 +122,7 @@ public sealed class AITemplateController : Controller
             return NotFound();
         }
 
+        model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         model.ApplyTo(existing);
 
         await _catalog.UpdateAsync(existing);
@@ -174,5 +180,30 @@ public sealed class AITemplateController : Controller
             .OrderBy(t => t.Category)
             .ThenBy(t => t.Title)
             .ToList();
+
+        var connections = await _a2aConnectionCatalog.GetAllAsync();
+        var selectedConnectionIds = new HashSet<string>(model.SelectedA2AConnectionIds ?? [], StringComparer.Ordinal);
+        model.AvailableA2AConnections = connections
+            .OrderBy(connection => connection.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(connection => new A2AConnectionSelectionItem
+            {
+                ItemId = connection.ItemId,
+                DisplayText = connection.DisplayText,
+                Endpoint = connection.Endpoint,
+                IsSelected = selectedConnectionIds.Contains(connection.ItemId),
+            })
+            .ToList();
+    }
+
+    private async Task<string[]> GetValidA2AConnectionIdsAsync(IEnumerable<string> selectedIds)
+    {
+        var allIds = (await _a2aConnectionCatalog.GetAllAsync())
+            .Select(connection => connection.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return (selectedIds ?? [])
+            .Where(id => !string.IsNullOrWhiteSpace(id) && allIds.Contains(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 }

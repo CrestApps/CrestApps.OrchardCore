@@ -1,7 +1,7 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

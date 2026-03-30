@@ -186,10 +186,13 @@ public static class ServiceCollectionExtensions
         // regardless of the host (OrchardCore, MVC, or any ASP.NET Core app).
         services.AddAITemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<OrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorSettings>();
         services.AddOptions<DefaultAIDeploymentSettings>();
+        services.AddOptions<InteractionDocumentSettings>();
+        services.AddOptions<AIDataSourceSettings>();
 
         // Register DefaultAIOptions as a scoped service that reads from IOptionsSnapshot
         // and applies GeneralAISettings overrides. Host applications (OrchardCore, MVC, etc.)
@@ -205,8 +208,11 @@ public static class ServiceCollectionExtensions
         // Register the Framework-level deployment manager.
         // OrchardCore overrides this with its ISiteService-backed implementation.
         services.TryAddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>();
+        services.TryAddScoped<IInteractionDocumentSettingsProvider, DefaultInteractionDocumentSettingsProvider>();
+        services.TryAddScoped<IAIDataSourceSettingsProvider, DefaultAIDataSourceSettingsProvider>();
 
         services.TryAddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
         services.TryAddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
 
         services.TryAddScoped<IAIToolsService, DefaultAIToolsService>();

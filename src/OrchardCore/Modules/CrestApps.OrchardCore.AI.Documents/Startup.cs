@@ -1,6 +1,8 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -10,7 +12,6 @@ using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Indexes;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
-using CrestApps.OrchardCore.AI.Documents.Tools;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Builder;
@@ -32,10 +33,6 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(".txt", new ExtractorExtension(".csv", false),
-                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
-
-        services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
@@ -45,7 +42,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
-        services.AddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
+        services.AddScoped<IInteractionDocumentSettingsProvider, OrchardCoreInteractionDocumentSettingsProvider>();
 
         services.AddIndexProvider<AIDocumentIndexProvider>();
         services.AddIndexProvider<AIDocumentChunkIndexProvider>();
@@ -60,12 +57,6 @@ public sealed class Startup : StartupBase
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
-
-        // Register the RAG search system tool.
-        services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
-            .WithTitle("Search Documents")
-            .WithDescription("Searches uploaded or attached documents using semantic vector search.")
-            .WithPurpose(AIToolPurposes.DocumentProcessing);
     }
 }
 

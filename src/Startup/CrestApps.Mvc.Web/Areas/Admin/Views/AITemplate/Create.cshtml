@@ -62,6 +62,9 @@
                     <li class="nav-item">
                         <button class="nav-link" id="tools-tab" data-bs-toggle="tab" data-bs-target="#tools" type="button" role="tab">AI tools</button>
                     </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="a2a-tab" data-bs-toggle="tab" data-bs-target="#a2a" type="button" role="tab">Agent to agent</button>
+                    </li>
                 </ul>
 
                 <div class="tab-content p-3 border border-top-0 rounded-bottom" id="profileTabContent">
@@ -210,6 +213,30 @@
                                         </label>
                                     </div>
                                 }
+                            }
+                        }
+                    </div>
+
+                    <div class="tab-pane fade" id="a2a" role="tabpanel">
+                        @if (Model.AvailableA2AConnections.Count == 0)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-info-circle"></i> No A2A host connections are configured. Add them under <strong>Agent to Agent Hosts</strong> first.
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-3">Select the remote A2A hosts that profiles created from this template can use.</p>
+                            @foreach (var connection in Model.AvailableA2AConnections)
+                            {
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="template_a2a_@connection.ItemId"
+                                           @(connection.IsSelected ? "checked" : "") />
+                                    <label class="form-check-label" for="template_a2a_@connection.ItemId">
+                                        <strong>@connection.DisplayText</strong><br />
+                                        <small class="text-muted">@connection.Endpoint</small>
+                                    </label>
+                                </div>
                             }
                         }
                     </div>

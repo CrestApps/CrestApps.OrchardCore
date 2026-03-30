@@ -51,6 +51,11 @@
                 <div class="form-text">The connection this deployment belongs to.</div>
             </div>
 
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Default deployment fallbacks are configured from <strong>Settings</strong>, not on individual deployments.
+            </div>
+
             <!-- Standalone deployment fields (Azure AI Services) -->
             <div id="standaloneFields" style="display: none;">
                 <div class="mb-3">
@@ -71,13 +76,6 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <div class="form-check form-switch">
-                    <input asp-for="IsDefault" class="form-check-input" type="checkbox" />
-                    <label asp-for="IsDefault" class="form-check-label">Default deployment</label>
-                </div>
-                <div class="form-text">Mark this as the default deployment for its type.</div>
-            </div>
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg"></i> Create

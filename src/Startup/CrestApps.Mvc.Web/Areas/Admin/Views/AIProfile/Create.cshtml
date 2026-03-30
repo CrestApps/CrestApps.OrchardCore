@@ -17,7 +17,7 @@
                     <button class="nav-link" id="params-tab" data-bs-toggle="tab" data-bs-target="#params" type="button" role="tab">AI Parameters</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" id="tools-tab" data-bs-toggle="tab" data-bs-target="#tools" type="button" role="tab">AI Tools</button>
+                    <button class="nav-link" id="capabilities-tab" data-bs-toggle="tab" data-bs-target="#capabilities" type="button" role="tab">Capabilities</button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">Documents</button>
@@ -42,19 +42,20 @@
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
                     <div class="mb-3">
-                        <label asp-for="DisplayText" class="form-label">Display Text</label>
+                        <label asp-for="DisplayText" class="form-label">Display text</label>
                         <input asp-for="DisplayText" class="form-control" placeholder="e.g., My Chat Assistant" />
                     </div>
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="Type" class="form-label">Type</label>
-                                <select asp-for="Type" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIProfileType>()"></select>
+                                <label asp-for="Type" class="form-label">Profile type</label>
+                                <select asp-for="Type" class="form-select" id="profileTypeSelect" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIProfileType>()"></select>
+                                <div class="form-text">Choose the type of the profile.</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
                             <div class="mb-3">
-                                <label asp-for="TitleType" class="form-label">Title Type</label>
+                                <label asp-for="TitleType" class="form-label">Title type</label>
                                 <select asp-for="TitleType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AISessionTitleType>()">
                                     <option value="">— Default —</option>
                                 </select>
@@ -62,6 +63,14 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Agent-only: Description -->
+                    <div class="mb-3 profile-type profile-type-agent@(Model.Type != CrestApps.AI.Models.AIProfileType.Agent ? " d-none" : "")">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Describe what this agent does so the orchestrator can decide when to invoke it."></textarea>
+                        <div class="form-text">A description of what this agent does. Used by the orchestrator to determine when to route requests to this agent.</div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -88,7 +97,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="SelectedTemplateId" class="form-label">AI Template</label>
+                                <label asp-for="SelectedTemplateId" class="form-label">AI template</label>
                                 <select asp-for="SelectedTemplateId" class="form-select" asp-items="Model.Templates"></select>
                                 <div class="form-text">Optionally apply a template to pre-fill the system message and parameters.</div>
                             </div>
@@ -103,24 +112,52 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="PromptSubject" class="form-label">Prompt Subject</label>
+
+                    <!-- Chat-only: Prompt Subject -->
+                    <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
+                        <label asp-for="PromptSubject" class="form-label">Prompt subject</label>
                         <input asp-for="PromptSubject" class="form-control" placeholder="Optional subject context for the prompt" />
+                        <div class="form-text">Provides context to the AI about the primary subject of the conversation.</div>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="WelcomeMessage" class="form-label">Welcome Message</label>
+
+                    <!-- Chat-only: Add Initial Prompt toggle -->
+                    <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
+                        <div class="form-check form-switch">
+                            <input asp-for="AddInitialPrompt" class="form-check-input" type="checkbox" id="addInitialPromptCheck" />
+                            <label asp-for="AddInitialPrompt" class="form-check-label">Add initial prompt</label>
+                        </div>
+                        <div class="form-text">When enabled, each new chat session starts with an assistant message from the initial prompt and the welcome message is ignored.</div>
+                    </div>
+
+                    <!-- Chat-only: Welcome Message (shown when AddInitialPrompt is unchecked) -->
+                    <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")" id="welcomeMessageGroup">
+                        <label asp-for="WelcomeMessage" class="form-label">Welcome message</label>
                         <textarea asp-for="WelcomeMessage" class="form-control" rows="3" placeholder="Message shown when a chat starts"></textarea>
+                        <div class="form-text">The welcome message to show on the user-interface when a new session is created.</div>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="PromptTemplate" class="form-label">Prompt Template</label>
-                        <textarea asp-for="PromptTemplate" class="form-control" rows="3" placeholder="Template for generating prompts (Liquid syntax supported)"></textarea>
+
+                    <!-- Chat-only: Initial Prompt (shown when AddInitialPrompt is checked) -->
+                    <div class="mb-3 profile-type profile-type-chat d-none" id="initialPromptGroup">
+                        <label asp-for="InitialPrompt" class="form-label">Initial prompt</label>
+                        <textarea asp-for="InitialPrompt" class="form-control" rows="4" placeholder="The assistant message added as the first chat history entry"></textarea>
+                        <div class="form-text">This assistant message is added as the first chat history entry when a new session is created.</div>
+                    </div>
+
+                    <!-- TemplatePrompt-only: Prompt Template -->
+                    <div class="mb-3 profile-type profile-type-template-prompt@(Model.Type != CrestApps.AI.Models.AIProfileType.TemplatePrompt ? " d-none" : "")">
+                        <label asp-for="PromptTemplate" class="form-label">Prompt template</label>
+                        <textarea asp-for="PromptTemplate" class="form-control" rows="5" placeholder="Template for generating prompts"></textarea>
+                        <div class="form-text">
+                            Liquid syntax is supported. Available variables: <code>{{ User.UserName }}</code>, <code>{{ User.Email }}</code>,
+                            <code>{{ Session.Id }}</code>, <code>{{ Profile.Name }}</code>, and any custom parameters.
+                        </div>
                     </div>
                 </div>
 
                 <!-- AI Parameters Tab -->
                 <div class="tab-pane fade" id="params" role="tabpanel">
                     <div class="mb-3">
-                        <label asp-for="SystemMessage" class="form-label">System Message</label>
+                        <label asp-for="SystemMessage" class="form-label">System message</label>
                         <textarea asp-for="SystemMessage" class="form-control" rows="5" placeholder="You are a helpful AI assistant..."></textarea>
                         <div class="form-text">Instructions that guide the AI's behavior throughout the conversation.</div>
                     </div>
@@ -143,14 +180,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="FrequencyPenalty" class="form-label">Frequency Penalty</label>
+                                <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty</label>
                                 <input asp-for="FrequencyPenalty" type="number" class="form-control" step="0.01" min="-2" max="2" placeholder="-2.0 - 2.0" />
                                 <div class="form-text">Penalizes repeated tokens. Higher = less repetition.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="PresencePenalty" class="form-label">Presence Penalty</label>
+                                <label asp-for="PresencePenalty" class="form-label">Presence penalty</label>
                                 <input asp-for="PresencePenalty" type="number" class="form-control" step="0.01" min="-2" max="2" placeholder="-2.0 - 2.0" />
                                 <div class="form-text">Penalizes tokens already present. Higher = more topic variety.</div>
                             </div>
@@ -159,40 +196,42 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="MaxTokens" class="form-label">Max Output Tokens</label>
+                                <label asp-for="MaxTokens" class="form-label">Max output tokens</label>
                                 <input asp-for="MaxTokens" type="number" class="form-control" min="1" placeholder="Leave blank for model default" />
                                 <div class="form-text">Maximum number of tokens in the response.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="PastMessagesCount" class="form-label">Past Messages Count</label>
+                                <label asp-for="PastMessagesCount" class="form-label">Past messages count</label>
                                 <input asp-for="PastMessagesCount" type="number" class="form-control" min="0" placeholder="Leave blank for all" />
-                                <div class="form-text">Number of previous messages to include in context (Chat type only).</div>
+                                <div class="form-text">Number of previous messages to include in context.</div>
                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="UseCaching" class="form-check-input" type="checkbox" />
-                            <label asp-for="UseCaching" class="form-check-label">Enable Response Caching</label>
+                            <label asp-for="UseCaching" class="form-check-label">Enable response caching</label>
                         </div>
                         <div class="form-text">Cache responses to improve performance for repeated queries.</div>
                     </div>
                 </div>
 
-                <!-- AI Tools Tab -->
-                <div class="tab-pane fade" id="tools" role="tabpanel">
+                <!-- Capabilities Tab (Tools, A2A, MCP) -->
+                <div class="tab-pane fade" id="capabilities" role="tabpanel">
+                    <!-- AI Tools Section -->
+                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-tools"></i> AI Tools</h6>
                     @if (Model.AvailableTools.Count == 0)
                     {
-                        <div class="alert alert-info mb-0">
-                            <i class="bi bi-info-circle"></i> No selectable AI tools are registered. Register tools using <code>services.AddAITool&lt;T&gt;(name).Selectable()</code> in your service configuration.
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> No selectable AI tools are registered.
                         </div>
                     }
                     else
                     {
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <p class="text-muted mb-0">Select the tools this profile can use during conversations. System tools (e.g., image/chart generation) are automatically included when applicable.</p>
+                            <p class="text-muted mb-0 small">Select the tools this profile can use during conversations.</p>
                             <div class="btn-group btn-group-sm ms-3" role="group">
                                 <button type="button" class="btn btn-outline-primary" id="select-all-tools"><i class="bi bi-check-all"></i> Select All</button>
                                 <button type="button" class="btn btn-outline-secondary" id="deselect-all-tools"><i class="bi bi-x-lg"></i> Deselect All</button>
@@ -217,17 +256,77 @@
                             }
                         }
                     }
+
+                    <!-- A2A Connections Section -->
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-diagram-3"></i> Agent to Agent Hosts</h6>
+                    @if (Model.AvailableA2AConnections.Count == 0)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> No A2A host connections are configured. Add them under <strong>Agent to Agent Hosts</strong> first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3 small">Select the remote A2A hosts this profile can use for agent orchestration.</p>
+                        @foreach (var connection in Model.AvailableA2AConnections)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="a2a_@connection.ItemId"
+                                       @(connection.IsSelected ? "checked" : "") />
+                                <label class="form-check-label" for="a2a_@connection.ItemId">
+                                    <strong>@connection.DisplayText</strong><br />
+                                    <small class="text-muted">@connection.Endpoint</small>
+                                </label>
+                            </div>
+                        }
+                    }
+
+                    <!-- MCP Connections Section -->
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Connections</h6>
+                    @if (Model.AvailableMcpConnections.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i> No MCP connections are configured. Add them under <strong>MCP Connections</strong> first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3 small">Select the MCP server connections this profile can use for external tools and resources.</p>
+                        @foreach (var connection in Model.AvailableMcpConnections)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="mcp_@connection.ItemId"
+                                       @(connection.IsSelected ? "checked" : "") />
+                                <label class="form-check-label" for="mcp_@connection.ItemId">
+                                    <strong>@connection.DisplayText</strong>
+                                    @if (!string.IsNullOrEmpty(connection.Source))
+                                    {
+                                        <br /><small class="text-muted">@connection.Source</small>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    }
                 </div>
 
                 <!-- Documents Tab -->
                 <div class="tab-pane fade" id="docs" role="tabpanel">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> Documents uploaded here will be used as a <strong>knowledgebase</strong> for the AI model. The model will search these documents to provide contextually relevant answers during chat sessions.
-                    </div>
+                    @if (Model.HasDocumentIndexConfiguration)
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Documents uploaded here are indexed into the <strong>@Model.DocumentIndexProfileName</strong> AI Documents index and can be used as background knowledge during chat.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Document knowledge-base search is not configured yet. Create an <strong>AI Documents</strong> index profile and select it under <strong>Settings → AI Settings → Documents</strong> before expecting uploaded documents to influence answers.
+                        </div>
+                    }
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="AllowSessionDocuments" class="form-check-input" type="checkbox" />
-                            <label asp-for="AllowSessionDocuments" class="form-check-label">Allow Session Document Uploads</label>
+                            <label asp-for="AllowSessionDocuments" class="form-check-label">Allow session document uploads</label>
                         </div>
                         <div class="form-text">Allow users to upload documents during chat sessions with this profile.</div>
                     </div>
@@ -250,32 +349,34 @@
                             <i class="bi bi-plus-lg"></i> Add
                         </button>
                     </div>
-                    <div class="form-text">Supported: .txt, .md, .csv, .json, .xml, .html, .pdf, .docx, .xlsx, .pptx. Documents will be uploaded when the profile is created.</div>
+                    <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
                 </div>
 
                 <!-- Data Extraction Tab -->
                 <div class="tab-pane fade" id="extraction" role="tabpanel">
-                    <p class="text-muted mb-3">Configure automatic data extraction from conversations. When enabled, the system analyzes messages and extracts structured data based on configured entries.</p>
+                    <p class="text-muted mb-3">Configure automatic data extraction from conversations.</p>
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input asp-for="EnableDataExtraction" class="form-check-input" type="checkbox" />
-                            <label asp-for="EnableDataExtraction" class="form-check-label">Enable Data Extraction</label>
+                            <input asp-for="EnableDataExtraction" class="form-check-input" type="checkbox" id="enableDataExtractionCheck" />
+                            <label asp-for="EnableDataExtraction" class="form-check-label">Enable data extraction</label>
                         </div>
                         <div class="form-text">Run AI-powered extraction on conversation messages to populate structured fields.</div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="ExtractionCheckInterval" class="form-label">Extraction Check Interval</label>
-                                <input asp-for="ExtractionCheckInterval" type="number" class="form-control" min="1" max="20" />
-                                <div class="form-text">How often extraction runs (1 = every message, 2 = every other message, etc.).</div>
+                    <div id="dataExtractionSettings" class="@(Model.EnableDataExtraction ? "" : "d-none")">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ExtractionCheckInterval" class="form-label">Extraction check interval</label>
+                                    <input asp-for="ExtractionCheckInterval" type="number" class="form-control" min="1" max="20" />
+                                    <div class="form-text">How often extraction runs (1 = every message, 2 = every other message, etc.).</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="SessionInactivityTimeoutInMinutes" class="form-label">Session Inactivity Timeout (minutes)</label>
-                                <input asp-for="SessionInactivityTimeoutInMinutes" type="number" class="form-control" min="1" />
-                                <div class="form-text">Sessions inactive longer than this will be automatically closed.</div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="SessionInactivityTimeoutInMinutes" class="form-label">Session inactivity timeout (minutes)</label>
+                                    <input asp-for="SessionInactivityTimeoutInMinutes" type="number" class="form-control" min="1" />
+                                    <div class="form-text">Sessions inactive longer than this will be automatically closed.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -289,25 +390,26 @@
                     <div class="mb-4">
                         <div class="form-check form-switch">
                             <input asp-for="EnableSessionMetrics" class="form-check-input" type="checkbox" />
-                            <label asp-for="EnableSessionMetrics" class="form-check-label">Enable Session Metrics</label>
+                            <label asp-for="EnableSessionMetrics" class="form-check-label">Enable session metrics</label>
                         </div>
                         <div class="form-text">Capture usage, latency, and feedback metrics for analytics.</div>
                     </div>
 
-                    <h6 class="mb-2"><i class="bi bi-clipboard-check"></i> Post Session Processing</h6>
+                    <h6 class="mb-2"><i class="bi bi-clipboard-check"></i> Post-session Processing</h6>
                     <div class="mb-3">
                         <div class="form-check form-switch">
-                            <input asp-for="EnablePostSessionProcessing" class="form-check-input" type="checkbox" />
-                            <label asp-for="EnablePostSessionProcessing" class="form-check-label">Enable Post Session Processing</label>
+                            <input asp-for="EnablePostSessionProcessing" class="form-check-input" type="checkbox" id="enablePostSessionCheck" />
+                            <label asp-for="EnablePostSessionProcessing" class="form-check-label">Enable post-session processing</label>
                         </div>
                         <div class="form-text">Run AI-powered analysis on the complete conversation after a session closes.</div>
                     </div>
 
-                    <div id="post-session-tasks">
+                    <div id="postSessionTasksSection" class="@(Model.EnablePostSessionProcessing ? "" : "d-none")">
+                        <div id="post-session-tasks"></div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="add-task-btn">
+                            <i class="bi bi-plus-circle"></i> Add Task
+                        </button>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-task-btn">
-                        <i class="bi bi-plus-circle"></i> Add Task
-                    </button>
                 </div>
 
                 <!-- Settings Tab -->
@@ -329,7 +431,7 @@
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="LockSystemMessage" class="form-check-input" type="checkbox" />
-                            <label asp-for="LockSystemMessage" class="form-check-label">Lock System Message</label>
+                            <label asp-for="LockSystemMessage" class="form-check-label">Lock system message</label>
                         </div>
                         <div class="form-text">Prevent modification of the system message after creation.</div>
                     </div>
@@ -349,6 +451,67 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // --- Profile Type conditional visibility ---
+            const profileTypeSelect = document.getElementById('profileTypeSelect');
+            const addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
+            const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
+            const initialPromptGroup = document.getElementById('initialPromptGroup');
+
+            function convertToKebabCase(str) {
+                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            }
+
+            function toggleProfileTypeFields() {
+                if (!profileTypeSelect) return;
+                const value = profileTypeSelect.value;
+                const className = 'profile-type-' + convertToKebabCase(value);
+                const elements = document.querySelectorAll('.profile-type');
+                elements.forEach(function (el) {
+                    if (el.classList.contains(className)) {
+                        el.classList.remove('d-none');
+                    } else {
+                        el.classList.add('d-none');
+                    }
+                });
+                toggleInitialPromptFields();
+            }
+
+            function toggleInitialPromptFields() {
+                if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
+                const isChatType = profileTypeSelect.value === 'Chat';
+                const showInitialPrompt = addInitialPromptCheck.checked;
+                welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
+                initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
+            }
+
+            if (profileTypeSelect) {
+                profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
+                toggleProfileTypeFields();
+            }
+
+            if (addInitialPromptCheck) {
+                addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
+            }
+
+            // --- Data Extraction conditional visibility ---
+            const enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');
+            const dataExtractionSettings = document.getElementById('dataExtractionSettings');
+            if (enableDataExtractionCheck && dataExtractionSettings) {
+                enableDataExtractionCheck.addEventListener('change', function () {
+                    dataExtractionSettings.classList.toggle('d-none', !this.checked);
+                });
+            }
+
+            // --- Post Session Processing conditional visibility ---
+            const enablePostSessionCheck = document.getElementById('enablePostSessionCheck');
+            const postSessionTasksSection = document.getElementById('postSessionTasksSection');
+            if (enablePostSessionCheck && postSessionTasksSection) {
+                enablePostSessionCheck.addEventListener('change', function () {
+                    postSessionTasksSection.classList.toggle('d-none', !this.checked);
+                });
+            }
+
+            // --- Post Session Tasks ---
             const tasksContainer = document.getElementById('post-session-tasks');
             const addTaskBtn = document.getElementById('add-task-btn');
             let taskIndex = 0;
@@ -369,7 +532,6 @@
                                     <div class="mb-2">
                                         <label class="form-label">Name <span class="text-danger">*</span></label>
                                         <input name="PostSessionTasks[${idx}].Name" class="form-control" placeholder="e.g., sentiment_analysis" required />
-                                        <div class="form-text">Alphanumeric key with underscores only.</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -389,7 +551,7 @@
                             <div class="mb-2">
                                 <div class="form-check">
                                     <input name="PostSessionTasks[${idx}].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" />
-                                    <label class="form-check-label">Allow Multiple Values</label>
+                                    <label class="form-check-label">Allow multiple values</label>
                                 </div>
                             </div>
                             <div class="mb-0">
@@ -407,7 +569,7 @@
                 }
             });
 
-            // Select All / Deselect All tools.
+            // --- Select All / Deselect All tools ---
             var selectAllBtn = document.getElementById('select-all-tools');
             var deselectAllBtn = document.getElementById('deselect-all-tools');
 
@@ -423,7 +585,7 @@
                 });
             }
 
-            // Document file management for Create page.
+            // --- Document file management ---
             var docAddBtn = document.getElementById('doc-add-btn');
             var docAddInput = document.getElementById('doc-add-input');
             var pendingDocsList = document.getElementById('pending-docs-list');
@@ -450,7 +612,6 @@
                             '<button type="button" class="btn btn-sm btn-outline-danger ms-2 remove-pending-doc"><i class="bi bi-x"></i></button>';
                         pendingDocsList.appendChild(row);
 
-                        // Create a hidden file input to hold this file for form submission.
                         var dt = new DataTransfer();
                         dt.items.add(file);
                         var hiddenInput = document.createElement('input');

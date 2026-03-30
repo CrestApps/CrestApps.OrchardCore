@@ -31,6 +31,7 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         context.Context.ToolNames = interaction.ToolNames?.ToArray();
         context.Context.AgentNames = interaction.AgentNames?.ToArray();
         context.Context.McpConnectionIds = interaction.McpConnectionIds?.ToArray();
+        context.Context.A2AConnectionIds = interaction.A2AConnectionIds?.ToArray();
 
         context.Context.AdditionalProperties["InteractionId"] = interaction.ItemId;
 

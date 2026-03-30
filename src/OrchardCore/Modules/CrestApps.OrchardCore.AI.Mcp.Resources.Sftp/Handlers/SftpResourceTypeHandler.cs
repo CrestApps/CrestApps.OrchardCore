@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using Renci.SshNet;
+using OrchardSftpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models.SftpConnectionMetadata;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 
@@ -31,7 +32,7 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
     protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
         // Get connection details from metadata
-        var metadata = resource.As<SftpConnectionMetadata>();
+        var metadata = resource.As<OrchardSftpConnectionMetadata>();
 
         var host = metadata?.Host;
         if (string.IsNullOrEmpty(host))
@@ -115,39 +116,7 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
             return CreateErrorResult(resource.Resource.Uri, "No authentication method provided. Please provide a password or private key.");
         }
 
-        // Build connection info with optional proxy support.
-        ConnectionInfo connectionInfo;
-
-        if (Enum.TryParse<ProxyTypes>(metadata?.ProxyType, ignoreCase: true, out var proxyType) &&
-            proxyType != ProxyTypes.None &&
-            !string.IsNullOrEmpty(metadata?.ProxyHost))
-        {
-            // Unprotect proxy password if present.
-            string proxyPassword = null;
-            if (!string.IsNullOrEmpty(metadata?.ProxyPassword))
-            {
-                try
-                {
-                    proxyPassword = protector.Unprotect(metadata.ProxyPassword);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to unprotect SFTP proxy password for resource {ResourceId}", resource.ItemId);
-                }
-            }
-
-            var proxyPort = metadata?.ProxyPort ?? 1080;
-
-            connectionInfo = new ConnectionInfo(
-                host, port, username,
-                proxyType, metadata.ProxyHost, proxyPort,
-                metadata?.ProxyUsername, proxyPassword,
-                authMethods.ToArray());
-        }
-        else
-        {
-            connectionInfo = new ConnectionInfo(host, port, username, authMethods.ToArray());
-        }
+        var connectionInfo = new ConnectionInfo(host, port, username, authMethods.ToArray());
 
         // Apply timeout settings.
         if (metadata?.ConnectionTimeout is > 0)

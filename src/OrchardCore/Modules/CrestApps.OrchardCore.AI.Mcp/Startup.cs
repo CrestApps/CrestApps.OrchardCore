@@ -32,6 +32,12 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using McpServerTool = ModelContextProtocol.Server.McpServerTool;
+using OrchardDefaultMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerPromptService;
+using OrchardDefaultMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerResourceService;
+using OrchardMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerPromptService;
+using OrchardMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerResourceService;
+using OrchardSseClientTransportProvider = CrestApps.OrchardCore.AI.Mcp.Services.SseClientTransportProvider;
+using OrchardDefaultOAuth2TokenService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultOAuth2TokenService;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -72,8 +78,8 @@ public sealed class Startup : StartupBase
 
         // Register SSE transport type.
         services
-            .AddScoped<IMcpClientTransportProvider, SseClientTransportProvider>()
-            .AddScoped<IOAuth2TokenService, DefaultOAuth2TokenService>()
+            .AddScoped<IMcpClientTransportProvider, OrchardSseClientTransportProvider>()
+            .AddScoped<IOAuth2TokenService, OrchardDefaultOAuth2TokenService>()
             .AddScoped<ICatalogEntryHandler<McpConnection>, SseMcpConnectionSettingsHandler>()
             .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>()
             .Configure<McpClientAIOptions>(options =>
@@ -148,8 +154,8 @@ public sealed class McpServerStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddOrchardCoreAgentSkillServices();
-        services.AddScoped<IMcpServerPromptService, DefaultMcpServerPromptService>();
-        services.AddScoped<IMcpServerResourceService, DefaultMcpServerResourceService>();
+        services.AddScoped<OrchardMcpServerPromptService, OrchardDefaultMcpServerPromptService>();
+        services.AddScoped<OrchardMcpServerResourceService, OrchardDefaultMcpServerResourceService>();
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
 
@@ -289,7 +295,7 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithListPromptsHandler(async (request, cancellationToken) =>
         {
-            var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
+            var promptService = request.Services.GetRequiredService<OrchardMcpServerPromptService>();
 
             return new ListPromptsResult
             {
@@ -298,13 +304,13 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithGetPromptHandler(async (request, cancellationToken) =>
         {
-            var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
+            var promptService = request.Services.GetRequiredService<OrchardMcpServerPromptService>();
 
             return await promptService.GetAsync(request, cancellationToken);
         })
         .WithListResourcesHandler(async (request, cancellationToken) =>
         {
-            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
 
             return new ListResourcesResult
             {
@@ -313,7 +319,7 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithListResourceTemplatesHandler(async (request, cancellationToken) =>
         {
-            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
 
             return new ListResourceTemplatesResult
             {
@@ -322,7 +328,7 @@ public sealed class McpServerStartup : StartupBase
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>
         {
-            var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
 
             return await resourceService.ReadAsync(request, cancellationToken);
         });

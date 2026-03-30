@@ -1,7 +1,7 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using CrestApps.Support;
 using Microsoft.Extensions.AI;

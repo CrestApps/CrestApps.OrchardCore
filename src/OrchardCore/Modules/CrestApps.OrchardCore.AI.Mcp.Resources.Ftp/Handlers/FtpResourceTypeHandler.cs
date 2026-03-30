@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
+using OrchardFtpConnectionMetadata = CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models.FtpConnectionMetadata;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;
 
@@ -32,7 +33,7 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
     protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
         // Get connection details from metadata
-        var metadata = resource.As<FtpConnectionMetadata>();
+        var metadata = resource.As<OrchardFtpConnectionMetadata>();
 
         var host = metadata?.Host;
         if (string.IsNullOrEmpty(host))
@@ -70,7 +71,11 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
 
         if (!string.IsNullOrEmpty(metadata?.Username))
         {
-            client.Credentials = new System.Net.NetworkCredential(metadata.Username, password);
+            client.Credentials = new System.Net.NetworkCredential
+            {
+                UserName = metadata.Username,
+                Password = password,
+            };
         }
 
         // Apply encryption mode.

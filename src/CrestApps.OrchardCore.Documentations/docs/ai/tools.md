@@ -245,6 +245,7 @@ The citation system ensures that every `[doc:N]` marker in an AI response maps t
 
 4. **Tool-invoked searches** (run during streaming when the AI model calls tools):
    - `DataSourceSearchTool` and `SearchDocumentsTool` use the same `NextReferenceIndex()` counter and write their references to `AIInvocationScope.Current.ToolReferences`.
+   - Both tools are now registered from the shared framework layers, so Orchard Core, the MVC sample, and other hosts can reuse the same citation-aware search behavior without duplicating host-specific tool implementations.
 
 5. **Incremental collection**: Inside the streaming loop, `CitationReferenceCollector.CollectToolReferences()` checks for newly added tool references on each chunk and merges them into the `references` dictionary. Since the dictionary is passed by reference to each `CompletionPartialMessage`, the client receives progressively richer reference data.
 

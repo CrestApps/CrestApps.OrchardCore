@@ -1,13 +1,21 @@
 using CrestApps;
 using CrestApps.AI;
+using CrestApps.AI.A2A;
+using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Tools;
 using CrestApps.AI.DataSources.AzureAI;
 using CrestApps.AI.DataSources.Elasticsearch;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
+using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Mcp.Services;
+using CrestApps.AI.Tools;
 using CrestApps.Data.YesSql;
 using CrestApps.Data.YesSql.Services;
 using CrestApps.Mvc.Web.Hubs;
@@ -16,7 +24,13 @@ using CrestApps.Mvc.Web.Services;
 using CrestApps.Mvc.Web.Tools;
 using CrestApps.Services;
 using CrestApps.SignalR;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 using NLog.Web;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -40,14 +54,28 @@ Directory.CreateDirectory(appDataPath);
 // automatically via the configuration reload-on-change mechanism.
 // ---------------------------------------------------------------------------
 var deploymentDefaultsService = new JsonFileDeploymentDefaultsService(appDataPath);
+var interactionDocumentSettingsService = new JsonFileInteractionDocumentSettingsService(appDataPath);
+var aiDataSourceSettingsService = new JsonFileAIDataSourceSettingsService(appDataPath);
+var mcpServerSettingsService = new JsonFileMcpServerSettingsService(appDataPath);
 
 builder.Configuration.AddJsonFile(
     deploymentDefaultsService.FilePath, optional: true, reloadOnChange: true);
+builder.Configuration.AddJsonFile(
+    interactionDocumentSettingsService.FilePath, optional: true, reloadOnChange: true);
+builder.Configuration.AddJsonFile(
+    aiDataSourceSettingsService.FilePath, optional: true, reloadOnChange: true);
 
 builder.Services.Configure<DefaultAIDeploymentSettings>(
     builder.Configuration.GetSection(JsonFileDeploymentDefaultsService.SectionKey));
+builder.Services.Configure<InteractionDocumentSettings>(
+    builder.Configuration.GetSection(JsonFileInteractionDocumentSettingsService.SectionKey));
+builder.Services.Configure<AIDataSourceSettings>(
+    builder.Configuration.GetSection(JsonFileAIDataSourceSettingsService.SectionKey));
 
 builder.Services.AddSingleton(deploymentDefaultsService);
+builder.Services.AddSingleton(interactionDocumentSettingsService);
+builder.Services.AddSingleton(aiDataSourceSettingsService);
+builder.Services.AddSingleton(mcpServerSettingsService);
 
 // ---------------------------------------------------------------------------
 // Authentication & Authorization
@@ -69,8 +97,10 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services
     .AddCrestAppsCoreServices()
     .AddCrestAppsAI()
+    .AddCrestAppsA2AClient()
     .AddOrchestrationServices()
     .AddChatInteractionHandlers()
+    .AddDefaultDocumentProcessingServices()
     .AddCrestAppsSignalR();
 
 // ---------------------------------------------------------------------------
@@ -85,6 +115,8 @@ builder.Services
 
 builder.Services.Configure<AIProviderOptions>(
     builder.Configuration.GetSection("CrestApps:AI:Providers"));
+builder.Services.AddSingleton<MvcAIProviderOptionsStore>();
+builder.Services.AddTransient<IConfigureOptions<AIProviderOptions>, MvcAIProviderOptionsConfiguration>();
 
 // ---------------------------------------------------------------------------
 // Search Providers — configure Elasticsearch and/or Azure AI Search for
@@ -95,6 +127,157 @@ builder.Services
     .AddElasticsearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
     .AddAzureAISearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
 
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<McpService>();
+builder.Services.AddScoped<IOAuth2TokenService, DefaultOAuth2TokenService>();
+builder.Services.AddScoped<IMcpClientTransportProvider, SseClientTransportProvider>();
+builder.Services.AddScoped<IMcpClientTransportProvider, StdioClientTransportProvider>();
+builder.Services.AddScoped<IMcpServerPromptService, DefaultMcpServerPromptService>();
+builder.Services.AddScoped<IMcpServerResourceService, DefaultMcpServerResourceService>();
+builder.Services.Configure<McpClientAIOptions>(options =>
+{
+    options.AddTransportType(McpConstants.TransportTypes.Sse, entry =>
+    {
+        entry.DisplayName = new LocalizedString("Server-Sent Events", "Server-Sent Events");
+        entry.Description = new LocalizedString("Server-Sent Events Description", "Uses a remote MCP server over HTTP.");
+    });
+    options.AddTransportType(McpConstants.TransportTypes.StdIo, entry =>
+    {
+        entry.DisplayName = new LocalizedString("Standard Input/Output", "Standard Input/Output");
+        entry.Description = new LocalizedString("Standard Input/Output Description", "Uses a local MCP process over standard input/output.");
+    });
+});
+builder.Services.AddMcpResourceType<FtpResourceTypeHandler>(FtpResourceConstants.Type, entry =>
+{
+    entry.DisplayName = new LocalizedString("FTP", "FTP/FTPS");
+    entry.Description = new LocalizedString("FTP Description", "Reads content from FTP/FTPS servers.");
+    entry.SupportedVariables =
+    [
+        new McpResourceVariable("path") { Description = new LocalizedString("FTP Path", "The remote file path on the FTP server.") },
+    ];
+});
+builder.Services.AddMcpResourceType<SftpResourceTypeHandler>(SftpResourceConstants.Type, entry =>
+{
+    entry.DisplayName = new LocalizedString("SFTP", "SFTP");
+    entry.Description = new LocalizedString("SFTP Description", "Reads content from SFTP servers.");
+    entry.SupportedVariables =
+    [
+        new McpResourceVariable("path") { Description = new LocalizedString("SFTP Path", "The remote file path on the SFTP server.") },
+    ];
+});
+
+_ = builder.Services.AddMcpServer(options =>
+{
+    options.ServerInfo = new()
+    {
+        Name = "CrestApps MVC MCP Server",
+        Version = "1.0",
+    };
+})
+.WithHttpTransport()
+.WithListToolsHandler((request, cancellationToken) =>
+{
+    var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
+    var tools = new List<Tool>();
+
+    foreach (var (name, _) in toolDefinitions.Tools)
+    {
+        if (request.Services.GetKeyedService<AITool>(name) is AIFunction aiFunction)
+        {
+            tools.Add(new Tool
+            {
+                Name = aiFunction.Name,
+                Description = aiFunction.Description,
+                InputSchema = aiFunction.JsonSchema,
+            });
+        }
+    }
+
+    var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+
+    if (sdkTools is not null)
+    {
+        foreach (var sdkTool in sdkTools)
+        {
+            if (!tools.Any(tool => tool.Name == sdkTool.ProtocolTool.Name))
+            {
+                tools.Add(sdkTool.ProtocolTool);
+            }
+        }
+    }
+
+    return ValueTask.FromResult(new ListToolsResult { Tools = tools });
+})
+.WithCallToolHandler(async (request, cancellationToken) =>
+{
+    var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
+
+    if (toolDefinitions.Tools.ContainsKey(request.Params.Name))
+    {
+        if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
+        {
+            throw new ModelContextProtocol.McpException($"Failed to create tool '{request.Params.Name}'.");
+        }
+
+        var arguments = new AIFunctionArguments
+        {
+            Services = request.Services,
+            Context = new Dictionary<object, object> { ["mcpRequest"] = request },
+        };
+
+        if (request.Params.Arguments is not null)
+        {
+            foreach (var kvp in request.Params.Arguments)
+            {
+                arguments[kvp.Key] = kvp.Value;
+            }
+        }
+
+        var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
+
+        return new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }],
+        };
+    }
+
+    var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
+    var sdkTool = sdkTools?.FirstOrDefault(tool => tool.ProtocolTool.Name == request.Params.Name);
+
+    if (sdkTool is not null)
+    {
+        return await sdkTool.InvokeAsync(request, cancellationToken);
+    }
+
+    throw new ModelContextProtocol.McpException($"Tool '{request.Params.Name}' not found.");
+})
+.WithListPromptsHandler(async (request, cancellationToken) =>
+{
+    var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
+    return new ListPromptsResult { Prompts = await promptService.ListAsync() };
+})
+.WithGetPromptHandler(async (request, cancellationToken) =>
+{
+    var promptService = request.Services.GetRequiredService<IMcpServerPromptService>();
+    return await promptService.GetAsync(request, cancellationToken);
+})
+.WithListResourcesHandler(async (request, cancellationToken) =>
+{
+    var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+    return new ListResourcesResult { Resources = await resourceService.ListAsync() };
+})
+.WithListResourceTemplatesHandler(async (request, cancellationToken) =>
+{
+    var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+    return new ListResourceTemplatesResult { ResourceTemplates = await resourceService.ListTemplatesAsync() };
+})
+.WithReadResourceHandler(async (request, cancellationToken) =>
+{
+    var resourceService = request.Services.GetRequiredService<IMcpServerResourceService>();
+    return await resourceService.ReadAsync(request, cancellationToken);
+});
+
 // ---------------------------------------------------------------------------
 // AI Tools — register custom tools that AI profiles can invoke.
 // ---------------------------------------------------------------------------
@@ -103,6 +286,9 @@ builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
     .WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
     .WithCategory("Utilities")
     .Selectable();
+
+builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
+    .WithPurpose(AIToolPurposes.DataSourceSearch);
 
 // ---------------------------------------------------------------------------
 // Data Store — YesSql with SQLite (default).
@@ -122,6 +308,10 @@ builder.Services.AddSingleton(sp =>
 
     store.RegisterIndexes<AIProfileIndexProvider>();
     store.RegisterIndexes<AIProviderConnectionIndexProvider>();
+    store.RegisterIndexes<A2AConnectionIndexProvider>();
+    store.RegisterIndexes<McpConnectionIndexProvider>();
+    store.RegisterIndexes<McpPromptIndexProvider>();
+    store.RegisterIndexes<McpResourceIndexProvider>();
     store.RegisterIndexes<AIDeploymentIndexProvider>();
     store.RegisterIndexes<AIProfileTemplateIndexProvider>();
     store.RegisterIndexes<AIChatSessionIndexProvider>();
@@ -143,6 +333,10 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession()
 builder.Services
     .AddNamedSourceDocumentCatalog<AIProfile, AIProfileIndex>()
     .AddNamedSourceDocumentCatalog<AIProviderConnection, AIProviderConnectionIndex>()
+    .AddDocumentCatalog<A2AConnection, A2AConnectionIndex>()
+    .AddSourceDocumentCatalog<McpConnection, McpConnectionIndex>()
+    .AddNamedDocumentCatalog<McpPrompt, McpPromptIndex>()
+    .AddSourceDocumentCatalog<McpResource, McpResourceIndex>()
     .AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>()
     .AddNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>()
     .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
@@ -153,6 +347,7 @@ builder.Services
     .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
     .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
     .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
+    .AddScoped<MvcAIDocumentIndexingService>()
     .AddDocumentCatalog<ChatInteraction, ChatInteractionIndex>()
     .AddScoped<ICatalogManager<ChatInteraction>, CatalogManager<ChatInteraction>>()
     .AddScoped<IChatInteractionPromptStore, YesSqlChatInteractionPromptStore>();
@@ -181,6 +376,19 @@ var app = builder.Build();
 // This block is only needed for YesSql; remove it if using another ORM.
 // ---------------------------------------------------------------------------
 await InitializeYesSqlSchemaAsync(app.Services);
+using (var scope = app.Services.CreateScope())
+{
+    var providerConnections = await scope.ServiceProvider
+        .GetRequiredService<ICatalog<AIProviderConnection>>()
+        .GetAllAsync();
+
+    app.Services.GetRequiredService<MvcAIProviderOptionsStore>()
+        .Replace(providerConnections);
+}
+
+app.Services.GetRequiredService<IOptionsMonitorCache<AIProviderOptions>>()
+    .TryRemove(Options.DefaultName);
+_ = app.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
 
 // ---------------------------------------------------------------------------
 // Middleware Pipeline
@@ -197,8 +405,56 @@ app.UseHttpsRedirection()
     .UseAuthentication()
     .UseAuthorization();
 
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =>
+{
+    branch.Use(async (context, next) =>
+    {
+        var settings = await context.RequestServices.GetRequiredService<JsonFileMcpServerSettingsService>().GetAsync();
+
+        if (settings.AuthenticationType == McpServerAuthenticationType.None)
+        {
+            await next();
+            return;
+        }
+
+        if (settings.AuthenticationType == McpServerAuthenticationType.ApiKey)
+        {
+            var authorization = context.Request.Headers.Authorization.ToString();
+            var providedKey = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? authorization["Bearer ".Length..]
+                : authorization.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase)
+                    ? authorization["ApiKey ".Length..]
+                    : authorization;
+
+            if (!string.IsNullOrEmpty(settings.ApiKey) && string.Equals(providedKey, settings.ApiKey, StringComparison.Ordinal))
+            {
+                await next();
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return;
+        }
+
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            await context.ChallengeAsync();
+            return;
+        }
+
+        if (settings.RequireAccessPermission && !context.User.IsInRole("Administrator"))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
+        await next();
+    });
+});
+
 app.MapHub<AIChatHub>("/hubs/ai-chat");
 app.MapHub<ChatInteractionHub>("/hubs/chat-interaction");
+app.MapMcp("mcp");
 
 app.MapControllerRoute(
     name: "areas",
@@ -232,6 +488,28 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIProviderConnectionIndex.ItemId), c => c.WithLength(26))
             .Column<string>(nameof(AIProviderConnectionIndex.Name), c => c.WithLength(255))
             .Column<string>(nameof(AIProviderConnectionIndex.Source), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<A2AConnectionIndex>(t => t
+            .Column<string>(nameof(A2AConnectionIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(A2AConnectionIndex.DisplayText), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<McpConnectionIndex>(t => t
+            .Column<string>(nameof(McpConnectionIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(McpConnectionIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(McpConnectionIndex.Source), c => c.WithLength(50))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<McpPromptIndex>(t => t
+            .Column<string>(nameof(McpPromptIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(McpPromptIndex.Name), c => c.WithLength(255))));
+
+    await TryCreateTableAsync(schemaBuilder, () =>
+        schemaBuilder.CreateMapIndexTableAsync<McpResourceIndex>(t => t
+            .Column<string>(nameof(McpResourceIndex.ItemId), c => c.WithLength(26))
+            .Column<string>(nameof(McpResourceIndex.DisplayText), c => c.WithLength(255))
+            .Column<string>(nameof(McpResourceIndex.Source), c => c.WithLength(50))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIDeploymentIndex>(t => t
