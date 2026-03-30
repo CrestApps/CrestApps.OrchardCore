@@ -345,7 +345,7 @@
                         deployments.forEach(deployment => {
                             let option = document.createElement('option');
                             option.value = deployment.id;
-                            option.textContent = deployment.name;
+                            option.textContent = deployment.displayText || deployment.name;
                             deploymentElement.appendChild(option);
                         });
                         if (deploymentContainer) deploymentContainer.style.display = '';

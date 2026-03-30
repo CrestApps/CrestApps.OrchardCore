@@ -150,8 +150,8 @@ Description: Template for customer support chatbots
 Category: Customer Service
 IsListable: true
 ProfileType: Chat
-ChatDeploymentId: your-chat-deployment-id
-UtilityDeploymentId: your-utility-deployment-id
+ChatDeploymentName: your-chat-deployment-id
+UtilityDeploymentName: your-utility-deployment-id
 WelcomeMessage: Hello! How can I help you today?
 TitleType: Generated
 Temperature: 0.7
@@ -180,8 +180,8 @@ The body after the front matter becomes the **System Message**.
 | `Source` | string | `Profile` | The template source (e.g., `Profile` or `SystemPrompt`). Overrides the default. |
 | `IsListable` | bool | `true` | Whether this template appears in selection dropdowns |
 | `ProfileType` | string | `null` | Profile type: `Chat`, `Utility`, or `TemplatePrompt` |
-| `ChatDeploymentId` | string | `null` | Deployment ID for chat completions |
-| `UtilityDeploymentId` | string | `null` | Deployment ID for auxiliary/utility tasks |
+| `ChatDeploymentName` | string | `null` | Deployment ID for chat completions |
+| `UtilityDeploymentName` | string | `null` | Deployment ID for auxiliary/utility tasks |
 | `WelcomeMessage` | string | `null` | Initial greeting shown to users |
 | `TitleType` | string | `null` | Session title type: `Generated`, `Fixed`, or `None` |
 | `OrchestratorName` | string | `null` | Name of the orchestrator to use |
@@ -375,7 +375,7 @@ Use the `AIProfileTemplate` step key to define templates in a recipe:
           "Properties": {
             "ProfileTemplateMetadata": {
               "ProfileType": "Chat",
-              "ChatDeploymentId": "customer-support-chat",
+              "ChatDeploymentName": "customer-support-chat",
               "SystemMessage": "You are a professional customer support agent.",
               "WelcomeMessage": "Hello! How can I help you today?",
               "TitleType": "Generated",
@@ -483,7 +483,7 @@ When a **Profile** source template is applied, the `ProfileTemplateMetadata` fie
 | Template Metadata Field | AI Profile Field | Notes |
 |------------------------|-----------------|-------|
 | `ProfileType` | `Type` | The profile type (Chat, Utility, TemplatePrompt) |
-| `ChatDeploymentId` | `ChatDeploymentId` | The selected chat deployment, which also determines the provider connection |
+| `ChatDeploymentName` | `ChatDeploymentName` | The selected chat deployment, which also determines the provider connection |
 | `OrchestratorName` | `OrchestratorName` | The orchestrator to use |
 | `SystemMessage` | `AIProfileMetadata.SystemMessage` | Via profile metadata |
 | `WelcomeMessage` | `WelcomeMessage` | Only for Chat profiles |

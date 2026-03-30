@@ -106,7 +106,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 interaction.ItemId,
                 interaction.Title,
                 interaction.ConnectionName,
-                DeploymentId = interaction.ChatDeploymentId,
+                DeploymentId = interaction.ChatDeploymentName,
                 Messages = prompts.Select(message => new AIChatResponseMessageDetailed
                 {
                     Id = message.ItemId,
@@ -173,7 +173,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             interaction.Title = GetString(settings, "title") ?? "Untitled";
             interaction.OrchestratorName = GetString(settings, "orchestratorName");
             interaction.ConnectionName = GetString(settings, "connectionName");
-            interaction.ChatDeploymentId = GetString(settings, "deploymentId");
+            interaction.ChatDeploymentName = GetString(settings, "deploymentId");
             interaction.SystemMessage = GetString(settings, "systemMessage");
             interaction.Temperature = GetFloat(settings, "temperature");
             interaction.TopP = GetFloat(settings, "topP");

@@ -191,7 +191,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 var planningContext = new AICompletionContext
                 {
                     ConnectionName = context.CompletionContext.ConnectionName,
-                    ChatDeploymentId = context.CompletionContext.ChatDeploymentId,
+                    ChatDeploymentName = context.CompletionContext.ChatDeploymentName,
                     DisableTools = true,
                     SystemMessage = planningSystemPrompt,
                     Temperature = 0.1f,
@@ -429,8 +429,8 @@ public sealed class DefaultOrchestrator : IOrchestrator
     private async Task<IChatClient> GetUtilityChatClientAsync(OrchestrationContext context)
     {
         var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
-            utilityDeploymentId: context.CompletionContext?.UtilityDeploymentId,
-            chatDeploymentId: context.CompletionContext?.ChatDeploymentId);
+            utilityDeploymentName: context.CompletionContext?.UtilityDeploymentName,
+            chatDeploymentName: context.CompletionContext?.ChatDeploymentName);
 
         if (deployment == null)
         {
@@ -440,7 +440,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         return await _aiClientFactory.CreateChatClientAsync(
             deployment.ClientName,
             deployment.ConnectionName ?? context.CompletionContext?.ConnectionName,
-            deployment.Name);
+            deployment.ModelName);
     }
 
     /// <summary>
@@ -450,7 +450,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
     {
         return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: context.CompletionContext?.ChatDeploymentId)
+            deploymentName: context.CompletionContext?.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the orchestration context.");
     }
 }

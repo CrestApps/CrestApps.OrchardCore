@@ -64,19 +64,19 @@ public abstract class AICompletionServiceBase
         AIProvider provider,
         string providerName,
         string connectionName,
-        string deploymentId = null)
+        string deploymentName = null)
     {
         if (DeploymentResolver != null)
         {
             var deployment = await DeploymentResolver.ResolveOrDefaultAsync(
                 type,
-                deploymentId: deploymentId,
+                deploymentName: deploymentName,
                 clientName: providerName,
                 connectionName: connectionName);
 
             if (deployment != null)
             {
-                return (deployment.Name, deployment.ConnectionName ?? connectionName);
+                return (deployment.ModelName, deployment.ConnectionName ?? connectionName);
             }
         }
 

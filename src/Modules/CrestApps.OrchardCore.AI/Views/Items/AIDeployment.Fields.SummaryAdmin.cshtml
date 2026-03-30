@@ -1,6 +1,12 @@
+@using System
 @using CrestApps.OrchardCore.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIDeployment>
 
 <h5>@(Model.Value.Name)</h5>
+
+@if (!string.Equals(Model.Value.Name, Model.Value.ModelName, StringComparison.OrdinalIgnoreCase))
+{
+    <div class="text-muted">@T["Model name: {0}", Model.Value.ModelName]</div>
+}

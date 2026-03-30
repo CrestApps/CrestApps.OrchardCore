@@ -81,7 +81,7 @@ internal sealed class AgentProxyTool : AIFunction
             // Disable tools on the agent's context to prevent infinite recursion.
             context.DisableTools = true;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
                 ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for agent profile '{_agentProfileName}'.");
 
             var messages = new List<ChatMessage>

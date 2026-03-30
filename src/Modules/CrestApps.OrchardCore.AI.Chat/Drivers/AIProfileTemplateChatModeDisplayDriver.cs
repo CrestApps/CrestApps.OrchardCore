@@ -88,5 +88,5 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
-        => await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentId: null);
+        => await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentName: null);
 }

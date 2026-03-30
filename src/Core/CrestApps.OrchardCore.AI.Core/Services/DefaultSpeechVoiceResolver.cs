@@ -34,7 +34,7 @@ public sealed class DefaultSpeechVoiceResolver : ISpeechVoiceResolver
                 continue;
             }
 
-            return await clientProvider.GetSpeechVoicesAsync(connectionEntry, deployment.Name);
+            return await clientProvider.GetSpeechVoicesAsync(connectionEntry, deployment.ModelName);
         }
 
         return [];

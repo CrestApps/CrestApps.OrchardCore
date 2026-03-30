@@ -5,9 +5,9 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class EditProfileDeploymentViewModel
 {
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
-    public string UtilityDeploymentId { get; set; }
+    public string UtilityDeploymentName { get; set; }
 
     [BindNever]
     public bool ShowMissingDefaultChatDeploymentWarning { get; set; }

@@ -25,12 +25,12 @@ public sealed class DefaultSpeechVoicePresenter
         _logger = logger;
     }
 
-    public async Task<IEnumerable<SelectListItem>> GetVoiceMenuItemsAsync(string deploymentId)
+    public async Task<IEnumerable<SelectListItem>> GetVoiceMenuItemsAsync(string deploymentName)
     {
         try
         {
-            var deployment = !string.IsNullOrEmpty(deploymentId)
-                ? await _deploymentManager.FindByIdAsync(deploymentId)
+            var deployment = !string.IsNullOrEmpty(deploymentName)
+                ? await _deploymentManager.FindByNameAsync(deploymentName)
                 : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
             if (deployment == null)
@@ -66,7 +66,7 @@ public sealed class DefaultSpeechVoicePresenter
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch available TTS voices for deployment '{DeploymentId}'.", deploymentId ?? "(resolved)");
+            _logger.LogWarning(ex, "Failed to fetch available TTS voices for deployment '{DeploymentName}'.", deploymentName ?? "(resolved)");
 
             return [];
         }

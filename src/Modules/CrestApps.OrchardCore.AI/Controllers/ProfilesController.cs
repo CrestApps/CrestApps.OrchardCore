@@ -388,14 +388,14 @@ public sealed class ProfilesController : Controller
             profile.Type = templateMetadata.ProfileType.Value;
         }
 
-        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentId))
+        if (!string.IsNullOrEmpty(templateMetadata.ChatDeploymentName))
         {
-            profile.ChatDeploymentId = templateMetadata.ChatDeploymentId;
+            profile.ChatDeploymentName = templateMetadata.ChatDeploymentName;
         }
 
-        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentId))
+        if (!string.IsNullOrEmpty(templateMetadata.UtilityDeploymentName))
         {
-            profile.UtilityDeploymentId = templateMetadata.UtilityDeploymentId;
+            profile.UtilityDeploymentName = templateMetadata.UtilityDeploymentName;
         }
 
         if (!string.IsNullOrEmpty(templateMetadata.OrchestratorName))

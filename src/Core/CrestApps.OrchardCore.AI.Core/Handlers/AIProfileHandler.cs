@@ -5,6 +5,7 @@ using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
@@ -16,6 +17,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProfileStore _profileStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -24,12 +26,14 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,
+        INamedCatalog<AIDeployment> deploymentCatalog,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _profileStore = profileStore;
+        _deploymentCatalog = deploymentCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         _clock = clock;
         S = stringLocalizer;
@@ -103,7 +107,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
+    private async Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
     {
         if (isNew)
         {
@@ -143,13 +147,20 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             profile.TitleType = titleType.Value;
         }
 
-        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+#pragma warning disable CS0618 // Type or member is obsolete
+        profile.ChatDeploymentName = await NormalizeDeploymentSelectorAsync(
+            data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim(),
+            data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+                ?? data["DeploymentId"]?.GetValue<string>()?.Trim(),
+            profile.ChatDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
-        if (!string.IsNullOrEmpty(deploymentId))
-        {
-            profile.ChatDeploymentId = deploymentId;
-        }
+#pragma warning disable CS0618 // Type or member is obsolete
+        profile.UtilityDeploymentName = await NormalizeDeploymentSelectorAsync(
+            data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim(),
+            data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim(),
+            profile.UtilityDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
 
         var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
 
@@ -199,7 +210,22 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         {
             profile.DisplayText = profile.Name;
         }
+    }
 
-        return Task.CompletedTask;
+    private async Task<string> NormalizeDeploymentSelectorAsync(string deploymentName, string deploymentId, string currentValue)
+    {
+        if (!string.IsNullOrWhiteSpace(deploymentName))
+        {
+            return deploymentName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(deploymentId))
+        {
+            var deployment = await _deploymentCatalog.FindByIdAsync(deploymentId);
+
+            return deployment?.Name ?? deploymentId;
+        }
+
+        return currentValue;
     }
 }

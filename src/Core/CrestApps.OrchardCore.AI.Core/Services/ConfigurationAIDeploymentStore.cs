@@ -344,6 +344,9 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
         AIProviderConnectionEntry connectionEntry)
     {
         var name = element.TryGetProperty("Name", out var nameProp) ? nameProp.GetString() : null;
+        var modelName = element.TryGetProperty("ModelName", out var modelNameProp)
+            ? modelNameProp.GetString()
+            : name;
 
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -367,6 +370,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
         {
             ItemId = GenerateConfigDeploymentId(providerName, connectionId, name),
             Name = name,
+            ModelName = modelName,
             Source = providerName,
             ConnectionName = connectionId,
             ConnectionNameAlias = connectionNameAlias,
@@ -379,8 +383,9 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
     {
         var entry = new AIDeploymentConfigurationEntry
         {
-            ProviderName = GetStringValue(deploymentObject["ProviderName"]) ?? providerName,
+            ProviderName = GetStringValue(deploymentObject["ClientName"]) ?? GetStringValue(deploymentObject["ProviderName"]) ?? providerName,
             Name = GetStringValue(deploymentObject["Name"]),
+            ModelName = GetStringValue(deploymentObject["ModelName"]) ?? GetStringValue(deploymentObject["Name"]),
             IsDefault = GetBooleanValue(deploymentObject["IsDefault"]),
             Properties = BuildStandaloneDeploymentProperties(deploymentObject),
         };
@@ -434,6 +439,7 @@ internal sealed class ConfigurationAIDeploymentStore : INamedSourceCatalog<AIDep
         {
             ItemId = GenerateConfigDeploymentId(entry.ProviderName, connectionName: null, entry.Name),
             Name = entry.Name,
+            ModelName = entry.ModelName,
             Source = entry.ProviderName,
             Type = entry.Type,
             IsDefault = entry.IsDefault,

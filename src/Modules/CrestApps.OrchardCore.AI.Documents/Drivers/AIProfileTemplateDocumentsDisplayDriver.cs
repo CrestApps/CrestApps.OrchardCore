@@ -232,10 +232,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
     {
         return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profileMetadata.ChatDeploymentId)
+            deploymentName: profileMetadata.ChatDeploymentName)
             ?? await _deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
-                deploymentId: profileMetadata.UtilityDeploymentId);
+                deploymentName: profileMetadata.UtilityDeploymentName);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

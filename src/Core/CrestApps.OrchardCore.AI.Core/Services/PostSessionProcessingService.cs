@@ -798,12 +798,12 @@ public sealed class PostSessionProcessingService
         if (_deploymentManager != null)
         {
             var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
-                utilityDeploymentId: profile.UtilityDeploymentId,
-                chatDeploymentId: profile.ChatDeploymentId);
+                utilityDeploymentName: profile.UtilityDeploymentName,
+                chatDeploymentName: profile.ChatDeploymentName);
 
-            if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.Name))
+            if (deployment != null && !string.IsNullOrEmpty(deployment.ConnectionName) && !string.IsNullOrEmpty(deployment.ModelName))
             {
-                return await _clientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
+                return await _clientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
             }
         }
 

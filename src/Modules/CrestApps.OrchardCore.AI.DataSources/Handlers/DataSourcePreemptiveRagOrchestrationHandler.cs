@@ -108,7 +108,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         // Try the new deployment resolver first.
         var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
-            deploymentId: profileMetadata.EmbeddingDeploymentId);
+            deploymentName: profileMetadata.EmbeddingDeploymentId);
 
         if (embeddingDeployment != null)
         {

@@ -92,7 +92,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         {
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
-            model.ChatDeploymentId = interaction.ChatDeploymentId;
+            model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.ConnectionName = interaction.ConnectionName;
             model.SystemMessage = interaction.SystemMessage;
             model.IsNew = context.IsNew;
@@ -103,7 +103,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
         {
             model.ItemId = interaction.ItemId;
             model.Title = interaction.Title;
-            model.ChatDeploymentId = interaction.ChatDeploymentId;
+            model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.ConnectionName = interaction.ConnectionName;
             model.Temperature = interaction.Temperature;
             model.TopP = interaction.TopP;

@@ -15,6 +15,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIProviderOptions _providerOptions;
+    private readonly AIOptions _aiOptions;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -22,11 +23,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
     public AIDeploymentHandler(
         IHttpContextAccessor httpContextAccessor,
         IOptions<AIProviderOptions> providerOptions,
+        IOptions<AIOptions> aiOptions,
         IClock clock,
         IStringLocalizer<AIDeploymentHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _providerOptions = providerOptions.Value;
+        _aiOptions = aiOptions.Value;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -44,14 +47,20 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Deployment Name is required."], [nameof(AIDeployment.Name)]));
         }
 
+        if (string.IsNullOrWhiteSpace(context.Model.ModelName))
+        {
+            context.Result.Fail(new ValidationResult(S["Model name is required."], [nameof(AIDeployment.ModelName)]));
+        }
+
         if (!context.Model.Type.IsValidSelection())
         {
             context.Result.Fail(new ValidationResult(S["The deployment type '{0}' is not valid.", context.Model.Type], [nameof(AIDeployment.Type)]));
         }
 
+        var requiresConnection = !HasContainedConnection(context.Model.ClientName);
         var hasConnectionName = true;
 
-        if (string.IsNullOrWhiteSpace(context.Model.ConnectionName))
+        if (requiresConnection && string.IsNullOrWhiteSpace(context.Model.ConnectionName))
         {
             hasConnectionName = false;
             context.Result.Fail(new ValidationResult(S["Connection name is required."], [nameof(AIDeployment.ConnectionName)]));
@@ -105,6 +114,17 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Name = name;
         }
 
+        var modelName = data[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrEmpty(modelName))
+        {
+            deployment.ModelName = modelName;
+        }
+        else if (!string.IsNullOrWhiteSpace(deployment.Name) && string.IsNullOrWhiteSpace(deployment.ModelName))
+        {
+            deployment.ModelName = deployment.Name;
+        }
+
         var clientName = data[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
             ?? data["ProviderName"]?.GetValue<string>()?.Trim();
 
@@ -119,7 +139,9 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         {
             deployment.ConnectionName = connectionName;
         }
-        else if (!string.IsNullOrEmpty(clientName) && _providerOptions.Providers.TryGetValue(clientName, out var provider))
+        else if (!string.IsNullOrEmpty(clientName) &&
+            !HasContainedConnection(clientName) &&
+            _providerOptions.Providers.TryGetValue(clientName, out var provider))
         {
             deployment.ConnectionName = provider.DefaultConnectionName;
         }
@@ -180,4 +202,9 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             Enum.TryParse(typeValue, ignoreCase: true, out type) &&
             type.IsValidSelection();
     }
+
+    private bool HasContainedConnection(string clientName)
+        => !string.IsNullOrWhiteSpace(clientName) &&
+        _aiOptions.Deployments.TryGetValue(clientName, out var entry) &&
+        entry.SupportsContainedConnection;
 }

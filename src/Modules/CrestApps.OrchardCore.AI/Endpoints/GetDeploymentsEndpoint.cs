@@ -45,9 +45,13 @@ internal static class GetDeploymentsEndpoint
 
         return TypedResults.Ok(deployments.Select(x => new
         {
-            Id = x.ItemId,
+            Id = x.Name,
             x.ItemId,
             x.Name,
+            x.ModelName,
+            DisplayText = string.Equals(x.Name, x.ModelName, StringComparison.OrdinalIgnoreCase)
+                ? x.Name
+                : $"{x.Name} ({x.ModelName})",
             x.CreatedUtc,
         }));
     }

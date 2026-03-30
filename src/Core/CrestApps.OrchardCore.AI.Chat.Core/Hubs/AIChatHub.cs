@@ -408,8 +408,8 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
 
         // Prefer utility deployment for title generation, fall back to chat.
         var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
-            utilityDeploymentId: context.UtilityDeploymentId,
-            chatDeploymentId: context.ChatDeploymentId);
+            utilityDeploymentName: context.UtilityDeploymentName,
+            chatDeploymentName: context.ChatDeploymentName);
 
         if (deployment == null)
         {
@@ -635,7 +635,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         });
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var builder = ZString.CreateStringBuilder();
@@ -684,7 +684,7 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         {
         });
 
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var references = new Dictionary<string, AICompletionReference>();

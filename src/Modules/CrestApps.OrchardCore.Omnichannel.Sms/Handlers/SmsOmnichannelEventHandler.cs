@@ -166,7 +166,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             var context = new AICompletionContext
             {
                 ConnectionName = campaign.ConnectionName,
-                ChatDeploymentId = campaign.DeploymentName,
+                ChatDeploymentName = campaign.DeploymentName,
                 Temperature = campaign.Temperature,
                 TopP = campaign.TopP,
                 FrequencyPenalty = campaign.FrequencyPenalty,
@@ -177,7 +177,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             context.AdditionalProperties["Session"] = chatSession;
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
                 ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for campaign '{campaign.ItemId}'.");
 
             var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context);

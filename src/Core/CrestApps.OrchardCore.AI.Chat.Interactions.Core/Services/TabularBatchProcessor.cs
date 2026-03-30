@@ -262,7 +262,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             var completionContext = new AICompletionContext
             {
                 ConnectionName = sourceContext.ConnectionName,
-                ChatDeploymentId = sourceContext.ChatDeploymentId,
+                ChatDeploymentName = sourceContext.ChatDeploymentName,
                 SystemMessage = await GetBatchSystemMessageAsync(batch, sourceContext.SystemMessage),
                 Temperature = sourceContext.Temperature ?? 0.1f, // Use low temperature for consistent row processing
                 TopP = sourceContext.TopP ?? 1.0f,
@@ -275,7 +275,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.BatchTimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: sourceContext.ChatDeploymentId)
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: sourceContext.ChatDeploymentName)
                 ?? throw new InvalidOperationException("Unable to resolve a chat deployment for batch processing.");
 
             var response = await _completionService.CompleteAsync(

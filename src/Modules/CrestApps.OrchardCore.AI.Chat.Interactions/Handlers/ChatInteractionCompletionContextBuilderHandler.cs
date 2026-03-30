@@ -22,7 +22,7 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         }
 
         context.Context.ConnectionName = interaction.ConnectionName;
-        context.Context.ChatDeploymentId = interaction.ChatDeploymentId;
+        context.Context.ChatDeploymentName = interaction.ChatDeploymentName;
         context.Context.SystemMessage = await ResolveSystemMessageAsync(interaction);
         context.Context.Temperature = interaction.Temperature;
         context.Context.TopP = interaction.TopP;

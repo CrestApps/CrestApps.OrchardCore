@@ -30,22 +30,53 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
-        if (!string.IsNullOrEmpty(context.Model.ChatDeploymentId) && await _deploymentsCatalog.FindByIdAsync(context.Model.ChatDeploymentId) is null)
+        if (!string.IsNullOrEmpty(context.Model.ChatDeploymentName) &&
+            await FindDeploymentAsync(context.Model.ChatDeploymentName) is null)
         {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.ChatDeploymentId)]));
+            context.Result.Fail(new ValidationResult(S["Invalid deployment selection provided."], [nameof(AIProfile.ChatDeploymentName)]));
+        }
+
+        if (!string.IsNullOrEmpty(context.Model.UtilityDeploymentName) &&
+            await FindDeploymentAsync(context.Model.UtilityDeploymentName) is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Invalid deployment selection provided."], [nameof(AIProfile.UtilityDeploymentName)]));
         }
     }
 
-    private static Task PopulateAsync(AIProfile profile, JsonNode data)
+    private async Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+        profile.ChatDeploymentName = await NormalizeDeploymentSelectorAsync(
+            data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim(),
+            data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+                ?? data["DeploymentId"]?.GetValue<string>()?.Trim(),
+            profile.ChatDeploymentName);
 
-        if (!string.IsNullOrEmpty(deploymentId))
+#pragma warning disable CS0618 // Type or member is obsolete
+        profile.UtilityDeploymentName = await NormalizeDeploymentSelectorAsync(
+            data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim(),
+            data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim(),
+            profile.UtilityDeploymentName);
+#pragma warning restore CS0618 // Type or member is obsolete
+    }
+
+    private async Task<AIDeployment> FindDeploymentAsync(string selector)
+        => await _deploymentsCatalog.FindByIdAsync(selector)
+        ?? await _deploymentsCatalog.FindByNameAsync(selector);
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string deploymentName, string deploymentId, string currentValue)
+    {
+        if (!string.IsNullOrWhiteSpace(deploymentName))
         {
-            profile.ChatDeploymentId = deploymentId;
+            return deploymentName;
         }
 
-        return Task.CompletedTask;
+        if (!string.IsNullOrWhiteSpace(deploymentId))
+        {
+            var deployment = await _deploymentsCatalog.FindByIdAsync(deploymentId);
+
+            return deployment?.Name ?? deploymentId;
+        }
+
+        return currentValue;
     }
 }

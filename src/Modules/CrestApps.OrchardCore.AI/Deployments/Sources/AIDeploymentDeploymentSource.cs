@@ -36,6 +36,8 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
             {
                 { "ItemId", deployment.ItemId },
                 { "Name", deployment.Name },
+                { "ModelName", deployment.ModelName },
+                { "ClientName", deployment.Source },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
                 { "ConnectionNameAlias", deployment.ConnectionNameAlias },

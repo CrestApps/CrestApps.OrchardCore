@@ -140,7 +140,7 @@ internal static class ApiAICompletionEndpoint
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
-            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: contextForTemplate.ChatDeploymentId)
+            var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName)
                 ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
             var completion = await completionService.CompleteAsync(templateDeployment, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
@@ -306,8 +306,8 @@ internal static class ApiAICompletionEndpoint
 
         // Prefer utility deployment for title generation, fall back to chat.
         var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
-            utilityDeploymentId: context.UtilityDeploymentId,
-            chatDeploymentId: context.ChatDeploymentId);
+            utilityDeploymentName: context.UtilityDeploymentName,
+            chatDeploymentName: context.ChatDeploymentName);
 
         if (deployment == null)
         {
@@ -329,7 +329,7 @@ internal static class ApiAICompletionEndpoint
     private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt, IAICompletionContextBuilder completionContextBuilder, IAIDeploymentManager deploymentManager)
     {
         var context = await completionContextBuilder.BuildAsync(profile);
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: context.ChatDeploymentId)
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, prompt)], context);

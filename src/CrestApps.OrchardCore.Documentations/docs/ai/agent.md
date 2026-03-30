@@ -154,7 +154,7 @@ await _profileManager.CreateAsync(profile);
           "DisplayText": "Research Agent",
           "Type": "Agent",
           "Description": "Gathers and synthesizes information from available knowledge sources.",
-          "ChatDeploymentId": "research-agent-chat",
+          "ChatDeploymentName": "research-agent-chat",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are a research agent..."
