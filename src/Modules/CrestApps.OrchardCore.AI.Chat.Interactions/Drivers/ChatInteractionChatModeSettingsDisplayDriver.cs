@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +17,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISiteService _siteService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IStringLocalizer S;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
@@ -26,12 +25,12 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     public ChatInteractionChatModeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        ISiteService siteService,
+        IAIDeploymentManager deploymentManager,
         IStringLocalizer<ChatInteractionChatModeSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _siteService = siteService;
+        _deploymentManager = deploymentManager;
         S = stringLocalizer;
     }
 
@@ -64,23 +63,20 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableModesAsync()
     {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        var hasSTT = !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
-        var hasTTS = !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
+        var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
+        var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech) != null;
 
         var modes = new List<SelectListItem>
         {
             new(S["Text input"], nameof(ChatMode.TextInput)),
         };
 
-        if (hasSTT)
+        if (hasSpeechToText)
         {
             modes.Add(new SelectListItem(S["Audio input"], nameof(ChatMode.AudioInput)));
         }
 
-        if (hasSTT && hasTTS)
+        if (hasSpeechToText && hasTextToSpeech)
         {
             modes.Add(new SelectListItem(S["Conversation"], nameof(ChatMode.Conversation)));
         }

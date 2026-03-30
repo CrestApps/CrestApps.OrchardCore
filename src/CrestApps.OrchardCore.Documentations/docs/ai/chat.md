@@ -63,17 +63,19 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 
 #### Prerequisites
 
-- **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Audio Input** requires a resolvable speech-to-text deployment. The system first uses **Settings → Artificial Intelligence → Default Deployments** and then falls back to the first available deployment that supports speech-to-text (for example, Azure Speech or OpenAI Whisper).
+- **Conversation** requires resolvable speech-to-text and text-to-speech deployments using that same fallback behavior.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
-- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions now fall back to **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
+- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** and otherwise fall back to the first available chat deployment.
 
 #### Configuring Chat Mode
 
 1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
-2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required default deployments are configured.
-3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the configured text-to-speech provider. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required deployment types can be resolved.
+3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the resolved text-to-speech deployment. If no voice is selected, the default voice from site settings (or the provider's default) is used.
 4. Save the profile.
+
+When the **Deployments** card leaves **Chat deployment** or **Utility deployment** set to **Default**, the editor now shows a warning if the matching site default has not been configured yet. Use **Settings → Artificial Intelligence → Default Deployments** to set the shared fallback models explicitly.
 
 Once configured, the selected chat mode applies to all chat UIs associated with that profile:
 - Admin session chat

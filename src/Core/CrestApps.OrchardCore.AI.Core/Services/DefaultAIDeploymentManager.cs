@@ -58,9 +58,9 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
             ?? candidates.FirstOrDefault();
     }
 
-    public async ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null)
+    public ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null)
     {
-        return await ResolveByTypeAsync(type, deploymentId, clientName, connectionName);
+        return ResolveByTypeAsync(type, deploymentId, clientName, connectionName);
     }
 
     public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string clientName = null)
@@ -89,9 +89,11 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
             }
         }
 
-        if (!string.IsNullOrEmpty(clientName) && !string.IsNullOrEmpty(connectionName))
+        var globalDefaultId = await GetGlobalDefaultIdAsync(type);
+
+        if (!string.IsNullOrEmpty(globalDefaultId))
         {
-            var deployment = await GetDefaultAsync(clientName, connectionName, type);
+            var deployment = await FindByIdAsync(globalDefaultId);
 
             if (deployment != null)
             {
@@ -99,14 +101,34 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
             }
         }
 
-        var globalDefaultId = await GetGlobalDefaultIdAsync(type);
+        return await GetFirstMatchingDeploymentAsync(type, clientName, connectionName);
+    }
 
-        if (!string.IsNullOrEmpty(globalDefaultId))
+    private async ValueTask<AIDeployment> GetFirstMatchingDeploymentAsync(AIDeploymentType type, string clientName, string connectionName)
+    {
+        var deployments = await GetAllAsync();
+
+        return deployments.FirstOrDefault(deployment =>
         {
-            return await FindByIdAsync(globalDefaultId);
-        }
+            if (!deployment.SupportsType(type))
+            {
+                return false;
+            }
 
-        return null;
+            if (!string.IsNullOrEmpty(clientName) &&
+                !string.Equals(deployment.ClientName, clientName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(connectionName))
+            {
+                return true;
+            }
+
+            return string.Equals(deployment.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     private async ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)

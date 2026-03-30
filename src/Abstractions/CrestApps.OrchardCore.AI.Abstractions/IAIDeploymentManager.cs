@@ -36,8 +36,8 @@ public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
     /// <summary>
     /// Resolves a deployment using the full fallback chain:
     /// 1. If deploymentId is provided, returns that specific deployment.
-    /// 2. If connectionName is provided, returns the default deployment supporting the given type for that connection.
-    /// 3. Falls back to the global default deployment for the given type (from DefaultAIDeploymentSettings).
+    /// 2. Falls back to the global default deployment for the given type (from DefaultAIDeploymentSettings).
+    /// 3. Falls back to the first deployment supporting the requested type within the current scope.
     /// Returns <see langword="null"/> if no deployment can be resolved.
     /// </summary>
     ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null);

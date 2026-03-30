@@ -14,8 +14,8 @@ Previously, AI model deployments were configured as string properties on `AIProv
 In the new architecture, **AIDeployment** is a first-class typed entity with:
 
 - **`Type`** — One or more deployment purposes: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, or `TextToSpeech`
-- **`IsDefault`** — Whether this deployment is the default for each selected type within its connection
 - **Independent identity** — Each deployment has its own record and can be referenced by ID
+- **Site-level defaults** — Default deployments for profiles, chat interactions, and voice features are configured centrally in **Settings > Artificial Intelligence > Default Deployments**
 
 AI Profiles and Chat Interactions now reference deployments by ID (`ChatDeploymentId`, `UtilityDeploymentId`) rather than relying on a connection name to resolve deployment names.
 
@@ -24,8 +24,8 @@ AI Profiles and Chat Interactions now reference deployments by ID (`ChatDeployme
 When resolving a deployment for a given type, the system follows this fallback chain:
 
 1. **Explicit deployment** — The deployment ID set directly on the profile or interaction
-2. **Connection default** — The default deployment for the requested type on the connection
-3. **Global default** — The global default deployment configured in **Settings > Artificial Intelligence > Default Deployments**
+2. **Global default** — The global default deployment configured in **Settings > Artificial Intelligence > Default Deployments**
+3. **First matching deployment** — The first deployment that supports the requested type in the current scope
 4. **null** — No deployment found
 
 :::info Utility → Chat Fallback
@@ -55,7 +55,7 @@ After migration, review the auto-created deployments at **Artificial Intelligenc
 
 After the automatic migration runs:
 
-1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct type selections and default flags.
+1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct type selections.
 2. **Set global defaults** — Go to **Settings > Artificial Intelligence > Default Deployments** and configure global defaults for Chat, Utility, Embedding, Image, and voice-related deployment types as needed. These serve as fallbacks when a profile or interaction doesn't specify a deployment.
 3. **Update profiles (optional)** — Existing profiles continue to work. However, you can now set separate `ChatDeploymentId` and `UtilityDeploymentId` on each profile for more granular control.
 

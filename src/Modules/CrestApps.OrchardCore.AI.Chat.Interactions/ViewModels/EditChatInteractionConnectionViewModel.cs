@@ -10,6 +10,12 @@ public class EditChatInteractionConnectionViewModel
     public string UtilityDeploymentId { get; set; }
 
     [BindNever]
+    public bool ShowMissingDefaultChatDeploymentWarning { get; set; }
+
+    [BindNever]
+    public bool ShowMissingDefaultUtilityDeploymentWarning { get; set; }
+
+    [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; }
 
     [BindNever]

@@ -105,7 +105,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     /// Synthesizes the given text as speech and streams audio chunks to the caller.
     /// </summary>
     protected async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
+        ITextToSpeechClient textToSpeechClient,
         string identifier,
         string text,
         string voiceName,
@@ -126,7 +126,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
             return;
         }
 
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+        await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
         {
             var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
             if (audioContent?.Data is not { Length: > 0 } audioData)
@@ -145,7 +145,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
     /// Reads sentences from a channel and synthesizes each as speech, streaming audio chunks to the caller.
     /// </summary>
     protected async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
+        ITextToSpeechClient textToSpeechClient,
         Func<string> getIdentifier,
         ChannelReader<string> sentenceReader,
         string voiceName,
@@ -174,7 +174,7 @@ public abstract class ChatHubBase<TClient> : Hub<TClient>
             }
 
             // Only stream audio — text tokens were already sent immediately in ProcessConversationPromptAsync.
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
                 var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
                 if (audioContent?.Data is not { Length: > 0 } audioData)

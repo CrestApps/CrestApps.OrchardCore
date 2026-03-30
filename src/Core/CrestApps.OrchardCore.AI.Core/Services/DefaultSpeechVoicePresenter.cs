@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
@@ -26,14 +27,11 @@ public sealed class DefaultSpeechVoicePresenter
 
     public async Task<IEnumerable<SelectListItem>> GetVoiceMenuItemsAsync(string deploymentId)
     {
-        if (string.IsNullOrEmpty(deploymentId))
-        {
-            return [];
-        }
-
         try
         {
-            var deployment = await _deploymentManager.FindByIdAsync(deploymentId);
+            var deployment = !string.IsNullOrEmpty(deploymentId)
+                ? await _deploymentManager.FindByIdAsync(deploymentId)
+                : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
             if (deployment == null)
             {
@@ -68,7 +66,7 @@ public sealed class DefaultSpeechVoicePresenter
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch available TTS voices for deployment '{DeploymentId}'.", deploymentId);
+            _logger.LogWarning(ex, "Failed to fetch available TTS voices for deployment '{DeploymentId}'.", deploymentId ?? "(resolved)");
 
             return [];
         }

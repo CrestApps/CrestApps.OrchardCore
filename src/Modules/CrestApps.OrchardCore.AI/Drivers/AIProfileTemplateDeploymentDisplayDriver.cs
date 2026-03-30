@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -6,20 +7,24 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileTemplateDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        ISiteService siteService,
         IStringLocalizer<AIProfileTemplateDeploymentDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -33,8 +38,11 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             }
 
             var metadata = template.As<ProfileTemplateMetadata>();
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             model.ChatDeploymentId = metadata.ChatDeploymentId;
             model.UtilityDeploymentId = metadata.UtilityDeploymentId;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentId);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentId);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));

@@ -3,6 +3,17 @@
 
 @model EditProfileDeploymentViewModel
 
+@if (Model.ShowMissingDefaultChatDeploymentWarning)
+{
+    <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
+        <div class="@Orchard.GetEndClasses(true)">
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended chat deployment."]
+            </div>
+        </div>
+    </div>
+}
+
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
     <label asp-for="ChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Chat deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
@@ -13,6 +24,17 @@
         <span class="hint">@T["Select the deployment to use for chat completions."]</span>
     </div>
 </div>
+
+@if (Model.ShowMissingDefaultUtilityDeploymentWarning)
+{
+    <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
+        <div class="@Orchard.GetEndClasses(true)">
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["Default utility deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there so the Default option resolves to the intended utility deployment."]
+            </div>
+        </div>
+    </div>
+}
 
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
     <label asp-for="UtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Utility deployment"]</label>
