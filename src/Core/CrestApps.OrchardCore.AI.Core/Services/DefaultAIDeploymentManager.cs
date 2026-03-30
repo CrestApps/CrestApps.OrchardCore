@@ -25,7 +25,8 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
     {
         var deployments = (await Catalog.GetAllAsync())
             .Where(x => string.Equals(x.ClientName, clientName, StringComparison.OrdinalIgnoreCase) &&
-            (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
+            (string.Equals(x.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
         foreach (var deployment in deployments)
         {
@@ -58,9 +59,9 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
             ?? candidates.FirstOrDefault();
     }
 
-    public ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null)
+    public ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentName = null, string clientName = null, string connectionName = null)
     {
-        return ResolveByTypeAsync(type, deploymentId, clientName, connectionName);
+        return ResolveByTypeAsync(type, deploymentName, clientName, connectionName);
     }
 
     public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string clientName = null)
@@ -77,11 +78,11 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
         return filtered;
     }
 
-    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentId, string clientName, string connectionName)
+    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentName, string clientName, string connectionName)
     {
-        if (!string.IsNullOrEmpty(deploymentId))
+        if (!string.IsNullOrEmpty(deploymentName))
         {
-            var deployment = await FindByIdAsync(deploymentId);
+            var deployment = await FindBySelectorAsync(deploymentName);
 
             if (deployment != null)
             {
@@ -89,11 +90,11 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
             }
         }
 
-        var globalDefaultId = await GetGlobalDefaultIdAsync(type);
+        var globalDefaultId = await GetGlobalDefaultSelectorAsync(type);
 
         if (!string.IsNullOrEmpty(globalDefaultId))
         {
-            var deployment = await FindByIdAsync(globalDefaultId);
+            var deployment = await FindBySelectorAsync(globalDefaultId);
 
             if (deployment != null)
             {
@@ -131,18 +132,30 @@ public sealed class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDep
         });
     }
 
-    private async ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)
+    private async ValueTask<AIDeployment> FindBySelectorAsync(string selector)
+    {
+        var deployment = await FindByIdAsync(selector);
+
+        if (deployment != null)
+        {
+            return deployment;
+        }
+
+        return await FindByNameAsync(selector);
+    }
+
+    private async ValueTask<string> GetGlobalDefaultSelectorAsync(AIDeploymentType type)
     {
         var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
 
         return type switch
         {
-            AIDeploymentType.Chat => settings.DefaultChatDeploymentId,
-            AIDeploymentType.Utility => settings.DefaultUtilityDeploymentId,
-            AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentId,
-            AIDeploymentType.Image => settings.DefaultImageDeploymentId,
-            AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentId,
-            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentId,
+            AIDeploymentType.Chat => settings.DefaultChatDeploymentName,
+            AIDeploymentType.Utility => settings.DefaultUtilityDeploymentName,
+            AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentName,
+            AIDeploymentType.Image => settings.DefaultImageDeploymentName,
+            AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentName,
+            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentName,
             _ => null,
         };
     }

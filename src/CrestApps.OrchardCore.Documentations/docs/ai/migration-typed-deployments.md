@@ -14,16 +14,17 @@ Previously, AI model deployments were configured as string properties on `AIProv
 In the new architecture, **AIDeployment** is a first-class typed entity with:
 
 - **`Type`** — One or more deployment purposes: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, or `TextToSpeech`
-- **Independent identity** — Each deployment has its own record and can be referenced by ID
+- **`Name`** — A unique technical name used in settings, profiles, interactions, and recipes
+- **`ModelName`** — A non-unique provider-facing model or deployment name sent to the AI provider
 - **Site-level defaults** — Default deployments for profiles, chat interactions, and voice features are configured centrally in **Settings > Artificial Intelligence > Default Deployments**
 
-AI Profiles and Chat Interactions now reference deployments by ID (`ChatDeploymentId`, `UtilityDeploymentId`) rather than relying on a connection name to resolve deployment names.
+AI Profiles now use `ChatDeploymentName` and `UtilityDeploymentName`, while profile templates, chat interactions, and site defaults still use selector properties such as `ChatDeploymentName` and `UtilityDeploymentName`. In all cases, the stored value is now the deployment's technical `Name` rather than its document `ItemId`.
 
 ## Deployment Resolution Fallback
 
 When resolving a deployment for a given type, the system follows this fallback chain:
 
-1. **Explicit deployment** — The deployment ID set directly on the profile or interaction
+1. **Explicit deployment** — The deployment technical name set directly on the profile or interaction
 2. **Global default** — The global default deployment configured in **Settings > Artificial Intelligence > Default Deployments**
 3. **First matching deployment** — The first deployment that supports the requested type in the current scope
 4. **null** — No deployment found
@@ -44,8 +45,9 @@ On application startup, the data migration automatically:
 
 1. Scans all existing `AIProviderConnection` records for deployment name fields
 2. Creates typed `AIDeployment` records for each non-empty deployment name
-3. Sets the `IsDefault` flag on the first deployment of each type per connection
-4. Preserves all existing functionality — no downtime or data loss
+3. Backfills `ModelName` from `Name` for older deployment records that predate the split
+4. Converts stored deployment selectors from legacy deployment `ItemId` values to technical deployment names
+5. Preserves all existing functionality — no downtime or data loss
 
 After migration, review the auto-created deployments at **Artificial Intelligence > Deployments** to verify they look correct.
 
@@ -57,7 +59,7 @@ After the automatic migration runs:
 
 1. **Review deployments** — Navigate to **Artificial Intelligence > Deployments** and verify the auto-created records have the correct type selections.
 2. **Set global defaults** — Go to **Settings > Artificial Intelligence > Default Deployments** and configure global defaults for Chat, Utility, Embedding, Image, and voice-related deployment types as needed. These serve as fallbacks when a profile or interaction doesn't specify a deployment.
-3. **Update profiles (optional)** — Existing profiles continue to work. However, you can now set separate `ChatDeploymentId` and `UtilityDeploymentId` on each profile for more granular control.
+3. **Update profiles (optional)** — Existing profiles continue to work. However, you can now set separate `ChatDeploymentName` and `UtilityDeploymentName` values on each profile for more granular control. These selectors save the deployment's technical `Name`.
 
 ---
 
@@ -96,27 +98,31 @@ After the automatic migration runs:
         "OpenAI": {
           "Connections": {
             "default": {
-              "Deployments": [
-                {
-                  "Name": "gpt-4o",
-                  "Type": "Chat",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "gpt-4.1-mini",
-                  "Type": ["Chat", "Utility"],
-                  "IsDefault": true
-                },
-                {
-                  "Name": "text-embedding-3-small",
-                  "Type": "Embedding",
-                  "IsDefault": true
-                },
-                {
-                  "Name": "dall-e-3",
-                  "Type": "Image",
-                  "IsDefault": true
-                }
+                "Deployments": [
+                  {
+                    "Name": "openai-chat",
+                    "ModelName": "gpt-4o",
+                    "Type": "Chat",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "openai-chat-utility",
+                    "ModelName": "gpt-4.1-mini",
+                    "Type": ["Chat", "Utility"],
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "openai-embedding",
+                    "ModelName": "text-embedding-3-small",
+                    "Type": "Embedding",
+                    "IsDefault": true
+                  },
+                  {
+                    "Name": "openai-image",
+                    "ModelName": "dall-e-3",
+                    "Type": "Image",
+                    "IsDefault": true
+                  }
               ]
             }
           }
@@ -141,13 +147,14 @@ Contained-connection deployments (e.g., Azure Speech) can also be defined in `ap
 {
   "OrchardCore": {
     "CrestApps_AI": {
-      "Deployments": [
-        {
-          "ClientName": "AzureSpeech",
-          "Name": "my-speech-to-text",
-          "Type": "SpeechToText",
-          "IsDefault": true,
-          "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+        "Deployments": [
+          {
+            "ClientName": "AzureSpeech",
+            "Name": "azure-speech-stt",
+            "ModelName": "my-speech-to-text",
+            "Type": "SpeechToText",
+            "IsDefault": true,
+            "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
           "AuthenticationType": "ApiKey",
           "ApiKey": "your-speech-service-api-key"
         }
@@ -158,6 +165,8 @@ Contained-connection deployments (e.g., Azure Speech) can also be defined in `ap
 ```
 
 Deployments defined this way are read-only, ephemeral (exist only while in configuration), and appear alongside database-managed deployments in dropdown menus and API queries.
+
+If `ModelName` is omitted in configuration, the system falls back to `Name` for backward compatibility. New configurations should set both values whenever the provider-facing model name should differ from the deployment's technical lookup name.
 
 ---
 
@@ -177,9 +186,11 @@ var chatDeployment = await deploymentManager.ResolveAsync(
     AIDeploymentType.Chat, connectionName: connectionName);
 var embeddingDeployment = await deploymentManager.ResolveAsync(
     AIDeploymentType.Embedding, connectionName: connectionName);
+
+var providerModelName = chatDeployment.ModelName;
 ```
 
-### AI Profile DeploymentId
+### AI Profile deployment selectors
 
 If your code referenced `DeploymentId` on AI Profiles:
 
@@ -188,8 +199,8 @@ If your code referenced `DeploymentId` on AI Profiles:
 var deploymentId = profile.DeploymentId;
 
 // New (recommended)
-var chatDeploymentId = profile.ChatDeploymentId;
-var utilityDeploymentId = profile.UtilityDeploymentId;
+var chatDeploymentName = profile.ChatDeploymentName;
+var utilityDeploymentName = profile.UtilityDeploymentName;
 ```
 
 ### AICompletionContext
@@ -201,7 +212,7 @@ If your code built or read `AICompletionContext`:
 context.DeploymentId = "some-id";
 
 // New (recommended)
-context.ChatDeploymentId = "some-id";
+context.ChatDeploymentName = "some-id";
 ```
 
 ---
@@ -219,7 +230,7 @@ context.ChatDeploymentId = "some-id";
         {
           "Name": "MyProfile",
           "ConnectionName": "default",
-          "DeploymentId": "some-deployment-id",
+          "DeploymentId": "legacy-deployment-item-id",
           ...
         }
       ]
@@ -239,8 +250,8 @@ context.ChatDeploymentId = "some-id";
         {
           "Name": "MyProfile",
           "ConnectionName": "default",
-          "ChatDeploymentId": "chat-deployment-id",
-          "UtilityDeploymentId": "utility-deployment-id",
+          "ChatDeploymentName": "openai-chat",
+          "UtilityDeploymentName": "openai-utility",
           ...
         }
       ]
@@ -262,21 +273,24 @@ Create typed deployments via recipes:
       "name": "AIDeployment",
       "deployments": [
         {
-          "Name": "gpt-4o",
+          "Name": "openai-chat",
+          "ModelName": "gpt-4o",
           "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Chat",
           "IsDefault": true
         },
         {
-          "Name": "gpt-4o-mini",
+          "Name": "openai-utility",
+          "ModelName": "gpt-4o-mini",
           "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Utility",
           "IsDefault": true
         },
         {
-          "Name": "dall-e-3",
+          "Name": "openai-image",
+          "ModelName": "dall-e-3",
           "ClientName": "OpenAI",
           "ConnectionName": "default",
           "Type": "Image",
@@ -304,9 +318,9 @@ For typed deployments, use `ClientName` in new recipes. The older `ProviderName`
 | `AIProvider.DefaultEmbeddingDeploymentName` | `AIDeployment` with `IsDefault = true` |
 | `AIProvider.DefaultUtilityDeploymentName` | `AIDeployment` with `IsDefault = true` |
 | `AIProvider.DefaultImagesDeploymentName` | `AIDeployment` with `IsDefault = true` |
-| `AIProfile.DeploymentId` | `AIProfile.ChatDeploymentId` |
-| `ChatInteraction.DeploymentId` | `ChatInteraction.ChatDeploymentId` |
-| `AICompletionContext.DeploymentId` | `AICompletionContext.ChatDeploymentId` |
+| `AIProfile.DeploymentId` | `AIProfile.ChatDeploymentName` |
+| `ChatInteraction.DeploymentId` | `ChatInteraction.ChatDeploymentName` |
+| `AICompletionContext.DeploymentId` | `AICompletionContext.ChatDeploymentName` |
 
 :::warning
 The deprecated properties still work for backward compatibility but will be removed in a future major release. Migrate to the new typed deployment system at your earliest convenience.

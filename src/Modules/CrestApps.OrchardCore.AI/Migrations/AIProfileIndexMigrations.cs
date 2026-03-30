@@ -17,6 +17,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
                 .Column<string>("Type", column => column.WithLength(50))
                 .Column<string>("ConnectionName", column => column.WithLength(255))
                 .Column<string>("DeploymentId", column => column.WithLength(255))
+                .Column<string>("DeploymentName", column => column.WithLength(255))
                 .Column<string>("OrchestratorName", column => column.WithLength(255))
                 .Column<string>("OwnerId", column => column.WithLength(26))
                 .Column<string>("Author", column => column.WithLength(255))
@@ -43,7 +44,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
             collection: AIConstants.AICollectionName
         );
 
-        return 2;
+        return 3;
     }
 
     public async Task<int> UpdateFrom1Async()
@@ -54,5 +55,15 @@ internal sealed class AIProfileIndexMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AIProfileIndex>(table => table
+            .AddColumn<string>("DeploymentName", column => column.WithLength(255)),
+            collection: AIConstants.AICollectionName
+        );
+
+        return 3;
     }
 }

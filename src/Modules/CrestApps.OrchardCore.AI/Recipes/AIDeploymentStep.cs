@@ -47,7 +47,10 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 deployment = await _manager.FindByIdAsync(id);
             }
 
-            var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>();
+#pragma warning disable CS0618 // Type or member is obsolete
+            var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>()
+                ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+#pragma warning restore CS0618 // Type or member is obsolete
             var hasSource = !string.IsNullOrEmpty(sourceName);
 
             if (deployment is null)

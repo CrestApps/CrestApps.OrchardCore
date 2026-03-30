@@ -40,7 +40,7 @@ public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
     /// 3. Falls back to the first deployment supporting the requested type within the current scope.
     /// Returns <see langword="null"/> if no deployment can be resolved.
     /// </summary>
-    ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null);
+    ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentName = null, string clientName = null, string connectionName = null);
 
     /// <summary>
     /// Gets all deployments of a given type, optionally filtered by client.

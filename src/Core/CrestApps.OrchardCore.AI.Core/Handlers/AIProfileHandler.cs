@@ -5,6 +5,7 @@ using System.Text.Json.Settings;
 using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
@@ -16,6 +17,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIProfileStore _profileStore;
+    private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
 
@@ -24,12 +26,14 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,
+        INamedCatalog<AIDeployment> deploymentCatalog,
         ILiquidTemplateManager liquidTemplateManager,
         IClock clock,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _profileStore = profileStore;
+        _deploymentCatalog = deploymentCatalog;
         _liquidTemplateManager = liquidTemplateManager;
         _clock = clock;
         S = stringLocalizer;
@@ -103,7 +107,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         return Task.CompletedTask;
     }
 
-    private static Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
+    private async Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
     {
         if (isNew)
         {
@@ -143,12 +147,35 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             profile.TitleType = titleType.Value;
         }
 
-        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+        var chatDeploymentName = data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim();
 
-        if (!string.IsNullOrEmpty(deploymentId))
+        if (!string.IsNullOrWhiteSpace(chatDeploymentName))
         {
-            profile.ChatDeploymentId = deploymentId;
+            profile.ChatDeploymentName = chatDeploymentName;
+        }
+        else
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
+        }
+
+        var utilityDeploymentName = data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(utilityDeploymentName))
+        {
+            profile.UtilityDeploymentName = utilityDeploymentName;
+        }
+        else
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            var utilityDeploymentId = data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
         }
 
         var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
@@ -199,7 +226,20 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         {
             profile.DisplayText = profile.Name;
         }
+    }
 
-        return Task.CompletedTask;
+    private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
+    {
+        if (!string.IsNullOrWhiteSpace(deploymentId))
+        {
+            var deployment = await _deploymentCatalog.FindByIdAsync(deploymentId);
+
+            if (deployment != null)
+            {
+                return deployment.Name;
+            }
+        }
+
+        return currentValue;
     }
 }

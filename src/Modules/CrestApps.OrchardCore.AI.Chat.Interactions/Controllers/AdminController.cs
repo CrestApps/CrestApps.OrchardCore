@@ -259,7 +259,7 @@ public sealed class AdminController : Controller
 
         var clonedInteraction = await _interactionManager.NewAsync(interaction.Properties);
         clonedInteraction.Title = GetNextTitle(interaction.Title);
-        clonedInteraction.ChatDeploymentId = interaction.ChatDeploymentId;
+        clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
         clonedInteraction.ConnectionName = interaction.ConnectionName;
         clonedInteraction.SystemMessage = interaction.SystemMessage;
         clonedInteraction.Temperature = interaction.Temperature;

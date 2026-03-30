@@ -15,12 +15,12 @@
 }
 
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
-    <label asp-for="ChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Chat deployment"]</label>
+    <label asp-for="ChatDeploymentName" class="@Orchard.GetLabelClasses()">@T["Chat deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ChatDeploymentId" asp-items="Model.ChatDeployments" class="form-select">
+        <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
             <option value="">@T["Default"]</option>
         </select>
-        <span asp-validation-for="ChatDeploymentId" class="text-danger"></span>
+        <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
         <span class="hint">@T["Select the deployment to use for chat completions."]</span>
     </div>
 </div>
@@ -37,12 +37,12 @@
 }
 
 <div class="@Orchard.GetWrapperClasses("orchestrator-dependent orchestrator-dependent-default")">
-    <label asp-for="UtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Utility deployment"]</label>
+    <label asp-for="UtilityDeploymentName" class="@Orchard.GetLabelClasses()">@T["Utility deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="UtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
+        <select asp-for="UtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
             <option value="">@T["Default"]</option>
         </select>
-        <span asp-validation-for="UtilityDeploymentId" class="text-danger"></span>
+        <span asp-validation-for="UtilityDeploymentName" class="text-danger"></span>
         <span class="hint">@T["Select a lightweight deployment for auxiliary tasks. Falls back to the global default if not set."]</span>
     </div>
 </div>

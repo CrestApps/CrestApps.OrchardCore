@@ -24,6 +24,7 @@ internal static class GetVoicesEndpoint
     }
 
     private static async Task<IResult> HandleAsync(
+        [FromQuery] string deploymentName,
         [FromQuery] string deploymentId,
         [FromServices] IAuthorizationService authorizationService,
         [FromServices] IHttpContextAccessor httpContextAccessor,
@@ -36,12 +37,17 @@ internal static class GetVoicesEndpoint
             return TypedResults.Forbid();
         }
 
-        if (string.IsNullOrWhiteSpace(deploymentId))
+        var deploymentSelector = string.IsNullOrWhiteSpace(deploymentName) ? deploymentId : deploymentName;
+
+        if (string.IsNullOrWhiteSpace(deploymentSelector))
         {
             return TypedResults.Ok(new { voices = Array.Empty<object>() });
         }
 
-        var deployment = await deploymentManager.FindByIdAsync(deploymentId);
+        var deployment = !string.IsNullOrWhiteSpace(deploymentName)
+            ? await deploymentManager.FindByNameAsync(deploymentSelector)
+            : await deploymentManager.FindByIdAsync(deploymentSelector)
+                ?? await deploymentManager.FindByNameAsync(deploymentSelector);
 
         if (deployment is null)
         {

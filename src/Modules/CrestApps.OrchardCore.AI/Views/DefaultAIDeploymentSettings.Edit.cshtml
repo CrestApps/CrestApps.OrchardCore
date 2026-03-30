@@ -6,9 +6,9 @@
 @model DefaultAIDeploymentSettingsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultChatDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default chat deployment"]</label>
+    <label asp-for="DefaultChatDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default chat deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultChatDeploymentId" asp-items="Model.ChatDeployments" class="form-select">
+        <select asp-for="DefaultChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default deployment used for chat sessions and chat interactions when the selected deployment is set to default."]</span>
@@ -16,9 +16,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultUtilityDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default utility deployment"]</label>
+    <label asp-for="DefaultUtilityDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default utility deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultUtilityDeploymentId" asp-items="Model.UtilityDeployments" class="form-select">
+        <select asp-for="DefaultUtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default lightweight deployment used for auxiliary tasks like planning and intent detection."]</span>
@@ -26,9 +26,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultEmbeddingDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default embedding deployment"]</label>
+    <label asp-for="DefaultEmbeddingDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default embedding deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultEmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+        <select asp-for="DefaultEmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default deployment used for embedding generation in document indexing and vector search."]</span>
@@ -36,9 +36,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultImageDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default image deployment"]</label>
+    <label asp-for="DefaultImageDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default image deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultImageDeploymentId" asp-items="Model.ImageDeployments" class="form-select">
+        <select asp-for="DefaultImageDeploymentName" asp-items="Model.ImageDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default deployment used for image generation."]</span>
@@ -46,9 +46,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultSpeechToTextDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default speech-to-text deployment"]</label>
+    <label asp-for="DefaultSpeechToTextDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default speech-to-text deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultSpeechToTextDeploymentId" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">
+        <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select" id="defaultSpeechToTextDeploymentId">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default deployment used for speech-to-text transcription."]</span>
@@ -56,9 +56,9 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="DefaultTextToSpeechDeploymentId" class="@Orchard.GetLabelClasses()">@T["Default text-to-speech deployment"]</label>
+    <label asp-for="DefaultTextToSpeechDeploymentName" class="@Orchard.GetLabelClasses()">@T["Default text-to-speech deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="DefaultTextToSpeechDeploymentId" asp-items="Model.TextToSpeechDeployments" class="form-select">
+        <select asp-for="DefaultTextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
             <option value="">@T["None"]</option>
         </select>
         <span class="hint">@T["The default deployment used for text-to-speech synthesis."]</span>
@@ -78,7 +78,7 @@
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
 
-        const ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechDeploymentId)');
+        const ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechDeploymentName)');
         const voiceSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechVoiceId)');
         let currentVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? "")';
 
@@ -91,14 +91,14 @@
 
         function loadVoices() {
 
-            const deploymentId = ttsDeploymentSelect.value;
+            const deploymentName = ttsDeploymentSelect.value;
 
-            if (!deploymentId) {
+            if (!deploymentName) {
                 resetVoices();
                 return;
             }
 
-            fetch('@Url.RouteUrl(AIConstants.RouteNames.GetVoices)' + '?deploymentId=' + encodeURIComponent(deploymentId))
+            fetch('@Url.RouteUrl(AIConstants.RouteNames.GetVoices)' + '?deploymentName=' + encodeURIComponent(deploymentName))
                 .then(response => response.json())
                 .then(data => {
 

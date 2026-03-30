@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.AI.Models;
 
 /// <summary>
@@ -16,18 +18,48 @@ public sealed class ProfileTemplateMetadata
     /// Gets or sets the legacy connection name used by older templates.
     /// Retained for backward compatibility with existing template metadata.
     /// </summary>
-    [Obsolete("Use ChatDeploymentId and UtilityDeploymentId. The selected deployment determines the connection.")]
+    [Obsolete("Use ChatDeploymentName and UtilityDeploymentName. The selected deployment determines the connection.")]
     public string ConnectionName { get; set; }
 
     /// <summary>
     /// Gets or sets the chat deployment identifier to pre-fill.
     /// </summary>
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
     /// <summary>
     /// Gets or sets the utility deployment identifier to pre-fill.
     /// </summary>
-    public string UtilityDeploymentId { get; set; }
+    public string UtilityDeploymentName { get; set; }
+
+    [JsonIgnore]
+    [Obsolete("Use ChatDeploymentName instead. Retained for backward compatibility.")]
+    public string ChatDeploymentId
+    {
+        get => ChatDeploymentName;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonIgnore]
+    [Obsolete("Use UtilityDeploymentName instead. Retained for backward compatibility.")]
+    public string UtilityDeploymentId
+    {
+        get => UtilityDeploymentName;
+        set => UtilityDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("ChatDeploymentId")]
+    private string _chatDeploymentId
+    {
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("UtilityDeploymentId")]
+    private string _utilityDeploymentId
+    {
+        set => UtilityDeploymentName = value;
+    }
 
     /// <summary>
     /// Gets or sets the name of the orchestrator to use.

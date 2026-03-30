@@ -131,14 +131,14 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
             profileMetadata.ProfileType = profileType;
         }
 
-        if (props.TryGetValue(nameof(ProfileTemplateMetadata.ChatDeploymentId), out var chatDeploymentId))
+        if (props.TryGetValue(nameof(ProfileTemplateMetadata.ChatDeploymentName), out var chatDeploymentName))
         {
-            profileMetadata.ChatDeploymentId = chatDeploymentId;
+            profileMetadata.ChatDeploymentName = chatDeploymentName;
         }
 
-        if (props.TryGetValue(nameof(ProfileTemplateMetadata.UtilityDeploymentId), out var utilityDeploymentId))
+        if (props.TryGetValue(nameof(ProfileTemplateMetadata.UtilityDeploymentName), out var utilityDeploymentName))
         {
-            profileMetadata.UtilityDeploymentId = utilityDeploymentId;
+            profileMetadata.UtilityDeploymentName = utilityDeploymentName;
         }
 
         if (props.TryGetValue(nameof(ProfileTemplateMetadata.OrchestratorName), out var orchestratorName))

@@ -33,33 +33,63 @@ public sealed class AIProfile : CatalogItem, INameAwareModel, IDisplayTextAwareM
     /// Gets or sets the legacy connection name for the profile.
     /// Retained for backward compatibility with older stored profiles.
     /// </summary>
-    [Obsolete("Use ChatDeploymentId and UtilityDeploymentId. The selected deployment determines the connection.")]
+    [Obsolete("Use ChatDeploymentName and UtilityDeploymentName. The selected deployment determines the connection.")]
     public string ConnectionName { get; set; }
 
     /// <summary>
-    /// Gets or sets the chat deployment identifier for this profile.
+    /// Gets or sets the chat deployment technical name for this profile.
     /// </summary>
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
     /// <summary>
-    /// Gets or sets the utility deployment identifier for this profile.
+    /// Gets or sets the utility deployment technical name for this profile.
     /// When not set, falls back to the global default utility deployment.
     /// </summary>
-    public string UtilityDeploymentId { get; set; }
+    public string UtilityDeploymentName { get; set; }
 
-    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    [Obsolete("Use ChatDeploymentName instead. Retained for backward compatibility.")]
+    public string ChatDeploymentId
+    {
+        get => ChatDeploymentName;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonIgnore]
+    [Obsolete("Use UtilityDeploymentName instead. Retained for backward compatibility.")]
+    public string UtilityDeploymentId
+    {
+        get => UtilityDeploymentName;
+        set => UtilityDeploymentName = value;
+    }
+
+    [Obsolete("Use ChatDeploymentName instead. Retained for backward compatibility.")]
     [JsonIgnore]
     public string DeploymentId
     {
-        get => ChatDeploymentId;
-        set => ChatDeploymentId = value;
+        get => ChatDeploymentName;
+        set => ChatDeploymentName = value;
     }
 
     [JsonInclude]
     [JsonPropertyName("DeploymentId")]
     private string _deploymentIdBackingField
     {
-        set => ChatDeploymentId = value;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("ChatDeploymentId")]
+    private string _chatDeploymentIdBackingField
+    {
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("UtilityDeploymentId")]
+    private string _utilityDeploymentIdBackingField
+    {
+        set => UtilityDeploymentName = value;
     }
 
     /// <summary>
@@ -132,8 +162,8 @@ public sealed class AIProfile : CatalogItem, INameAwareModel, IDisplayTextAwareM
 #pragma warning disable CS0618 // Type or member is obsolete
             ConnectionName = ConnectionName,
 #pragma warning restore CS0618 // Type or member is obsolete
-            ChatDeploymentId = ChatDeploymentId,
-            UtilityDeploymentId = UtilityDeploymentId,
+            ChatDeploymentName = ChatDeploymentName,
+            UtilityDeploymentName = UtilityDeploymentName,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,
             PromptSubject = PromptSubject,

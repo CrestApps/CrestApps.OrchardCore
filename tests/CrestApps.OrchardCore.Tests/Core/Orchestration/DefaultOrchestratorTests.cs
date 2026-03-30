@@ -366,7 +366,7 @@ public sealed class DefaultOrchestratorTests
             CompletionContext = new AICompletionContext
             {
                 ConnectionName = "test",
-                ChatDeploymentId = "test-deployment",
+                ChatDeploymentName = "test-deployment",
                 ToolNames = ["tool0", "tool1", "tool2"],
             },
             SourceName = "TestClient",

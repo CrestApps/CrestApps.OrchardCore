@@ -13,20 +13,37 @@
 }
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Name"]</label>
+    <label asp-for="ModelName" class="@Orchard.GetLabelClasses()">@T["Model name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <input asp-for="ModelName" class="form-control" />
+        <span asp-validation-for="ModelName" class="text-danger"></span>
+        <span class="hint">@T["The provider-facing model or deployment name to send when this deployment is used. This value does not need to be unique."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="Name" class="@Orchard.GetLabelClasses()">@T["Technical name"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
         <span asp-validation-for="Name" class="text-danger"></span>
         @if (Model.IsNew)
         {
-            <span class="hint">@T["Deployment name. This name cannot be changed later."]</span>
+            <span class="hint">@T["The unique technical name used in settings, profiles, and recipes. This name cannot be changed later."]</span>
         }
         else
         {
-            <span class="hint">@T["Deployment name."]</span>
+            <span class="hint">@T["The unique technical name used in settings, profiles, and recipes."]</span>
         }
     </div>
 </div>
+
+@if (Model.IsNew)
+{
+    <script asp-name="technical-name-generator"></script>
+    <script at="Foot" depends-on="technical-name-generator">
+        window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.ModelName)', '@Html.IdFor(x => x.Name)');
+    </script>
+}
 
 <div class="@Orchard.GetWrapperClasses()">
     <fieldset class="mb-0">

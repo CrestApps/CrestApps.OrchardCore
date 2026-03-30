@@ -15,9 +15,15 @@ public sealed class AIDeploymentConfigurationEntry
     public string ProviderName { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployment model name (e.g., "gpt-4o", "my-speech-to-text").
+    /// Gets or sets the unique technical deployment name used for lookups.
     /// </summary>
     public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-facing model or deployment name.
+    /// Falls back to <see cref="Name"/> when not provided.
+    /// </summary>
+    public string ModelName { get; set; }
 
     /// <summary>
     /// Gets or sets the deployment capability types (Chat, Utility, Embedding, Image, SpeechToText, TextToSpeech).

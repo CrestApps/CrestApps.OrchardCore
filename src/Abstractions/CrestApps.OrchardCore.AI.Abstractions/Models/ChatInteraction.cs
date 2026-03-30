@@ -27,27 +27,57 @@ public sealed class ChatInteraction : CatalogItem
     /// <summary>
     /// Gets or sets the chat deployment identifier (AI model) to use.
     /// </summary>
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
     /// <summary>
     /// Gets or sets the utility deployment identifier for this interaction.
     /// When not set, falls back to the global default utility deployment.
     /// </summary>
-    public string UtilityDeploymentId { get; set; }
+    public string UtilityDeploymentName { get; set; }
 
-    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
+    [JsonIgnore]
+    [Obsolete("Use ChatDeploymentName instead. Retained for backward compatibility.")]
+    public string ChatDeploymentId
+    {
+        get => ChatDeploymentName;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonIgnore]
+    [Obsolete("Use UtilityDeploymentName instead. Retained for backward compatibility.")]
+    public string UtilityDeploymentId
+    {
+        get => UtilityDeploymentName;
+        set => UtilityDeploymentName = value;
+    }
+
+    [Obsolete("Use ChatDeploymentName instead. Retained for backward compatibility.")]
     [JsonIgnore]
     public string DeploymentId
     {
-        get => ChatDeploymentId;
-        set => ChatDeploymentId = value;
+        get => ChatDeploymentName;
+        set => ChatDeploymentName = value;
     }
 
     [JsonInclude]
     [JsonPropertyName("DeploymentId")]
     private string _deploymentIdBackingField
     {
-        set => ChatDeploymentId = value;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("ChatDeploymentId")]
+    private string _chatDeploymentIdBackingField
+    {
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("UtilityDeploymentId")]
+    private string _utilityDeploymentIdBackingField
+    {
+        set => UtilityDeploymentName = value;
     }
 
     /// <summary>

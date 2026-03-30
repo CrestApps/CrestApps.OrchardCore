@@ -36,10 +36,10 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
-            model.ChatDeploymentId = profile.ChatDeploymentId;
-            model.UtilityDeploymentId = profile.UtilityDeploymentId;
-            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentId);
-            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentId);
+            model.ChatDeploymentName = profile.ChatDeploymentName;
+            model.UtilityDeploymentName = profile.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
@@ -56,8 +56,8 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.ChatDeploymentId = model.ChatDeploymentId;
-        profile.UtilityDeploymentId = model.UtilityDeploymentId;
+        profile.ChatDeploymentName = model.ChatDeploymentName;
+        profile.UtilityDeploymentName = model.UtilityDeploymentName;
 
         return Edit(profile, context);
     }
@@ -72,14 +72,19 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
             .Select(d =>
             {
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                SelectListGroup group = null;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
     }
 }
