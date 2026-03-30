@@ -9,6 +9,8 @@ public sealed class AIChatSessionIndex : CatalogItemIndex
     public string SessionId { get; set; }
     public string ProfileId { get; set; }
     public string UserId { get; set; }
+    public int Status { get; set; }
+    public DateTime LastActivityUtc { get; set; }
 }
 
 public sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
@@ -22,6 +24,8 @@ public sealed class AIChatSessionIndexProvider : IndexProvider<AIChatSession>
                 SessionId = session.SessionId,
                 ProfileId = session.ProfileId,
                 UserId = session.UserId,
+                Status = (int)session.Status,
+                LastActivityUtc = session.LastActivityUtc,
             });
     }
 }

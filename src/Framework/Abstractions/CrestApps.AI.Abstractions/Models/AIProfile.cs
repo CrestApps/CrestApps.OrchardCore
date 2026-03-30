@@ -42,6 +42,12 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
     public string ChatDeploymentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the denormalized chat deployment name for this profile.
+    /// Populated automatically from the deployment when the profile is saved.
+    /// </summary>
+    public string ChatDeploymentName { get; set; }
+
+    /// <summary>
     /// Gets or sets the utility deployment identifier for this profile.
     /// When not set, falls back to the global default utility deployment.
     /// </summary>
@@ -134,6 +140,7 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             ConnectionName = ConnectionName,
 #pragma warning restore CS0618 // Type or member is obsolete
             ChatDeploymentId = ChatDeploymentId,
+            ChatDeploymentName = ChatDeploymentName,
             UtilityDeploymentId = UtilityDeploymentId,
             TitleType = TitleType,
             WelcomeMessage = WelcomeMessage,

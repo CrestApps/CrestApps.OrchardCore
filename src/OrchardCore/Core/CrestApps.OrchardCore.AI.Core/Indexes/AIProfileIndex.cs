@@ -29,6 +29,12 @@ public sealed class AIProfileIndex : CatalogItemIndex, INameAwareIndex
     public string DeploymentId { get; set; }
 
     /// <summary>
+    /// Gets or sets the deployment name associated with the profile.
+    /// Denormalized from the <see cref="CrestApps.AI.Models.AIDeployment.Name"/> for efficient querying.
+    /// </summary>
+    public string DeploymentName { get; set; }
+
+    /// <summary>
     /// Gets or sets the orchestrator name used by the profile.
     /// </summary>
     public string OrchestratorName { get; set; }

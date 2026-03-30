@@ -50,7 +50,19 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="Type" class="form-label">Profile type</label>
-                                <select asp-for="Type" class="form-select" id="profileTypeSelect" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIProfileType>()"></select>
+                                <select asp-for="Type" class="form-select" id="profileTypeSelect">
+                                    @foreach (var profileType in Enum.GetValues<CrestApps.AI.Models.AIProfileType>())
+                                    {
+                                        if (Model.Type == profileType)
+                                        {
+                                            @:<option value="@profileType" selected>@profileType</option>
+                                        }
+                                        else
+                                        {
+                                            @:<option value="@profileType">@profileType</option>
+                                        }
+                                    }
+                                </select>
                                 <div class="form-text">Choose the type of the profile.</div>
                             </div>
                         </div>
@@ -95,23 +107,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="SelectedTemplateId" class="form-label">AI template</label>
-                                <select asp-for="SelectedTemplateId" class="form-select" asp-items="Model.Templates"></select>
-                                <div class="form-text">Optionally apply a template to pre-fill the system message and parameters.</div>
-                            </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableUserMemory" class="form-check-label">Enable user memory</label>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3 pt-4">
-                                <div class="form-check form-switch">
-                                    <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
-                                    <label asp-for="EnableUserMemory" class="form-check-label">Enable user memory</label>
-                                </div>
-                                <div class="form-text">Store and recall user conversation history for personalized responses.</div>
-                            </div>
-                        </div>
+                        <div class="form-text">Store and recall user conversation history for personalized responses.</div>
                     </div>
 
                     <!-- Chat-only: Prompt Subject -->
@@ -157,6 +158,113 @@
 
                 <!-- AI Parameters Tab -->
                 <div class="tab-pane fade" id="params" role="tabpanel">
+                    @if (Model.AvailablePromptTemplates.Count > 0)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Prompt templates
+                                <span class="text-muted" data-bs-toggle="tooltip" title="Add one or more reusable prompt templates that will be rendered in order before the custom system instructions.">
+                                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <div class="dropdown mb-3">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="addPromptTemplateBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-plus"></i> Add prompt template
+                                </button>
+                                <div class="dropdown-menu p-2" id="promptTemplateDropdown" style="max-height:24rem;min-width:22rem;overflow-y:auto;">
+                                    <div class="mb-2">
+                                        <input type="search" class="form-control form-control-sm" id="promptTemplateSearch" placeholder="Search prompt templates..." />
+                                    </div>
+                                    <div class="prompt-template-menu-items">
+                                        @foreach (var group in Model.AvailablePromptTemplates.GroupBy(t => t.Category).OrderBy(g => g.Key))
+                                        {
+                                            <div class="dropdown-header px-2">@group.Key</div>
+                                            @foreach (var option in group)
+                                            {
+                                                <button type="button"
+                                                        class="dropdown-item prompt-template-add-btn text-wrap"
+                                                        data-template-id="@option.TemplateId"
+                                                        data-template-title="@option.Title"
+                                                        data-template-description="@option.Description">
+                                                    <span class="d-block fw-semibold">@option.Title</span>
+                                                    @if (!string.IsNullOrWhiteSpace(option.Description))
+                                                    {
+                                                        <small class="text-muted">@option.Description</small>
+                                                    }
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                    <div class="text-muted small d-none px-2 py-1" id="promptTemplateNoResults">No prompt templates match your search.</div>
+                                </div>
+                            </div>
+
+                            <div id="promptTemplatesContainer">
+                                @for (var i = 0; i < Model.PromptTemplates.Count; i++)
+                                {
+                                    var selection = Model.PromptTemplates[i];
+                                    var option = Model.AvailablePromptTemplates.FirstOrDefault(t => string.Equals(t.TemplateId, selection.TemplateId, StringComparison.OrdinalIgnoreCase));
+                                    var title = option?.Title ?? selection.TemplateId ?? "Prompt template";
+                                    var category = option?.Category ?? "Unavailable";
+                                    var description = option?.Description;
+                                    var parameters = option?.Parameters ?? [];
+
+                                    <div class="card mb-1 prompt-template-card" data-template-id="@selection.TemplateId">
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                            <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
+                                               data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
+                                                <i class="fa-solid fa-chevron-right me-1"></i>
+                                                <span class="prompt-template-title fw-semibold">@title</span>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="Remove">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div id="promptCollapse_@i" class="collapse">
+                                            <div class="card-body">
+                                                <input type="hidden" name="PromptTemplates[@i].TemplateId" value="@selection.TemplateId" class="prompt-template-id-input" />
+                                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                                    <span class="badge text-bg-secondary">@category</span>
+                                                    @if (option == null)
+                                                    {
+                                                        <span class="badge text-bg-warning">Unavailable</span>
+                                                    }
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(description))
+                                                {
+                                                    <div class="text-muted small mb-3">@description</div>
+                                                }
+                                                @if (parameters.Count > 0)
+                                                {
+                                                    <div class="mb-3">
+                                                        <small class="text-muted d-block mb-1">Expected parameters:</small>
+                                                        <ul class="mb-0 small text-muted">
+                                                            @foreach (var p in parameters)
+                                                            {
+                                                                <li><strong>@p.Name</strong>@(string.IsNullOrWhiteSpace(p.Description) ? "" : $": {p.Description}")</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+                                                <div class="mb-1">
+                                                    <label class="form-label">Template parameters</label>
+                                                    <textarea name="PromptTemplates[@i].PromptParameters"
+                                                              class="form-control prompt-template-parameters-input" rows="3"
+                                                              placeholder='e.g., {"key1": "value1", "key2": "value2"}'>@selection.PromptParameters</textarea>
+                                                    <span class="form-text">Optional JSON key-value pairs to pass as template arguments.</span>
+                                                    <div class="text-danger small d-none prompt-template-parameters-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="text-muted small @(Model.PromptTemplates.Count == 0 ? "" : "d-none")" id="promptTemplateEmptyState">
+                                No prompt templates selected.
+                            </div>
+                        </div>
+                    }
+
                     <div class="mb-3">
                         <label asp-for="SystemMessage" class="form-label">System message</label>
                         <textarea asp-for="SystemMessage" class="form-control" rows="5" placeholder="You are a helpful AI assistant..."></textarea>
@@ -221,11 +329,62 @@
 
                 <!-- Capabilities Tab -->
                 <div class="tab-pane fade" id="capabilities" role="tabpanel">
-                    <!-- AI Tools -->
-                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-tools"></i> AI Tools</h6>
-                    @if (Model.AvailableTools.Count == 0)
+                    <!-- A2A Connections Section -->
+                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-diagram-3"></i> Agent to Agent Hosts</h6>
+                    @if (Model.AvailableA2AConnections.Count == 0)
                     {
                         <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> No A2A host connections are configured. Add them under <strong>Agent to Agent Hosts</strong> first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3 small">Select the remote A2A hosts this profile can use for agent orchestration.</p>
+                        @foreach (var connection in Model.AvailableA2AConnections)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="a2a_@connection.ItemId"
+                                       @(connection.IsSelected ? "checked" : "") />
+                                <label class="form-check-label" for="a2a_@connection.ItemId">
+                                    <strong>@connection.DisplayText</strong><br />
+                                    <small class="text-muted">@connection.Endpoint</small>
+                                </label>
+                            </div>
+                        }
+                    }
+
+                    <!-- MCP Connections Section -->
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Connections</h6>
+                    @if (Model.AvailableMcpConnections.Count == 0)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> No MCP connections are configured. Add them under <strong>MCP Connections</strong> first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3 small">Select the MCP server connections this profile can use for external tools and resources.</p>
+                        @foreach (var connection in Model.AvailableMcpConnections)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="mcp_@connection.ItemId"
+                                       @(connection.IsSelected ? "checked" : "") />
+                                <label class="form-check-label" for="mcp_@connection.ItemId">
+                                    <strong>@connection.DisplayText</strong>
+                                    @if (!string.IsNullOrEmpty(connection.Source))
+                                    {
+                                        <br /><small class="text-muted">@connection.Source</small>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    }
+
+                    <!-- AI Tools Section -->
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-tools"></i> AI Tools</h6>
+                    @if (Model.AvailableTools.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
                             <i class="bi bi-info-circle"></i> No selectable AI tools are registered.
                         </div>
                     }
@@ -255,57 +414,6 @@
                                     </label>
                                 </div>
                             }
-                        }
-                    }
-
-                    <!-- A2A -->
-                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-diagram-3"></i> Agent to Agent Hosts</h6>
-                    @if (Model.AvailableA2AConnections.Count == 0)
-                    {
-                        <div class="alert alert-info mb-3">
-                            <i class="bi bi-info-circle"></i> No A2A host connections are configured.
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-3 small">Select the remote A2A hosts this profile can use.</p>
-                        @foreach (var connection in Model.AvailableA2AConnections)
-                        {
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="a2a_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
-                                <label class="form-check-label" for="a2a_@connection.ItemId">
-                                    <strong>@connection.DisplayText</strong><br />
-                                    <small class="text-muted">@connection.Endpoint</small>
-                                </label>
-                            </div>
-                        }
-                    }
-
-                    <!-- MCP -->
-                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Connections</h6>
-                    @if (Model.AvailableMcpConnections.Count == 0)
-                    {
-                        <div class="alert alert-info mb-0">
-                            <i class="bi bi-info-circle"></i> No MCP connections are configured.
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-3 small">Select the MCP server connections this profile can use.</p>
-                        @foreach (var connection in Model.AvailableMcpConnections)
-                        {
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="mcp_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
-                                <label class="form-check-label" for="mcp_@connection.ItemId">
-                                    <strong>@connection.DisplayText</strong>
-                                    @if (!string.IsNullOrEmpty(connection.Source))
-                                    {
-                                        <br /><small class="text-muted">@connection.Source</small>
-                                    }
-                                </label>
-                            </div>
                         }
                     }
                 </div>
@@ -359,6 +467,7 @@
                             <input asp-for="EnableDataExtraction" class="form-check-input" type="checkbox" id="enableDataExtractionCheck" />
                             <label asp-for="EnableDataExtraction" class="form-check-label">Enable data extraction</label>
                         </div>
+                        <div class="form-text">Run AI-powered extraction on conversation messages to populate structured fields.</div>
                     </div>
                     <div id="dataExtractionSettings" class="@(Model.EnableDataExtraction ? "" : "d-none")">
                         <div class="row">
@@ -366,28 +475,160 @@
                                 <div class="mb-3">
                                     <label asp-for="ExtractionCheckInterval" class="form-label">Extraction check interval</label>
                                     <input asp-for="ExtractionCheckInterval" type="number" class="form-control" min="1" max="20" />
+                                    <div class="form-text">How often extraction runs (1 = every message, 2 = every other message, etc.).</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="SessionInactivityTimeoutInMinutes" class="form-label">Session inactivity timeout (minutes)</label>
                                     <input asp-for="SessionInactivityTimeoutInMinutes" type="number" class="form-control" min="1" />
+                                    <div class="form-text">Sessions inactive longer than this will be automatically closed.</div>
                                 </div>
                             </div>
                         </div>
+
+                        <h6 class="mb-2 mt-2 border-bottom pb-2"><i class="bi bi-list-check"></i> Extraction Entries</h6>
+                        <div id="extractionEntriesContainer">
+                            @for (var i = 0; i < Model.DataExtractionEntries.Count; i++)
+                            {
+                                var entry = Model.DataExtractionEntries[i];
+                                <div class="card mb-2 extraction-entry-card">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
+                                           data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                                            <i class="fa-solid fa-chevron-down me-1"></i>
+                                            <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div id="entryCollapse_@i" class="collapse show">
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Name</label>
+                                                <input type="text" class="form-control entry-name-input"
+                                                       name="DataExtractionEntries[@i].Name" value="@entry.Name"
+                                                       pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" />
+                                                <span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Description</label>
+                                                <textarea class="form-control" name="DataExtractionEntries[@i].Description"
+                                                          rows="3" placeholder="What to extract">@entry.Description</textarea>
+                                                <span class="form-text">Describes what data to extract. The AI uses this to understand what to look for.</span>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input type="checkbox" class="form-check-input"
+                                                       name="DataExtractionEntries[@i].AllowMultipleValues" value="true"
+                                                       @(entry.AllowMultipleValues ? "checked" : "") />
+                                                <label class="form-check-label">Allow multiple values</label>
+                                                <span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input type="checkbox" class="form-check-input"
+                                                       name="DataExtractionEntries[@i].IsUpdatable" value="true"
+                                                       @(entry.IsUpdatable ? "checked" : "") />
+                                                <label class="form-check-label">Updatable</label>
+                                                <span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry">
+                            <i class="fa-solid fa-plus"></i> Add Entry
+                        </button>
                     </div>
                 </div>
 
                 <!-- Analytics Tab -->
                 <div class="tab-pane fade" id="analytics" role="tabpanel">
+                    <p class="text-muted mb-3">Configure session metrics and post-session processing for conversations using this profile.</p>
+
                     <h6 class="mb-2"><i class="bi bi-graph-up"></i> Session Metrics</h6>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="EnableSessionMetrics" class="form-check-input" type="checkbox" />
                             <label asp-for="EnableSessionMetrics" class="form-check-label">Enable session metrics</label>
                         </div>
+                        <div class="form-text">Capture usage, latency, and feedback metrics for analytics.</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableAIResolutionDetection" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableAIResolutionDetection" class="form-check-label">Enable AI resolution detection</label>
+                        </div>
+                        <div class="form-text">When enabled, the AI will determine whether the user's issue was resolved during the session.</div>
                     </div>
 
+                    <h6 class="mb-2"><i class="bi bi-bullseye"></i> Conversion Goals</h6>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableConversionMetrics" class="form-check-input" type="checkbox" id="enableConversionMetricsCheck" />
+                            <label asp-for="EnableConversionMetrics" class="form-check-label">Enable conversion metrics</label>
+                        </div>
+                        <div class="form-text">Evaluate each session against defined goals and assign scores to measure session success.</div>
+                    </div>
+                    <div id="conversionGoalsSection" class="@(Model.EnableConversionMetrics ? "" : "d-none")">
+                        <div id="conversionGoalsContainer">
+                            @for (var i = 0; i < Model.ConversionGoals.Count; i++)
+                            {
+                                var goal = Model.ConversionGoals[i];
+                                <div class="card mb-2 conversion-goal-card">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
+                                           data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
+                                            <i class="fa-solid fa-chevron-down me-1"></i>
+                                            <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New Goal" : goal.Name)</span>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div id="goalCollapse_@i" class="collapse show">
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Name</label>
+                                                <input type="text" class="form-control goal-name-input"
+                                                       name="ConversionGoals[@i].Name" value="@goal.Name"
+                                                       pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />
+                                                <span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Description</label>
+                                                <textarea class="form-control" name="ConversionGoals[@i].Description"
+                                                          rows="3" placeholder="Describe what constitutes success for this goal">@goal.Description</textarea>
+                                                <span class="form-text">Provided to the AI model as evaluation criteria.</span>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Min score</label>
+                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MinScore"
+                                                               value="@goal.MinScore" min="0" />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Max score</label>
+                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MaxScore"
+                                                               value="@goal.MaxScore" min="1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success" id="addConversionGoal">
+                            <i class="fa-solid fa-plus"></i> Add Goal
+                        </button>
+                    </div>
+
+                    <hr class="my-4" />
                     <h6 class="mb-2"><i class="bi bi-clipboard-check"></i> Post-session Processing</h6>
                     <div class="mb-3">
                         <div class="form-check form-switch">
@@ -535,6 +776,213 @@
                 });
             }
 
+            // --- Data Extraction Entries ---
+            (function () {
+                var entriesContainer = document.getElementById('extractionEntriesContainer');
+                var addEntryBtn = document.getElementById('addExtractionEntry');
+                if (!entriesContainer || !addEntryBtn) return;
+
+                addEntryBtn.addEventListener('click', function () {
+                    var index = entriesContainer.querySelectorAll('.extraction-entry-card').length;
+                    var card = document.createElement('div');
+                    card.className = 'card mb-2 extraction-entry-card';
+                    card.innerHTML =
+                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#entryCollapse_' + index + '" role="button" aria-expanded="true">' +
+                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<span class="entry-name-display fw-semibold">New Entry</span>' +
+                            '</a>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                        '</div>' +
+                        '<div id="entryCollapse_' + index + '" class="collapse show">' +
+                            '<div class="card-body">' +
+                                '<div class="mb-3"><label class="form-label">Name</label>' +
+                                    '<input type="text" class="form-control entry-name-input" name="DataExtractionEntries[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" />' +
+                                    '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
+                                '<div class="mb-3"><label class="form-label">Description</label>' +
+                                    '<textarea class="form-control" name="DataExtractionEntries[' + index + '].Description" rows="3" placeholder="What to extract"></textarea>' +
+                                    '<span class="form-text">Describes what data to extract. The AI uses this to understand what to look for.</span></div>' +
+                                '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].AllowMultipleValues" value="true" />' +
+                                    '<label class="form-check-label">Allow multiple values</label>' +
+                                    '<span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span></div>' +
+                                '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].IsUpdatable" value="true" />' +
+                                    '<label class="form-check-label">Updatable</label>' +
+                                    '<span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span></div>' +
+                            '</div>' +
+                        '</div>';
+                    entriesContainer.appendChild(card);
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (e.target.closest('.remove-entry-btn')) {
+                        var card = e.target.closest('.extraction-entry-card');
+                        if (card) card.remove();
+                    }
+                });
+
+                document.addEventListener('input', function (e) {
+                    if (e.target.classList.contains('entry-name-input')) {
+                        var card = e.target.closest('.extraction-entry-card');
+                        if (card) {
+                            var display = card.querySelector('.entry-name-display');
+                            if (display) display.textContent = e.target.value || 'New Entry';
+                        }
+                    }
+                });
+            })();
+
+            // --- Prompt Template Management ---
+            (function () {
+                var container = document.getElementById('promptTemplatesContainer');
+                var dropdown = document.getElementById('promptTemplateDropdown');
+                var searchInput = document.getElementById('promptTemplateSearch');
+                var noResults = document.getElementById('promptTemplateNoResults');
+                var emptyState = document.getElementById('promptTemplateEmptyState');
+                var addButton = document.getElementById('addPromptTemplateBtn');
+                if (!container) return;
+
+                var promptOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.AvailablePromptTemplates.Select(t => new {
+                        t.TemplateId, t.Title, t.Description, t.Category,
+                        Parameters = t.Parameters.Select(p => new { p.Name, p.Description })
+                    })));
+
+                function escapeH(v) {
+                    return (v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                }
+
+                function getOption(id) {
+                    return promptOptions.find(function (o) { return o.TemplateId === id; }) || null;
+                }
+
+                function buildParamsMarkup(option) {
+                    if (!option || !option.Parameters || option.Parameters.length === 0) return '';
+                    return option.Parameters.map(function (p) {
+                        var desc = p.Description ? ': ' + escapeH(p.Description) : '';
+                        return '<li><strong>' + escapeH(p.Name) + '</strong>' + desc + '</li>';
+                    }).join('');
+                }
+
+                function createCard(templateId, promptParameters) {
+                    var option = getOption(templateId);
+                    var card = document.createElement('div');
+                    var title = option && option.Title ? option.Title : templateId;
+                    var description = option && option.Description ? option.Description : '';
+                    var category = option ? option.Category : 'Unavailable';
+                    var paramsMarkup = buildParamsMarkup(option);
+                    var unavailableBadge = option ? '' : '<span class="badge text-bg-warning">Unavailable</span>';
+
+                    card.className = 'card mb-1 prompt-template-card';
+                    card.dataset.templateId = templateId;
+                    card.innerHTML =
+                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#" role="button" aria-expanded="true">' +
+                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<span class="prompt-template-title fw-semibold">' + escapeH(title) + '</span>' +
+                            '</a>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                        '</div>' +
+                        '<div class="collapse show">' +
+                            '<div class="card-body">' +
+                                '<input type="hidden" class="prompt-template-id-input" value="' + escapeH(templateId) + '" />' +
+                                '<div class="d-flex flex-wrap gap-2 mb-2">' +
+                                    '<span class="badge text-bg-secondary">' + escapeH(category) + '</span>' +
+                                    unavailableBadge +
+                                '</div>' +
+                                (description ? '<div class="text-muted small mb-3">' + escapeH(description) + '</div>' : '') +
+                                '<div class="mb-3' + (paramsMarkup ? '' : ' d-none') + '">' +
+                                    '<small class="text-muted d-block mb-1">Expected parameters:</small>' +
+                                    '<ul class="mb-0 small text-muted">' + paramsMarkup + '</ul>' +
+                                '</div>' +
+                                '<div class="mb-1">' +
+                                    '<label class="form-label">Template parameters</label>' +
+                                    '<textarea class="form-control prompt-template-parameters-input" rows="3" placeholder=\'e.g., {"key1": "value1", "key2": "value2"}\'></textarea>' +
+                                    '<span class="form-text">Optional JSON key-value pairs to pass as template arguments.</span>' +
+                                    '<div class="text-danger small d-none prompt-template-parameters-error"></div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                    card.querySelector('.prompt-template-parameters-input').value = promptParameters || '';
+                    return card;
+                }
+
+                function updateEmptyState() {
+                    if (emptyState) emptyState.classList.toggle('d-none', container.querySelectorAll('.prompt-template-card').length > 0);
+                }
+
+                function reindexCards() {
+                    container.querySelectorAll('.prompt-template-card').forEach(function (card, index) {
+                        var idInput = card.querySelector('.prompt-template-id-input');
+                        var paramsInput = card.querySelector('.prompt-template-parameters-input');
+                        if (idInput) idInput.name = 'PromptTemplates[' + index + '].TemplateId';
+                        if (paramsInput) paramsInput.name = 'PromptTemplates[' + index + '].PromptParameters';
+                    });
+                }
+
+                function validateParams(textarea) {
+                    if (!textarea) return;
+                    var errorEl = textarea.closest('.mb-1')?.querySelector('.prompt-template-parameters-error');
+                    if (!errorEl) return;
+                    var val = textarea.value.trim();
+                    if (!val) { errorEl.classList.add('d-none'); return; }
+                    try {
+                        var parsed = JSON.parse(val);
+                        if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) throw new Error();
+                        for (var k in parsed) { if (typeof parsed[k] !== 'string') throw new Error(); }
+                        errorEl.classList.add('d-none');
+                    } catch { errorEl.textContent = 'Must be valid JSON with string key-value pairs.'; errorEl.classList.remove('d-none'); }
+                }
+
+                if (dropdown) {
+                    dropdown.addEventListener('click', function (e) {
+                        var btn = e.target.closest('.prompt-template-add-btn');
+                        if (!btn) return;
+                        container.appendChild(createCard(btn.dataset.templateId, ''));
+                        reindexCards();
+                        updateEmptyState();
+                        var dd = bootstrap.Dropdown.getOrCreateInstance(addButton);
+                        dd.hide();
+                        container.querySelector('.prompt-template-card:last-child .prompt-template-parameters-input')?.focus();
+                    });
+                }
+
+                document.addEventListener('click', function (e) {
+                    var removeBtn = e.target.closest('.remove-prompt-template-btn');
+                    if (!removeBtn) return;
+                    var card = removeBtn.closest('.prompt-template-card');
+                    if (card) { card.remove(); reindexCards(); updateEmptyState(); }
+                });
+
+                document.addEventListener('input', function (e) {
+                    if (e.target.classList.contains('prompt-template-parameters-input')) validateParams(e.target);
+                });
+
+                if (searchInput && dropdown) {
+                    searchInput.addEventListener('input', function () {
+                        var query = (this.value || '').trim().toLowerCase();
+                        var anyVisible = false;
+                        var currentHeader = null, currentHeaderHasVisible = false;
+                        dropdown.querySelectorAll('.dropdown-header, .prompt-template-add-btn').forEach(function (el) {
+                            if (el.classList.contains('dropdown-header')) {
+                                if (currentHeader && !currentHeaderHasVisible) currentHeader.classList.add('d-none');
+                                currentHeader = el; currentHeaderHasVisible = false; currentHeader.classList.remove('d-none');
+                                return;
+                            }
+                            var text = (el.dataset.templateTitle || '') + ' ' + (el.dataset.templateDescription || '');
+                            var matches = !query || text.toLowerCase().includes(query);
+                            el.classList.toggle('d-none', !matches);
+                            if (matches) { anyVisible = true; currentHeaderHasVisible = true; }
+                        });
+                        if (currentHeader && !currentHeaderHasVisible) currentHeader.classList.add('d-none');
+                        if (noResults) noResults.classList.toggle('d-none', anyVisible);
+                    });
+                }
+
+                container.querySelectorAll('.prompt-template-parameters-input').forEach(validateParams);
+                reindexCards();
+                updateEmptyState();
+            })();
+
             var enablePostSessionCheck = document.getElementById('enablePostSessionCheck');
             var postSessionTasksSection = document.getElementById('postSessionTasksSection');
             if (enablePostSessionCheck && postSessionTasksSection) {
@@ -575,6 +1023,70 @@
                     document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = false; });
                 });
             }
+
+            // --- Conversion Goals conditional visibility ---
+            const enableConversionMetricsCheck = document.getElementById('enableConversionMetricsCheck');
+            const conversionGoalsSection = document.getElementById('conversionGoalsSection');
+            if (enableConversionMetricsCheck && conversionGoalsSection) {
+                enableConversionMetricsCheck.addEventListener('change', function () {
+                    conversionGoalsSection.classList.toggle('d-none', !this.checked);
+                });
+            }
+
+            // --- Conversion Goals Entries ---
+            (function () {
+                var goalsContainer = document.getElementById('conversionGoalsContainer');
+                var addGoalBtn = document.getElementById('addConversionGoal');
+                if (!goalsContainer || !addGoalBtn) return;
+
+                addGoalBtn.addEventListener('click', function () {
+                    var index = goalsContainer.querySelectorAll('.conversion-goal-card').length;
+                    var card = document.createElement('div');
+                    card.className = 'card mb-2 conversion-goal-card';
+                    card.innerHTML =
+                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#goalCollapse_' + index + '" role="button" aria-expanded="true">' +
+                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<span class="goal-name-display fw-semibold">New Goal</span>' +
+                            '</a>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                        '</div>' +
+                        '<div id="goalCollapse_' + index + '" class="collapse show">' +
+                            '<div class="card-body">' +
+                                '<div class="mb-3"><label class="form-label">Name</label>' +
+                                    '<input type="text" class="form-control goal-name-input" name="ConversionGoals[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />' +
+                                    '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
+                                '<div class="mb-3"><label class="form-label">Description</label>' +
+                                    '<textarea class="form-control" name="ConversionGoals[' + index + '].Description" rows="3" placeholder="Describe what constitutes success for this goal"></textarea>' +
+                                    '<span class="form-text">Provided to the AI model as evaluation criteria.</span></div>' +
+                                '<div class="row">' +
+                                    '<div class="col-md-6"><div class="mb-3"><label class="form-label">Min score</label>' +
+                                        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MinScore" value="0" min="0" /></div></div>' +
+                                    '<div class="col-md-6"><div class="mb-3"><label class="form-label">Max score</label>' +
+                                        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MaxScore" value="10" min="1" /></div></div>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                    goalsContainer.appendChild(card);
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (e.target.closest('.remove-goal-btn')) {
+                        var card = e.target.closest('.conversion-goal-card');
+                        if (card) card.remove();
+                    }
+                });
+
+                document.addEventListener('input', function (e) {
+                    if (e.target.classList.contains('goal-name-input')) {
+                        var card = e.target.closest('.conversion-goal-card');
+                        if (card) {
+                            var display = card.querySelector('.goal-name-display');
+                            if (display) display.textContent = e.target.value || 'New Goal';
+                        }
+                    }
+                });
+            })();
         });
     </script>
 }

@@ -36,6 +36,24 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
         }
     }
 
+    public override async Task ValidatedAsync(ValidatedContext<AIProfile> context)
+    {
+        await ResolveChatDeploymentNameAsync(context.Model);
+    }
+
+    private async Task ResolveChatDeploymentNameAsync(AIProfile profile)
+    {
+        if (!string.IsNullOrEmpty(profile.ChatDeploymentId))
+        {
+            var deployment = await _deploymentsCatalog.FindByIdAsync(profile.ChatDeploymentId);
+            profile.ChatDeploymentName = deployment?.Name;
+        }
+        else
+        {
+            profile.ChatDeploymentName = null;
+        }
+    }
+
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
         var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()

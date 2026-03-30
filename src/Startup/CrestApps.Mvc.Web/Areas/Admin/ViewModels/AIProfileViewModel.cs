@@ -1,7 +1,9 @@
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Prompting.Models;
 using CrestApps.Mvc.Web.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -54,6 +56,10 @@ public sealed class AIProfileViewModel
     public string[] SelectedMcpConnectionIds { get; set; } = [];
     public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
 
+    // Prompt Templates
+    public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
+    public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+
     // Documents
     public List<DocumentItem> AttachedDocuments { get; set; } = [];
     public int? DocumentTopN { get; set; }
@@ -65,9 +71,13 @@ public sealed class AIProfileViewModel
     public bool EnableDataExtraction { get; set; }
     public int ExtractionCheckInterval { get; set; } = 1;
     public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
+    public List<DataExtractionEntryItem> DataExtractionEntries { get; set; } = [];
 
     // Session Metrics
     public bool EnableSessionMetrics { get; set; }
+    public bool EnableAIResolutionDetection { get; set; } = true;
+    public bool EnableConversionMetrics { get; set; }
+    public List<ConversionGoalItem> ConversionGoals { get; set; } = [];
 
     // Post Session Processing
     public bool EnablePostSessionProcessing { get; set; }
@@ -81,6 +91,9 @@ public sealed class AIProfileViewModel
 
     // Template
     public string SelectedTemplateId { get; set; }
+
+    // Apply Template (templates with source "Profile" for pre-filling)
+    public List<SelectListItem> AvailableProfileTemplates { get; set; } = [];
 
     // Memory
     public bool EnableUserMemory { get; set; }
@@ -98,6 +111,7 @@ public sealed class AIProfileViewModel
         var memorySettings = profile.GetSettings<MemorySettings>();
         var a2aMetadata = profile.As<AIProfileA2AMetadata>();
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
+        var promptMetadata = profile.As<PromptTemplateMetadata>();
 
         return new AIProfileViewModel
         {
@@ -135,6 +149,17 @@ public sealed class AIProfileViewModel
             SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
             SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
 
+            PromptTemplates = (promptMetadata.Templates ?? [])
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                .Select(t => new PromptTemplateSelectionItem
+                {
+                    TemplateId = t.TemplateId,
+                    PromptParameters = t.Parameters is { Count: > 0 }
+                        ? System.Text.Json.JsonSerializer.Serialize(t.Parameters)
+                        : null,
+                })
+                .ToList(),
+
             DocumentTopN = docMetadata?.DocumentTopN,
             AllowSessionDocuments = sessionDocMetadata?.AllowSessionDocuments ?? false,
             AttachedDocuments = (docMetadata?.Documents ?? []).Select(d => new DocumentItem
@@ -148,8 +173,28 @@ public sealed class AIProfileViewModel
             EnableDataExtraction = dataExtractionSettings.EnableDataExtraction,
             ExtractionCheckInterval = dataExtractionSettings.ExtractionCheckInterval,
             SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes,
+            DataExtractionEntries = dataExtractionSettings.DataExtractionEntries
+                .Select(e => new DataExtractionEntryItem
+                {
+                    Name = e.Name,
+                    Description = e.Description,
+                    AllowMultipleValues = e.AllowMultipleValues,
+                    IsUpdatable = e.IsUpdatable,
+                })
+                .ToList(),
 
             EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics,
+            EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection,
+            EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics,
+            ConversionGoals = analyticsMetadata.ConversionGoals
+                .Select(g => new ConversionGoalItem
+                {
+                    Name = g.Name,
+                    Description = g.Description,
+                    MinScore = g.MinScore,
+                    MaxScore = g.MaxScore,
+                })
+                .ToList(),
 
             EnablePostSessionProcessing = postSessionSettings.EnablePostSessionProcessing,
             PostSessionTasks = postSessionSettings.PostSessionTasks.Select(t => new PostSessionTaskItem
@@ -225,6 +270,36 @@ public sealed class AIProfileViewModel
                 .ToArray() ?? [],
         });
 
+        var promptTemplateMetadata = new PromptTemplateMetadata();
+        promptTemplateMetadata.SetSelections(
+            (PromptTemplates ?? [])
+            .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+            .Select(t =>
+            {
+                var entry = new PromptTemplateSelectionEntry { TemplateId = t.TemplateId };
+                if (!string.IsNullOrWhiteSpace(t.PromptParameters))
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(t.PromptParameters);
+                        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        {
+                            entry.Parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var prop in doc.RootElement.EnumerateObject())
+                            {
+                                if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                                {
+                                    entry.Parameters[prop.Name] = prop.Value.GetString();
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                return entry;
+            }));
+        profile.Put(promptTemplateMetadata);
+
         profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.DocumentTopN = DocumentTopN;
@@ -240,11 +315,33 @@ public sealed class AIProfileViewModel
             s.EnableDataExtraction = EnableDataExtraction;
             s.ExtractionCheckInterval = ExtractionCheckInterval;
             s.SessionInactivityTimeoutInMinutes = SessionInactivityTimeoutInMinutes;
+            s.DataExtractionEntries = (DataExtractionEntries ?? [])
+                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                .Select(e => new DataExtractionEntry
+                {
+                    Name = e.Name,
+                    Description = e.Description,
+                    AllowMultipleValues = e.AllowMultipleValues,
+                    IsUpdatable = e.IsUpdatable,
+                })
+                .ToList();
         });
 
         profile.Put(new AnalyticsMetadata
         {
             EnableSessionMetrics = EnableSessionMetrics,
+            EnableAIResolutionDetection = EnableAIResolutionDetection,
+            EnableConversionMetrics = EnableConversionMetrics,
+            ConversionGoals = (ConversionGoals ?? [])
+                .Where(g => !string.IsNullOrWhiteSpace(g.Name))
+                .Select(g => new ConversionGoal
+                {
+                    Name = g.Name,
+                    Description = g.Description,
+                    MinScore = g.MinScore,
+                    MaxScore = g.MaxScore > 0 ? g.MaxScore : 10,
+                })
+                .ToList(),
         });
 
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
@@ -296,4 +393,41 @@ public sealed class PostSessionTaskItem
     public string Instructions { get; set; }
     public bool AllowMultipleValues { get; set; }
     public string Options { get; set; }
+}
+
+public sealed class PromptTemplateSelectionItem
+{
+    public string TemplateId { get; set; }
+    public string PromptParameters { get; set; }
+}
+
+public sealed class PromptTemplateOptionItem
+{
+    public string TemplateId { get; set; }
+    public string Title { get; set; }
+    public string Description { get; set; }
+    public string Category { get; set; }
+    public List<PromptTemplateParameterItem> Parameters { get; set; } = [];
+}
+
+public sealed class PromptTemplateParameterItem
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+}
+
+public sealed class DataExtractionEntryItem
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public bool AllowMultipleValues { get; set; }
+    public bool IsUpdatable { get; set; }
+}
+
+public sealed class ConversionGoalItem
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public int MinScore { get; set; }
+    public int MaxScore { get; set; } = 10;
 }

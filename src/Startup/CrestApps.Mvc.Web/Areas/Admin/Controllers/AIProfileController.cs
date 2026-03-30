@@ -4,6 +4,7 @@ using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Services;
@@ -31,6 +32,7 @@ public sealed class AIProfileController : Controller
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
     private readonly IInteractionDocumentSettingsProvider _interactionDocumentSettingsProvider;
     private readonly ISearchIndexProfileStore _indexProfileStore;
+    private readonly IAITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly AIToolDefinitionOptions _toolOptions;
 
@@ -47,6 +49,7 @@ public sealed class AIProfileController : Controller
         MvcAIDocumentIndexingService documentIndexingService,
         IInteractionDocumentSettingsProvider interactionDocumentSettingsProvider,
         ISearchIndexProfileStore indexProfileStore,
+        IAITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
@@ -62,6 +65,7 @@ public sealed class AIProfileController : Controller
         _documentIndexingService = documentIndexingService;
         _interactionDocumentSettingsProvider = interactionDocumentSettingsProvider;
         _indexProfileStore = indexProfileStore;
+        _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
         _toolOptions = toolOptions.Value;
     }
@@ -73,9 +77,23 @@ public sealed class AIProfileController : Controller
         return View(profiles);
     }
 
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create([FromQuery] string templateId = null)
     {
         var model = new AIProfileViewModel { Type = AIProfileType.Chat, UseCaching = true, IsListable = true, IsRemovable = true };
+
+        if (!string.IsNullOrWhiteSpace(templateId))
+        {
+            var template = await _templateCatalog.FindByIdAsync(templateId);
+
+            if (template != null)
+            {
+                var profile = new AIProfile { Type = AIProfileType.Chat };
+                ApplyTemplateToProfile(profile, template);
+
+                model = AIProfileViewModel.FromProfile(profile);
+            }
+        }
+
         await PopulateDropdownsAsync(model);
 
         return View(model);
@@ -195,6 +213,11 @@ public sealed class AIProfileController : Controller
         model.Templates = [new SelectListItem("— No Template —", "")];
         model.Templates.AddRange(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
 
+        model.AvailableProfileTemplates = [new SelectListItem("— Select a template to apply —", "")];
+        model.AvailableProfileTemplates.AddRange(templates
+            .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
+            .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
+
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableTools = _toolOptions.Tools
             .Where(kvp => !kvp.Value.IsSystemTool)
@@ -249,6 +272,25 @@ public sealed class AIProfileController : Controller
         {
             model.HasDocumentIndexConfiguration = false;
         }
+
+        var promptTemplates = await _aiTemplateService.ListAsync();
+        model.AvailablePromptTemplates = promptTemplates
+            .Where(t => t.Metadata.IsListable)
+            .OrderBy(t => t.Metadata.Category ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => t.Metadata.Title ?? t.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new PromptTemplateOptionItem
+            {
+                TemplateId = t.Id,
+                Title = t.Metadata.Title ?? t.Id,
+                Description = t.Metadata.Description,
+                Category = t.Metadata.Category ?? "General",
+                Parameters = (t.Metadata.Parameters ?? []).Select(p => new PromptTemplateParameterItem
+                {
+                    Name = p.Name,
+                    Description = p.Description,
+                }).ToList(),
+            })
+            .ToList();
     }
 
     private async Task<string[]> GetValidA2AConnectionIdsAsync(IEnumerable<string> selectedIds)
@@ -323,5 +365,122 @@ public sealed class AIProfileController : Controller
 
         await _profileManager.UpdateAsync(profile);
         await _documentStore.SaveChangesAsync();
+    }
+
+    private static void ApplyTemplateToProfile(AIProfile profile, AIProfileTemplate template)
+    {
+        var metadata = template.As<ProfileTemplateMetadata>();
+
+        if (metadata == null)
+        {
+            return;
+        }
+
+        if (metadata.ProfileType.HasValue)
+        {
+            profile.Type = metadata.ProfileType.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.ChatDeploymentId))
+        {
+            profile.ChatDeploymentId = metadata.ChatDeploymentId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.UtilityDeploymentId))
+        {
+            profile.UtilityDeploymentId = metadata.UtilityDeploymentId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.OrchestratorName))
+        {
+            profile.OrchestratorName = metadata.OrchestratorName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.WelcomeMessage))
+        {
+            profile.WelcomeMessage = metadata.WelcomeMessage;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.PromptTemplate))
+        {
+            profile.PromptTemplate = metadata.PromptTemplate;
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.PromptSubject))
+        {
+            profile.PromptSubject = metadata.PromptSubject;
+        }
+
+        if (metadata.TitleType.HasValue)
+        {
+            profile.TitleType = metadata.TitleType.Value;
+        }
+
+        if (metadata.AgentAvailability.HasValue)
+        {
+            profile.Put(new AgentMetadata
+            {
+                Availability = metadata.AgentAvailability.Value,
+            });
+        }
+
+        profile.AlterSettings<AIProfileMetadata>(m =>
+        {
+            if (!string.IsNullOrWhiteSpace(metadata.SystemMessage))
+            {
+                m.SystemMessage = metadata.SystemMessage;
+            }
+
+            if (metadata.Temperature.HasValue)
+            {
+                m.Temperature = metadata.Temperature;
+            }
+
+            if (metadata.TopP.HasValue)
+            {
+                m.TopP = metadata.TopP;
+            }
+
+            if (metadata.FrequencyPenalty.HasValue)
+            {
+                m.FrequencyPenalty = metadata.FrequencyPenalty;
+            }
+
+            if (metadata.PresencePenalty.HasValue)
+            {
+                m.PresencePenalty = metadata.PresencePenalty;
+            }
+
+            if (metadata.MaxOutputTokens.HasValue)
+            {
+                m.MaxTokens = metadata.MaxOutputTokens;
+            }
+
+            if (metadata.PastMessagesCount.HasValue)
+            {
+                m.PastMessagesCount = metadata.PastMessagesCount;
+            }
+        });
+
+        if (metadata.ToolNames?.Length > 0)
+        {
+            profile.WithSettings(new FunctionInvocationMetadata
+            {
+                Names = metadata.ToolNames,
+            });
+        }
+
+        if (metadata.A2AConnectionIds?.Length > 0)
+        {
+            profile.Put(new AIProfileA2AMetadata
+            {
+                ConnectionIds = metadata.A2AConnectionIds,
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.Description))
+        {
+            profile.Description = metadata.Description;
+        }
     }
 }

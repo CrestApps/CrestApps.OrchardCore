@@ -18,6 +18,7 @@ using CrestApps.AI.Mcp.Services;
 using CrestApps.AI.Tools;
 using CrestApps.Data.YesSql;
 using CrestApps.Data.YesSql.Services;
+using CrestApps.Mvc.Web.BackgroundTasks;
 using CrestApps.Mvc.Web.Hubs;
 using CrestApps.Mvc.Web.Indexes;
 using CrestApps.Mvc.Web.Services;
@@ -360,6 +361,13 @@ builder.Services.AddSingleton(new FileSystemFileStore(
 builder.Services.AddSingleton(new JsonFileSettingsService(appDataPath));
 
 // ---------------------------------------------------------------------------
+// Background Tasks
+// ---------------------------------------------------------------------------
+builder.Services.AddHostedService<AIChatSessionCloseBackgroundService>();
+builder.Services.AddHostedService<DataSourceSyncBackgroundService>();
+builder.Services.AddHostedService<DataSourceAlignmentBackgroundService>();
+
+// ---------------------------------------------------------------------------
 // MVC & SignalR
 // ---------------------------------------------------------------------------
 builder.Services.AddControllersWithViews();
@@ -528,7 +536,9 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
             .Column<string>(nameof(AIChatSessionIndex.ItemId), c => c.WithLength(44))
             .Column<string>(nameof(AIChatSessionIndex.SessionId), c => c.WithLength(44))
             .Column<string>(nameof(AIChatSessionIndex.ProfileId), c => c.WithLength(26))
-            .Column<string>(nameof(AIChatSessionIndex.UserId), c => c.WithLength(255))));
+            .Column<string>(nameof(AIChatSessionIndex.UserId), c => c.WithLength(255))
+            .Column<int>(nameof(AIChatSessionIndex.Status))
+            .Column<DateTime>(nameof(AIChatSessionIndex.LastActivityUtc))));
 
     await TryCreateTableAsync(schemaBuilder, () =>
         schemaBuilder.CreateMapIndexTableAsync<AIChatSessionPromptIndex>(t => t
