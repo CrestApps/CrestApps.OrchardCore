@@ -3,7 +3,6 @@ using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -27,19 +26,19 @@ public sealed class PreemptiveSearchQueryProvider
     private const int MaxConversationHistoryMessages = 4;
 
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAITemplateService _aiTemplateService;
-    private readonly AIProviderOptions _providerOptions;
     private readonly ILogger _logger;
 
     public PreemptiveSearchQueryProvider(
         IAIClientFactory aiClientFactory,
+        IAIDeploymentManager deploymentManager,
         IAITemplateService aiTemplateService,
-        IOptions<AIProviderOptions> providerOptions,
         ILogger<PreemptiveSearchQueryProvider> logger)
     {
         _aiClientFactory = aiClientFactory;
+        _deploymentManager = deploymentManager;
         _aiTemplateService = aiTemplateService;
-        _providerOptions = providerOptions.Value;
         _logger = logger;
     }
 
@@ -167,38 +166,20 @@ public sealed class PreemptiveSearchQueryProvider
         var providerName = context.SourceName;
         var connectionName = context.CompletionContext?.ConnectionName;
 
-        if (string.IsNullOrEmpty(providerName) ||
-            !_providerOptions.Providers.TryGetValue(providerName, out var provider))
+        if (string.IsNullOrEmpty(providerName))
         {
             return null;
         }
 
-        if (string.IsNullOrEmpty(connectionName))
-        {
-            connectionName = provider.DefaultConnectionName;
-        }
+        var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
+            clientName: providerName,
+            connectionName: connectionName);
 
-        if (string.IsNullOrEmpty(connectionName) ||
-            !provider.Connections.TryGetValue(connectionName, out var connection))
+        if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
         {
             return null;
         }
 
-        // Prefer the utility deployment, fall back to the default deployment.
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-        var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
-        }
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            return null;
-        }
-
-        return await _aiClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+        return await _aiClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
     }
 }

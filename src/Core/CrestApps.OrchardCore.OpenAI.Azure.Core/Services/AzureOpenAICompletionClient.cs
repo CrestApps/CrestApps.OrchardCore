@@ -58,7 +58,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
@@ -194,7 +194,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(

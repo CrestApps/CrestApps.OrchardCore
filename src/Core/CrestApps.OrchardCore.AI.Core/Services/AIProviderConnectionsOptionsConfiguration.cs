@@ -96,11 +96,6 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 }
 #pragma warning restore CS0618
 
-                if (string.IsNullOrEmpty(provider.DefaultConnectionName) && provider.Connections.Count > 0)
-                {
-                    provider.DefaultConnectionName = provider.Connections.First().Key;
-                }
-
                 options.Providers[group.ProviderName] = provider;
             }
             catch (Exception ex)

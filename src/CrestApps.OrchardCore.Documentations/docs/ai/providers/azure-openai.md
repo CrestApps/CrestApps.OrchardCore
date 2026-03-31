@@ -26,7 +26,6 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
     "CrestApps_AI": {
       "Providers": {
         "Azure": {
-          "DefaultConnectionName": "<!-- Default connection name -->",
           "Connections": {
             "<!-- Unique connection name, ideally your Azure AccountName -->": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.openai.azure.com/",

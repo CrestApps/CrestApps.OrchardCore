@@ -96,17 +96,15 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
-
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
             AIDeploymentType.Chat,
             provider,
             ProviderName,
-            connectionName,
+            context.ConnectionName,
             deploymentName: context.ChatDeploymentName);
 
-        connectionName = resolvedConnectionName;
+        var connectionName = resolvedConnectionName;
 
         if (string.IsNullOrEmpty(connectionName))
         {
@@ -154,7 +152,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(

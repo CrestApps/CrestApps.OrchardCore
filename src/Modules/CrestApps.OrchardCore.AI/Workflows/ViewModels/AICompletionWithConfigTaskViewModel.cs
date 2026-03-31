@@ -6,10 +6,6 @@ namespace CrestApps.OrchardCore.AI.Workflows.ViewModels;
 
 public class AICompletionWithConfigTaskViewModel
 {
-    public string ProviderName { get; set; }
-
-    public string ConnectionName { get; set; }
-
     public string DeploymentName { get; set; }
 
     public string PromptTemplate { get; set; }
@@ -32,12 +28,6 @@ public class AICompletionWithConfigTaskViewModel
 
     [Range(4, int.MaxValue)]
     public int? MaxTokens { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> Providers { get; set; }
-
-    [BindNever]
-    public IEnumerable<SelectListItem> ConnectionNames { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> DeploymentNames { get; set; }

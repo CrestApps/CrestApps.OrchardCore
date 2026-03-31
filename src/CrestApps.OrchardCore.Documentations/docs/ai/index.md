@@ -78,7 +78,6 @@ Add the following to your `appsettings.json` to get started with OpenAI:
       },
       "Providers": {
         "OpenAI": {
-          "DefaultConnectionName": "my-connection",
           "Connections": {
             "my-connection": {
               "Endpoint": "https://api.openai.com/v1/",

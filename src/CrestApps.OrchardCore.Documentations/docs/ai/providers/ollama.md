@@ -37,7 +37,6 @@ To configure the Ollama connection, add the following settings to the `appsettin
     "CrestApps_AI": {
       "Providers": {
         "Ollama": {
-          "DefaultConnectionName": "Default",
           "Connections": {
             "Default": {
               "Endpoint": "<!-- Ollama host address -->",

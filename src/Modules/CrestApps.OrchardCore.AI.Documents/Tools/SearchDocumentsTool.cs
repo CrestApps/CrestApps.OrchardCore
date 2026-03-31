@@ -133,37 +133,32 @@ public sealed class SearchDocumentsTool : AIFunction
             }
 
             // Resolve the embedding deployment using the same execution context.
-            var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+            var deploymentManager = arguments.Services.GetRequiredService<IAIDeploymentManager>();
             var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
 
             var providerName = executionContext?.ProviderName;
             var connectionName = executionContext?.ConnectionName;
-            string deploymentName = null;
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(
+                AIDeploymentType.Embedding,
+                clientName: providerName,
+                connectionName: connectionName);
 
-            if (!string.IsNullOrEmpty(providerName) &&
-                providerOptions.Providers.TryGetValue(providerName, out var provider))
-            {
-                if (string.IsNullOrEmpty(connectionName))
-                {
-                    connectionName = provider.DefaultConnectionName;
-                }
-
-                if (!string.IsNullOrEmpty(connectionName) &&
-                    provider.Connections.TryGetValue(connectionName, out var connection))
-                {
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-                    deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
-#pragma warning restore CS0618
-                }
-            }
-
-            if (string.IsNullOrEmpty(deploymentName))
+            if (deployment == null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no embedding deployment configured.", Name);
                 return "No embedding deployment is configured for document search.";
             }
 
-            var embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
+            if (string.IsNullOrEmpty(deployment.ConnectionName))
+            {
+                logger.LogWarning("AI tool '{ToolName}' failed: embedding deployment '{DeploymentName}' has no connection reference.", Name, deployment.Name);
+                return "The resolved embedding deployment does not define a connection.";
+            }
+
+            var embeddingGenerator = await aIClientFactory.CreateEmbeddingGeneratorAsync(
+                deployment.ClientName,
+                deployment.ConnectionName,
+                deployment.ModelName);
 
             if (embeddingGenerator is null)
             {

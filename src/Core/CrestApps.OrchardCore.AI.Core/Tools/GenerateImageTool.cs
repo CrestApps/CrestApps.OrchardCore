@@ -5,7 +5,6 @@ using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Tools;
 
@@ -80,38 +79,27 @@ public sealed class GenerateImageTool : AIFunction
                 return "Image generation is not available. AI provider is not configured.";
             }
 
-            var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+            var deploymentManager = arguments.Services.GetRequiredService<IAIDeploymentManager>();
+            var deployment = await deploymentManager.ResolveOrDefaultAsync(
+                AIDeploymentType.Image,
+                clientName: providerName,
+                connectionName: connectionName);
 
-            if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
-            {
-                logger.LogWarning("AI tool '{ToolName}' failed: AI provider '{ProviderName}' is invalid.", Name, providerName);
-                return "Image generation is not available. AI provider is invalid.";
-            }
-
-            if (string.IsNullOrEmpty(connectionName))
-            {
-                connectionName = provider.DefaultConnectionName;
-            }
-
-            if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
-            {
-                logger.LogWarning("AI tool '{ToolName}' failed: no valid connection configured for provider '{ProviderName}'.", Name, providerName);
-                return "Image generation is not available. No connection is configured.";
-            }
-
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-            var deploymentName = connection.GetImagesDeploymentOrDefaultName(throwException: false);
-#pragma warning restore CS0618
-
-            if (string.IsNullOrEmpty(deploymentName))
+            if (deployment == null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no image model deployment configured.", Name);
                 return "Image generation is not available. No image model deployment is configured.";
             }
 
+            if (string.IsNullOrEmpty(deployment.ConnectionName))
+            {
+                logger.LogWarning("AI tool '{ToolName}' failed: image deployment '{DeploymentName}' has no connection reference.", Name, deployment.Name);
+                return "Image generation is not available. The resolved image deployment does not define a connection.";
+            }
+
             var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
 
-            var imageGenerator = await aIClientFactory.CreateImageGeneratorAsync(providerName, connectionName, deploymentName);
+            var imageGenerator = await aIClientFactory.CreateImageGeneratorAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             var options = new ImageGenerationOptions

@@ -71,10 +71,9 @@ Below is an example configuration:
           "AbsoluteMaximumIterationsPerRequest": 100,
           "EnableOpenTelemetry": false,
           "EnableDistributedCaching": true
-        },
+      },
       "Providers": {
         "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
-          "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               // Provider-specific settings go here (e.g., ApiKey, Endpoint)
@@ -266,7 +265,7 @@ The following providers are supported **out of the box**:
 > **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**.
 > For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
 
-Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
+Each provider can define multiple connections. Runtime resolution now uses the connection associated with the selected deployment, so callers should provide the deployment name and matching connection name when a provider has more than one connection.
 
 ---
 

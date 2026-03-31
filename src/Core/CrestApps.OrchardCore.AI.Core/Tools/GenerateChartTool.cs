@@ -1,11 +1,9 @@
 using System.Text.Json;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Core.Tools;
 
@@ -80,44 +78,26 @@ public sealed class GenerateChartTool : AIFunction
                 return "Chart generation is not available. AI provider is not configured.";
             }
 
-            var providerOptions = arguments.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+            var deploymentManager = arguments.Services.GetRequiredService<IAIDeploymentManager>();
+            var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
+                clientName: providerName,
+                connectionName: connectionName);
 
-            if (!providerOptions.Providers.TryGetValue(providerName, out var provider))
-            {
-                logger.LogWarning("AI tool '{ToolName}' failed: AI provider '{ProviderName}' is invalid.", Name, providerName);
-                return "Chart generation is not available. AI provider is invalid.";
-            }
-
-            if (string.IsNullOrEmpty(connectionName))
-            {
-                connectionName = provider.DefaultConnectionName;
-            }
-
-            if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
-            {
-                logger.LogWarning("AI tool '{ToolName}' failed: no valid connection configured for provider '{ProviderName}'.", Name, providerName);
-                return "Chart generation is not available. No connection is configured.";
-            }
-
-            // Prefer the utility deployment for chart generation, fall back to the default deployment.
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-            var deploymentName = connection.GetUtilityDeploymentOrDefaultName(throwException: false);
-
-            if (string.IsNullOrEmpty(deploymentName))
-            {
-                deploymentName = connection.GetChatDeploymentOrDefaultName(throwException: false);
-            }
-#pragma warning restore CS0618
-
-            if (string.IsNullOrEmpty(deploymentName))
+            if (deployment == null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no chat model deployment configured.", Name);
                 return "Chart generation is not available. No chat model deployment is configured.";
             }
 
+            if (string.IsNullOrEmpty(deployment.ConnectionName))
+            {
+                logger.LogWarning("AI tool '{ToolName}' failed: chart deployment '{DeploymentName}' has no connection reference.", Name, deployment.Name);
+                return "Chart generation is not available. The resolved deployment does not define a connection.";
+            }
+
             var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
 
-            var chatClient = await aIClientFactory.CreateChatClientAsync(providerName, connectionName, deploymentName);
+            var chatClient = await aIClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
 
             var promptService = arguments.Services.GetService<IAITemplateService>();
             var systemPrompt = promptService != null
