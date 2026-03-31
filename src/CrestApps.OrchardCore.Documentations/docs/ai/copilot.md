@@ -32,6 +32,7 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 - **Configuration Safety Checks**: Copilot-backed chat UIs now warn and stay disabled until the required Copilot settings are complete, and the orchestrator short-circuits with a friendly message instead of forwarding incomplete requests
 - **Tenant-Aware OAuth Callback URL**: GitHub OAuth now prefers the tenant **Base URI** from site settings when constructing the callback URL, which avoids localhost redirects when a tenant is accessed through a public tunnel or reverse proxy
 - **Tenant-Aware Chat Hub URLs**: Copilot-backed chat surfaces now use the tenant **Base URI** for SignalR hub endpoints too, so chat reconnects and post-sign-in flows do not fall back to `localhost`
+- **Direct Orchard Site Settings Resolution**: The shared SignalR hub route builder now resolves the tenant Base URI through Orchard's `ISiteService` directly instead of using reflection
 
 ## Prerequisites
 

@@ -826,8 +826,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                     return;
                 }
 
-                var site = await siteService.GetSiteSettingsAsync();
-                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
                 var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
                 if (speechToTextDeployment is null)
@@ -847,9 +845,17 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
                 using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
-                var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
-                    ? chatModeSettings.VoiceName
-                    : deploymentSettings.DefaultTextToSpeechVoiceId;
+                var effectiveVoiceName = chatModeSettings.VoiceName;
+
+                if (string.IsNullOrWhiteSpace(effectiveVoiceName))
+                {
+                    var site = await siteService.GetSiteSettingsAsync();
+
+                    if (site.TryGet<DefaultAIDeploymentSettings>(out var deploymentSettings))
+                    {
+                        effectiveVoiceName = deploymentSettings.DefaultTextToSpeechVoiceId;
+                    }
+                }
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 

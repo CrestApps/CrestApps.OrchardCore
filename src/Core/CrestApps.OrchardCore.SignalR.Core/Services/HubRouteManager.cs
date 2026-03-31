@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.SignalR.Core.Services;
 
@@ -11,9 +12,12 @@ public sealed class HubRouteManager
     private const string DefaultPath = "/Communication/Hub/";
 
     private readonly string _hubPrefix;
+    private readonly ISiteService _siteService;
 
-    public HubRouteManager(ShellSettings shellSettings)
+    public HubRouteManager(ShellSettings shellSettings, ISiteService siteService)
     {
+        _siteService = siteService;
+
         if (!string.IsNullOrEmpty(shellSettings.RequestUrlPrefix))
         {
             _hubPrefix = '/' + shellSettings.RequestUrlPrefix;
@@ -58,13 +62,14 @@ public sealed class HubRouteManager
         return BuildAbsoluteUri(httpContext, $"{_hubPrefix}{DefaultPath}{typeof(T).Name}");
     }
 
-    private static string BuildAbsoluteUri(HttpContext httpContext, string path)
+    private string BuildAbsoluteUri(HttpContext httpContext, string path)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentException.ThrowIfNullOrEmpty(path);
 
         var requestAbsoluteUri = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{path}";
-        if (!TryGetSiteBaseUrl(httpContext, out var siteBaseUrl) ||
+        var siteBaseUrl = GetSiteBaseUrl();
+        if (string.IsNullOrWhiteSpace(siteBaseUrl) ||
             string.IsNullOrWhiteSpace(siteBaseUrl) ||
             !Uri.TryCreate(siteBaseUrl, UriKind.Absolute, out var siteBaseUri))
         {
@@ -92,38 +97,9 @@ public sealed class HubRouteManager
         return new Uri(EnsureTrailingSlash(siteBaseUri), relativePath.TrimStart('/')).AbsoluteUri;
     }
 
-    private static bool TryGetSiteBaseUrl(HttpContext httpContext, out string baseUrl)
+    private string GetSiteBaseUrl()
     {
-        baseUrl = null;
-
-        var siteServiceType =
-            Type.GetType("OrchardCore.Settings.ISiteService, OrchardCore.Infrastructure.Abstractions") ??
-            Type.GetType("OrchardCore.Settings.ISiteService, OrchardCore.Settings");
-
-        if (siteServiceType is null)
-        {
-            return false;
-        }
-
-        var siteService = httpContext.RequestServices.GetService(siteServiceType);
-        var getSiteSettingsAsync = siteServiceType.GetMethod("GetSiteSettingsAsync", Type.EmptyTypes);
-
-        if (siteService is null || getSiteSettingsAsync is null)
-        {
-            return false;
-        }
-
-        if (getSiteSettingsAsync.Invoke(siteService, null) is not Task task)
-        {
-            return false;
-        }
-
-        task.GetAwaiter().GetResult();
-
-        var result = task.GetType().GetProperty("Result")?.GetValue(task);
-        baseUrl = result?.GetType().GetProperty("BaseUrl")?.GetValue(result) as string;
-
-        return !string.IsNullOrWhiteSpace(baseUrl);
+        return _siteService.GetSiteSettings().BaseUrl;
     }
 
     private static Uri EnsureTrailingSlash(Uri uri)
