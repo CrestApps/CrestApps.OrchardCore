@@ -3,6 +3,11 @@ using CrestApps.Services;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Manages AI profiles with CRUD operations, name-based lookup,
+/// and type-filtered retrieval. AI profiles define chat, agent, and embedding
+/// configurations that drive AI completion behavior.
+/// </summary>
 public interface IAIProfileManager : INamedCatalogManager<AIProfile>
 {
     /// <summary>

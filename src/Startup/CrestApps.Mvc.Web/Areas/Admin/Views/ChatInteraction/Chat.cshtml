@@ -44,7 +44,6 @@
         border-right: 1px solid var(--bs-border-color, #dee2e6);
     }
     .chat-settings-sidebar .nav-pills .nav-link {
-        font-size: 0.8125rem;
         padding: 0.375rem 0.75rem;
         border-radius: 0.25rem;
     }
@@ -52,22 +51,11 @@
         background-color: var(--bs-primary);
     }
     .settings-section label.form-label {
-        font-size: 0.8125rem;
         font-weight: 600;
         margin-bottom: 0.25rem;
     }
-    .settings-section .form-control,
-    .settings-section .form-select {
-        font-size: 0.8125rem;
-    }
-    .settings-section .form-text {
-        font-size: 0.7rem;
-    }
-    .settings-section .form-check-label {
-        font-size: 0.8125rem;
-    }
     .settings-save-indicator {
-        font-size: 0.75rem;
+        font-size: 0.85rem;
         min-height: 1.25rem;
         transition: opacity 0.3s ease;
     }
@@ -118,13 +106,13 @@
                 <div class="tab-pane fade show active" id="pane-settings" role="tabpanel">
                     <div class="mb-2">
                         <label class="form-label">Title</label>
-                        <input type="text" class="form-control form-control-sm setting-input" id="setting-title"
+                        <input type="text" class="form-control setting-input" id="setting-title"
                                value="@Model.Title" placeholder="e.g., Code Helper" data-setting="title" />
                     </div>
 
                     <div class="mb-2">
                         <label class="form-label">Deployment</label>
-                        <select class="form-select form-select-sm setting-input" id="setting-deployment" data-setting="deploymentName">
+                        <select class="form-select setting-input" id="setting-deployment" data-setting="deploymentName">
                             <option value="">— Select deployment —</option>
                             @foreach (var d in Model.Deployments)
                             {
@@ -135,7 +123,7 @@
 
                     <div class="mb-2">
                         <label class="form-label">Orchestrator</label>
-                        <select class="form-select form-select-sm setting-input" id="setting-orchestratorName" data-setting="orchestratorName">
+                        <select class="form-select setting-input" id="setting-orchestratorName" data-setting="orchestratorName">
                             @foreach (var o in Model.Orchestrators)
                             {
                                 <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName)">@o.Text</option>
@@ -147,6 +135,7 @@
                     @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData) {
                         { "CopilotPrefix", "ci" },
                         { "CopilotAuthType", Model.CopilotAuthenticationType },
+                        { "CopilotIsConfigured", Model.CopilotIsConfigured },
                         { "CopilotIsAuth", Model.CopilotIsAuthenticated },
                         { "CopilotUsername", Model.CopilotGitHubUsername },
                         { "CopilotModel", Model.CopilotModel },
@@ -165,7 +154,7 @@
                                     <i class="bi bi-plus-lg"></i> Add template
                                 </button>
                                 <div class="dropdown-menu p-2" style="max-height:20rem;min-width:18rem;overflow-y:auto;">
-                                    <input type="search" class="form-control form-control-sm mb-2" id="chatPromptTemplateSearch" placeholder="Search..." />
+                                    <input type="search" class="form-control mb-2" id="chatPromptTemplateSearch" placeholder="Search..." />
                                     <div class="chat-prompt-template-menu">
                                         @foreach (var group in Model.AvailablePromptTemplates.GroupBy(t => t.Category).OrderBy(g => g.Key))
                                         {
@@ -175,7 +164,9 @@
                                                 <button type="button"
                                                         class="dropdown-item chat-prompt-add-btn text-wrap small"
                                                         data-template-id="@option.TemplateId"
-                                                        data-template-title="@option.Title">
+                                                        data-template-title="@option.Title"
+                                                        data-template-description="@(option.Description ?? "")"
+                                                        data-template-params="@(System.Text.Json.JsonSerializer.Serialize(option.Parameters.Select(p => new { p.Name, p.Description })))">
                                                     @option.Title
                                                 </button>
                                             }
@@ -189,7 +180,7 @@
 
                     <div class="mb-2">
                         <label class="form-label">System message</label>
-                        <textarea class="form-control form-control-sm setting-input" id="setting-systemMessage"
+                        <textarea class="form-control setting-input" id="setting-systemMessage"
                                   rows="3" placeholder="You are a helpful assistant..." data-setting="systemMessage">@Model.SystemMessage</textarea>
                     </div>
 
@@ -197,21 +188,21 @@
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Temperature</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-temperature"
+                                <input type="number" class="form-control setting-input" id="setting-temperature"
                                        step="0.1" min="0" max="2" value="@Model.Temperature" placeholder="0.7" data-setting="temperature" />
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Top P</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-topP"
+                                <input type="number" class="form-control setting-input" id="setting-topP"
                                        step="0.1" min="0" max="1" value="@Model.TopP" placeholder="1.0" data-setting="topP" />
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Max tokens</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-maxTokens"
+                                <input type="number" class="form-control setting-input" id="setting-maxTokens"
                                        min="1" value="@Model.MaxTokens" placeholder="4096" data-setting="maxTokens" />
                             </div>
                         </div>
@@ -221,21 +212,21 @@
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Freq. penalty</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-frequencyPenalty"
+                                <input type="number" class="form-control setting-input" id="setting-frequencyPenalty"
                                        step="0.1" min="-2" max="2" value="@Model.FrequencyPenalty" placeholder="0" data-setting="frequencyPenalty" />
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Pres. penalty</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-presencePenalty"
+                                <input type="number" class="form-control setting-input" id="setting-presencePenalty"
                                        step="0.1" min="-2" max="2" value="@Model.PresencePenalty" placeholder="0" data-setting="presencePenalty" />
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="mb-2">
                                 <label class="form-label">Past msgs</label>
-                                <input type="number" class="form-control form-control-sm setting-input" id="setting-pastMessagesCount"
+                                <input type="number" class="form-control setting-input" id="setting-pastMessagesCount"
                                        min="0" value="@Model.PastMessagesCount" placeholder="10" data-setting="pastMessagesCount" />
                             </div>
                         </div>
@@ -352,7 +343,7 @@
                 <div class="tab-pane fade" id="pane-knowledge" role="tabpanel">
                     <div class="mb-2">
                         <label class="form-label">Data source</label>
-                        <select class="form-select form-select-sm setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
+                        <select class="form-select setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
                             <option value="">— None —</option>
                             @foreach (var ds in Model.DataSources)
                             {
@@ -364,7 +355,7 @@
 
                     <div class="mb-2">
                         <label class="form-label">Document Top N</label>
-                        <input type="number" class="form-control form-control-sm setting-input" id="setting-documentTopN"
+                        <input type="number" class="form-control setting-input" id="setting-documentTopN"
                                min="1" max="20" value="@Model.DocumentTopN" placeholder="Default: 3" data-setting="documentTopN" />
                         <div class="form-text">Number of top matching document chunks to include as context.</div>
                     </div>
@@ -384,7 +375,7 @@
 
                     <div class="mb-2">
                         <label class="form-label"><i class="bi bi-paperclip"></i> Upload documents</label>
-                        <input type="file" class="form-control form-control-sm" id="chat-doc-upload" multiple
+                        <input type="file" class="form-control" id="chat-doc-upload" multiple
                                accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
                         <div class="form-text">Supported: Text, Markdown, JSON, XML, HTML, PDF, Office docs.</div>
                     </div>
@@ -686,13 +677,17 @@
                     settings[g] = groups[g];
                 }
 
-                // Prompt template IDs
-                var templateIds = [];
+                // Prompt templates with parameters
+                var promptTemplates = [];
                 document.querySelectorAll('#chatPromptTemplatesContainer .chat-prompt-card').forEach(function (card) {
                     var tid = card.dataset.templateId;
-                    if (tid) templateIds.push(tid);
+                    if (!tid) return;
+                    var paramsInput = card.querySelector('.chat-prompt-params-input');
+                    var paramsValue = paramsInput ? paramsInput.value.trim() : '';
+                    promptTemplates.push({ templateId: tid, promptParameters: paramsValue });
                 });
-                settings.promptTemplateIds = templateIds;
+                settings.promptTemplateIds = promptTemplates.map(function (t) { return t.templateId; });
+                settings.promptTemplates = promptTemplates;
 
                 return settings;
             }
@@ -744,14 +739,43 @@
                 var searchInput = document.getElementById('chatPromptTemplateSearch');
                 if (!container) return;
 
-                function createTemplateCard(templateId, title) {
+                function createTemplateCard(templateId, title, description, params) {
                     var card = document.createElement('div');
-                    card.className = 'badge text-bg-secondary d-inline-flex align-items-center me-1 mb-1 chat-prompt-card';
+                    card.className = 'card mb-2 chat-prompt-card';
                     card.dataset.templateId = templateId;
-                    card.innerHTML = '<span class="me-1">' + (title || templateId) + '</span>' +
-                        '<button type="button" class="btn-close btn-close-white" style="font-size:0.5rem;" aria-label="Remove"></button>';
-                    card.querySelector('.btn-close').addEventListener('click', function () {
+
+                    var headerHtml = '<div class="card-body p-2">' +
+                        '<div class="d-flex justify-content-between align-items-center">' +
+                        '<span class="fw-bold small">' + (title || templateId) + '</span>' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger border-0 p-0 ms-2" aria-label="Remove">' +
+                        '<i class="bi bi-trash"></i></button></div>';
+
+                    if (description) {
+                        headerHtml += '<div class="text-muted small">' + description + '</div>';
+                    }
+
+                    var paramsHtml = '';
+                    if (params && params.length > 0) {
+                        paramsHtml += '<div class="mt-1"><small class="text-muted d-block mb-1">Expected parameters:</small><ul class="mb-0 small text-muted">';
+                        params.forEach(function (p) {
+                            paramsHtml += '<li><strong>' + p.Name + '</strong>' + (p.Description ? ': ' + p.Description : '') + '</li>';
+                        });
+                        paramsHtml += '</ul></div>';
+                    }
+
+                    paramsHtml += '<div class="mt-1">' +
+                        '<label class="form-label small">Template parameters</label>' +
+                        '<textarea class="form-control form-control-sm chat-prompt-params-input" rows="2" ' +
+                        'placeholder=\'e.g., {"key1": "value1", "key2": "value2"}\'></textarea>' +
+                        '<span class="form-text small">Optional JSON key-value pairs to pass as template arguments.</span>' +
+                        '</div>';
+
+                    card.innerHTML = headerHtml + paramsHtml + '</div>';
+                    card.querySelector('.btn-outline-danger').addEventListener('click', function () {
                         card.remove();
+                        debounceSave();
+                    });
+                    card.querySelector('.chat-prompt-params-input').addEventListener('change', function () {
                         debounceSave();
                     });
                     return card;
@@ -761,7 +785,9 @@
                     var btn = e.target.closest('.chat-prompt-add-btn');
                     if (!btn) return;
                     e.preventDefault();
-                    var card = createTemplateCard(btn.dataset.templateId, btn.dataset.templateTitle);
+                    var params = [];
+                    try { params = JSON.parse(btn.dataset.templateParams || '[]'); } catch (ex) { }
+                    var card = createTemplateCard(btn.dataset.templateId, btn.dataset.templateTitle, btn.dataset.templateDescription, params);
                     container.appendChild(card);
                     debounceSave();
                 });

@@ -23,6 +23,13 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
 
         context.Context.CompletionContext = completionContext;
 
+        // Resolve the SourceName from the connection configured on the completion context.
+        if (string.IsNullOrEmpty(context.Context.SourceName)
+            && !string.IsNullOrEmpty(completionContext.ConnectionName))
+        {
+            context.Context.SourceName = completionContext.ConnectionName;
+        }
+
         // Propagate DisableTools from the completion context.
         context.Context.DisableTools = context.Context.CompletionContext.DisableTools;
 

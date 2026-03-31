@@ -246,6 +246,7 @@ public sealed class ChatInteractionController : Controller
 
         // Copilot
         model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
+        model.CopilotIsConfigured = IsCopilotConfigured();
         await PopulateCopilotStatusAsync(model);
 
         // A2A Connections
@@ -367,6 +368,7 @@ public sealed class ChatInteractionController : Controller
 
         // Copilot
         model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
+        model.CopilotIsConfigured = IsCopilotConfigured();
         await PopulateCopilotChatStatusAsync(model);
 
         // A2A Connections
@@ -611,5 +613,15 @@ public sealed class ChatInteractionController : Controller
             model.CopilotModel = copilotMeta.CopilotModel;
             model.CopilotIsAllowAll = copilotMeta.IsAllowAll;
         }
+    }
+
+    private bool IsCopilotConfigured()
+    {
+        return _copilotOptions.AuthenticationType switch
+        {
+            CopilotAuthenticationType.GitHubOAuth => !string.IsNullOrEmpty(_copilotOptions.ClientId) && !string.IsNullOrEmpty(_copilotOptions.ClientSecret),
+            CopilotAuthenticationType.ApiKey => !string.IsNullOrEmpty(_copilotOptions.ApiKey),
+            _ => false,
+        };
     }
 }

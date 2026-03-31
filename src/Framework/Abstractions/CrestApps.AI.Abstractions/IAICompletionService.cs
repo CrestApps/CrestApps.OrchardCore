@@ -3,6 +3,11 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Provides a deployment-aware facade for generating AI chat completions.
+/// Routes completion requests to the appropriate <see cref="IAICompletionClient"/>
+/// based on the specified <see cref="AIDeployment"/>.
+/// </summary>
 public interface IAICompletionService
 {
     /// <summary>

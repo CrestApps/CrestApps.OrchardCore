@@ -2,6 +2,11 @@ using CrestApps.AI.Models;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Handles per-request configuration of AI completion options, allowing dynamic
+/// customization of model parameters, tool selections, and other settings
+/// before a completion request is sent to the AI provider.
+/// </summary>
 public interface IAICompletionServiceHandler
 {
     /// <summary>

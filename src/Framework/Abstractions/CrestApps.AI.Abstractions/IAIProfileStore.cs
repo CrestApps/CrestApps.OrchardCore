@@ -3,6 +3,10 @@ using CrestApps.Services;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Provides persistent storage for AI profiles, supporting CRUD operations,
+/// name-based lookup, and efficient type-filtered queries via index.
+/// </summary>
 public interface IAIProfileStore : INamedCatalog<AIProfile>
 {
     /// <summary>

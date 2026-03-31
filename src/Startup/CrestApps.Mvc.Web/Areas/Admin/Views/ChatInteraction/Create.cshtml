@@ -48,6 +48,7 @@
                     @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData) {
                         { "CopilotPrefix", "ci" },
                         { "CopilotAuthType", Model.CopilotAuthenticationType },
+                        { "CopilotIsConfigured", Model.CopilotIsConfigured },
                         { "CopilotIsAuth", Model.CopilotIsAuthenticated },
                         { "CopilotUsername", Model.CopilotGitHubUsername },
                         { "CopilotModel", Model.CopilotModel },

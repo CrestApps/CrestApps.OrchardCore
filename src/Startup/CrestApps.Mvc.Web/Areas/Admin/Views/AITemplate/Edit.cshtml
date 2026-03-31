@@ -412,11 +412,11 @@
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
                                                data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
-                                                <i class="fa-solid fa-chevron-down me-1"></i>
+                                                <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove">
-                                                <i class="fa-solid fa-trash"></i>
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         <div id="entryCollapse_@i" class="collapse show">
@@ -454,7 +454,7 @@
                                 }
                             </div>
                             <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry">
-                                <i class="fa-solid fa-plus"></i> Add entry
+                                <i class="bi bi-plus"></i> Add entry
                             </button>
                         </div>
                     </div>
@@ -563,11 +563,11 @@
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
                                                data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
-                                                <i class="fa-solid fa-chevron-down me-1"></i>
+                                                <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New Goal" : goal.Name)</span>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove">
-                                                <i class="fa-solid fa-trash"></i>
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         <div id="goalCollapse_@i" class="collapse show">
@@ -607,7 +607,7 @@
                                 }
                             </div>
                             <button type="button" class="btn btn-sm btn-success" id="addConversionGoal">
-                                <i class="fa-solid fa-plus"></i> Add goal
+                                <i class="bi bi-plus"></i> Add goal
                             </button>
                         </div>
                     </div>
@@ -746,10 +746,10 @@
                     card.innerHTML =
                         '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                             '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#entryCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<i class="bi bi-chevron-down me-1"></i>' +
                                 '<span class="entry-name-display fw-semibold">New Entry</span>' +
                             '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
                         '</div>' +
                         '<div id="entryCollapse_' + index + '" class="collapse show">' +
                             '<div class="card-body">' +
@@ -810,10 +810,10 @@
                     card.innerHTML =
                         '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                             '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#goalCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<i class="bi bi-chevron-down me-1"></i>' +
                                 '<span class="goal-name-display fw-semibold">New Goal</span>' +
                             '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
                         '</div>' +
                         '<div id="goalCollapse_' + index + '" class="collapse show">' +
                             '<div class="card-body">' +

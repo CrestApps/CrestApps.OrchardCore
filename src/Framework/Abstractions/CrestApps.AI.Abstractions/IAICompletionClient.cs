@@ -3,6 +3,11 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Defines an AI completion client that communicates with a specific AI provider
+/// to generate chat completions and streaming responses. Each implementation
+/// targets a different AI backend (e.g., OpenAI, Azure OpenAI, Ollama).
+/// </summary>
 public interface IAICompletionClient
 {
     /// <summary>

@@ -15,6 +15,7 @@
 @{
     var prefix = ViewData["CopilotPrefix"] as string ?? "copilot";
     var authType = (int)(ViewData["CopilotAuthType"] ?? 0);
+    var isConfigured = (bool)(ViewData["CopilotIsConfigured"] ?? false);
     var isAuth = (bool)(ViewData["CopilotIsAuth"] ?? false);
     var username = ViewData["CopilotUsername"] as string ?? "";
     var copilotModel = ViewData["CopilotModel"] as string ?? "";
@@ -25,25 +26,34 @@
 <div class="d-none orchestrator-dependent orchestrator-dependent-copilot" id="@(prefix)-copilot-panel">
     <div class="card mb-3">
         <div class="card-header">
-            <h6 class="card-title mb-0"><i class="fab fa-github me-1"></i> Copilot configuration</h6>
+            <h6 class="card-title mb-0"><i class="bi bi-github me-1"></i> Copilot Configuration</h6>
         </div>
         <div class="card-body">
-            @if (authType == 0)
+            @if (!isConfigured)
+            {
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>Copilot is not configured.</strong>
+                    Go to <a href="@Url.Action("Index", "Settings", new { area = "Admin" })"><strong>Settings</strong></a>
+                    and configure the Copilot section with your GitHub OAuth credentials or API key before using this orchestrator.
+                </div>
+            }
+            else if (authType == 0)
             {
                 @* GitHub OAuth mode *@
                 <div id="@(prefix)-github-connected" class="@(isAuth ? "" : "d-none")">
                     <div class="alert alert-success d-flex align-items-center justify-content-between py-2 mb-3">
                         <span>
-                            <i class="fas fa-check-circle"></i>
+                            <i class="bi bi-check-circle-fill"></i>
                             Connected as <strong id="@(prefix)-github-username">@username</strong>
                         </span>
                         <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="@(prefix)-disconnect-github"
                            data-confirm-message="Are you sure you want to disconnect your GitHub account?">
-                            <i class="fa-solid fa-power-off"></i>
+                            <i class="bi bi-power"></i>
                         </a>
                     </div>
                     <div class="alert alert-warning py-2 mb-3">
-                        <i class="fas fa-exclamation-triangle"></i>
+                        <i class="bi bi-exclamation-triangle-fill"></i>
                         Using the Copilot orchestrator will allow any user chatting with this profile to utilize your GitHub credentials, not their own.
                     </div>
                 </div>
@@ -51,11 +61,11 @@
                 <div id="@(prefix)-github-disconnected" class="@(isAuth ? "d-none" : "")">
                     <div class="text-center py-3">
                         <p class="text-muted mb-2">
-                            <i class="fab fa-github fa-2x"></i>
+                            <i class="bi bi-github fs-1"></i>
                         </p>
                         <p class="text-muted">Copilot requires GitHub authentication. Sign in with your GitHub account to continue.</p>
                         <a href="#" class="btn btn-primary" id="@(prefix)-connect-github">
-                            <i class="fab fa-github"></i> Sign in with GitHub
+                            <i class="bi bi-github"></i> Sign in with GitHub
                         </a>
                     </div>
                 </div>

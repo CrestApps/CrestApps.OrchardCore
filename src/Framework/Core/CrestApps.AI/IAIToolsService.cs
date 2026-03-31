@@ -2,6 +2,10 @@ using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Provides retrieval of registered AI tools by name, supporting tool
+/// resolution during completion and orchestration pipelines.
+/// </summary>
 public interface IAIToolsService
 {
     /// <summary>

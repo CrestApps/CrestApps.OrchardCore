@@ -48,7 +48,7 @@
                     <button class="nav-link" id="capabilities-tab" data-bs-toggle="tab" data-bs-target="#capabilities" type="button" role="tab">Capabilities</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">Knowledge Base</button>
+                    <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">Knowledge</button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" id="extraction-tab" data-bs-toggle="tab" data-bs-target="#extraction" type="button" role="tab">Data Extraction</button>
@@ -138,6 +138,7 @@
                     @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData) {
                         { "CopilotPrefix", "ap" },
                         { "CopilotAuthType", Model.CopilotAuthenticationType },
+                        { "CopilotIsConfigured", Model.CopilotIsConfigured },
                         { "CopilotIsAuth", Model.CopilotIsAuthenticated },
                         { "CopilotUsername", Model.CopilotGitHubUsername },
                         { "CopilotModel", Model.CopilotModel },
@@ -202,12 +203,12 @@
                             <label class="form-label">
                                 Prompt templates
                                 <span class="text-muted" data-bs-toggle="tooltip" title="Add one or more reusable prompt templates that will be rendered in order before the custom system instructions.">
-                                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
                                 </span>
                             </label>
                             <div class="dropdown mb-3">
                                 <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="addPromptTemplateBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa-solid fa-plus"></i> Add prompt template
+                                    <i class="bi bi-plus"></i> Add prompt template
                                 </button>
                                 <div class="dropdown-menu p-2" id="promptTemplateDropdown" style="max-height:24rem;min-width:22rem;overflow-y:auto;">
                                     <div class="mb-2">
@@ -251,11 +252,11 @@
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
                                                data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
-                                                <i class="fa-solid fa-chevron-right me-1"></i>
+                                                <i class="bi bi-chevron-right me-1"></i>
                                                 <span class="prompt-template-title fw-semibold">@title</span>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="Remove">
-                                                <i class="fa-solid fa-trash"></i>
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                         <div id="promptCollapse_@i" class="collapse">
@@ -571,11 +572,11 @@
                                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                                         <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
                                            data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
-                                            <i class="fa-solid fa-chevron-down me-1"></i>
+                                            <i class="bi bi-chevron-down me-1"></i>
                                             <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
                                         </a>
                                         <button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove">
-                                            <i class="fa-solid fa-trash"></i>
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                     <div id="entryCollapse_@i" class="collapse show">
@@ -613,7 +614,7 @@
                             }
                         </div>
                         <button type="button" class="btn btn-sm btn-success" id="addExtractionEntry">
-                            <i class="fa-solid fa-plus"></i> Add Entry
+                            <i class="bi bi-plus"></i> Add Entry
                         </button>
                     </div>
                 </div>
@@ -654,8 +655,6 @@
                         </button>
                     </div>
 
-                    <hr class="my-4" />
-
                     <h6 class="mb-2"><i class="bi bi-bullseye"></i> Conversion Goals</h6>
                     <div class="mb-3">
                         <div class="form-check form-switch">
@@ -673,11 +672,11 @@
                                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                                         <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
                                            data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
-                                            <i class="fa-solid fa-chevron-down me-1"></i>
+                                            <i class="bi bi-chevron-down me-1"></i>
                                             <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New goal" : goal.Name)</span>
                                         </a>
                                         <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove">
-                                            <i class="fa-solid fa-trash"></i>
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
                                     <div id="goalCollapse_@i" class="collapse show">
@@ -717,7 +716,7 @@
                             }
                         </div>
                         <button type="button" class="btn btn-sm btn-success" id="addConversionGoal">
-                            <i class="fa-solid fa-plus"></i> Add Goal
+                            <i class="bi bi-plus"></i> Add Goal
                         </button>
                     </div>
                 </div>
@@ -825,10 +824,10 @@
                     card.innerHTML =
                         '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                             '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#entryCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<i class="bi bi-chevron-down me-1"></i>' +
                                 '<span class="entry-name-display fw-semibold">New Entry</span>' +
                             '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
                         '</div>' +
                         '<div id="entryCollapse_' + index + '" class="collapse show">' +
                             '<div class="card-body">' +
@@ -913,10 +912,10 @@
                     card.innerHTML =
                         '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                             '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#" role="button" aria-expanded="true">' +
-                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<i class="bi bi-chevron-down me-1"></i>' +
                                 '<span class="prompt-template-title fw-semibold">' + escapeH(title) + '</span>' +
                             '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-prompt-template-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
                         '</div>' +
                         '<div class="collapse show">' +
                             '<div class="card-body">' +
@@ -1177,10 +1176,10 @@
                     card.innerHTML =
                         '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
                             '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#goalCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                                '<i class="bi bi-chevron-down me-1"></i>' +
                                 '<span class="goal-name-display fw-semibold">New Goal</span>' +
                             '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="fa-solid fa-trash"></i></button>' +
+                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
                         '</div>' +
                         '<div id="goalCollapse_' + index + '" class="collapse show">' +
                             '<div class="card-body">' +

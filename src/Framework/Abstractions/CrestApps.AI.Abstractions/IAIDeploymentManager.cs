@@ -3,6 +3,11 @@ using CrestApps.Services;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Manages AI deployments with CRUD operations, composite name/source lookup,
+/// type-filtered retrieval, and a multi-level fallback resolution chain for
+/// selecting the appropriate deployment for a given request.
+/// </summary>
 public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
 {
     /// <summary>

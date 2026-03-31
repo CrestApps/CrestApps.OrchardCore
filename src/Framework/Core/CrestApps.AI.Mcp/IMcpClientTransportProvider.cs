@@ -3,6 +3,11 @@ using ModelContextProtocol.Client;
 
 namespace CrestApps.AI.Mcp;
 
+/// <summary>
+/// Provides transport implementations for MCP (Model Context Protocol) client connections.
+/// Each implementation handles a specific transport type (e.g., SSE, Stdio) and
+/// determines whether it can service a given <see cref="McpConnection"/>.
+/// </summary>
 public interface IMcpClientTransportProvider
 {
     /// <summary>

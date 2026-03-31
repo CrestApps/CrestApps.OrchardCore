@@ -51,6 +51,7 @@ public sealed class ChatInteractionViewModel
     // Copilot
     public string CopilotModel { get; set; }
     public bool CopilotIsAllowAll { get; set; }
+    public bool CopilotIsConfigured { get; set; }
     public bool CopilotIsAuthenticated { get; set; }
     public string CopilotGitHubUsername { get; set; }
     public int CopilotAuthenticationType { get; set; }

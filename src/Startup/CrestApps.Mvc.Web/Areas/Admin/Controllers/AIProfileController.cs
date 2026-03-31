@@ -224,6 +224,7 @@ public sealed class AIProfileController : Controller
 
         // Copilot
         model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
+        model.CopilotIsConfigured = IsCopilotConfigured();
         if (_copilotOptions.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
         {
             var userId = User.Identity?.Name;
@@ -560,4 +561,14 @@ public sealed class AIProfileController : Controller
         => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
             ? deployment.Name
             : $"{deployment.Name} ({deployment.ModelName})";
+
+    private bool IsCopilotConfigured()
+    {
+        return _copilotOptions.AuthenticationType switch
+        {
+            CopilotAuthenticationType.GitHubOAuth => !string.IsNullOrEmpty(_copilotOptions.ClientId) && !string.IsNullOrEmpty(_copilotOptions.ClientSecret),
+            CopilotAuthenticationType.ApiKey => !string.IsNullOrEmpty(_copilotOptions.ApiKey),
+            _ => false,
+        };
+    }
 }

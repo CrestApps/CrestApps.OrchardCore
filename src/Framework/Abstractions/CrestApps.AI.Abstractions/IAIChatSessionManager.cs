@@ -2,13 +2,20 @@ using CrestApps.AI.Models;
 
 namespace CrestApps.AI;
 
+/// <summary>
+/// Manages AI chat session lifecycle operations including creation, retrieval,
+/// pagination, persistence, and deletion of chat sessions tied to AI profiles.
+/// </summary>
 public interface IAIChatSessionManager
 {
     /// <summary>
     /// Asynchronously retrieves an existing AI chat session by its session ID.
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <param name="id">The unique identifier of the chat session.</param>
+    /// <returns>
+    /// A task representing the asynchronous operation. The task result is the <see cref="AIChatSession"/> if found,
+    /// or <c>null</c> if no session with the specified ID exists.
+    /// </returns>
     Task<AIChatSession> FindByIdAsync(string id);
 
     /// <summary>
