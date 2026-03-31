@@ -10,16 +10,16 @@
     <div class="row">
         <div class="col-md-8">
             <div class="mb-3">
-                <label asp-for="Name" class="form-label">Title <span class="text-danger">*</span></label>
-                <input asp-for="Name" class="form-control" id="deploymentTitle" required placeholder="e.g., gpt-4o-mini" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <div class="form-text">The model or deployment name (e.g., gpt-4o-mini, llama3.2).</div>
+                <label asp-for="ModelName" class="form-label">Model name <span class="text-danger">*</span></label>
+                <input asp-for="ModelName" class="form-control" id="deploymentModelName" required placeholder="e.g., gpt-4o-mini" />
+                <span asp-validation-for="ModelName" class="text-danger"></span>
+                <div class="form-text">The provider model or deployment name used when connecting to the AI provider.</div>
             </div>
             <div class="mb-3">
                 <label asp-for="TechnicalName" class="form-label">Technical name <span class="text-danger">*</span></label>
                 <input asp-for="TechnicalName" class="form-control" id="deploymentTechName" required />
                 <span asp-validation-for="TechnicalName" class="text-danger"></span>
-                <div class="form-text">Auto-generated from the title.</div>
+                <div class="form-text">This is the deployment identifier shown throughout the app. It is auto-generated from the model name and can be adjusted before saving.</div>
             </div>
             <div class="mb-3">
                 <label asp-for="ClientName" class="form-label">Provider</label>
@@ -116,5 +116,5 @@
             updateVisibility();
         });
     </script>
-    <script>initAutoGenerateTechnicalName('deploymentTitle', 'deploymentTechName');</script>
+    <script>initAutoGenerateTechnicalName('deploymentModelName', 'deploymentTechName');</script>
 }

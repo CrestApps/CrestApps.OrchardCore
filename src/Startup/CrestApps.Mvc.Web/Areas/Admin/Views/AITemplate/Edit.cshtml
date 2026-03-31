@@ -124,6 +124,17 @@
                                 </div>
                             </div>
                         </div>
+                        @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData)
+                        {
+                            { "CopilotPrefix", "at" },
+                            { "CopilotAuthType", Model.CopilotAuthenticationType },
+                            { "CopilotIsConfigured", Model.CopilotIsConfigured },
+                            { "CopilotIsAuth", Model.CopilotIsAuthenticated },
+                            { "CopilotUsername", Model.CopilotGitHubUsername },
+                            { "CopilotModel", Model.CopilotModel },
+                            { "CopilotIsAllowAll", Model.CopilotIsAllowAll },
+                            { "CopilotModels", Model.CopilotAvailableModels },
+                        })
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />

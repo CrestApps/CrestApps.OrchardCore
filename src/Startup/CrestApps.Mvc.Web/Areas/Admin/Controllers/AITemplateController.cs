@@ -1,9 +1,12 @@
 using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +25,8 @@ public sealed class AITemplateController : Controller
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
     private readonly IAIProfileManager _profileManager;
     private readonly OrchestratorOptions _orchestratorOptions;
+    private readonly CopilotOptions _copilotOptions;
+    private readonly GitHubOAuthService _oauthService;
     private readonly AIToolDefinitionOptions _toolOptions;
 
     public AITemplateController(
@@ -31,6 +36,8 @@ public sealed class AITemplateController : Controller
         ICatalog<McpConnection> mcpConnectionCatalog,
         IAIProfileManager profileManager,
         IOptions<OrchestratorOptions> orchestratorOptions,
+        IOptions<CopilotOptions> copilotOptions,
+        GitHubOAuthService oauthService,
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
         _catalog = catalog;
@@ -39,6 +46,8 @@ public sealed class AITemplateController : Controller
         _mcpConnectionCatalog = mcpConnectionCatalog;
         _profileManager = profileManager;
         _orchestratorOptions = orchestratorOptions.Value;
+        _copilotOptions = copilotOptions.Value;
+        _oauthService = oauthService;
         _toolOptions = toolOptions.Value;
     }
 
@@ -178,6 +187,10 @@ public sealed class AITemplateController : Controller
         model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
         model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
 
+        model.CopilotAuthenticationType = _copilotOptions.AuthenticationType;
+        model.CopilotIsConfigured = IsCopilotConfigured();
+        await PopulateCopilotStatusAsync(model);
+
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableTools = _toolOptions.Tools
             .Where(kvp => !kvp.Value.IsSystemTool)
@@ -293,4 +306,34 @@ public sealed class AITemplateController : Controller
         => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
             ? deployment.Name
             : $"{deployment.Name} ({deployment.ModelName})";
+
+    private async Task PopulateCopilotStatusAsync(AITemplateViewModel model)
+    {
+        if (_copilotOptions.AuthenticationType != CopilotAuthenticationType.GitHubOAuth)
+        {
+            return;
+        }
+
+        var userId = User.Identity?.Name;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        var isAuth = await _oauthService.IsAuthenticatedAsync(userId);
+        model.CopilotIsAuthenticated = isAuth;
+        if (!isAuth)
+        {
+            return;
+        }
+
+        var credential = await _oauthService.GetCredentialAsync(userId);
+        model.CopilotGitHubUsername = credential?.GitHubUsername;
+        var models = await _oauthService.ListModelsAsync(userId);
+        model.CopilotAvailableModels = models
+            .Select(m => new SelectListItem(m.Name, m.Id))
+            .ToList();
+    }
+
+    private bool IsCopilotConfigured() => _copilotOptions.IsConfigured();
 }

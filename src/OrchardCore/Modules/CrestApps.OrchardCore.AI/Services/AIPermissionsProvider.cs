@@ -1,7 +1,5 @@
 using CrestApps.AI;
-using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Security.Permissions;

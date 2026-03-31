@@ -45,10 +45,15 @@ Loads settings from JSON files in `App_Data/` with automatic reload-on-change:
 | `JsonFileInteractionDocumentSettingsService` | Chat document settings |
 | `JsonFileAIDataSourceSettingsService` | Vector search configuration |
 | `JsonFileMcpServerSettingsService` | MCP server authentication |
+| `JsonFileCopilotSettingsService` | Copilot authentication and BYOK settings |
 
 ### Section 3 — Authentication & Authorization
 
 Cookie-based authentication with an `"Admin"` authorization policy requiring the Administrator role.
+
+The MVC admin Copilot settings follow the same configured/not-configured behavior as the Orchard Core host: leaving Copilot at `NotConfigured` keeps the Copilot orchestrator unavailable until the required OAuth or BYOK fields are completed.
+
+That same Copilot status now flows through the MVC AI Profile, AI Profile Template, and Chat Interaction editors as well. When admins choose the Copilot orchestrator, the sample app shows the same not-configured warning, GitHub sign-in prompt, connected-as status, and Copilot model picker behavior that Orchard Core uses.
 
 ### Section 4 — CrestApps AI Framework
 

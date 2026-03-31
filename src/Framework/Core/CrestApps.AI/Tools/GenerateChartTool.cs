@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.AI.Extensions;
-using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

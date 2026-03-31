@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Routing;
-
 namespace CrestApps.Mvc.Web.Endpoints.Chat;
 
 internal static class ChatApiEndpoints

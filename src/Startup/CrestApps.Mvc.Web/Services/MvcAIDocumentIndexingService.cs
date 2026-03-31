@@ -1,8 +1,6 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
-using Microsoft.Extensions.Logging;
 
 namespace CrestApps.Mvc.Web.Services;
 

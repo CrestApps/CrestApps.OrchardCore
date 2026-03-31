@@ -1,6 +1,5 @@
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models;
 using FluentFTP;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;

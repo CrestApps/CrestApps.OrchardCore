@@ -63,14 +63,15 @@ public sealed class AIDeploymentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AIDeploymentViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            ModelState.AddModelError(nameof(model.Name), "Title is required.");
-        }
 
         if (string.IsNullOrWhiteSpace(model.TechnicalName))
         {
             ModelState.AddModelError(nameof(model.TechnicalName), "Technical name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.ModelName))
+        {
+            ModelState.AddModelError(nameof(model.ModelName), "Model name is required.");
         }
 
         if (!model.GetDeploymentType().IsValidSelection())
@@ -123,9 +124,9 @@ public sealed class AIDeploymentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AIDeploymentViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
+        if (string.IsNullOrWhiteSpace(model.ModelName))
         {
-            ModelState.AddModelError(nameof(model.Name), "Title is required.");
+            ModelState.AddModelError(nameof(model.ModelName), "Model name is required.");
         }
 
         if (string.IsNullOrWhiteSpace(model.TechnicalName))

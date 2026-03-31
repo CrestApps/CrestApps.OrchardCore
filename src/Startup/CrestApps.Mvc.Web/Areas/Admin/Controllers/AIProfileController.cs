@@ -533,6 +533,19 @@ public sealed class AIProfileController : Controller
             });
         }
 
+        if (template.TryGet<CopilotSessionMetadata>(out var copilotMetadata))
+        {
+            profile.Put(new CopilotSessionMetadata
+            {
+                CopilotModel = copilotMetadata.CopilotModel,
+                IsAllowAll = copilotMetadata.IsAllowAll,
+            });
+        }
+        else
+        {
+            profile.Remove<CopilotSessionMetadata>();
+        }
+
         if (!string.IsNullOrWhiteSpace(metadata.Description))
         {
             profile.Description = metadata.Description;
@@ -562,13 +575,5 @@ public sealed class AIProfileController : Controller
             ? deployment.Name
             : $"{deployment.Name} ({deployment.ModelName})";
 
-    private bool IsCopilotConfigured()
-    {
-        return _copilotOptions.AuthenticationType switch
-        {
-            CopilotAuthenticationType.GitHubOAuth => !string.IsNullOrEmpty(_copilotOptions.ClientId) && !string.IsNullOrEmpty(_copilotOptions.ClientSecret),
-            CopilotAuthenticationType.ApiKey => !string.IsNullOrEmpty(_copilotOptions.ApiKey),
-            _ => false,
-        };
-    }
+    private bool IsCopilotConfigured() => _copilotOptions.IsConfigured();
 }

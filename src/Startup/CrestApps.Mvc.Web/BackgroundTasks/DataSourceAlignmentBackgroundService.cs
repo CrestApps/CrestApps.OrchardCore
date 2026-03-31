@@ -1,6 +1,5 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.Mvc.Web.BackgroundTasks;

@@ -1,6 +1,5 @@
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;

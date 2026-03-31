@@ -50,12 +50,17 @@ The Copilot orchestrator addresses all of these by wrapping the GitHub Copilot E
 
 ## Authentication Modes
 
-The orchestrator supports two authentication modes, controlled by the `CopilotOptions.AuthenticationType` property:
+The orchestrator supports three authentication states, controlled by the `CopilotOptions.AuthenticationType` property:
 
 | Mode | Value | Who Provides Credentials | Use Case |
 |------|-------|--------------------------|----------|
+| **Not configured** | `NotConfigured` | Nobody yet | Keep Copilot disabled until the host finishes configuration |
 | **GitHub OAuth** | `GitHubOAuth` | Each user authenticates via GitHub | Users with Copilot subscriptions |
 | **BYOK (API Key)** | `ApiKey` | Tenant admin configures a shared API key | Any OpenAI-compatible provider |
+
+Hosts should treat `NotConfigured` as an intentionally disabled state. Admin UIs can save other settings first, then enable a real Copilot authentication mode later without accidentally showing Copilot as ready.
+
+When a host exposes admin editors for AI profiles, templates, or chat interactions, those screens should also respect the configured state. If Copilot is selected while still `NotConfigured`, show a warning instead of Copilot-specific fields; in GitHub OAuth mode, show the same sign-in / connected-as state consistently anywhere the Copilot orchestrator can be selected.
 
 ### GitHub OAuth Mode
 

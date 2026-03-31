@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.AI.Chat.Copilot;
 using CrestApps.AI.Chat.Copilot.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

@@ -1,6 +1,4 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.Mvc.Web.Services;

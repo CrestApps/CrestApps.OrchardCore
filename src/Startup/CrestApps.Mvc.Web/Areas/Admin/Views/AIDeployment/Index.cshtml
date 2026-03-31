@@ -23,7 +23,8 @@ else
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>Title</th>
+                    <th>Technical name</th>
+                    <th>Model name</th>
                     <th>Type</th>
                     <th>Provider</th>
                     <th>Connection</th>
@@ -35,6 +36,7 @@ else
                 {
                     <tr>
                         <td><strong>@deployment.Name</strong></td>
+                        <td>@(string.IsNullOrWhiteSpace(deployment.ModelName) ? "—" : deployment.ModelName)</td>
                         <td>
                             @foreach (var type in deployment.Type.GetSupportedTypes())
                             {

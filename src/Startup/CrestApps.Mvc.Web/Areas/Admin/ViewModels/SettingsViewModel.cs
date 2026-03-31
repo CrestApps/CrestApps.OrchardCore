@@ -1,6 +1,6 @@
 using CrestApps.AI.Chat.Copilot.Models;
-using CrestApps.AI.Models;
 using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -75,6 +75,9 @@ public sealed class SettingsViewModel
     // Dropdown items — never bound from form data.
     [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
+
+    // Pagination settings.
+    public int AdminPageSize { get; set; } = 25;
 
     [BindNever]
     public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];

@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc.Rendering;
 using CrestApps.AI.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 

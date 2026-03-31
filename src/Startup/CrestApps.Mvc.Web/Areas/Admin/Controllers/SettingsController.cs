@@ -1,5 +1,4 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -25,6 +24,7 @@ public sealed class SettingsController : Controller
     private readonly JsonFileMcpServerSettingsService _mcpServerSettingsService;
     private readonly JsonFileChatInteractionSettingsService _chatInteractionSettingsService;
     private readonly JsonFileCopilotSettingsService _copilotSettingsService;
+    private readonly JsonFilePaginationSettingsService _paginationSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
@@ -37,6 +37,7 @@ public sealed class SettingsController : Controller
         JsonFileMcpServerSettingsService mcpServerSettingsService,
         JsonFileChatInteractionSettingsService chatInteractionSettingsService,
         JsonFileCopilotSettingsService copilotSettingsService,
+        JsonFilePaginationSettingsService paginationSettingsService,
         IAIDeploymentManager deploymentManager,
         ISearchIndexProfileStore indexProfileStore,
         IDataProtectionProvider dataProtectionProvider)
@@ -48,6 +49,7 @@ public sealed class SettingsController : Controller
         _mcpServerSettingsService = mcpServerSettingsService;
         _chatInteractionSettingsService = chatInteractionSettingsService;
         _copilotSettingsService = copilotSettingsService;
+        _paginationSettingsService = paginationSettingsService;
         _deploymentManager = deploymentManager;
         _indexProfileStore = indexProfileStore;
         _dataProtectionProvider = dataProtectionProvider;
@@ -62,6 +64,7 @@ public sealed class SettingsController : Controller
         var mcpServerSettings = await _mcpServerSettingsService.GetAsync();
         var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
         var copilotSettings = await _copilotSettingsService.GetAsync();
+        var paginationSettings = await _paginationSettingsService.GetAsync();
 
         var model = new SettingsViewModel
         {
@@ -98,6 +101,7 @@ public sealed class SettingsController : Controller
             CopilotDefaultModel = copilotSettings.DefaultModel,
             CopilotAzureApiVersion = copilotSettings.AzureApiVersion,
             CopilotCallbackUrl = Url.Action("OAuthCallback", "CopilotAuth", new { area = "Admin" }, Request.Scheme),
+            AdminPageSize = paginationSettings.AdminPageSize,
         };
 
         await NormalizeDeploymentSelectorsAsync(model);
@@ -134,6 +138,11 @@ public sealed class SettingsController : Controller
             string.IsNullOrWhiteSpace(model.McpServerApiKey))
         {
             ModelState.AddModelError(nameof(model.McpServerApiKey), "API key is required when the MCP server uses API key authentication.");
+        }
+
+        if (model.AdminPageSize < 1 || model.AdminPageSize > 200)
+        {
+            ModelState.AddModelError(nameof(model.AdminPageSize), "Page size must be between 1 and 200.");
         }
 
         if (!ModelState.IsValid)
@@ -219,6 +228,12 @@ public sealed class SettingsController : Controller
         }
 
         await _copilotSettingsService.SaveAsync(copilotSettings);
+
+        // Save pagination settings.
+        await _paginationSettingsService.SaveAsync(new PaginationSettings
+        {
+            AdminPageSize = model.AdminPageSize,
+        });
 
         TempData["SuccessMessage"] = "Settings saved successfully.";
 

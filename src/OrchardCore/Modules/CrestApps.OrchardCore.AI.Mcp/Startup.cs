@@ -34,10 +34,10 @@ using OrchardCore.Security.Permissions;
 using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 using OrchardDefaultMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerPromptService;
 using OrchardDefaultMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerResourceService;
+using OrchardDefaultOAuth2TokenService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultOAuth2TokenService;
 using OrchardMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerPromptService;
 using OrchardMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerResourceService;
 using OrchardSseClientTransportProvider = CrestApps.OrchardCore.AI.Mcp.Services.SseClientTransportProvider;
-using OrchardDefaultOAuth2TokenService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultOAuth2TokenService;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 

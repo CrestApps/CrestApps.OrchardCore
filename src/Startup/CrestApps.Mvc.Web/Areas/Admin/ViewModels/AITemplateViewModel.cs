@@ -1,8 +1,9 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -84,6 +85,15 @@ public sealed class AITemplateViewModel
     public List<SelectListItem> ChatDeployments { get; set; } = [];
     public List<SelectListItem> UtilityDeployments { get; set; } = [];
     public List<SelectListItem> Orchestrators { get; set; } = [];
+
+    // Copilot.
+    public string CopilotModel { get; set; }
+    public bool CopilotIsAllowAll { get; set; }
+    public bool CopilotIsConfigured { get; set; }
+    public bool CopilotIsAuthenticated { get; set; }
+    public string CopilotGitHubUsername { get; set; }
+    public CopilotAuthenticationType CopilotAuthenticationType { get; set; }
+    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
 
     public static AITemplateViewModel FromTemplate(AIProfileTemplate template)
     {
@@ -220,6 +230,12 @@ public sealed class AITemplateViewModel
             {
                 model.IsRemovable = profileSettings.IsRemovable;
                 model.LockSystemMessage = profileSettings.LockSystemMessage;
+            }
+
+            if (template.TryGet<CopilotSessionMetadata>(out var copilotMetadata))
+            {
+                model.CopilotModel = copilotMetadata.CopilotModel;
+                model.CopilotIsAllowAll = copilotMetadata.IsAllowAll;
             }
         }
 
@@ -360,6 +376,24 @@ public sealed class AITemplateViewModel
                 IsListable = IsListable,
                 IsRemovable = IsRemovable,
             });
+
+            if (!string.IsNullOrEmpty(OrchestratorName) &&
+                string.Equals(OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+            {
+                template.Put(new CopilotSessionMetadata
+                {
+                    CopilotModel = CopilotModel,
+                    IsAllowAll = CopilotIsAllowAll,
+                });
+            }
+            else
+            {
+                template.Remove<CopilotSessionMetadata>();
+            }
+        }
+        else
+        {
+            template.Remove<CopilotSessionMetadata>();
         }
     }
 }

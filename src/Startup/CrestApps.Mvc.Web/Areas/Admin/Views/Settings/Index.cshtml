@@ -221,10 +221,11 @@
                     <div class="mb-3">
                         <label asp-for="CopilotAuthenticationType" class="form-label">Authentication type</label>
                         <select asp-for="CopilotAuthenticationType" class="form-select" id="copilotAuthType">
+                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.NotConfigured)">Not configured</option>
                             <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)">GitHub signed-in user</option>
                             <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)">API key (BYOK)</option>
                         </select>
-                        <div class="form-text">Choose how the Copilot orchestrator authenticates. "GitHub signed-in user" requires a GitHub Copilot subscription. "API key (BYOK)" uses your own API key from a model provider.</div>
+                        <div class="form-text">Choose how the Copilot orchestrator authenticates. "Not configured" keeps Copilot disabled until you explicitly select and save an authentication mode.</div>
                     </div>
 
                     @* GitHub OAuth Section *@
@@ -397,6 +398,20 @@
                 </div>
             </div>
 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pagination</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AdminPageSize" class="form-label">Items per page</label>
+                        <input asp-for="AdminPageSize" class="form-control" type="number" min="1" max="200" style="max-width: 200px;" />
+                        <span asp-validation-for="AdminPageSize" class="text-danger"></span>
+                        <div class="form-text">The number of items shown per page across all admin lists. Default is 25.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg"></i> Save Settings
@@ -428,8 +443,9 @@
         var copilotHints = document.querySelectorAll('.copilot-hint');
 
         function toggleCopilotAuthSections() {
+            var isGitHubOAuth = copilotAuthType.value === '@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)';
             var isApiKey = copilotAuthType.value === '@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)';
-            copilotGitHubSection.style.display = isApiKey ? 'none' : '';
+            copilotGitHubSection.style.display = isGitHubOAuth ? '' : 'none';
             copilotApiKeySection.style.display = isApiKey ? '' : 'none';
         }
 

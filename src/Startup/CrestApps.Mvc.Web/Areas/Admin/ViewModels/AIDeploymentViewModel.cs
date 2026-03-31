@@ -6,7 +6,7 @@ namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 public sealed class AIDeploymentViewModel
 {
     public string ItemId { get; set; }
-    public string Name { get; set; }
+    public string ModelName { get; set; }
     public string TechnicalName { get; set; }
     public string[] SelectedTypes { get; set; } = [];
     public string ConnectionName { get; set; }
@@ -27,7 +27,7 @@ public sealed class AIDeploymentViewModel
         var model = new AIDeploymentViewModel
         {
             ItemId = deployment.ItemId,
-            Name = deployment.ModelName,
+            ModelName = deployment.ModelName,
             TechnicalName = deployment.Name,
             SelectedTypes = deployment.Type.GetSupportedTypes()
                 .Select(static type => type.ToString())
@@ -49,7 +49,7 @@ public sealed class AIDeploymentViewModel
     public void ApplyTo(AIDeployment deployment)
     {
         deployment.Name = TechnicalName;
-        deployment.ModelName = Name;
+        deployment.ModelName = ModelName;
         deployment.Type = GetDeploymentType();
         deployment.ConnectionName = ConnectionName;
         deployment.ClientName = ClientName;

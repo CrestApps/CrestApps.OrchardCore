@@ -3,7 +3,6 @@ using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Models;
 using CrestApps.Mvc.Web.Models;
 using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -417,6 +416,10 @@ public sealed class AIProfileViewModel
                 CopilotModel = CopilotModel,
                 IsAllowAll = CopilotIsAllowAll,
             });
+        }
+        else
+        {
+            profile.Remove<CopilotSessionMetadata>();
         }
     }
 }

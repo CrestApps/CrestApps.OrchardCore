@@ -123,7 +123,7 @@
 
                     <div class="mb-2">
                         <label class="form-label">Orchestrator</label>
-                        <select class="form-select setting-input" id="setting-orchestratorName" data-setting="orchestratorName">
+                        <select class="form-select setting-input" id="setting-orchestratorName" name="OrchestratorName" data-setting="orchestratorName">
                             @foreach (var o in Model.Orchestrators)
                             {
                                 <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName)">@o.Text</option>

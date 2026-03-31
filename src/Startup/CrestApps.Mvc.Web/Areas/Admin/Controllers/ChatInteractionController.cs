@@ -1,7 +1,6 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat;
 using CrestApps.AI.A2A.Models;
-using CrestApps.AI.Chat.Copilot;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Chat.Services;
@@ -11,7 +10,6 @@ using CrestApps.AI.Orchestration;
 using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
-using CrestApps.Mvc.Web.Indexes;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +24,7 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class ChatInteractionController : Controller
 {
     private readonly ICatalogManager<ChatInteraction> _interactionManager;
+    private readonly ICatalog<ChatInteraction> _interactionCatalog;
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
@@ -47,6 +46,7 @@ public sealed class ChatInteractionController : Controller
 
     public ChatInteractionController(
         ICatalogManager<ChatInteraction> interactionManager,
+        ICatalog<ChatInteraction> interactionCatalog,
         IChatInteractionPromptStore promptStore,
         ICatalog<AIDeployment> deploymentCatalog,
         ICatalog<A2AConnection> a2aConnectionCatalog,
@@ -67,6 +67,7 @@ public sealed class ChatInteractionController : Controller
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
         _interactionManager = interactionManager;
+        _interactionCatalog = interactionCatalog;
         _promptStore = promptStore;
         _deploymentCatalog = deploymentCatalog;
         _a2aConnectionCatalog = a2aConnectionCatalog;
@@ -96,10 +97,15 @@ public sealed class ChatInteractionController : Controller
 
     public async Task<IActionResult> Create()
     {
-        var model = new ChatInteractionViewModel();
-        await PopulateDropdownsAsync(model);
+        var interaction = await _interactionManager.NewAsync();
+        interaction.Title = "Untitled Chat";
+        interaction.OwnerId = User.Identity?.Name ?? "anonymous";
+        interaction.Author = User.Identity?.Name ?? "anonymous";
+        interaction.CreatedUtc = DateTime.UtcNow;
 
-        return View(model);
+        await _interactionManager.CreateAsync(interaction);
+
+        return RedirectToAction(nameof(Chat), new { id = interaction.ItemId });
     }
 
     [HttpPost]
@@ -224,6 +230,8 @@ public sealed class ChatInteractionController : Controller
 
         await _promptStore.DeleteAllPromptsAsync(id);
         await _interactionManager.DeleteAsync(interaction);
+        await _promptStore.SaveChangesAsync();
+        await _interactionCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -616,13 +624,5 @@ public sealed class ChatInteractionController : Controller
         }
     }
 
-    private bool IsCopilotConfigured()
-    {
-        return _copilotOptions.AuthenticationType switch
-        {
-            CopilotAuthenticationType.GitHubOAuth => !string.IsNullOrEmpty(_copilotOptions.ClientId) && !string.IsNullOrEmpty(_copilotOptions.ClientSecret),
-            CopilotAuthenticationType.ApiKey => !string.IsNullOrEmpty(_copilotOptions.ApiKey),
-            _ => false,
-        };
-    }
+    private bool IsCopilotConfigured() => _copilotOptions.IsConfigured();
 }

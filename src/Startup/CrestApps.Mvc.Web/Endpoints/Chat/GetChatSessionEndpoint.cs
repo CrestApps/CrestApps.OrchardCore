@@ -1,7 +1,4 @@
 using CrestApps.AI;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.Mvc.Web.Endpoints.Chat;
 

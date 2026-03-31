@@ -1,5 +1,4 @@
 using CrestApps.AI.Mcp.Models;
-using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;

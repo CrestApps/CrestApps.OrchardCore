@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Settings;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Handlers;

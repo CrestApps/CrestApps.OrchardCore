@@ -1,10 +1,10 @@
 @*
     Copilot orchestrator configuration panel.
     Shown/hidden dynamically based on orchestrator selection.
-    Works for both AIProfile and ChatInteraction views.
+    Works for AI Profile, AI Template, and Chat Interaction views.
 
     Expected model properties:
-      - CopilotAuthenticationType (int: 0=GitHubOAuth, 1=ApiKey)
+      - CopilotAuthenticationType (int enum: 0=NotConfigured, 1=GitHubOAuth, 2=ApiKey)
       - CopilotIsAuthenticated (bool)
       - CopilotGitHubUsername (string)
       - CopilotModel (string)
@@ -15,6 +15,8 @@
 @{
     var prefix = ViewData["CopilotPrefix"] as string ?? "copilot";
     var authType = (int)(ViewData["CopilotAuthType"] ?? 0);
+    var isGitHubOAuth = authType == (int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth;
+    var isApiKey = authType == (int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey;
     var isConfigured = (bool)(ViewData["CopilotIsConfigured"] ?? false);
     var isAuth = (bool)(ViewData["CopilotIsAuth"] ?? false);
     var username = ViewData["CopilotUsername"] as string ?? "";
@@ -33,12 +35,12 @@
             {
                 <div class="alert alert-warning mb-0">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    <strong>Copilot is not configured.</strong>
+                    <strong>Copilot is not configured and cannot be used until it has been configured.</strong>
                     Go to <a href="@Url.Action("Index", "Settings", new { area = "Admin" })"><strong>Settings</strong></a>
-                    and configure the Copilot section with your GitHub OAuth credentials or API key before using this orchestrator.
+                    and complete the Copilot section first.
                 </div>
             }
-            else if (authType == 0)
+            else if (isGitHubOAuth)
             {
                 @* GitHub OAuth mode *@
                 <div id="@(prefix)-github-connected" class="@(isAuth ? "" : "d-none")">
@@ -97,7 +99,7 @@
                     <div class="form-text">When checked, the Copilot CLI runs with the --allow-all flag.</div>
                 </div>
             }
-            else
+            else if (isApiKey)
             {
                 @* BYOK mode *@
                 <div class="mb-3">
@@ -120,11 +122,38 @@
     </div>
 </div>
 
-@if (authType == 0)
+@* Orchestrator-change panel toggle — always rendered so the panel
+   shows/hides regardless of the current authentication type. *@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const prefix = '@prefix';
+        const copilotName = 'copilot';
+
+        const orchestratorSelect = document.querySelector('[name="OrchestratorName"]');
+        if (orchestratorSelect) {
+            orchestratorSelect.addEventListener('change', function () {
+                const panel = document.getElementById(prefix + '-copilot-panel');
+                const isCopilot = this.value === copilotName;
+                document.querySelectorAll('.orchestrator-dependent').forEach(el => el.classList.add('d-none'));
+                if (isCopilot && panel) {
+                    panel.classList.remove('d-none');
+                }
+            });
+
+            if (orchestratorSelect.value === copilotName) {
+                const panel = document.getElementById(prefix + '-copilot-panel');
+                if (panel) panel.classList.remove('d-none');
+            }
+        }
+    });
+</script>
+
+@if (isGitHubOAuth)
 {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const prefix = '@prefix';
+            const copilotName = 'copilot';
             const connectBtn = document.getElementById(prefix + '-connect-github');
             const disconnectBtn = document.getElementById(prefix + '-disconnect-github');
             const connectedEl = document.getElementById(prefix + '-github-connected');
@@ -196,22 +225,17 @@
                 }
             }
 
-            // Listen for orchestrator changes
+            // Trigger auth check when orchestrator changes to copilot
             const orchestratorSelect = document.querySelector('[name="OrchestratorName"]');
             if (orchestratorSelect) {
                 orchestratorSelect.addEventListener('change', function () {
-                    const panel = document.getElementById(prefix + '-copilot-panel');
-                    const isCopilot = this.value === 'copilot';
-                    document.querySelectorAll('.orchestrator-dependent').forEach(el => el.classList.add('d-none'));
-                    if (isCopilot && panel) {
-                        panel.classList.remove('d-none');
-                        if (!statusChecked) checkAuthStatus();
+                    if (this.value === copilotName && !statusChecked) {
+                        checkAuthStatus();
                     }
                 });
 
-                // Show panel if already selected
-                if (orchestratorSelect.value === 'copilot') {
-                    document.getElementById(prefix + '-copilot-panel').classList.remove('d-none');
+                if (orchestratorSelect.value === copilotName && !statusChecked) {
+                    checkAuthStatus();
                 }
             }
 
