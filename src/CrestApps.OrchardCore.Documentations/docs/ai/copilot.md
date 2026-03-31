@@ -24,11 +24,15 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 - **Data Source Support**: Data source context (documents) is handled by the orchestration context pipeline before reaching the orchestrator
 - **Streaming Responses**: Supports real-time streaming of AI responses via `AssistantMessageDeltaEvent`
 - **Per-Profile Model Selection**: The model is configured per AI Profile or Chat Interaction
-- **Allow All Tool Executions**: Configurable checkbox that passes the `--allow-all` flag via `CliArgs`
+- **Allow All Tool Executions**: Configurable checkbox that both passes the `--allow-all` flag and supplies the required Copilot SDK permission handler for tool execution
 - **GitHub OAuth Authentication**: User-scoped or profile-scoped authentication with GitHub for Copilot access
 - **Profile-Level Credential Storage**: AI Profiles can store GitHub credentials so all chat sessions using the profile share the same token
 - **Popup OAuth Flow**: AI Profile editing uses a popup window for GitHub authentication to avoid losing unsaved form data
 - **Extensible Settings Pipeline**: Chat Interaction settings are saved via `IChatInteractionSettingsHandler`, allowing Copilot-specific fields to be handled without modifying core chat infrastructure
+- **Configuration Safety Checks**: Copilot-backed chat UIs now warn and stay disabled until the required Copilot settings are complete, and the orchestrator short-circuits with a friendly message instead of forwarding incomplete requests
+- **Tenant-Aware OAuth Callback URL**: GitHub OAuth now prefers the tenant **Base URI** from site settings when constructing the callback URL, which avoids localhost redirects when a tenant is accessed through a public tunnel or reverse proxy
+- **Tenant-Aware Chat Hub URLs**: Copilot-backed chat surfaces now use the tenant **Base URI** for SignalR hub endpoints too, so chat reconnects and post-sign-in flows do not fall back to `localhost`
+- **Direct Orchard Site Settings Resolution**: The shared SignalR hub route builder now resolves the tenant Base URI through Orchard's `ISiteService` directly instead of using reflection
 
 ## Prerequisites
 
@@ -45,8 +49,11 @@ Configure the Copilot orchestrator at **Settings → Copilot**. The main choice 
 
 | Authentication type | When to use | What you configure |
 |---|---|---|
+| **Not configured** (`NotConfigured`) | You are not ready to enable Copilot yet | Nothing yet — keeps Copilot disabled until you explicitly choose and save a real authentication mode |
 | **GitHub OAuth (GitHub Signed-in User)** (`GitHubOAuth`) | You want to use GitHub Copilot entitlements and user-scoped access | GitHub OAuth app (client ID/secret) and user/profile sign-in |
 | **API Key (Bring your own key)** (`ApiKey`) | You want to use your own model provider credentials (no Copilot subscription required) | Provider type, base URL, API key, default model, wire format |
+
+The settings editor defaults to **Not configured** so you can save other tenant settings without accidentally selecting an incomplete Copilot authentication mode.
 
 ### Authentication: GitHub OAuth (GitHub Signed-in User)
 
@@ -61,10 +68,15 @@ Use this mode when you want the orchestrator to authenticate to Copilot via GitH
 
 1. Create a GitHub OAuth App:
    - GitHub Settings → Developer settings → OAuth Apps → **New OAuth App**
-   - **Authorization callback URL**: `https://your-domain.com/copilot/OAuthCallback`
+   - In Orchard Core, first set **Settings → General → Base URI** to the public URL for the tenant.
+   - **Authorization callback URL**: `<Base URI>/copilot/OAuthCallback`
    - Copy the **Client ID** and **Client Secret**
 2. In Orchard Core: go to **Settings → Artificial Intelligence → Copilot** and enter the client ID/secret.
 3. If AI Memory or AI Documents features are enabled but not configured yet, you can still save Copilot settings first and come back later to choose those index profiles.
+
+Until both the client ID and client secret are saved, Copilot editors and chat experiences show a warning and prevent new Copilot requests from being sent.
+
+If the tenant is exposed through a dev tunnel, reverse proxy, or another public hostname, set **Settings → General → Base URI** to that public URL. Both the GitHub OAuth callback URL and the SignalR chat hub URLs use that value.
 
 #### Required OAuth scopes
 
@@ -107,11 +119,13 @@ The **Wire API Format** controls the HTTP format used by the underlying SDK:
 4. Configure the settings listed above.
 5. Save settings.
 
+If the required API key settings are incomplete, Copilot chat surfaces stay disabled and show a warning until the missing settings are supplied.
+
 ## Usage
 
 Usage differs slightly depending on the authentication type selected in **Settings → Copilot**.
 
-In all modes, **Allow All** is checked by default (passes `--allow-all` to the Copilot CLI) and settings are saved automatically via SignalR using the extensible `IChatInteractionSettingsHandler` pipeline.
+In all modes, **Allow All** is checked by default. When enabled, the orchestrator both passes `--allow-all` to the Copilot CLI and approves tool permission requests through the SDK session callback. When disabled, the orchestrator denies tool execution explicitly instead of letting session startup fail.
 
 ### GitHub OAuth authentication
 
@@ -156,8 +170,8 @@ The module uses `IChatInteractionSettingsHandler` to decouple Copilot-specific s
 ### Orchestration Context Flow
 
 1. `CopilotOrchestrationContextHandler` (implements `IOrchestrationContextHandler`) reads `CopilotSessionMetadata` from the resource entity and sets it on `OrchestrationContext.Properties`
-2. `CopilotOrchestrator` reads the metadata from `Properties` to configure the session model and the `--allow-all` flag
-3. Authentication uses the SDK's `GithubToken` property (not environment variables) and `CliArgs` for the allow-all flag
+2. `CopilotOrchestrator` reads the metadata from `Properties` to configure the session model, CLI behavior, and the required SDK permission callback
+3. Authentication uses the SDK's `GithubToken` property (not environment variables), while the allow-all behavior is applied through both `CliArgs` and `SessionConfig.OnPermissionRequest`
 
 ### Credential Resolution Order
 

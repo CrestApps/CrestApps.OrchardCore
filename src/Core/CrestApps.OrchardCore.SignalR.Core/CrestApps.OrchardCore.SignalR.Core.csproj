@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings" />
   </ItemGroup>
 
   <ItemGroup>

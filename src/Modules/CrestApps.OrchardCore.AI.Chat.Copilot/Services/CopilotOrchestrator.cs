@@ -63,10 +63,21 @@ public sealed class CopilotOrchestrator : IOrchestrator
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.CompletionContext);
-        ArgumentException.ThrowIfNullOrEmpty(context.SourceName);
+
+        // Some orchestration sources, such as ad-hoc chat interactions, do not currently
+        // populate SourceName. Copilot does not rely on it, so keep the request flowing.
+        context.SourceName ??= Name;
+
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
+
+        if (!settings.IsConfigured())
+        {
+            yield return CreateTextResponse("Copilot is not configured and cannot be used until it has been configured.");
+            yield break;
+        }
 
         // Get the full tool registry for this context.
-        var allTools = await _toolRegistry.GetAllAsync(context.CompletionContext, cancellationToken);
+        var allTools = (await _toolRegistry.GetAllAsync(context.CompletionContext, cancellationToken))?.ToArray() ?? [];
 
         // Store scoped entries so the FunctionInvocationHandler can resolve tool factories.
         context.CompletionContext.ToolNames = allTools.Select(e => e.Name).ToArray();
@@ -115,6 +126,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         var sessionConfig = new SessionConfig
         {
             Streaming = true,
+            OnPermissionRequest = CreatePermissionRequestHandler(),
         };
 
         // Read Copilot-specific metadata from the orchestration context.
@@ -125,10 +137,8 @@ public sealed class CopilotOrchestrator : IOrchestrator
         {
             metadata = md;
             sessionConfig.Model = metadata.CopilotModel;
+            sessionConfig.OnPermissionRequest = CreatePermissionRequestHandler(metadata.IsAllowAll);
         }
-
-        // Load site-level settings to determine authentication mode.
-        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
 
         if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
@@ -343,7 +353,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         await using var session = await client.CreateSessionAsync(sessionConfig, cancellationToken);
 
         var responseBuilder = new StringBuilder();
-        var completionSource = new TaskCompletionSource<bool>();
+        var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         string errorMessage = null;
 
         using var subscription = session.On(ev =>
@@ -442,9 +452,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
     /// </summary>
     private static string BuildPromptWithHistory(OrchestrationContext context)
     {
+        var userMessage = context.UserMessage ?? string.Empty;
+
         if (context.ConversationHistory is not { Count: > 0 })
         {
-            return context.UserMessage;
+            return userMessage;
         }
 
         var sb = ZString.CreateStringBuilder();
@@ -475,7 +487,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         sb.AppendLine();
         sb.AppendLine("[Current Message]");
-        sb.Append(context.UserMessage);
+        sb.Append(userMessage);
 
         return sb.ToString();
     }
@@ -552,15 +564,17 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         // Append MCP server information to the system message.
+        var mcpDescriptionText = mcpDescription.ToString();
+
         if (sessionConfig.SystemMessage is not null)
         {
-            sessionConfig.SystemMessage.Content += mcpDescription.ToString();
+            sessionConfig.SystemMessage.Content = string.Concat(sessionConfig.SystemMessage.Content, mcpDescriptionText);
         }
         else
         {
             sessionConfig.SystemMessage = new SystemMessageConfig
             {
-                Content = mcpDescription.ToString(),
+                Content = mcpDescriptionText,
             };
         }
 
@@ -571,6 +585,24 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 connections.Count,
                 string.Join(", ", connections.Select(c => c.DisplayText ?? c.ItemId)));
         }
+    }
+
+    /// <summary>
+    /// Creates the permission handler required by the Copilot SDK when opening a session.
+    /// When no interactive approval flow is available, honor the existing allow-all behavior
+    /// or deny tool execution explicitly instead of failing session startup.
+    /// </summary>
+    private static PermissionRequestHandler CreatePermissionRequestHandler(bool allowAll = true)
+    {
+        if (allowAll)
+        {
+            return PermissionHandler.ApproveAll;
+        }
+
+        return (request, invocation) => Task.FromResult(new PermissionRequestResult
+        {
+            Kind = PermissionRequestResultKind.DeniedCouldNotRequestFromUser,
+        });
     }
 
     /// <summary>
@@ -616,4 +648,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return _inner.InvokeAsync(arguments, cancellationToken);
         }
     }
+
+    private static ChatResponseUpdate CreateTextResponse(string responseText)
+        => new()
+        {
+            Role = ChatRole.Assistant,
+            Contents = [new TextContent(responseText)],
+        };
 }

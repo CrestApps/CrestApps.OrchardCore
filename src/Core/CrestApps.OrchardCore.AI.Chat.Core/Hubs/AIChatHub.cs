@@ -151,6 +151,13 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 return;
             }
 
+            var availability = await GetOrchestratorAvailabilityAsync(services, profile);
+            if (!availability.IsAvailable)
+            {
+                await Clients.Caller.ReceiveError(availability.Message);
+                return;
+            }
+
             var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
             // Allow the caller to override the initial response handler set by the profile.
@@ -276,6 +283,13 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             {
                 await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
 
+                return;
+            }
+
+            var availability = await GetOrchestratorAvailabilityAsync(services, profile);
+            if (!availability.IsAvailable)
+            {
+                await Clients.Caller.ReceiveError(availability.Message);
                 return;
             }
 
@@ -746,6 +760,21 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 
+    private static async Task<OrchestratorAvailability> GetOrchestratorAvailabilityAsync(IServiceProvider services, AIProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.OrchestratorName))
+        {
+            return new OrchestratorAvailability();
+        }
+
+        var availabilityProvider = services.GetServices<IOrchestratorAvailabilityProvider>()
+            .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
+
+        return availabilityProvider is null
+            ? new OrchestratorAvailability()
+            : await availabilityProvider.GetAvailabilityAsync();
+    }
+
     /// <summary>
     /// Gets the SignalR group name for a chat session. Clients in this group
     /// receive deferred responses delivered via webhook or external callback.
@@ -797,8 +826,6 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                     return;
                 }
 
-                var site = await siteService.GetSiteSettingsAsync();
-                var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
                 var speechToTextDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
 
                 if (speechToTextDeployment is null)
@@ -818,9 +845,17 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(speechToTextDeployment);
                 using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
-                var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
-                    ? chatModeSettings.VoiceName
-                    : deploymentSettings.DefaultTextToSpeechVoiceId;
+                var effectiveVoiceName = chatModeSettings.VoiceName;
+
+                if (string.IsNullOrWhiteSpace(effectiveVoiceName))
+                {
+                    var site = await siteService.GetSiteSettingsAsync();
+
+                    if (site.TryGet<DefaultAIDeploymentSettings>(out var deploymentSettings))
+                    {
+                        effectiveVoiceName = deploymentSettings.DefaultTextToSpeechVoiceId;
+                    }
+                }
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 

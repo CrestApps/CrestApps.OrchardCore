@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -23,7 +23,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -32,14 +32,14 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
-        LinkGenerator linkGenerator,
+        CopilotCallbackUrlProvider callbackUrlProvider,
         IHtmlLocalizer<CopilotSettingsDisplayDriver> htmlLocalizer,
         IStringLocalizer<CopilotSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
-        _linkGenerator = linkGenerator;
+        _callbackUrlProvider = callbackUrlProvider;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -48,15 +48,12 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
     public override IDisplayResult Edit(ISite site, CopilotSettings settings, BuildEditorContext context)
     {
-        return Initialize<CopilotSettingsViewModel>("CopilotSettings_Edit", model =>
+        return Initialize<CopilotSettingsViewModel>("CopilotSettings_Edit", async model =>
         {
             model.AuthenticationType = settings.AuthenticationType;
             model.ClientId = settings.ClientId;
             model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
-            model.ComputedCallbackUrl = _linkGenerator.GetUriByAction(_httpContextAccessor.HttpContext, "OAuthCallback", "CopilotAuth", new
-            {
-                area = "CrestApps.OrchardCore.AI.Chat.Copilot",
-            });
+            model.ComputedCallbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
 
             // BYOK fields
             model.ProviderType = settings.ProviderType;
@@ -69,6 +66,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             // Select list options
             model.AuthenticationTypes =
             [
+                new SelectListItem(S["Not configured"], nameof(CopilotAuthenticationType.NotConfigured)),
                 new SelectListItem(S["GitHub signed-in user"], nameof(CopilotAuthenticationType.GitHubOAuth)),
                 new SelectListItem(S["API key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
             ];
@@ -98,6 +96,11 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.AuthenticationType = model.AuthenticationType;
+
+        if (settings.AuthenticationType == CopilotAuthenticationType.NotConfigured)
+        {
+            return await EditAsync(site, settings, context);
+        }
 
         if (settings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
         {

@@ -50,13 +50,20 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
+            model.IsCopilotConfigured = siteSettings.IsConfigured();
+
+            if (!model.IsCopilotConfigured)
+            {
+                model.AvailableModels = [];
+                return;
+            }
 
             if (siteSettings.AuthenticationType == CopilotAuthenticationType.ApiKey)
             {
                 // BYOK mode — no GitHub auth needed.
                 model.AvailableModels = [];
             }
-            else
+            else if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
             {
                 // GitHub OAuth mode — only fetch auth/models when the orchestrator is Copilot.
                 if (string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase) &&
@@ -85,6 +92,10 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                 }
 
                 model.AvailableModels ??= [];
+            }
+            else
+            {
+                model.AvailableModels = [];
             }
         }).Location("Parameters:4#Settings;1");
     }

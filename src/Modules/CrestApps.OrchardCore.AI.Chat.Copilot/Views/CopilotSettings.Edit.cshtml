@@ -13,18 +13,17 @@
         <label asp-for="AuthenticationType" class="form-label">@T["Authentication type"]</label>
         <select asp-for="AuthenticationType" asp-items="Model.AuthenticationTypes" class="form-select" id="copilot-auth-type">
         </select>
-        <span class="hint">@T["Choose how the Copilot orchestrator authenticates. \"GitHub signed-in user\" requires a GitHub Copilot subscription. \"API key (BYOK)\" uses your own API key from a model provider."]</span>
+        <span class="hint">@T["Choose how the Copilot orchestrator authenticates. \"Not configured\" keeps Copilot disabled until you explicitly select and save an authentication mode."]</span>
     </div>
 
     @* ── GitHub OAuth Section ── *@
-    <div id="copilot-github-oauth-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "d-none" : "")">
+    <div id="copilot-github-oauth-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth ? "" : "d-none")">
         <div class="mb-4">
             <h4 class="mb-2">@T["How to create a GitHub app"]</h4>
             <div class="ps-3">
                 <ol>
                     <li>
-                        @T["In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>. You can also open {0}.",
-                        Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">this link</a>")]
+                        @T["In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>. You can also open {0}.", Html.Raw("<a href=\"https://github.com/settings/apps/new\" target=\"_blank\" rel=\"noopener noreferrer\">this link</a>")]
                     </li>
                     <li>@T["Enter an <strong>App name</strong> (e.g., \"Orchard Copilot Integration\") and your site's <strong>Homepage URL</strong>."]</li>
                     <li>
@@ -43,8 +42,7 @@
                     <li>@T["Click <strong>Generate a new client secret</strong>, copy the generated secret, and paste it below."]</li>
                 </ol>
                 <p class="hint">
-                    @T["Docs: {0}",
-                                    Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps\" target=\"_blank\" rel=\"noopener noreferrer\">About creating GitHub Apps</a>")]
+                    @T["Docs: {0}", Html.Raw("<a href=\"https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps\" target=\"_blank\" rel=\"noopener noreferrer\">About creating GitHub Apps</a>")]
                 </p>
             </div>
         </div>
@@ -75,8 +73,10 @@
     <div id="copilot-api-key-section" class="@(Model.AuthenticationType == CopilotAuthenticationType.ApiKey ? "" : "d-none")">
         <div class="mb-4">
             <h4 class="mb-2">@T["API key (BYOK) configuration"]</h4>
-            <p class="hint">@T["Use your own API key from a model provider. No GitHub Copilot subscription is required. {0}",
-                Html.Raw("<a href=\"https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more about BYOK</a>")]</p>
+            <p class="hint">
+                @T["Use your own API key from a model provider. No GitHub Copilot subscription is required. {0}",
+                Html.Raw("<a href=\"https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md\" target=\"_blank\" rel=\"noopener noreferrer\">Learn more about BYOK</a>")]
+            </p>
         </div>
 
         <div class="mb-3">
@@ -168,8 +168,10 @@
         const providerHints = document.querySelectorAll('.copilot-provider-hint');
 
         function toggleAuthSections() {
-            const isApiKey = authTypeSelect.value === '@(nameof(CopilotAuthenticationType.ApiKey))';
-            githubSection.classList.toggle('d-none', isApiKey);
+            const authType = authTypeSelect.value;
+            const isGitHubOAuth = authType === '@(nameof(CopilotAuthenticationType.GitHubOAuth))';
+            const isApiKey = authType === '@(nameof(CopilotAuthenticationType.ApiKey))';
+            githubSection.classList.toggle('d-none', !isGitHubOAuth);
             apiKeySection.classList.toggle('d-none', !isApiKey);
         }
 
@@ -203,5 +205,8 @@
         if (providerTypeSelect) {
             providerTypeSelect.addEventListener('change', toggleProviderHints);
         }
+
+        toggleAuthSections();
+        toggleProviderHints();
     });
 </script>

@@ -61,6 +61,17 @@
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+    var orchestratorAvailability = new OrchestratorAvailability();
+    if (!string.IsNullOrWhiteSpace(Model.Profile?.OrchestratorName))
+    {
+        var availabilityProvider = ShellScope.Services.GetServices<IOrchestratorAvailabilityProvider>()
+            .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, Model.Profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
+
+        if (availabilityProvider is not null)
+        {
+            orchestratorAvailability = await availabilityProvider.GetAvailabilityAsync();
+        }
+    }
 }
 
 <div class="container-fluid d-flex flex-column h-100">
@@ -85,6 +96,13 @@
     </div>
 
     <div class="flex-shrink-0">
+        @if (!orchestratorAvailability.IsAvailable)
+        {
+            <div class="alert alert-warning mb-3">
+                <i class="fas fa-exclamation-triangle"></i>
+                @orchestratorAvailability.Message
+            </div>
+        }
 
         <div class="text-bg-light rounded border w-100">
             @if (sessionDocumentsEnabled)
@@ -185,6 +203,8 @@
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
+        ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
     };
 
     if (sessionDocumentsEnabled)

@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -28,8 +27,7 @@ public sealed class GitHubOAuthService
     private readonly UserManager<IUser> _userManager;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ISiteService _siteService;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IClock _clock;
     private readonly ILogger<GitHubOAuthService> _logger;
@@ -38,8 +36,7 @@ public sealed class GitHubOAuthService
         UserManager<IUser> userManager,
         IDataProtectionProvider dataProtectionProvider,
         ISiteService siteService,
-        IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator,
+        CopilotCallbackUrlProvider callbackUrlProvider,
         IHttpClientFactory httpClientFactory,
         IClock clock,
         ILogger<GitHubOAuthService> logger)
@@ -47,8 +44,7 @@ public sealed class GitHubOAuthService
         _userManager = userManager;
         _dataProtectionProvider = dataProtectionProvider;
         _siteService = siteService;
-        _httpContextAccessor = httpContextAccessor;
-        _linkGenerator = linkGenerator;
+        _callbackUrlProvider = callbackUrlProvider;
         _httpClientFactory = httpClientFactory;
         _clock = clock;
         _logger = logger;
@@ -63,10 +59,7 @@ public sealed class GitHubOAuthService
             throw new InvalidOperationException("GitHub OAuth Client ID is not configured. Please configure Copilot settings.");
         }
 
-        var callbackUrl = _linkGenerator.GetUriByAction(_httpContextAccessor.HttpContext, "OAuthCallback", "CopilotAuth", new
-        {
-            area = "CrestApps.OrchardCore.AI.Chat.Copilot",
-        });
+        var callbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync(cancellationToken);
 
         var scopes = string.Join(" ", settings.Scopes ?? ["user:email", "read:org"]);
         var state = returnUrl ?? string.Empty;
