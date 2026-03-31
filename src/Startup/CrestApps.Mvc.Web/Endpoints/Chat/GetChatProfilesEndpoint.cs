@@ -1,0 +1,33 @@
+using CrestApps.AI;
+using CrestApps.AI.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
+namespace CrestApps.Mvc.Web.Endpoints.Chat;
+
+internal static class GetChatProfilesEndpoint
+{
+    public static IEndpointRouteBuilder AddGetChatProfilesEndpoint(this IEndpointRouteBuilder builder)
+    {
+        _ = builder.MapGet("api/chat/profiles", HandleAsync)
+            .RequireAuthorization();
+
+        return builder;
+    }
+
+    private static async Task<IResult> HandleAsync(IAIProfileManager profileManager)
+    {
+        var profiles = await profileManager.GetAsync(AIProfileType.Chat);
+
+        return TypedResults.Ok(profiles
+            .Where(profile => profile.GetSettings<AIProfileSettings>().IsListable)
+            .Select(profile => new
+            {
+                id = profile.ItemId,
+                name = profile.Name,
+                displayText = profile.DisplayText,
+                welcomeMessage = profile.WelcomeMessage,
+            }));
+    }
+}

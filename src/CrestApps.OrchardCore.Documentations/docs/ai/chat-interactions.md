@@ -30,6 +30,7 @@ This module provides ad-hoc AI chat interactions with configurable parameters, e
 - User memory — persist private, non-sensitive preferences and durable background details for authenticated users
 - Chat mode — configurable voice interaction modes (Text Only, Audio Input, Conversation) for speech-to-text dictation and two-way voice chat
 - Prompt-template composition — add multiple reusable prompt templates from a searchable picker and provide per-template JSON parameters
+- Immediate document management — upload and remove interaction documents through AJAX while the chat UI stays open
 
 ## Getting Started
 
@@ -117,6 +118,10 @@ The `AI Documents` feature is provided on demand and is only enabled when anothe
 :::
 
 The Documents feature supports Elasticsearch and Azure AI Search as embedding and search providers. Ensure you enable the corresponding feature for your chosen provider in Orchard Core admin.
+
+When document indexing is configured, the Chat Interaction editor uploads and removes knowledge-base documents immediately through AJAX. Users can keep chatting while documents are added or removed, and the knowledge panel refreshes without a full page postback.
+
+AI chat sessions now follow the same pattern in the MVC sample: when an AI Profile enables **Allow session document uploads**, the chat UI exposes direct session document upload and removal so users can attach files as part of the conversation flow.
 
 ## Image and Chart Generation
 

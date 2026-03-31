@@ -20,7 +20,6 @@ else
                 <tr>
                     <th>Title</th>
                     <th>Transport</th>
-                    <th>Details</th>
                     <th style="width:180px;">Actions</th>
                 </tr>
             </thead>
@@ -30,18 +29,6 @@ else
                 <tr>
                     <td><strong>@connection.DisplayText</strong></td>
                     <td><span class="badge bg-info text-dark">@connection.Source</span></td>
-                    <td>
-                        @if (connection.Source == CrestApps.AI.Mcp.McpConstants.TransportTypes.Sse)
-                        {
-                            var metadata = connection.As<CrestApps.AI.Mcp.Models.SseMcpConnectionMetadata>();
-                            <code>@metadata.Endpoint</code>
-                        }
-                        else
-                        {
-                            var metadata = connection.As<CrestApps.AI.Mcp.Models.StdioMcpConnectionMetadata>();
-                            <code>@metadata.Command</code>
-                        }
-                    </td>
                     <td>
                         <a asp-action="Edit" asp-route-id="@connection.ItemId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
                         <form asp-action="Delete" asp-route-id="@connection.ItemId" method="post" class="d-inline">

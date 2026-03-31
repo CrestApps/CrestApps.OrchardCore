@@ -379,6 +379,7 @@
                                accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
                         <div class="form-text">Supported: Text, Markdown, JSON, XML, HTML, PDF, Office docs.</div>
                     </div>
+                    <div id="chat-documents-list" class="d-flex flex-column gap-2"></div>
                 </div>
             </div>
         </div>
@@ -409,6 +410,9 @@
         <!-- Input area -->
         <div class="border-top p-3 bg-white">
             <div class="d-flex gap-2">
+                <button type="button" id="attach-document-btn" class="btn btn-outline-secondary" title="Attach documents">
+                    <i class="bi bi-paperclip"></i>
+                </button>
                 <textarea id="chat-input"
                           class="form-control"
                           rows="1"
@@ -433,6 +437,9 @@
             var itemId = '@Model.ItemId';
             var hubUrl = '/hubs/chat-interaction';
             var existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExistingMessages));
+            var interactionDocuments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Documents));
+            var uploadDocumentUrl = '@Url.Content("~/ai/chat-interactions/upload-document")';
+            var removeDocumentUrl = '@Url.Content("~/ai/chat-interactions/remove-document")';
 
             // --- Markdown rendering ---
             var renderer = new marked.Renderer();
@@ -451,6 +458,128 @@
 
             function renderMarkdown(text) {
                 return DOMPurify.sanitize(marked.parse(text || ''));
+            }
+
+            function formatFileSize(bytes) {
+                if (!bytes && bytes !== 0) {
+                    return '';
+                }
+
+                if (bytes < 1024) {
+                    return bytes + ' B';
+                }
+
+                if (bytes < 1024 * 1024) {
+                    return (bytes / 1024).toFixed(1) + ' KB';
+                }
+
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            function renderDocuments() {
+                var container = document.getElementById('chat-documents-list');
+                if (!container) {
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                if (interactionDocuments.length === 0) {
+                    container.innerHTML = '<div class="text-muted small">No documents uploaded yet.</div>';
+                    return;
+                }
+
+                interactionDocuments.forEach(function (doc) {
+                    var row = document.createElement('div');
+                    row.className = 'd-flex justify-content-between align-items-start border rounded px-2 py-2 bg-white';
+                    row.innerHTML =
+                        '<div class="me-2">' +
+                            '<div class="fw-semibold small"><i class="bi bi-file-earmark-text me-1"></i>' + DOMPurify.sanitize(doc.fileName || 'Document') + '</div>' +
+                            '<div class="text-muted small">' + DOMPurify.sanitize(formatFileSize(doc.fileSize)) + '</div>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger remove-chat-document-btn" data-document-id="' + DOMPurify.sanitize(doc.documentId) + '">' +
+                            '<i class="bi bi-trash"></i> Remove' +
+                        '</button>';
+
+                    container.appendChild(row);
+                });
+
+                container.querySelectorAll('.remove-chat-document-btn').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        removeDocument(button.dataset.documentId);
+                    });
+                });
+            }
+
+            async function uploadDocuments(files) {
+                if (!files || files.length === 0) {
+                    return;
+                }
+
+                var formData = new FormData();
+                formData.append('chatInteractionId', itemId);
+
+                Array.from(files).forEach(function (file) {
+                    formData.append('files', file);
+                });
+
+                try {
+                    var response = await fetch(uploadDocumentUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to upload documents:', await response.text());
+                        return;
+                    }
+
+                    var result = await response.json();
+                    if (Array.isArray(result.uploaded) && result.uploaded.length > 0) {
+                        interactionDocuments = interactionDocuments.concat(result.uploaded);
+                        renderDocuments();
+                    }
+
+                    if (Array.isArray(result.failed) && result.failed.length > 0) {
+                        alert(result.failed.map(function (entry) { return entry.fileName + ': ' + entry.error; }).join('\n'));
+                    }
+                }
+                catch (error) {
+                    console.error('Upload failed:', error);
+                }
+            }
+
+            async function removeDocument(documentId) {
+                if (!documentId || !confirm('Remove this document?')) {
+                    return;
+                }
+
+                try {
+                    var response = await fetch(removeDocumentUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            itemId: itemId,
+                            documentId: documentId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to remove document:', await response.text());
+                        return;
+                    }
+
+                    interactionDocuments = interactionDocuments.filter(function (doc) {
+                        return doc.documentId !== documentId;
+                    });
+
+                    renderDocuments();
+                }
+                catch (error) {
+                    console.error('Remove failed:', error);
+                }
             }
 
             // --- Vue app for messages ---
@@ -570,6 +699,8 @@
             // --- Send message ---
             var inputEl = document.getElementById('chat-input');
             var sendBtn = document.getElementById('send-btn');
+            var attachDocumentBtn = document.getElementById('attach-document-btn');
+            var documentUploadInput = document.getElementById('chat-doc-upload');
             var placeholder = document.getElementById('chat-placeholder');
 
             function sendMessage() {
@@ -617,6 +748,17 @@
             }
 
             sendBtn.addEventListener('click', sendMessage);
+            if (attachDocumentBtn && documentUploadInput) {
+                attachDocumentBtn.addEventListener('click', function () {
+                    documentUploadInput.click();
+                });
+
+                documentUploadInput.addEventListener('change', function () {
+                    uploadDocuments(documentUploadInput.files).finally(function () {
+                        documentUploadInput.value = '';
+                    });
+                });
+            }
             inputEl.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -810,6 +952,8 @@
             if (existingMessages.length > 0 && placeholder) {
                 placeholder.style.display = 'none';
             }
+
+            renderDocuments();
         });
     </script>
 }

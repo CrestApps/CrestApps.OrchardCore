@@ -194,6 +194,7 @@ public sealed class ChatInteractionController : Controller
             MaxTokens = interaction.MaxTokens,
             PastMessagesCount = interaction.PastMessagesCount,
             DocumentTopN = interaction.DocumentTopN,
+            Documents = interaction.Documents ?? [],
             DataSourceId = dataSourceMetadata?.DataSourceId,
             SelectedA2AConnectionIds = interaction.A2AConnectionIds?.ToArray() ?? [],
             SelectedMcpConnectionIds = interaction.McpConnectionIds?.ToArray() ?? [],

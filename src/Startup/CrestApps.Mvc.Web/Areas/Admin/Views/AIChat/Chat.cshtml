@@ -1,3 +1,4 @@
+@using CrestApps.Services
 @model CrestApps.AI.Models.AIProfile
 @{
     var session = ViewData["Session"] as CrestApps.AI.Models.AIChatSession;
@@ -5,6 +6,9 @@
     ViewData["Title"] = "Chat - " + (Model.DisplayText ?? Model.Name);
     var sessionId = session?.SessionId ?? "";
     var messages = prompts?.Where(p => !p.IsGeneratedPrompt).Select(m => new { role = m.Role.Value, content = m.Content, id = m.ItemId }) ?? [];
+    var sessionDocumentsMetadata = Model.As<CrestApps.AI.Models.AIProfileSessionDocumentsMetadata>();
+    var allowSessionDocuments = sessionDocumentsMetadata?.AllowSessionDocuments ?? false;
+    var existingDocuments = session?.Documents ?? [];
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
@@ -64,6 +68,7 @@
             </div>
             <div id="chat-app"></div>
         </div>
+        <div id="chat-document-bar" class="border-top bg-light @(allowSessionDocuments ? string.Empty : "d-none")"></div>
         <div class="border-top p-3">
             <div class="d-flex gap-2">
                 <textarea id="chat-input"
@@ -97,7 +102,13 @@
                 sendButtonElementSelector: '#send-btn',
                 placeholderElementSelector: '#chat-placeholder',
                 messages: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(messages)),
-                metricsEnabled: false
+                metricsEnabled: false,
+                sessionDocumentsEnabled: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allowSessionDocuments)),
+                existingDocuments: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(existingDocuments)),
+                documentBarSelector: '#chat-document-bar',
+                uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
+                removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
+                allowedExtensions: '.txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx'
             });
         });
     </script>

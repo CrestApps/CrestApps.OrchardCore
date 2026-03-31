@@ -5,6 +5,7 @@ using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Copilot;
+using CrestApps.AI.Endpoints;
 using CrestApps.AI.DataSources.AzureAI;
 using CrestApps.AI.DataSources.Elasticsearch;
 using CrestApps.AI.Mcp;
@@ -17,6 +18,7 @@ using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.Tools;
 using CrestApps.Data.YesSql;
 using CrestApps.Mvc.Web.BackgroundTasks;
+using CrestApps.Mvc.Web.Endpoints.Chat;
 using CrestApps.Mvc.Web.Hubs;
 using CrestApps.Mvc.Web.Indexes;
 using CrestApps.Mvc.Web.Models;
@@ -413,6 +415,8 @@ builder.Services
     .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
     .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
     .AddScoped<MvcAIDocumentIndexingService>()
+    .AddScoped<IAIChatDocumentAuthorizationService, MvcAIChatDocumentAuthorizationService>()
+    .AddScoped<IAIChatDocumentEventHandler, MvcAIChatDocumentEventHandler>()
     .AddDocumentCatalog<ChatInteraction, ChatInteractionIndex>()
     .AddScoped<ICatalogManager<ChatInteraction>, CatalogManager<ChatInteraction>>()
     .AddScoped<IChatInteractionPromptStore, YesSqlChatInteractionPromptStore>();
@@ -531,6 +535,11 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 app.MapHub<AIChatHub>("/hubs/ai-chat");
 app.MapHub<ChatInteractionHub>("/hubs/chat-interaction");
 app.MapMcp("mcp");
+app.AddChatApiEndpoints()
+    .AddUploadChatInteractionDocumentEndpoint()
+    .AddRemoveChatInteractionDocumentEndpoint()
+    .AddUploadChatSessionDocumentEndpoint()
+    .AddRemoveChatSessionDocumentEndpoint();
 
 app.MapControllerRoute(
     name: "areas",

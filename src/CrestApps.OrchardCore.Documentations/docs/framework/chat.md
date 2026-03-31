@@ -106,6 +106,39 @@ public sealed class MyChatInteractionHandler : CatalogEntryHandlerBase<ChatInter
 }
 ```
 
+### `IAIChatDocumentAuthorizationService`
+
+Applications register this service to decide who may upload or remove chat documents.
+
+```csharp
+public interface IAIChatDocumentAuthorizationService
+{
+    Task<bool> CanManageChatInteractionDocumentsAsync(
+        ClaimsPrincipal user,
+        ChatInteraction interaction);
+
+    Task<bool> CanManageChatSessionDocumentsAsync(
+        ClaimsPrincipal user,
+        AIProfile profile,
+        AIChatSession session);
+}
+```
+
+Use this when your host needs different authorization rules for admin-managed interaction documents versus end-user session uploads.
+
+### `IAIChatDocumentEventHandler`
+
+Implement this hook when uploaded or removed chat documents need additional side effects such as indexing chunks, persisting original files, or cleaning up external stores.
+
+```csharp
+public interface IAIChatDocumentEventHandler
+{
+    Task UploadedAsync(AIChatDocumentUploadContext context, CancellationToken cancellationToken = default);
+
+    Task RemovedAsync(AIChatDocumentRemoveContext context, CancellationToken cancellationToken = default);
+}
+```
+
 ## Session Lifecycle
 
 A chat session moves through a well-defined lifecycle:
@@ -158,6 +191,26 @@ The framework defines `IAIChatSessionManager` for session CRUD. **You must provi
 builder.Services.AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>();
 builder.Services.AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>();
 ```
+
+## Shared document endpoints
+
+The framework now ships reusable minimal API extensions for chat document uploads and removals:
+
+```csharp
+app.AddUploadChatInteractionDocumentEndpoint()
+    .AddRemoveChatInteractionDocumentEndpoint()
+    .AddUploadChatSessionDocumentEndpoint()
+    .AddRemoveChatSessionDocumentEndpoint();
+```
+
+These endpoints:
+
+- process files through `IAIDocumentProcessingService`
+- persist `AIDocument` and `AIDocumentChunk` records through the configured stores
+- update `ChatInteraction.Documents` or `AIChatSession.Documents`
+- invoke `IAIChatDocumentEventHandler` so the host can index chunks or save original files
+
+Session uploads are also gated by `AIProfileSessionDocumentsMetadata.AllowSessionDocuments`, which keeps profile-level session upload behavior explicit.
 
 ### `IAIChatSessionManager` Interface
 

@@ -58,17 +58,15 @@ else
                             }
                         </td>
                         <td>
-                            <div class="btn-group btn-group-sm">
-                                <a asp-action="Edit" asp-route-id="@template.ItemId" class="btn btn-outline-primary" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form asp-action="Delete" asp-route-id="@template.ItemId" method="post" class="d-inline"
-                                      onsubmit="return confirm('Delete this template?');">
-                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            <a asp-action="Edit" asp-route-id="@template.ItemId" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@template.ItemId" method="post" class="d-inline"
+                                  onsubmit="return confirm('Delete this template?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 }

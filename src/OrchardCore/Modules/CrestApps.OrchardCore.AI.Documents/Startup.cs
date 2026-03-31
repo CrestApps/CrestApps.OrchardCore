@@ -1,13 +1,13 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Endpoints;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
-using CrestApps.OrchardCore.AI.Documents.Endpoints;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Indexes;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
@@ -43,6 +43,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
         services.AddScoped<IInteractionDocumentSettingsProvider, OrchardCoreInteractionDocumentSettingsProvider>();
+        services.AddScoped<IAIChatDocumentAuthorizationService, OrchardAIChatDocumentAuthorizationService>();
+        services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
 
         services.AddIndexProvider<AIDocumentIndexProvider>();
         services.AddIndexProvider<AIDocumentChunkIndexProvider>();
@@ -79,8 +81,8 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadDocumentEndpoint()
-            .AddRemoveDocumentEndpoint();
+            .AddUploadChatInteractionDocumentEndpoint()
+            .AddRemoveChatInteractionDocumentEndpoint();
     }
 }
 
@@ -106,7 +108,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadSessionDocumentEndpoint()
-            .AddRemoveSessionDocumentEndpoint();
+            .AddUploadChatSessionDocumentEndpoint()
+            .AddRemoveChatSessionDocumentEndpoint();
     }
 }

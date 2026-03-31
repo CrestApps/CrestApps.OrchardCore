@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
+using CrestApps.AI.Models;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 
@@ -40,6 +41,7 @@ public sealed class ChatInteractionChatViewModel
     public int? DocumentTopN { get; set; }
     public bool HasDocumentIndexConfiguration { get; set; }
     public string DocumentIndexProfileName { get; set; }
+    public List<ChatDocumentInfo> Documents { get; set; } = [];
 
     // Data Sources
     public string DataSourceId { get; set; }
