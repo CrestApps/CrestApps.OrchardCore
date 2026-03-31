@@ -105,7 +105,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         return Task.CompletedTask;
     }
 
-    private Task PopulateAsync(AIDeployment deployment, JsonNode data)
+    private static Task PopulateAsync(AIDeployment deployment, JsonNode data)
     {
         var name = data[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
 
@@ -138,12 +138,6 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         if (!string.IsNullOrEmpty(connectionName))
         {
             deployment.ConnectionName = connectionName;
-        }
-        else if (!string.IsNullOrEmpty(clientName) &&
-            !HasContainedConnection(clientName) &&
-            _providerOptions.Providers.TryGetValue(clientName, out var provider))
-        {
-            deployment.ConnectionName = provider.DefaultConnectionName;
         }
 
         if (TryGetDeploymentType(data[nameof(AIDeployment.Type)], out var type))

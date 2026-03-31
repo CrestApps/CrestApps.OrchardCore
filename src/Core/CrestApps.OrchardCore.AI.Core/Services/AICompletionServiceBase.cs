@@ -26,16 +26,6 @@ public abstract class AICompletionServiceBase
         DeploymentResolver = deploymentResolver;
     }
 
-    protected virtual string GetDefaultConnectionName(AIProvider provider, string connectionName)
-    {
-        if (!string.IsNullOrEmpty(connectionName))
-        {
-            return connectionName;
-        }
-
-        return provider.DefaultConnectionName;
-    }
-
     protected virtual string GetDefaultDeploymentName(AIProvider provider, string connectionName)
     {
         if (connectionName is not null && provider.Connections.TryGetValue(connectionName, out var connection))

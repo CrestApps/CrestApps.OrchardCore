@@ -66,16 +66,9 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     };
                 }
 
-                AIProviderConnection defaultConnection = null;
-
                 foreach (var connection in group.Connections)
                 {
                     var mappingContext = new InitializingAIProviderConnectionContext(connection);
-
-                    if (defaultConnection is null && connection.IsDefault)
-                    {
-                        defaultConnection = connection;
-                    }
 
                     if (string.IsNullOrEmpty(connection.ItemId))
                     {
@@ -97,24 +90,11 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                 }
 
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-                if (defaultConnection is not null)
+                if (string.IsNullOrEmpty(provider.DefaultChatDeploymentName) && provider.Connections.Count > 0)
                 {
-                    provider.DefaultConnectionName = defaultConnection.ItemId;
-                    provider.DefaultChatDeploymentName = defaultConnection.ChatDeploymentName;
+                    provider.DefaultChatDeploymentName = provider.Connections.First().Value?.GetChatDeploymentOrDefaultName(false);
                 }
-                else
-                {
-                    if (string.IsNullOrEmpty(provider.DefaultChatDeploymentName) && provider.Connections.Count > 0)
-                    {
-                        provider.DefaultChatDeploymentName = provider.Connections.First().Value?.GetChatDeploymentOrDefaultName(false);
-                    }
 #pragma warning restore CS0618
-
-                    if (string.IsNullOrEmpty(provider.DefaultConnectionName) && provider.Connections.Count > 0)
-                    {
-                        provider.DefaultConnectionName = provider.Connections.First().Key;
-                    }
-                }
 
                 options.Providers[group.ProviderName] = provider;
             }

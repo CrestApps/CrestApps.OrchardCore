@@ -39,8 +39,8 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     private readonly IMcpServerMetadataCacheProvider _metadataProvider;
     private readonly IMcpCapabilityEmbeddingCacheProvider _embeddingCache;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ITextTokenizer _tokenizer;
-    private readonly AIProviderOptions _providerOptions;
     private readonly McpCapabilityResolverOptions _resolverOptions;
     private readonly ILogger _logger;
 
@@ -49,8 +49,8 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         IMcpServerMetadataCacheProvider metadataProvider,
         IMcpCapabilityEmbeddingCacheProvider embeddingCache,
         IAIClientFactory aiClientFactory,
+        IAIDeploymentManager deploymentManager,
         ITextTokenizer tokenizer,
-        IOptions<AIProviderOptions> providerOptions,
         IOptions<McpCapabilityResolverOptions> resolverOptions,
         ILogger<DefaultMcpCapabilityResolver> logger)
     {
@@ -58,8 +58,8 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         _metadataProvider = metadataProvider;
         _embeddingCache = embeddingCache;
         _aiClientFactory = aiClientFactory;
+        _deploymentManager = deploymentManager;
         _tokenizer = tokenizer;
-        _providerOptions = providerOptions.Value;
         _resolverOptions = resolverOptions.Value;
         _logger = logger;
     }
@@ -393,33 +393,25 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(
         string providerName, string connectionName)
     {
-        if (string.IsNullOrEmpty(providerName) ||
-            !_providerOptions.Providers.TryGetValue(providerName, out var provider))
+        if (string.IsNullOrEmpty(providerName))
         {
             return null;
         }
 
-        if (string.IsNullOrEmpty(connectionName))
-        {
-            connectionName = provider.DefaultConnectionName;
-        }
+        var deployment = await _deploymentManager.ResolveOrDefaultAsync(
+            AIDeploymentType.Embedding,
+            clientName: providerName,
+            connectionName: connectionName);
 
-        if (string.IsNullOrEmpty(connectionName) ||
-            !provider.Connections.TryGetValue(connectionName, out var connection))
-        {
-            return null;
-        }
-
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-        var deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(throwException: false);
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
+        if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
         {
             return null;
         }
 
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
+        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+            deployment.ClientName,
+            deployment.ConnectionName,
+            deployment.ModelName);
     }
 
     /// <summary>

@@ -131,13 +131,6 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         }
 #pragma warning restore CS0618
 
-        var isDefault = data[nameof(AIProviderConnection.IsDefault)]?.GetValue<bool>();
-
-        if (isDefault == true)
-        {
-            connection.IsDefault = true;
-        }
-
         var displayText = data[nameof(AIProviderConnection.DisplayText)]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(displayText))

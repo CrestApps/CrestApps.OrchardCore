@@ -71,10 +71,9 @@ Below is an example configuration:
           "AbsoluteMaximumIterationsPerRequest": 100,
           "EnableOpenTelemetry": false,
           "EnableDistributedCaching": true
-        },
+      },
       "Providers": {
         "<!-- Provider name goes here (valid values: 'OpenAI', 'Azure', 'AzureAIInference', or 'Ollama') -->": {
-          "DefaultConnectionName": "<!-- The default connection name to use from the Connections list -->",
           "Connections": {
             "<!-- Connection name goes here -->": {
               // Provider-specific settings go here (e.g., ApiKey, Endpoint)
@@ -154,7 +153,7 @@ Each deployment is a first-class entity with a **Type**. Deployments can be defi
 |----------|-------------|----------|
 | `Name` | The model/deployment name (e.g., `gpt-4o`, `text-embedding-3-large`) | Yes |
 | `Type` | The deployment type. Valid values: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText` | Yes |
-| `IsDefault` | Optional legacy connection-scoped default marker retained for backward compatibility in configuration and recipes | No |
+| `IsDefault` | Whether this deployment is the default for its type within the connection | No |
 
 **Deployment Types:**
 
@@ -266,7 +265,7 @@ The following providers are supported **out of the box**:
 > **Tip:** Most modern AI providers offer APIs that follow the **OpenAI API standard**.
 > For these providers, use the **`OpenAI`** provider type when configuring their connections and endpoints.
 
-Each provider can define multiple connections, and the `DefaultConnectionName` determines which one is used when multiple connections are available.
+Each provider can define multiple connections. Runtime resolution now uses the connection associated with the selected deployment, so callers should provide the deployment name and matching connection name when a provider has more than one connection.
 
 ---
 
@@ -367,7 +366,6 @@ You can add or update a connection using **recipes**. Below is a recipe for addi
         {
           "Source": "OpenAI",
           "Name": "deepseek",
-          "IsDefault": false,
           "DisplayText": "DeepSeek",
           "Deployments": [
             { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }

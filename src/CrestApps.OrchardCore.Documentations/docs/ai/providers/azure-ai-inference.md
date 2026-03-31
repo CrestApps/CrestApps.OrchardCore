@@ -26,7 +26,6 @@ To configure the OpenAI connection, add the following settings to the `appsettin
     "CrestApps_AI": {
       "Providers": {
         "AzureAIInference": {
-          "DefaultConnectionName": "default",
           "Connections": {
             "default": {
               "Endpoint": "https://<!-- Your Azure Resource Name -->.services.ai.azure.com/models",

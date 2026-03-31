@@ -3,9 +3,9 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
 using Fluid;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Liquid;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -15,53 +15,40 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
 public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithConfigTask>
 {
-    private readonly AIProviderOptions _aiProviderOptions;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IAIClientFactory _aIClientFactory;
     private readonly IAIToolsService _aIToolsService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
-    private readonly ILoggerFactory _loggerFactory;
     private readonly DefaultAIOptions _defaultOptions;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
     public AICompletionWithConfigTask(
-        IOptions<AIProviderOptions> aiProviderOptions,
-        IServiceProvider serviceProvider,
         IAIClientFactory aIClientFactory,
         IAIToolsService aIToolsService,
+        IAIDeploymentManager deploymentManager,
         ILiquidTemplateManager liquidTemplateManager,
-        ILoggerFactory loggerFactory,
+        IServiceProvider serviceProvider,
         DefaultAIOptions defaultOptions,
+        ILogger<AICompletionWithConfigTask> logger,
         IStringLocalizer<AICompletionWithConfigTask> stringLocalizer)
     {
-        _aiProviderOptions = aiProviderOptions.Value;
-        _serviceProvider = serviceProvider;
         _aIClientFactory = aIClientFactory;
         _aIToolsService = aIToolsService;
+        _deploymentManager = deploymentManager;
         _liquidTemplateManager = liquidTemplateManager;
-        _loggerFactory = loggerFactory;
         _defaultOptions = defaultOptions;
-        _logger = _loggerFactory.CreateLogger<AICompletionWithConfigTask>();
+        ServiceProvider = serviceProvider;
+        _logger = logger;
         S = stringLocalizer;
     }
+
+    internal IServiceProvider ServiceProvider { get; }
 
     public override LocalizedString DisplayText => S["AI Completion using Direct Config"];
 
     public override LocalizedString Category => S["Artificial Intelligence"];
-
-    public string ProviderName
-    {
-        get => GetProperty<string>();
-        set => SetProperty(value);
-    }
-
-    public string ConnectionName
-    {
-        get => GetProperty<string>();
-        set => SetProperty(value);
-    }
 
     public string DeploymentName
     {
@@ -130,11 +117,6 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-        if (string.IsNullOrEmpty(ProviderName) || !_aiProviderOptions.Providers.TryGetValue(ProviderName, out var provider))
-        {
-            return Outcomes("Failed");
-        }
-
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default, null);
 
         if (string.IsNullOrWhiteSpace(userPrompt))
@@ -146,10 +128,17 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
         try
         {
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(
+                AIDeploymentType.Chat,
+                deploymentName: DeploymentName);
 
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-            var client = await _aIClientFactory.CreateChatClientAsync(ProviderName, ConnectionName ?? provider.DefaultConnectionName, DeploymentName ?? provider.DefaultChatDeploymentName);
-#pragma warning restore CS0618
+            if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
+            {
+                _logger.LogWarning("Unable to resolve the selected chat deployment with a valid connection. Deployment: '{DeploymentName}'.", DeploymentName);
+                return Outcomes("Failed");
+            }
+
+            var client = await _aIClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
 
             var chatOptions = new ChatOptions
             {
@@ -167,10 +156,10 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
                 client = client
                     .AsBuilder()
-                    .UseFunctionInvocation(_loggerFactory, c =>
+                    .UseFunctionInvocation(ServiceProvider.GetRequiredService<ILoggerFactory>(), c =>
                     {
                         c.MaximumIterationsPerRequest = _defaultOptions.MaximumIterationsPerRequest;
-                    }).Build(_serviceProvider);
+                    }).Build(ServiceProvider);
 
                 foreach (var toolName in ToolNames)
                 {

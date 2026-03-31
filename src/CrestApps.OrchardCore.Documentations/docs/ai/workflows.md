@@ -26,7 +26,7 @@ To prevent naming conflicts with other workflow tasks, it's recommended to prefi
 ## AI Completion using Direct Config Task
 
 This activity allows you to request AI completions by defining the configuration directly within the workflow, without relying on a predefined AI Profile.
-To use it, search for the **AI Completion using Direct Config** task in your workflow and specify a unique **Result Property Name**.
+To use it, search for the **AI Completion using Direct Config** task in your workflow, choose the chat **Deployment** to execute, and specify a unique **Result Property Name**.
 The generated response will be saved in this property.
 
 For example, if the **Result Property Name** is `AI-CrestApps-Step1`, you can access the response later using:
@@ -92,3 +92,4 @@ Triggered once when **all** configured data extraction fields have been collecte
 | `ProfileId` | string | The AI profile identifier. |
 | `Session` | AIChatSession | The full session object. |
 | `Profile` | AIProfile | The full AI profile configuration. |
+

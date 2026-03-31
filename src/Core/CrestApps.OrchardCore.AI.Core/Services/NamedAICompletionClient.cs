@@ -96,21 +96,19 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
-
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
             AIDeploymentType.Chat,
             provider,
             ProviderName,
-            connectionName,
+            context.ConnectionName,
             deploymentName: context.ChatDeploymentName);
 
-        connectionName = resolvedConnectionName;
+        var connectionName = resolvedConnectionName;
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             return null;
         }
@@ -154,7 +152,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             throw new ArgumentException($"Provider '{ProviderName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
@@ -168,7 +166,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             yield break;
         }
