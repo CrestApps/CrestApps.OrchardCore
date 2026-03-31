@@ -1,9 +1,11 @@
 using CrestApps.AI.Chat.Copilot;
+using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -31,6 +33,8 @@ public sealed class Startup : StartupBase
 
         // Bridge OrchardCore User model → ICopilotCredentialStore.
         services.AddScoped<ICopilotCredentialStore, OrchardCoreCopilotCredentialStore>();
+        services.AddScoped<CopilotCallbackUrlProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestratorAvailabilityProvider, CopilotOrchestratorAvailabilityProvider>());
 
         // OrchardCore-specific display drivers.
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();

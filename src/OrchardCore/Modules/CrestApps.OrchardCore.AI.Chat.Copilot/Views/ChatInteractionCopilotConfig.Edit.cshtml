@@ -7,66 +7,76 @@
 @model EditCopilotProfileViewModel
 
 <div class="d-none orchestrator-dependent orchestrator-dependent-@(CopilotOrchestrator.OrchestratorName)">
+    @if (!Model.IsCopilotConfigured)
+    {
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            @T["Copilot is not configured and cannot be used until it has been configured in Settings → Artificial Intelligence → Copilot."]
+        </div>
+    }
 
     @if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
     {
-        @* Connected state *@
-        <div id="ci-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
-            <div class="alert alert-success d-flex align-items-center justify-content-between mb-3 py-2">
-                <span>
-                    <i class="fas fa-check-circle"></i>
-                    @T["Connected as"] <strong id="ci-github-username">@Model.GitHubUsername</strong>
-                </span>
-                <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
-                    <i class="fa-solid fa-power-off"></i>
-                </a>
-            </div>
-        </div>
-
-        @* Disconnected state *@
-        <div id="ci-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
-            <div class="card mb-3">
-                <div class="card-body text-center">
-                    <h5 class="card-title">
-                        <i class="fab fa-github"></i> @T["GitHub Authentication"]
-                    </h5>
-                    <p class="card-text text-muted">
-                        @T["Copilot requires a GitHub connection. Sign in with your GitHub account to configure and use Copilot models."]
-                    </p>
-                    <a href="#" class="btn btn-primary" id="ci-connect-github">
-                        <i class="fab fa-github"></i> @T["Sign in with GitHub"]
+        @if (Model.IsCopilotConfigured)
+        {
+            @* Connected state *@
+            <div id="ci-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
+                <div class="alert alert-success d-flex align-items-center justify-content-between mb-3 py-2">
+                    <span>
+                        <i class="fas fa-check-circle"></i>
+                        @T["Connected as"] <strong id="ci-github-username">@Model.GitHubUsername</strong>
+                    </span>
+                    <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="ci-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]" title="@T["Disconnect from GitHub"]">
+                        <i class="fa-solid fa-power-off"></i>
                     </a>
                 </div>
             </div>
-        </div>
 
-        @* Loading state *@
-        <div id="ci-github-loading" class="d-none">
-            <div class="d-flex align-items-center justify-content-center text-muted py-4">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                @T["Checking GitHub connection..."]
+            @* Disconnected state *@
+            <div id="ci-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
+                <div class="card mb-3">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">
+                            <i class="fab fa-github"></i> @T["GitHub Authentication"]
+                        </h5>
+                        <p class="card-text text-muted">
+                            @T["Copilot requires a GitHub connection. Sign in with your GitHub account to configure and use Copilot models."]
+                        </p>
+                        <a href="#" class="btn btn-primary" id="ci-connect-github">
+                            <i class="fab fa-github"></i> @T["Sign in with GitHub"]
+                        </a>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        @* Copilot Model Selection — dropdown, toggled by JS *@
-        <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
-            <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-            <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
-            </select>
-            <span asp-validation-for="CopilotModel" class="text-danger"></span>
-            <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
-        </div>
-
-        @* Allow All — toggled by JS *@
-        <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
-            <div class="form-check">
-                <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
-                <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+            @* Loading state *@
+            <div id="ci-github-loading" class="d-none">
+                <div class="d-flex align-items-center justify-content-center text-muted py-4">
+                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    @T["Checking GitHub connection..."]
+                </div>
             </div>
-            <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
-        </div>
+
+            @* Copilot Model Selection — dropdown, toggled by JS *@
+            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
+                <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
+                <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+                </select>
+                <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
+            </div>
+
+            @* Allow All — toggled by JS *@
+            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
+                <div class="form-check">
+                    <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+                </div>
+                <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
+            </div>
+        }
     }
-    else
+    else if (Model.AuthenticationType == CopilotAuthenticationType.ApiKey)
     {
         @* BYOK mode — no GitHub sign-in needed *@
         <div class="mb-3">
@@ -104,8 +114,9 @@
         const modelsUrl = '@Url.Action("GetModels", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
         const disconnectUrl = '@Url.Action("DisconnectGitHubAjax", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
         const authUrl = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=__popup__';
+        const isConfigured = @(Model.IsCopilotConfigured ? "true" : "false");
 
-        let statusChecked = @(Model.IsAuthenticated ? "true" : "false");
+        let statusChecked = @(Model.IsAuthenticated || !Model.IsCopilotConfigured ? "true" : "false");
 
         function getAntiForgeryToken() {
             const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -155,7 +166,9 @@
                 const resp = await fetch(statusUrl);
                 const data = await resp.json();
 
-                if (data.isAuthenticated) {
+                if (data.isConfigured === false) {
+                    showState('disconnected');
+                } else if (data.isAuthenticated) {
                     usernameEl.textContent = data.gitHubUsername;
                     showState('connected');
                     await loadModels();
@@ -185,6 +198,11 @@
 
         if (connectButton) {
             connectButton.addEventListener('click', function (e) {
+                if (!isConfigured) {
+                    e.preventDefault();
+                    return;
+                }
+
                 e.preventDefault();
 
                 var popup = window.open(authUrl, 'github-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');

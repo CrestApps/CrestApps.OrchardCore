@@ -30,7 +30,7 @@ public sealed class MvcAIProviderOptionsStore
                 Connections = new Dictionary<string, AIProviderConnectionEntry>(StringComparer.OrdinalIgnoreCase),
             };
 
-            var defaultConnection = group.FirstOrDefault(static connection => connection.IsDefault) ?? group.FirstOrDefault();
+            var defaultConnection = group.FirstOrDefault();
 
             foreach (var connection in group)
             {
@@ -65,8 +65,6 @@ public sealed class MvcAIProviderOptionsStore
             {
                 continue;
             }
-
-            provider.DefaultConnectionName = defaultConnection?.Name ?? provider.Connections.Keys.First();
 
 #pragma warning disable CS0618
             provider.DefaultChatDeploymentName = defaultConnection?.ChatDeploymentName

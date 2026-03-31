@@ -4,6 +4,7 @@ using CrestApps.SignalR.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.SignalR;
 
@@ -14,8 +15,9 @@ public sealed class Startup : StartupBase
         services.AddScoped(sp =>
         {
             var shellSettings = sp.GetRequiredService<ShellSettings>();
+            var siteService = sp.GetRequiredService<ISiteService>();
 
-            return new HubRouteManager(shellSettings.RequestUrlPrefix);
+            return new HubRouteManager(shellSettings.RequestUrlPrefix, () => siteService.GetSiteSettings().BaseUrl);
         });
 
         services

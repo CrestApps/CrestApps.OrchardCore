@@ -8,8 +8,6 @@ public class AIProviderConnectionFieldsViewModel
 
     public string Name { get; set; }
 
-    public bool IsDefault { get; set; }
-
     [Obsolete("Deployment names are now managed through AIDeployment entities. Retained for backward compatibility.")]
     public string ChatDeploymentName { get; set; }
 

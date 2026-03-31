@@ -1,14 +1,16 @@
 using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Settings;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
@@ -21,7 +23,8 @@ public sealed class CopilotAuthController : Controller
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
     private readonly AdminOptions _adminOptions;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly ISiteService _siteService;
+    private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
 
     internal readonly IHtmlLocalizer H;
 
@@ -29,17 +32,19 @@ public sealed class CopilotAuthController : Controller
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         INotifier notifier,
+        ISiteService siteService,
+        CopilotCallbackUrlProvider callbackUrlProvider,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
         ILogger<CopilotAuthController> logger,
-        IOptions<AdminOptions> adminOptions,
-        LinkGenerator linkGenerator)
+        IOptions<AdminOptions> adminOptions)
     {
         _oauthService = oauthService;
         _userManager = userManager;
         _notifier = notifier;
+        _siteService = siteService;
+        _callbackUrlProvider = callbackUrlProvider;
         _logger = logger;
         _adminOptions = adminOptions.Value;
-        _linkGenerator = linkGenerator;
         H = htmlLocalizer;
     }
 
@@ -47,7 +52,7 @@ public sealed class CopilotAuthController : Controller
     /// Initiates the GitHub OAuth flow.
     /// </summary>
     [HttpGet("copilot/Authorize")]
-    public IActionResult AuthorizeGitHub(string returnUrl = null)
+    public async Task<IActionResult> AuthorizeGitHub(string returnUrl = null)
     {
         // Validate returnUrl to prevent open redirect attacks.
         // Fallback to admin home — never to OAuthCallback itself (which would trigger a loop).
@@ -58,14 +63,18 @@ public sealed class CopilotAuthController : Controller
                 ? returnUrl
                 : "~/" + _adminOptions.AdminUrlPrefix;
 
-        var callbackUrl = _linkGenerator.GetUriByAction(HttpContext, "OAuthCallback", "CopilotAuth", new
+        try
         {
-            area = "CrestApps.OrchardCore.AI.Chat.Copilot",
-        });
+            var callbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
+            var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
 
-        var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
-
-        return Redirect(authUrl);
+            return Redirect(authUrl);
+        }
+        catch (InvalidOperationException)
+        {
+            await _notifier.WarningAsync(H["Copilot is not configured and cannot be used until it has been configured."]);
+            return HandleOAuthReturn(safeReturnUrl, success: false, username: null);
+        }
     }
 
     /// <summary>

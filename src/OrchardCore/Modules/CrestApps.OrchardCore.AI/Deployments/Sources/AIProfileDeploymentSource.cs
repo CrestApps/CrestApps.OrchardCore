@@ -44,8 +44,6 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
                 { "PromptTemplate", profile.PromptTemplate },
                 { "ChatDeploymentName", profile.ChatDeploymentName },
                 { "UtilityDeploymentName", profile.UtilityDeploymentName },
-                { "ChatDeploymentName", profile.ChatDeploymentName },
-                { "UtilityDeploymentName", profile.UtilityDeploymentName },
                 { "CreatedUtc", profile.CreatedUtc },
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },

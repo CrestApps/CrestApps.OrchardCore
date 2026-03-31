@@ -40,4 +40,10 @@ public class EditCopilotProfileViewModel
     /// </summary>
     [BindNever]
     public CopilotAuthenticationType AuthenticationType { get; set; }
+
+    /// <summary>
+    /// Indicates whether the site-level Copilot settings are complete enough to use Copilot.
+    /// </summary>
+    [BindNever]
+    public bool IsCopilotConfigured { get; set; }
 }

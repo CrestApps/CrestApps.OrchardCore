@@ -129,10 +129,16 @@ public sealed class SearchDocumentsTool : AIFunction
                 return "No embedding deployment is configured for document search.";
             }
 
+            if (string.IsNullOrEmpty(embeddingDeployment.ConnectionName))
+            {
+                logger.LogWarning("AI tool '{ToolName}' failed: embedding deployment '{DeploymentName}' has no connection reference.", Name, embeddingDeployment.Name);
+                return "The resolved embedding deployment does not define a connection.";
+            }
+
             var embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
                 embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
-                embeddingDeployment.Name);
+                embeddingDeployment.ModelName);
 
             if (embeddingGenerator == null)
             {

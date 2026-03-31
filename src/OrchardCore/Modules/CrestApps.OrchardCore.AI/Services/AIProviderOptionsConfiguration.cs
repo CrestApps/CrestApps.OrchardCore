@@ -89,17 +89,6 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                     Connections = connections,
                 };
 
-                var defaultConnectionName = providerNode["DefaultConnectionName"]?.GetValue<string>();
-
-                if (!string.IsNullOrEmpty(defaultConnectionName))
-                {
-                    provider.DefaultConnectionName = defaultConnectionName;
-                }
-                else
-                {
-                    provider.DefaultConnectionName = connections.FirstOrDefault().Key;
-                }
-
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 var defaultDeploymentName = providerNode["ChatDeploymentName"]?.GetValue<string>()
                     ?? providerNode["DefaultChatDeploymentName"]?.GetValue<string>()

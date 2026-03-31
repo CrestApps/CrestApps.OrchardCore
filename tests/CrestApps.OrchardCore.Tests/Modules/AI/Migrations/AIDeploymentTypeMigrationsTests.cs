@@ -96,7 +96,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         var connections = new[]
         {
             CreateConnection(itemId: "secondary-connection", name: "Secondary", legacyChatDeploymentName: "gpt-4.1"),
-            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4o-mini", legacyUtilityDeploymentName: "gpt-4o-mini", isDefault: true),
+            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4o-mini", legacyUtilityDeploymentName: "gpt-4o-mini"),
         };
         var deployments = new[]
         {
@@ -165,7 +165,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         var settings = new DefaultAIDeploymentSettings();
         var connections = new[]
         {
-            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini", isDefault: true),
+            CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini"),
         };
         var deployments = new[]
         {
@@ -340,8 +340,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         string name,
         string legacyChatDeploymentName,
         string legacyUtilityDeploymentName = null,
-        string legacyEmbeddingDeploymentName = null,
-        bool isDefault = false)
+        string legacyEmbeddingDeploymentName = null)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
         return new AIProviderConnection
@@ -352,7 +351,6 @@ public sealed class AIDeploymentTypeMigrationsTests
             ChatDeploymentName = legacyChatDeploymentName,
             UtilityDeploymentName = legacyUtilityDeploymentName,
             EmbeddingDeploymentName = legacyEmbeddingDeploymentName,
-            IsDefault = isDefault,
         };
 #pragma warning restore CS0618 // Type or member is obsolete
     }

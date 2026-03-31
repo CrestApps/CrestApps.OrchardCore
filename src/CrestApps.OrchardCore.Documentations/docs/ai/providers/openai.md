@@ -28,7 +28,6 @@ To configure a connection, add the following settings to the `appsettings.json` 
     "CrestApps_AI": {
       "Providers": {
         "OpenAI": {
-          "DefaultConnectionName": "openai-cloud",
           "Connections": {
             "openai-cloud": {
               "ApiKey": "<!-- Your API Key Goes Here -->",
@@ -105,7 +104,6 @@ To configure DeepSeek, add the following settings:
     "CrestApps_AI": {
       "Providers": {
         "OpenAI": {
-          "DefaultConnectionName": "deepseek",
           "Connections": {
             "deepseek": {
               "Endpoint": "https://api.deepseek.com/v1",
@@ -122,7 +120,7 @@ To configure DeepSeek, add the following settings:
 }
 ```
 
-> The `DefaultConnectionName` under the `OpenAI` node is required only if you want to set the `deepseek` connection as the default OpenAI connection when AI profiles use the default setting.  
+> When using multiple OpenAI connections, pass the deployment name and matching connection name together so the runtime resolves the correct endpoint.  
 
 #### Configuration via AI Connection Management  
 
@@ -137,7 +135,6 @@ If you are using the **AI Connection Management** feature, you can configure Dee
         {
           "Source": "OpenAI",
           "Name": "deepseek",
-          "IsDefault": false,
           "DisplayText": "DeepSeek",
           "Deployments": [
             { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }
@@ -167,7 +164,6 @@ To connect to **Google Gemini**, **Together AI**, **vLLM**, or any other support
     "CrestApps_AI": {
       "Providers": {
         "OpenAI": {
-          "DefaultConnectionName": "google-gemini",
           "Connections": {
             "google-gemini": {
               "Endpoint": "https://generativelanguage.googleapis.com/v1",

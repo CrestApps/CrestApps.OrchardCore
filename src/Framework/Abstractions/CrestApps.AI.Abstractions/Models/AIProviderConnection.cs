@@ -27,8 +27,6 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
     [Obsolete("Use typed AIDeployment records instead. This property is retained for backward compatibility and migration.")]
     public string SpeechToTextDeploymentName { get; set; }
 
-    public bool IsDefault { get; set; }
-
     /// <summary>
     /// Gets or sets the technical name of the AI client implementation associated with this connection.
     /// This maps to a registered key in <c>AIOptions.Clients</c>.
@@ -90,14 +88,13 @@ public sealed class AIProviderConnection : SourceCatalogEntry, INameAwareModel, 
             Source = Source,
             Name = Name,
             DisplayText = DisplayText,
-            IsDefault = IsDefault,
 #pragma warning disable CS0618 // Type or member is obsolete
             ChatDeploymentName = ChatDeploymentName,
             EmbeddingDeploymentName = EmbeddingDeploymentName,
             ImagesDeploymentName = ImagesDeploymentName,
             UtilityDeploymentName = UtilityDeploymentName,
             SpeechToTextDeploymentName = SpeechToTextDeploymentName,
-#pragma warning restore CS0618
+#pragma warning restore CS0618 // Type or member is obsolete
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

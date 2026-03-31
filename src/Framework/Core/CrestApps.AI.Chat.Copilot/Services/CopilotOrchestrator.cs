@@ -63,7 +63,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.CompletionContext);
-        ArgumentException.ThrowIfNullOrEmpty(context.SourceName);
+        context.SourceName ??= Name;
 
         // Get the full tool registry for this context.
         var allTools = await _toolRegistry.GetAllAsync(context.CompletionContext, cancellationToken);
@@ -115,6 +115,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         var sessionConfig = new SessionConfig
         {
             Streaming = true,
+            OnPermissionRequest = CreatePermissionRequestHandler(),
         };
 
         // Read Copilot-specific metadata from the orchestration context.
@@ -125,10 +126,16 @@ public sealed class CopilotOrchestrator : IOrchestrator
         {
             metadata = md;
             sessionConfig.Model = metadata.CopilotModel;
+            sessionConfig.OnPermissionRequest = CreatePermissionRequestHandler(metadata.IsAllowAll);
         }
 
-        // Load options to determine authentication mode.
         var settings = _options.Value;
+
+        if (!IsConfigured(settings))
+        {
+            yield return CreateTextResponse("Copilot is not configured and cannot be used until it has been configured.");
+            yield break;
+        }
 
         if (settings.AuthenticationType == CopilotAuthenticationType.ApiKey)
         {
@@ -284,6 +291,37 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         return clientOptions;
+    }
+
+    private static bool IsConfigured(CopilotOptions settings)
+    {
+        return settings.AuthenticationType switch
+        {
+            CopilotAuthenticationType.GitHubOAuth =>
+                !string.IsNullOrWhiteSpace(settings.ClientId) &&
+                !string.IsNullOrWhiteSpace(settings.ClientSecret),
+            CopilotAuthenticationType.ApiKey =>
+                !string.IsNullOrWhiteSpace(settings.ProviderType) &&
+                !string.IsNullOrWhiteSpace(settings.BaseUrl) &&
+                !string.IsNullOrWhiteSpace(settings.DefaultModel) &&
+                (!string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase) ||
+                    (!string.IsNullOrWhiteSpace(settings.AzureApiVersion) &&
+                     !string.IsNullOrWhiteSpace(settings.ApiKey))),
+            _ => false,
+        };
+    }
+
+    private static PermissionRequestHandler CreatePermissionRequestHandler(bool allowAll = true)
+    {
+        if (allowAll)
+        {
+            return PermissionHandler.ApproveAll;
+        }
+
+        return (request, invocation) => Task.FromResult(new PermissionRequestResult
+        {
+            Kind = PermissionRequestResultKind.DeniedCouldNotRequestFromUser,
+        });
     }
 
     /// <summary>
@@ -620,4 +658,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return _inner.InvokeAsync(arguments, cancellationToken);
         }
     }
+
+    private static ChatResponseUpdate CreateTextResponse(string responseText)
+        => new()
+        {
+            Role = ChatRole.Assistant,
+            Contents = [new TextContent(responseText)],
+        };
 }

@@ -55,7 +55,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
@@ -69,7 +69,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             return null;
         }
@@ -191,7 +191,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             throw new ArgumentException($"Provider '{AzureOpenAIConstants.ClientName}' not found.");
         }
 
-        var connectionName = GetDefaultConnectionName(provider, context.ConnectionName);
+        var connectionName = context.ConnectionName;
 
         // Use the deployment resolver with fallback to legacy dictionary-based resolution.
         var (deploymentName, resolvedConnectionName) = await ResolveDeploymentAsync(
@@ -205,7 +205,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             yield break;
         }

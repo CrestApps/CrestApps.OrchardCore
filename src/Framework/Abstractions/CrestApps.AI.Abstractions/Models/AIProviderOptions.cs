@@ -11,8 +11,6 @@ public class AIProviderOptions
 
 public sealed class AIProvider
 {
-    public string DefaultConnectionName { get; set; }
-
     [Obsolete("Use typed AIDeployment records with IsDefault instead. Retained for backward compatibility.")]
     public string DefaultChatDeploymentName { get; set; }
 

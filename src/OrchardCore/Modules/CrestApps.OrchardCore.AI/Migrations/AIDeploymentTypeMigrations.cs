@@ -414,9 +414,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         {
             var orderedConnections = connections
                 .Where(connection => !string.IsNullOrWhiteSpace(legacyDeploymentNameAccessor(connection)))
-                .OrderByDescending(connection => connection.IsDefault)
-                .ThenBy(connection => connection.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                .OrderBy(connection => connection.Name, StringComparer.OrdinalIgnoreCase);
 
             foreach (var connection in orderedConnections)
             {

@@ -54,7 +54,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
             var generator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
                 embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
-                embeddingDeployment.Name);
+                embeddingDeployment.ModelName);
 
             if (generator == null)
             {
@@ -70,15 +70,12 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
         string deploymentName = null;
 
-#pragma warning disable CS0618
-        if (!string.IsNullOrEmpty(providerName) && _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (!string.IsNullOrEmpty(providerName) &&
+            !string.IsNullOrEmpty(connectionName) &&
+            _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
         {
-            if (string.IsNullOrEmpty(connectionName))
-            {
-                connectionName = provider.DefaultConnectionName;
-            }
-
-            if (!string.IsNullOrEmpty(connectionName) && provider.Connections.TryGetValue(connectionName, out var connection))
+            if (provider.Connections.TryGetValue(connectionName, out var connection))
             {
                 deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
             }

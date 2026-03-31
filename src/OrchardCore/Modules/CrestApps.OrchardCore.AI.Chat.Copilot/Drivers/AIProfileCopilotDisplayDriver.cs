@@ -49,13 +49,20 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
+            model.IsCopilotConfigured = siteSettings.IsConfigured();
+
+            if (!model.IsCopilotConfigured)
+            {
+                model.AvailableModels = [];
+                return;
+            }
 
             if (siteSettings.AuthenticationType == CopilotAuthenticationType.ApiKey)
             {
                 // BYOK mode — no GitHub auth needed; model is a text input.
                 model.AvailableModels = [];
             }
-            else
+            else if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
             {
                 // GitHub OAuth mode — check auth and load models from GitHub API.
                 var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
@@ -79,6 +86,10 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                 }
 
                 model.AvailableModels ??= [];
+            }
+            else
+            {
+                model.AvailableModels = [];
             }
         }).Location("Content:3.5");
     }

@@ -219,10 +219,11 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         bool enablePreemptiveRag)
     {
         var templateService = new FakeAITemplateService();
+        var deploymentManager = new Mock<IAIDeploymentManager>();
         var queryProvider = new PreemptiveSearchQueryProvider(
             new NullAIClientFactory(),
+            deploymentManager.Object,
             templateService,
-            Options.Create(new AIProviderOptions()),
             NullLogger<PreemptiveSearchQueryProvider>.Instance);
 
         var settings = Options.Create(new DefaultOrchestratorSettings { EnablePreemptiveRag = enablePreemptiveRag });

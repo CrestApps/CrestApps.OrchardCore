@@ -44,7 +44,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         {
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
-            model.IsDefault = connection.IsDefault;
             model.IsNew = context.IsNew;
 
         }).Location("Content:1");
@@ -76,7 +75,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
 
         connection.DisplayText = model.DisplayText;
-        connection.IsDefault = model.IsDefault;
 
         _shellReleaseManager.RequestRelease();
 
