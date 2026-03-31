@@ -34,12 +34,12 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
     {
         return Initialize<DefaultAIDeploymentSettingsViewModel>("DefaultAIDeploymentSettings_Edit", async model =>
         {
-            model.DefaultChatDeploymentId = settings.DefaultChatDeploymentId;
-            model.DefaultUtilityDeploymentId = settings.DefaultUtilityDeploymentId;
-            model.DefaultEmbeddingDeploymentId = settings.DefaultEmbeddingDeploymentId;
-            model.DefaultImageDeploymentId = settings.DefaultImageDeploymentId;
-            model.DefaultSpeechToTextDeploymentId = settings.DefaultSpeechToTextDeploymentId;
-            model.DefaultTextToSpeechDeploymentId = settings.DefaultTextToSpeechDeploymentId;
+            model.DefaultChatDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultChatDeploymentName);
+            model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultUtilityDeploymentName);
+            model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultEmbeddingDeploymentName);
+            model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultImageDeploymentName);
+            model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
+            model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
@@ -75,12 +75,12 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.DefaultChatDeploymentId = model.DefaultChatDeploymentId;
-        settings.DefaultUtilityDeploymentId = model.DefaultUtilityDeploymentId;
-        settings.DefaultEmbeddingDeploymentId = model.DefaultEmbeddingDeploymentId;
-        settings.DefaultImageDeploymentId = model.DefaultImageDeploymentId;
-        settings.DefaultSpeechToTextDeploymentId = model.DefaultSpeechToTextDeploymentId;
-        settings.DefaultTextToSpeechDeploymentId = model.DefaultTextToSpeechDeploymentId;
+        settings.DefaultChatDeploymentName = model.DefaultChatDeploymentName;
+        settings.DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName;
+        settings.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
+        settings.DefaultImageDeploymentName = model.DefaultImageDeploymentName;
+        settings.DefaultSpeechToTextDeploymentName = model.DefaultSpeechToTextDeploymentName;
+        settings.DefaultTextToSpeechDeploymentName = model.DefaultTextToSpeechDeploymentName;
         settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();
 
         return Edit(site, settings, context);
@@ -105,7 +105,23 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
+    }
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
+    {
+        if (string.IsNullOrWhiteSpace(selector))
+        {
+            return selector;
+        }
+
+        var deployment = await _deploymentManager.FindByIdAsync(selector);
+
+        return deployment?.Name ?? selector;
     }
 }

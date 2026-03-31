@@ -231,8 +231,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         }
 
         var chatDeployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
-            utilityDeploymentId: context.UtilityDeploymentId,
-            chatDeploymentId: context.ChatDeploymentId);
+            utilityDeploymentName: context.UtilityDeploymentName,
+            chatDeploymentName: context.ChatDeploymentName);
 
         if (chatDeployment is null)
         {
@@ -587,19 +587,19 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
                 var deploymentSettings = await GetDeploymentSettingsAsync(services);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentName))
                 {
                     await Clients.Caller.ReceiveError(GetNoSttDeploymentMessage());
                     return;
                 }
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentName))
                 {
                     await Clients.Caller.ReceiveError(GetNoTtsDeploymentMessage());
                     return;
                 }
 
-                var sttDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
+                var sttDeployment = await deploymentManager.FindByNameAsync(deploymentSettings.DefaultSpeechToTextDeploymentName);
 
                 if (sttDeployment is null)
                 {
@@ -607,7 +607,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                     return;
                 }
 
-                var ttsDeployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
+                var ttsDeployment = await deploymentManager.FindByNameAsync(deploymentSettings.DefaultTextToSpeechDeploymentName);
 
                 if (ttsDeployment is null)
                 {
@@ -703,13 +703,13 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
                 var deploymentSettings = await GetDeploymentSettingsAsync(services);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId))
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentName))
                 {
                     await Clients.Caller.ReceiveError(GetNoSttDeploymentMessage());
                     return;
                 }
 
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultSpeechToTextDeploymentId);
+                var deployment = await deploymentManager.FindByNameAsync(deploymentSettings.DefaultSpeechToTextDeploymentName);
 
                 if (deployment is null)
                 {
@@ -801,13 +801,13 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
                 var deploymentSettings = await GetDeploymentSettingsAsync(services);
 
-                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId))
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentName))
                 {
                     await Clients.Caller.ReceiveError(GetNoTtsDeploymentMessage());
                     return;
                 }
 
-                var deployment = await deploymentManager.FindByIdAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
+                var deployment = await deploymentManager.FindByNameAsync(deploymentSettings.DefaultTextToSpeechDeploymentName);
 
                 if (deployment is null)
                 {
@@ -1138,7 +1138,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         });
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var builder = ZString.CreateStringBuilder();
@@ -1195,7 +1195,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         {
         });
 
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var references = new Dictionary<string, AICompletionReference>();

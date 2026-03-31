@@ -16,8 +16,8 @@ public sealed class AIProfileViewModel
     public string DisplayText { get; set; }
     public AIProfileType Type { get; set; }
     public string Source { get; set; }
-    public string ChatDeploymentId { get; set; }
-    public string UtilityDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
+    public string UtilityDeploymentName { get; set; }
     public string OrchestratorName { get; set; }
     public string PromptTemplate { get; set; }
     public string PromptSubject { get; set; }
@@ -120,8 +120,8 @@ public sealed class AIProfileViewModel
             DisplayText = profile.DisplayText,
             Type = profile.Type,
             Source = profile.Source,
-            ChatDeploymentId = profile.ChatDeploymentId,
-            UtilityDeploymentId = profile.UtilityDeploymentId,
+            ChatDeploymentName = profile.ChatDeploymentName,
+            UtilityDeploymentName = profile.UtilityDeploymentName,
             OrchestratorName = profile.OrchestratorName,
             WelcomeMessage = profile.WelcomeMessage,
             PromptTemplate = profile.PromptTemplate,
@@ -216,8 +216,8 @@ public sealed class AIProfileViewModel
         profile.DisplayText = DisplayText;
         profile.Type = Type;
         profile.Source = Source;
-        profile.ChatDeploymentId = ChatDeploymentId;
-        profile.UtilityDeploymentId = UtilityDeploymentId;
+        profile.ChatDeploymentName = ChatDeploymentName;
+        profile.UtilityDeploymentName = UtilityDeploymentName;
         profile.OrchestratorName = OrchestratorName;
         profile.PromptTemplate = PromptTemplate;
         profile.PromptSubject = PromptSubject;

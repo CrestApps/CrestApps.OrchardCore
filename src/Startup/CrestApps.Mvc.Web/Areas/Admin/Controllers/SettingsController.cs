@@ -54,12 +54,12 @@ public sealed class SettingsController : Controller
             EnableDistributedCaching = settings.EnableDistributedCaching,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
 
-            DefaultChatDeploymentId = deploymentDefaults.DefaultChatDeploymentId,
-            DefaultUtilityDeploymentId = deploymentDefaults.DefaultUtilityDeploymentId,
-            DefaultEmbeddingDeploymentId = deploymentDefaults.DefaultEmbeddingDeploymentId,
-            DefaultImageDeploymentId = deploymentDefaults.DefaultImageDeploymentId,
-            DefaultSpeechToTextDeploymentId = deploymentDefaults.DefaultSpeechToTextDeploymentId,
-            DefaultTextToSpeechDeploymentId = deploymentDefaults.DefaultTextToSpeechDeploymentId,
+            DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
+            DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
+            DefaultEmbeddingDeploymentName = deploymentDefaults.DefaultEmbeddingDeploymentName,
+            DefaultImageDeploymentName = deploymentDefaults.DefaultImageDeploymentName,
+            DefaultSpeechToTextDeploymentName = deploymentDefaults.DefaultSpeechToTextDeploymentName,
+            DefaultTextToSpeechDeploymentName = deploymentDefaults.DefaultTextToSpeechDeploymentName,
             DefaultTextToSpeechVoiceId = deploymentDefaults.DefaultTextToSpeechVoiceId,
 
             DocumentIndexProfileName = documentSettings.IndexProfileName,
@@ -71,6 +71,7 @@ public sealed class SettingsController : Controller
             McpServerRequireAccessPermission = mcpServerSettings.RequireAccessPermission,
         };
 
+        await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDeploymentDropdownsAsync(model);
 
         return View(model);
@@ -126,12 +127,12 @@ public sealed class SettingsController : Controller
         // Save default deployment settings.
         var deploymentDefaults = new DefaultAIDeploymentSettings
         {
-            DefaultChatDeploymentId = model.DefaultChatDeploymentId,
-            DefaultUtilityDeploymentId = model.DefaultUtilityDeploymentId,
-            DefaultEmbeddingDeploymentId = model.DefaultEmbeddingDeploymentId,
-            DefaultImageDeploymentId = model.DefaultImageDeploymentId,
-            DefaultSpeechToTextDeploymentId = model.DefaultSpeechToTextDeploymentId,
-            DefaultTextToSpeechDeploymentId = model.DefaultTextToSpeechDeploymentId,
+            DefaultChatDeploymentName = model.DefaultChatDeploymentName,
+            DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName,
+            DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName,
+            DefaultImageDeploymentName = model.DefaultImageDeploymentName,
+            DefaultSpeechToTextDeploymentName = model.DefaultSpeechToTextDeploymentName,
+            DefaultTextToSpeechDeploymentName = model.DefaultTextToSpeechDeploymentName,
             DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim(),
         };
 
@@ -205,7 +206,33 @@ public sealed class SettingsController : Controller
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
+    }
+
+    private async Task NormalizeDeploymentSelectorsAsync(SettingsViewModel model)
+    {
+        model.DefaultChatDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultChatDeploymentName);
+        model.DefaultUtilityDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultUtilityDeploymentName);
+        model.DefaultEmbeddingDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultEmbeddingDeploymentName);
+        model.DefaultImageDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultImageDeploymentName);
+        model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultSpeechToTextDeploymentName);
+        model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(model.DefaultTextToSpeechDeploymentName);
+    }
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
+    {
+        if (string.IsNullOrWhiteSpace(selector))
+        {
+            return selector;
+        }
+
+        var deployment = await _deploymentManager.FindByIdAsync(selector);
+
+        return deployment?.Name ?? selector;
     }
 }

@@ -34,23 +34,29 @@ public class AICompletionContext
 
     public string DataSourceId { get; set; }
 
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
-    public string UtilityDeploymentId { get; set; }
-
-    [Obsolete("Use ChatDeploymentId instead. Retained for backward compatibility.")]
-    [JsonIgnore]
-    public string DeploymentId
-    {
-        get => ChatDeploymentId;
-        set => ChatDeploymentId = value;
-    }
+    public string UtilityDeploymentName { get; set; }
 
     [JsonInclude]
     [JsonPropertyName("DeploymentId")]
     private string _deploymentIdBackingField
     {
-        set => ChatDeploymentId = value;
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("ChatDeploymentId")]
+    private string _chatDeploymentIdBackingField
+    {
+        set => ChatDeploymentName = value;
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("UtilityDeploymentId")]
+    private string _utilityDeploymentIdBackingField
+    {
+        set => UtilityDeploymentName = value;
     }
 
     public Dictionary<string, object> AdditionalProperties { get; } = new(StringComparer.OrdinalIgnoreCase);

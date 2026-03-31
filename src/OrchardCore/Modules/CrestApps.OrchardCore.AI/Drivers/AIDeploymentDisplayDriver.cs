@@ -47,9 +47,9 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         return Initialize<EditDeploymentViewModel>("AIDeploymentFields_Edit", model =>
         {
             model.Name = deployment.Name;
+            model.ModelName = deployment.ModelName;
             model.ConnectionName = deployment.ConnectionName;
             model.SelectedTypes = deployment.Type.GetSupportedTypes().Select(static type => type.ToString()).ToArray();
-            model.IsDefault = deployment.IsDefault;
             model.IsNew = context.IsNew;
             model.HasContainedConnection = HasContainedConnection(deployment.ClientName);
 
@@ -89,6 +89,17 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             deployment.Name = name;
         }
 
+        var modelName = model.ModelName?.Trim();
+
+        if (string.IsNullOrEmpty(modelName))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ModelName), S["Model name is required."]);
+        }
+        else
+        {
+            deployment.ModelName = modelName;
+        }
+
         if (!TryGetSelectedTypes(model.SelectedTypes, out var deploymentTypes))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedTypes), S["At least one deployment type is required."]);
@@ -97,8 +108,6 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         {
             deployment.Type = deploymentTypes;
         }
-
-        deployment.IsDefault = model.IsDefault;
 
         if (HasContainedConnection(deployment.ClientName))
         {
@@ -132,14 +141,13 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         }
 
         var anotherExists = (await _deploymentsCatalog.GetAllAsync())
-            .Any(d => d.ClientName == deployment.ClientName &&
-            d.ConnectionName == deployment.ConnectionName &&
-            d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)
-            && d.ItemId != deployment.ItemId);
+            .Any(d =>
+                d.ItemId != deployment.ItemId &&
+                d.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase));
 
         if (anotherExists)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The selected connection already has an existing deployment with the specified name."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["A deployment with the specified technical name already exists."]);
         }
 
         return Edit(deployment, context);

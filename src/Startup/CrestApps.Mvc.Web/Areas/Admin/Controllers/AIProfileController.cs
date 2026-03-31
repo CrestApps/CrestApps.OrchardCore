@@ -91,6 +91,7 @@ public sealed class AIProfileController : Controller
                 ApplyTemplateToProfile(profile, template);
 
                 model = AIProfileViewModel.FromProfile(profile);
+                await NormalizeDeploymentSelectorsAsync(model);
             }
         }
 
@@ -139,6 +140,7 @@ public sealed class AIProfileController : Controller
         }
 
         var model = AIProfileViewModel.FromProfile(profile);
+        await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDropdownsAsync(model);
 
         return View(model);
@@ -197,13 +199,13 @@ public sealed class AIProfileController : Controller
 
         model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
         model.ChatDeployments.AddRange(allDeployments
-            .Where(d => d.Type == AIDeploymentType.Chat)
-            .Select(d => new SelectListItem(d.Name, d.ItemId)));
+            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
 
         model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
         model.UtilityDeployments.AddRange(allDeployments
-            .Where(d => d.Type == AIDeploymentType.Utility || d.Type == AIDeploymentType.Chat)
-            .Select(d => new SelectListItem(d.Name, d.ItemId)));
+            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
         model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
@@ -381,14 +383,14 @@ public sealed class AIProfileController : Controller
             profile.Type = metadata.ProfileType.Value;
         }
 
-        if (!string.IsNullOrWhiteSpace(metadata.ChatDeploymentId))
+        if (!string.IsNullOrWhiteSpace(metadata.ChatDeploymentName))
         {
-            profile.ChatDeploymentId = metadata.ChatDeploymentId;
+            profile.ChatDeploymentName = metadata.ChatDeploymentName;
         }
 
-        if (!string.IsNullOrWhiteSpace(metadata.UtilityDeploymentId))
+        if (!string.IsNullOrWhiteSpace(metadata.UtilityDeploymentName))
         {
-            profile.UtilityDeploymentId = metadata.UtilityDeploymentId;
+            profile.UtilityDeploymentName = metadata.UtilityDeploymentName;
         }
 
         if (!string.IsNullOrWhiteSpace(metadata.OrchestratorName))
@@ -483,4 +485,27 @@ public sealed class AIProfileController : Controller
             profile.Description = metadata.Description;
         }
     }
+
+    private async Task NormalizeDeploymentSelectorsAsync(AIProfileViewModel model)
+    {
+        model.ChatDeploymentName = await NormalizeDeploymentSelectorAsync(model.ChatDeploymentName);
+        model.UtilityDeploymentName = await NormalizeDeploymentSelectorAsync(model.UtilityDeploymentName);
+    }
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
+    {
+        if (string.IsNullOrWhiteSpace(selector))
+        {
+            return selector;
+        }
+
+        var deployment = await _deploymentCatalog.FindByIdAsync(selector);
+
+        return deployment?.Name ?? selector;
+    }
+
+    private static string BuildDeploymentLabel(AIDeployment deployment)
+        => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
+            ? deployment.Name
+            : $"{deployment.Name} ({deployment.ModelName})";
 }

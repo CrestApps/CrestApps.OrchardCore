@@ -61,7 +61,7 @@ public sealed class ChatInteractionController : Controller
         interaction.Title = model.Title;
         interaction.OwnerId = User.Identity?.Name ?? "anonymous";
         interaction.Author = User.Identity?.Name ?? "anonymous";
-        interaction.ChatDeploymentId = model.ChatDeploymentId;
+        interaction.ChatDeploymentName = model.ChatDeploymentName;
         interaction.SystemMessage = model.SystemMessage;
         interaction.Temperature = model.Temperature;
         interaction.TopP = model.TopP;
@@ -120,7 +120,11 @@ public sealed class ChatInteractionController : Controller
         var deployments = await _deploymentCatalog.GetAllAsync();
         model.Deployments = deployments
             .Where(d => d.Type.Supports(AIDeploymentType.Chat))
-            .Select(d => new SelectListItem(d.Name, d.ItemId))
+            .Select(d => new SelectListItem(
+                string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})",
+                d.Name))
             .ToList();
 
         var connections = await _a2aConnectionCatalog.GetAllAsync();

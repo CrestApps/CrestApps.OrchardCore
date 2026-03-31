@@ -119,7 +119,8 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
             interaction.ItemId,
             interaction.Title,
             interaction.ConnectionName,
-            interaction.ChatDeploymentId,
+            interaction.ChatDeploymentName,
+            ChatDeploymentId = interaction.ChatDeploymentName,
             Messages = prompts.Select(message => new AIChatResponseMessageDetailed
             {
                 Id = message.ItemId,
@@ -393,7 +394,8 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         interaction.Title = JsonHelper.GetString(settings, "title") ?? "Untitled";
         interaction.OrchestratorName = JsonHelper.GetString(settings, "orchestratorName");
         interaction.ConnectionName = JsonHelper.GetString(settings, "connectionName");
-        interaction.ChatDeploymentId = JsonHelper.GetString(settings, "deploymentId");
+        interaction.ChatDeploymentName = JsonHelper.GetString(settings, "deploymentName")
+            ?? JsonHelper.GetString(settings, "deploymentId");
         interaction.SystemMessage = JsonHelper.GetString(settings, "systemMessage");
         interaction.Temperature = JsonHelper.GetFloat(settings, "temperature");
         interaction.TopP = JsonHelper.GetFloat(settings, "topP");

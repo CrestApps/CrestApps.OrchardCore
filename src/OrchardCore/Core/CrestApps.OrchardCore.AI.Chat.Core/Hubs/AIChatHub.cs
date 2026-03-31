@@ -333,7 +333,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         });
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: completionContext.ChatDeploymentId)
+        var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var builder = ZString.CreateStringBuilder();

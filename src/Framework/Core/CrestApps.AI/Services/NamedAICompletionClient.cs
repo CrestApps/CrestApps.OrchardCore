@@ -102,7 +102,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             provider,
             ProviderName,
             connectionName,
-            deploymentId: context.ChatDeploymentId);
+            deploymentName: context.ChatDeploymentName);
 
         connectionName = resolvedConnectionName;
 
@@ -115,7 +115,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment name '{DeploymentName}' or the default deployment", context.ChatDeploymentName);
 
             return null;
         }
@@ -160,7 +160,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
             provider,
             ProviderName,
             connectionName,
-            deploymentId: context.ChatDeploymentId);
+            deploymentName: context.ChatDeploymentName);
 
         connectionName = resolvedConnectionName;
 
@@ -173,7 +173,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
+            Logger.LogWarning("Unable to chat. Unable to find a deployment name '{DeploymentName}' or the default deployment", context.ChatDeploymentName);
 
             yield break;
         }

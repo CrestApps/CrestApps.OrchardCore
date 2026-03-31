@@ -23,7 +23,8 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
     {
         var deployments = (await Catalog.GetAllAsync())
             .Where(x => string.Equals(x.ClientName, clientName, StringComparison.OrdinalIgnoreCase) &&
-            (x.ConnectionName.Equals(connectionName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
+            (string.Equals(x.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
         foreach (var deployment in deployments)
         {
@@ -56,9 +57,9 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             ?? candidates.FirstOrDefault();
     }
 
-    public async ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentId = null, string clientName = null, string connectionName = null)
+    public ValueTask<AIDeployment> ResolveOrDefaultAsync(AIDeploymentType type, string deploymentName = null, string clientName = null, string connectionName = null)
     {
-        return await ResolveByTypeAsync(type, deploymentId, clientName, connectionName);
+        return ResolveByTypeAsync(type, deploymentName, clientName, connectionName);
     }
 
     public async ValueTask<IEnumerable<AIDeployment>> GetAllByTypeAsync(AIDeploymentType type, string clientName = null)
@@ -75,11 +76,11 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
         return filtered;
     }
 
-    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentId, string clientName, string connectionName)
+    private async ValueTask<AIDeployment> ResolveByTypeAsync(AIDeploymentType type, string deploymentName, string clientName, string connectionName)
     {
-        if (!string.IsNullOrEmpty(deploymentId))
+        if (!string.IsNullOrEmpty(deploymentName))
         {
-            var deployment = await FindByIdAsync(deploymentId);
+            var deployment = await FindBySelectorAsync(deploymentName);
 
             if (deployment != null)
             {
@@ -87,38 +88,72 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
             }
         }
 
-        if (!string.IsNullOrEmpty(clientName) && !string.IsNullOrEmpty(connectionName))
-        {
-            var deployment = await GetDefaultAsync(clientName, connectionName, type);
-
-            if (deployment != null)
-            {
-                return deployment;
-            }
-        }
-
-        var globalDefaultId = await GetGlobalDefaultIdAsync(type);
+        var globalDefaultId = await GetGlobalDefaultSelectorAsync(type);
 
         if (!string.IsNullOrEmpty(globalDefaultId))
         {
-            return await FindByIdAsync(globalDefaultId);
+            var deployment = await FindBySelectorAsync(globalDefaultId);
+
+            if (deployment != null)
+            {
+                return deployment;
+            }
         }
 
-        return null;
+        return await GetFirstMatchingDeploymentAsync(type, clientName, connectionName);
     }
 
-    protected virtual ValueTask<string> GetGlobalDefaultIdAsync(AIDeploymentType type)
+    private async ValueTask<AIDeployment> GetFirstMatchingDeploymentAsync(AIDeploymentType type, string clientName, string connectionName)
+    {
+        var deployments = await GetAllAsync();
+
+        return deployments.FirstOrDefault(deployment =>
+        {
+            if (!deployment.SupportsType(type))
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(clientName) &&
+                !string.Equals(deployment.ClientName, clientName, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(connectionName))
+            {
+                return true;
+            }
+
+            return string.Equals(deployment.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(deployment.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    private async ValueTask<AIDeployment> FindBySelectorAsync(string selector)
+    {
+        var deployment = await FindByIdAsync(selector);
+
+        if (deployment != null)
+        {
+            return deployment;
+        }
+
+        return await FindByNameAsync(selector);
+    }
+
+    protected virtual ValueTask<string> GetGlobalDefaultSelectorAsync(AIDeploymentType type)
     {
         var settings = _deploymentSettings.CurrentValue;
 
         var result = type switch
         {
-            AIDeploymentType.Chat => settings.DefaultChatDeploymentId,
-            AIDeploymentType.Utility => settings.DefaultUtilityDeploymentId,
-            AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentId,
-            AIDeploymentType.Image => settings.DefaultImageDeploymentId,
-            AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentId,
-            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentId,
+            AIDeploymentType.Chat => settings.DefaultChatDeploymentName,
+            AIDeploymentType.Utility => settings.DefaultUtilityDeploymentName,
+            AIDeploymentType.Embedding => settings.DefaultEmbeddingDeploymentName,
+            AIDeploymentType.Image => settings.DefaultImageDeploymentName,
+            AIDeploymentType.SpeechToText => settings.DefaultSpeechToTextDeploymentName,
+            AIDeploymentType.TextToSpeech => settings.DefaultTextToSpeechDeploymentName,
             _ => null,
         };
 

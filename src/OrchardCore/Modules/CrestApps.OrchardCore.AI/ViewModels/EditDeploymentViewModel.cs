@@ -8,11 +8,11 @@ public class EditDeploymentViewModel
 {
     public string Name { get; set; }
 
+    public string ModelName { get; set; }
+
     public string ConnectionName { get; set; }
 
     public string[] SelectedTypes { get; set; }
-
-    public bool IsDefault { get; set; }
 
     [BindNever]
     public bool IsNew { get; set; }

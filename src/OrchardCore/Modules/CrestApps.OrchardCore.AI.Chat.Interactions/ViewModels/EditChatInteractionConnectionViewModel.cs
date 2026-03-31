@@ -5,9 +5,15 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 
 public class EditChatInteractionConnectionViewModel
 {
-    public string ChatDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
 
-    public string UtilityDeploymentId { get; set; }
+    public string UtilityDeploymentName { get; set; }
+
+    [BindNever]
+    public bool ShowMissingDefaultChatDeploymentWarning { get; set; }
+
+    [BindNever]
+    public bool ShowMissingDefaultUtilityDeploymentWarning { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; }

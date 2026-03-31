@@ -87,15 +87,15 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="ChatDeploymentId" class="form-label">Chat deployment</label>
-                                <select asp-for="ChatDeploymentId" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                <label asp-for="ChatDeploymentName" class="form-label">Chat deployment</label>
+                                <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments"></select>
                                 <div class="form-text">The chat model deployment to use.</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label asp-for="UtilityDeploymentId" class="form-label">Utility deployment</label>
-                                <select asp-for="UtilityDeploymentId" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                <label asp-for="UtilityDeploymentName" class="form-label">Utility deployment</label>
+                                <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments"></select>
                                 <div class="form-text">Optional deployment for utility tasks (planning, summarization).</div>
                             </div>
                         </div>

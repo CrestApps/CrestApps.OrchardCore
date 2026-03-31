@@ -17,6 +17,7 @@
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject HubRouteManager HubRouteManager
 @inject ISiteService SiteService
+@inject IAIDeploymentManager AIDeploymentManager
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -27,13 +28,14 @@
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
     var site = await SiteService.GetSiteSettingsAsync();
-    var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
     var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
     var chatMode = chatModeSettings.ChatMode;
+    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
-        && !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+        && speechToTextDeployment != null;
     var textToSpeechEnabled = chatMode == ChatMode.Conversation
-        && !string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentId);
+        && textToSpeechDeployment != null;
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
 }

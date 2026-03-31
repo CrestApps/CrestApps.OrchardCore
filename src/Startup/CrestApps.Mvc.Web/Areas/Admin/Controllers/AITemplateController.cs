@@ -95,6 +95,7 @@ public sealed class AITemplateController : Controller
         }
 
         var model = AITemplateViewModel.FromTemplate(template);
+        await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDropdownsAsync(model);
 
         return View(model);
@@ -154,13 +155,13 @@ public sealed class AITemplateController : Controller
 
         model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
         model.ChatDeployments.AddRange(allDeployments
-            .Where(d => d.Type == AIDeploymentType.Chat)
-            .Select(d => new SelectListItem(d.Name, d.ItemId)));
+            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
 
         model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
         model.UtilityDeployments.AddRange(allDeployments
-            .Where(d => d.Type == AIDeploymentType.Utility || d.Type == AIDeploymentType.Chat)
-            .Select(d => new SelectListItem(d.Name, d.ItemId)));
+            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
         model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
@@ -206,4 +207,27 @@ public sealed class AITemplateController : Controller
             .Distinct(StringComparer.Ordinal)
             .ToArray();
     }
+
+    private async Task NormalizeDeploymentSelectorsAsync(AITemplateViewModel model)
+    {
+        model.ChatDeploymentName = await NormalizeDeploymentSelectorAsync(model.ChatDeploymentName);
+        model.UtilityDeploymentName = await NormalizeDeploymentSelectorAsync(model.UtilityDeploymentName);
+    }
+
+    private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
+    {
+        if (string.IsNullOrWhiteSpace(selector))
+        {
+            return selector;
+        }
+
+        var deployment = await _deploymentCatalog.FindByIdAsync(selector);
+
+        return deployment?.Name ?? selector;
+    }
+
+    private static string BuildDeploymentLabel(AIDeployment deployment)
+        => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
+            ? deployment.Name
+            : $"{deployment.Name} ({deployment.ModelName})";
 }

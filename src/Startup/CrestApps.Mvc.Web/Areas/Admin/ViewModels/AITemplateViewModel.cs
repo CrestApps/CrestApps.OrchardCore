@@ -19,8 +19,8 @@ public sealed class AITemplateViewModel
 
     // Profile source fields.
     public AIProfileType? ProfileType { get; set; }
-    public string ChatDeploymentId { get; set; }
-    public string UtilityDeploymentId { get; set; }
+    public string ChatDeploymentName { get; set; }
+    public string UtilityDeploymentName { get; set; }
     public string OrchestratorName { get; set; }
     public AISessionTitleType? TitleType { get; set; }
     public float? Temperature { get; set; }
@@ -74,8 +74,8 @@ public sealed class AITemplateViewModel
             {
                 model.ProfileType = metadata.ProfileType;
                 model.SystemMessage = metadata.SystemMessage;
-                model.ChatDeploymentId = metadata.ChatDeploymentId;
-                model.UtilityDeploymentId = metadata.UtilityDeploymentId;
+                model.ChatDeploymentName = metadata.ChatDeploymentName;
+                model.UtilityDeploymentName = metadata.UtilityDeploymentName;
                 model.OrchestratorName = metadata.OrchestratorName;
                 model.TitleType = metadata.TitleType;
                 model.Temperature = metadata.Temperature;
@@ -119,8 +119,8 @@ public sealed class AITemplateViewModel
             {
                 ProfileType = ProfileType,
                 SystemMessage = SystemMessage,
-                ChatDeploymentId = ChatDeploymentId,
-                UtilityDeploymentId = UtilityDeploymentId,
+                ChatDeploymentName = ChatDeploymentName,
+                UtilityDeploymentName = UtilityDeploymentName,
                 OrchestratorName = OrchestratorName,
                 TitleType = TitleType,
                 Temperature = Temperature,

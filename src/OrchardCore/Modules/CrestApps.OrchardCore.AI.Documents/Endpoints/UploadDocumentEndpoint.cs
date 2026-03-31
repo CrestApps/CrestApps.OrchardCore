@@ -80,7 +80,7 @@ internal static class UploadDocumentEndpoint
             return TypedResults.Forbid();
         }
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentId: interaction.ChatDeploymentId);
+        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: interaction.ChatDeploymentName);
         var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, deployment?.ConnectionName ?? interaction.ConnectionName);
 
         interaction.Documents ??= [];

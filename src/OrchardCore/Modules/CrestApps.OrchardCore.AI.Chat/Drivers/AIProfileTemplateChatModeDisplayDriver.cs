@@ -6,23 +6,23 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Settings;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
 public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
-    private readonly ISiteService _siteService;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileTemplateChatModeDisplayDriver(
-        ISiteService siteService,
+        IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer)
     {
-        _siteService = siteService;
+        _deploymentManager = deploymentManager;
         _speechVoiceMenuService = speechVoiceMenuService;
         S = stringLocalizer;
     }
@@ -49,10 +49,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 return false;
             }
 
-            var site = await _siteService.GetSiteSettingsAsync();
-            var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-            return !string.IsNullOrEmpty(deploymentSettings.DefaultSpeechToTextDeploymentId);
+            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
         });
     }
 
@@ -90,10 +87,5 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var deploymentSettings = site.As<DefaultAIDeploymentSettings>();
-
-        return await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentSettings.DefaultTextToSpeechDeploymentId);
-    }
+        => await _speechVoiceMenuService.GetVoiceMenuItemsAsync(deploymentName: null);
 }

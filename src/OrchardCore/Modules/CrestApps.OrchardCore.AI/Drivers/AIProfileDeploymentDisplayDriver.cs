@@ -6,22 +6,26 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISiteService _siteService;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        ISiteService siteService,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _siteService = siteService;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
@@ -30,8 +34,11 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
     {
         return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
         {
-            model.ChatDeploymentId = profile.ChatDeploymentId;
-            model.UtilityDeploymentId = profile.UtilityDeploymentId;
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            model.ChatDeploymentName = profile.ChatDeploymentName;
+            model.UtilityDeploymentName = profile.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
@@ -48,8 +55,8 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.ChatDeploymentId = model.ChatDeploymentId;
-        profile.UtilityDeploymentId = model.UtilityDeploymentId;
+        profile.ChatDeploymentName = model.ChatDeploymentName;
+        profile.UtilityDeploymentName = model.UtilityDeploymentName;
 
         return Edit(profile, context);
     }
@@ -64,14 +71,19 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
             .Select(d =>
             {
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                SelectListGroup group = null;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
     }
 }

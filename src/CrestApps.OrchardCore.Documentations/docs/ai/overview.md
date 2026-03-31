@@ -148,13 +148,13 @@ The appsettings-based `DefaultParameters` still provide the base values. Site se
 
 #### Typed AI Deployments
 
-Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.
+Each deployment is a first-class entity with a **Type**. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.
 
 | Property | Description | Required |
 |----------|-------------|----------|
 | `Name` | The model/deployment name (e.g., `gpt-4o`, `text-embedding-3-large`) | Yes |
 | `Type` | The deployment type. Valid values: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText` | Yes |
-| `IsDefault` | Whether this is the default deployment for its type within the connection | No |
+| `IsDefault` | Optional legacy connection-scoped default marker retained for backward compatibility in configuration and recipes | No |
 
 **Deployment Types:**
 
@@ -171,26 +171,22 @@ Each deployment is a first-class entity with a **Type** and an optional **IsDefa
 When an AI Profile or service requests a deployment, the system resolves it using the following fallback chain:
 
 1. **Explicit deployment** — The deployment explicitly assigned to the profile/resource
-2. **Connection default for type** — The deployment marked `IsDefault: true` for that type on the connection
-3. **Global default** — The default deployment configured in **Default AI Deployment Settings** (see below)
+2. **Global default** — The default deployment configured in **Default Deployments** (see below)
+3. **First matching deployment** — The first deployment that supports the requested type in the current scope
 4. **null/error** — No deployment found
 
-#### Default AI Deployment Settings
+#### Default Deployments
 
-A new settings page is available under **Settings → Artificial Intelligence → Default AI Deployment Settings**. This page allows administrators to configure global default deployments:
+A new settings page is available under **Settings → Artificial Intelligence → Default Deployments**. This page allows administrators to configure global default deployments:
 
 | Setting | Description |
 |---------|-------------|
-| `DefaultUtilityDeploymentId` | The global default deployment for utility tasks |
-| `DefaultEmbeddingDeploymentId` | The global default deployment for embedding generation |
-| `DefaultImageDeploymentId` | The global default deployment for image generation |
-| `DefaultSpeechToTextDeploymentId` | The global default deployment for speech-to-text transcription |
+| `DefaultUtilityDeploymentName` | The global default deployment for utility tasks |
+| `DefaultEmbeddingDeploymentName` | The global default deployment for embedding generation |
+| `DefaultImageDeploymentName` | The global default deployment for image generation |
+| `DefaultSpeechToTextDeploymentName` | The global default deployment for speech-to-text transcription |
 
-These global defaults act as the final fallback when no explicit or connection-level default is configured.
-
-:::tip
-Chat deployments do not need a global default because they are always explicitly set on AI Profiles or Chat Interactions.
-:::
+These global defaults act as the primary fallback whenever a profile, interaction, or service chooses **Default deployment**.
 
 #### Contained-Connection Deployments
 

@@ -31,9 +31,10 @@ public sealed class AIProfileRecipeStep : IRecipeStep
                 ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chat", "Utility", "TemplatePrompt").Description("The profile type.")),
                 ("TitleType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("InitialPrompt", "Generated").Description("How the session title is generated.")),
                 ("PromptTemplate", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Liquid template for TemplatePrompt profiles.")),
-                ("ChatDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment ID for the AI model.")),
-                ("UtilityDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment ID for the AI model.")),
-                ("DeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deprecated. Use ChatDeploymentId instead.")),
+                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment technical name for the AI model.")),
+                ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment technical name for the AI model.")),
+                ("ChatDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy chat deployment selector. Use ChatDeploymentName instead.")),
+                ("UtilityDeploymentId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy utility deployment selector. Use UtilityDeploymentName instead.")),
                 ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Extended profile properties including AIProfileMetadata.")),
                 ("Settings", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(true).Description("Profile settings.")))
             .Required("Name")

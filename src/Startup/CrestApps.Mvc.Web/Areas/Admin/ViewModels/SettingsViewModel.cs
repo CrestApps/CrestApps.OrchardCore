@@ -31,17 +31,17 @@ public sealed class SettingsViewModel
     public bool McpServerRequireAccessPermission { get; set; } = true;
 
     // Default deployment settings.
-    public string DefaultChatDeploymentId { get; set; }
+    public string DefaultChatDeploymentName { get; set; }
 
-    public string DefaultUtilityDeploymentId { get; set; }
+    public string DefaultUtilityDeploymentName { get; set; }
 
-    public string DefaultEmbeddingDeploymentId { get; set; }
+    public string DefaultEmbeddingDeploymentName { get; set; }
 
-    public string DefaultImageDeploymentId { get; set; }
+    public string DefaultImageDeploymentName { get; set; }
 
-    public string DefaultSpeechToTextDeploymentId { get; set; }
+    public string DefaultSpeechToTextDeploymentName { get; set; }
 
-    public string DefaultTextToSpeechDeploymentId { get; set; }
+    public string DefaultTextToSpeechDeploymentName { get; set; }
 
     public string DefaultTextToSpeechVoiceId { get; set; }
 

@@ -147,7 +147,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         // When the deployment has a connection reference, use the standard path.
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            return CreateSpeechToTextClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
+            return CreateSpeechToTextClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
@@ -160,7 +160,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
                 continue;
             }
 
-            return clientProvider.GetSpeechToTextClientAsync(connectionEntry, deployment.Name);
+            return clientProvider.GetSpeechToTextClientAsync(connectionEntry, deployment.ModelName);
         }
 
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ClientName}'.");
@@ -203,7 +203,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         // When the deployment has a connection reference, use the standard path.
         if (!string.IsNullOrEmpty(deployment.ConnectionName))
         {
-            return CreateTextToSpeechClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.Name);
+            return CreateTextToSpeechClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
         }
 
         // Contained-connection deployment: build an AIProviderConnectionEntry from the deployment's Properties.
@@ -216,7 +216,7 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
                 continue;
             }
 
-            return clientProvider.GetTextToSpeechClientAsync(connectionEntry, deployment.Name);
+            return clientProvider.GetTextToSpeechClientAsync(connectionEntry, deployment.ModelName);
         }
 
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ClientName}'.");

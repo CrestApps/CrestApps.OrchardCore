@@ -213,10 +213,10 @@ internal static class UploadSessionDocumentEndpoint
     {
         return await deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
-            deploymentId: profile.ChatDeploymentId)
+            deploymentName: profile.ChatDeploymentName)
             ?? await deploymentManager.ResolveOrDefaultAsync(
                 AIDeploymentType.Utility,
-                deploymentId: profile.UtilityDeploymentId);
+                deploymentName: profile.UtilityDeploymentName);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

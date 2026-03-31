@@ -114,8 +114,8 @@ Define an AI profile with the following step in your recipe:
           "TitleType": "InitialPrompt",
           "PromptTemplate": null,
           "ConnectionName": "<!-- Optional connection fallback -->",
-          "ChatDeploymentId": "<!-- Optional chat deployment ID -->",
-          "UtilityDeploymentId": "<!-- Optional utility deployment ID -->",
+          "ChatDeploymentName": "<!-- Optional chat deployment technical name -->",
+          "UtilityDeploymentName": "<!-- Optional utility deployment technical name -->",
           "Properties": {
             "AIProfileMetadata": {
               "SystemMessage": "You are an AI assistant that helps people find information.",
@@ -135,7 +135,7 @@ Define an AI profile with the following step in your recipe:
 ```
 
 :::tip
-AI Profiles now use `ChatDeploymentId` and `UtilityDeploymentId` instead of the previous single `DeploymentId` field. This allows profiles to specify separate deployments for chat completions and auxiliary utility tasks.
+AI Profiles now use `ChatDeploymentName` and `UtilityDeploymentName` instead of the previous single `DeploymentId` field. This allows profiles to specify separate deployments for chat completions and auxiliary utility tasks.
 :::
 
 ## RAG / Data Sources

@@ -30,40 +30,69 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
-        if (!string.IsNullOrEmpty(context.Model.ChatDeploymentId) && await _deploymentsCatalog.FindByIdAsync(context.Model.ChatDeploymentId) is null)
+        if (!string.IsNullOrEmpty(context.Model.ChatDeploymentName) &&
+            await FindDeploymentAsync(context.Model.ChatDeploymentName) is null)
         {
-            context.Result.Fail(new ValidationResult(S["Invalid DeploymentId provided."], [nameof(AIProfile.ChatDeploymentId)]));
+            context.Result.Fail(new ValidationResult(S["Invalid deployment selection provided."], [nameof(AIProfile.ChatDeploymentName)]));
+        }
+
+        if (!string.IsNullOrEmpty(context.Model.UtilityDeploymentName) &&
+            await FindDeploymentAsync(context.Model.UtilityDeploymentName) is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Invalid deployment selection provided."], [nameof(AIProfile.UtilityDeploymentName)]));
         }
     }
 
-    public override async Task ValidatedAsync(ValidatedContext<AIProfile> context)
+    private async Task PopulateAsync(AIProfile profile, JsonNode data)
     {
-        await ResolveChatDeploymentNameAsync(context.Model);
-    }
+        var chatDeploymentName = data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim();
 
-    private async Task ResolveChatDeploymentNameAsync(AIProfile profile)
-    {
-        if (!string.IsNullOrEmpty(profile.ChatDeploymentId))
+        if (!string.IsNullOrWhiteSpace(chatDeploymentName))
         {
-            var deployment = await _deploymentsCatalog.FindByIdAsync(profile.ChatDeploymentId);
-            profile.ChatDeploymentName = deployment?.Name;
+            profile.ChatDeploymentName = chatDeploymentName;
         }
         else
         {
-            profile.ChatDeploymentName = null;
+#pragma warning disable CS0618 // Type or member is obsolete
+            var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
+                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
+        }
+
+        var utilityDeploymentName = data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(utilityDeploymentName))
+        {
+            profile.UtilityDeploymentName = utilityDeploymentName;
+        }
+        else
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            var utilityDeploymentId = data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim();
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
         }
     }
 
-    private static Task PopulateAsync(AIProfile profile, JsonNode data)
-    {
-        var deploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+    private async Task<AIDeployment> FindDeploymentAsync(string selector)
+        => await _deploymentsCatalog.FindByIdAsync(selector)
+        ?? await _deploymentsCatalog.FindByNameAsync(selector);
 
-        if (!string.IsNullOrEmpty(deploymentId))
+    private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
+    {
+        if (!string.IsNullOrWhiteSpace(deploymentId))
         {
-            profile.ChatDeploymentId = deploymentId;
+            var deployment = await _deploymentsCatalog.FindByIdAsync(deploymentId);
+
+            if (deployment != null)
+            {
+                return deployment.Name;
+            }
         }
 
-        return Task.CompletedTask;
+        return currentValue;
     }
 }

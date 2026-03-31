@@ -6,22 +6,26 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 
 public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ISiteService _siteService;
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
 
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        ISiteService siteService,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<ChatInteractionConnectionDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _siteService = siteService;
         _aiOptions = aiOptions.Value;
         S = stringLocalizer;
     }
@@ -30,8 +34,11 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     {
         var connectionResult = Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConnection_Edit", async model =>
         {
-            model.ChatDeploymentId = interaction.ChatDeploymentId;
-            model.UtilityDeploymentId = interaction.UtilityDeploymentId;
+            var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
+            model.ChatDeploymentName = interaction.ChatDeploymentName;
+            model.UtilityDeploymentName = interaction.UtilityDeploymentName;
+            model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
+            model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
@@ -51,8 +58,8 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        interaction.ChatDeploymentId = model.ChatDeploymentId;
-        interaction.UtilityDeploymentId = model.UtilityDeploymentId;
+        interaction.ChatDeploymentName = model.ChatDeploymentName;
+        interaction.UtilityDeploymentName = model.UtilityDeploymentName;
 
         return Edit(interaction, context);
     }
@@ -67,14 +74,19 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             .Select(d =>
             {
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                SelectListGroup group = null;
 
-                if (!groups.TryGetValue(groupKey, out var group))
+                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;
                 }
 
-                return new SelectListItem(d.Name, d.ItemId) { Group = group };
+                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
+                    ? d.Name
+                    : $"{d.Name} ({d.ModelName})";
+
+                return new SelectListItem(label, d.Name) { Group = group };
             });
     }
 }

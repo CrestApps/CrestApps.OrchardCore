@@ -6,6 +6,8 @@ namespace CrestApps.AI.Models;
 
 public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareModel, ICloneable<AIDeployment>
 {
+    private string _modelName;
+
     /// <summary>
     /// Gets or sets the technical name of the AI client implementation to use for this deployment.
     /// This maps to a registered key in <c>AIOptions.Clients</c>.
@@ -32,7 +34,20 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
         set => Source = value;
     }
 
+    /// <summary>
+    /// Gets or sets the unique technical name used to identify this deployment in settings, profiles, and recipes.
+    /// </summary>
     public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider-facing model or deployment name.
+    /// Falls back to <see cref="Name"/> for backward compatibility with legacy records.
+    /// </summary>
+    public string ModelName
+    {
+        get => string.IsNullOrWhiteSpace(_modelName) ? Name : _modelName;
+        set => _modelName = value?.Trim();
+    }
 
     public string ConnectionName { get; set; }
 
@@ -65,6 +80,7 @@ public class AIDeployment : SourceCatalogEntry, INameAwareModel, ISourceAwareMod
         {
             ItemId = ItemId,
             Name = Name,
+            ModelName = _modelName,
             Source = Source,
             ConnectionName = ConnectionName,
             ConnectionNameAlias = ConnectionNameAlias,

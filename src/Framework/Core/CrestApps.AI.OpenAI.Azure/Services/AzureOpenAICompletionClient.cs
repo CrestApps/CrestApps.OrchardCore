@@ -63,7 +63,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             provider,
             AzureOpenAIConstants.ClientName,
             connectionName,
-            deploymentId: context.ChatDeploymentId);
+            deploymentName: context.ChatDeploymentName);
 
         connectionName = resolvedConnectionName;
 
@@ -83,7 +83,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
+            _logger.LogWarning("Unable to chat. Unable to find a deployment name '{DeploymentName}' or the default deployment", context.ChatDeploymentName);
 
             return null;
         }
@@ -199,7 +199,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             provider,
             AzureOpenAIConstants.ClientName,
             connectionName,
-            deploymentId: context.ChatDeploymentId);
+            deploymentName: context.ChatDeploymentName);
 
         connectionName = resolvedConnectionName;
 
@@ -212,7 +212,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(deploymentName))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a deployment id '{DeploymentId}' or the default deployment", context.ChatDeploymentId);
+            _logger.LogWarning("Unable to chat. Unable to find a deployment name '{DeploymentName}' or the default deployment", context.ChatDeploymentName);
 
             yield break;
         }
