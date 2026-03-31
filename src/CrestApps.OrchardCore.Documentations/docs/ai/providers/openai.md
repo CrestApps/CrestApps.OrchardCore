@@ -137,7 +137,6 @@ If you are using the **AI Connection Management** feature, you can configure Dee
         {
           "Source": "OpenAI",
           "Name": "deepseek",
-          "IsDefault": false,
           "DisplayText": "DeepSeek",
           "Deployments": [
             { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }

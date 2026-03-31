@@ -34,7 +34,6 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
             UtilityDeploymentName = GetString(node, nameof(AIProviderConnection.UtilityDeploymentName))
                 ?? GetString(node, "DefaultUtilityDeploymentName"),
 #pragma warning restore CS0618
-            IsDefault = GetBool(node, nameof(AIProviderConnection.IsDefault)),
             CreatedUtc = GetDateTime(node, nameof(AIProviderConnection.CreatedUtc)),
             Author = GetString(node, nameof(AIProviderConnection.Author)),
             OwnerId = GetString(node, nameof(AIProviderConnection.OwnerId)),
@@ -65,7 +64,6 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         WriteString(writer, nameof(AIProviderConnection.ImagesDeploymentName), value.ImagesDeploymentName);
         WriteString(writer, nameof(AIProviderConnection.UtilityDeploymentName), value.UtilityDeploymentName);
 #pragma warning restore CS0618
-        writer.WriteBoolean(nameof(AIProviderConnection.IsDefault), value.IsDefault);
         writer.WriteString(nameof(AIProviderConnection.CreatedUtc), value.CreatedUtc);
         WriteString(writer, nameof(AIProviderConnection.Author), value.Author);
         WriteString(writer, nameof(AIProviderConnection.OwnerId), value.OwnerId);
@@ -93,16 +91,6 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         }
 
         return null;
-    }
-
-    private static bool GetBool(JsonObject node, string name)
-    {
-        if (node.TryGetPropertyValue(name, out var value) && value != null)
-        {
-            return value.GetValue<bool>();
-        }
-
-        return false;
     }
 
     private static DateTime GetDateTime(JsonObject node, string name)

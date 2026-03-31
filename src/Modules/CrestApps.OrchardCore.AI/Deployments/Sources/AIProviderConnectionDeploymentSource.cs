@@ -52,7 +52,6 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "ImagesDeploymentName", connection.ImagesDeploymentName },
                 { "UtilityDeploymentName", connection.UtilityDeploymentName },
 #pragma warning restore CS0618
-                { "IsDefault", connection.IsDefault },
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },
                 { "OwnerId", connection.OwnerId },

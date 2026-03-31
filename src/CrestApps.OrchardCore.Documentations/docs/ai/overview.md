@@ -154,7 +154,7 @@ Each deployment is a first-class entity with a **Type**. Deployments can be defi
 |----------|-------------|----------|
 | `Name` | The model/deployment name (e.g., `gpt-4o`, `text-embedding-3-large`) | Yes |
 | `Type` | The deployment type. Valid values: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText` | Yes |
-| `IsDefault` | Optional legacy connection-scoped default marker retained for backward compatibility in configuration and recipes | No |
+| `IsDefault` | Whether this deployment is the default for its type within the connection | No |
 
 **Deployment Types:**
 
@@ -367,7 +367,6 @@ You can add or update a connection using **recipes**. Below is a recipe for addi
         {
           "Source": "OpenAI",
           "Name": "deepseek",
-          "IsDefault": false,
           "DisplayText": "DeepSeek",
           "Deployments": [
             { "Name": "deepseek-chat", "Type": "Chat", "IsDefault": true }

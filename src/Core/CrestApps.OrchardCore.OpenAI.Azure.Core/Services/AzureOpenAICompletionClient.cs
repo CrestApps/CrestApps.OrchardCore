@@ -72,7 +72,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             return null;
         }
@@ -208,7 +208,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
 
         if (string.IsNullOrEmpty(connectionName) || !provider.Connections.TryGetValue(connectionName, out var connection))
         {
-            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            _logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             yield break;
         }

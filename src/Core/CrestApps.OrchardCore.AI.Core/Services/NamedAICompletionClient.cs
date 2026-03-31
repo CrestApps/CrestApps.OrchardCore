@@ -110,7 +110,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             return null;
         }
@@ -168,7 +168,7 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
 
         if (string.IsNullOrEmpty(connectionName))
         {
-            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' or the default connection", context.ConnectionName);
+            Logger.LogWarning("Unable to chat. Unable to find a connection '{ConnectionName}' and no fallback connection could be resolved.", context.ConnectionName);
 
             yield break;
         }
