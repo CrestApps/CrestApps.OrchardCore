@@ -1,16 +1,16 @@
 @model IReadOnlyCollection<CrestApps.AI.Mcp.Models.McpConnection>
 @{
-    ViewData["Title"] = "MCP Connections";
+    ViewData["Title"] = "MCP Hosts";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-hdd-network"></i> MCP Connections</h2>
-    <a asp-action="Create" class="btn btn-success"><i class="bi bi-plus-lg"></i> Add Connection</a>
+    <h2><i class="bi bi-hdd-network"></i> MCP Hosts</h2>
+    <a asp-action="Create" class="btn btn-success"><i class="bi bi-plus-lg"></i> Add Host</a>
 </div>
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">No MCP connections are configured yet.</div>
+    <div class="alert alert-info">No MCP hosts are configured yet.</div>
 }
 else
 {
@@ -18,7 +18,7 @@ else
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>Display text</th>
+                    <th>Title</th>
                     <th>Transport</th>
                     <th>Details</th>
                     <th style="width:180px;">Actions</th>

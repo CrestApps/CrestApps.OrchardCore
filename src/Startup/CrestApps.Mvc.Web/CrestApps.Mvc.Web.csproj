@@ -26,6 +26,7 @@
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.Chat.Copilot/CrestApps.AI.Chat.Copilot.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.SignalR/CrestApps.SignalR.csproj" />
     <ProjectReference Include="../../Framework/Utilities/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj" />

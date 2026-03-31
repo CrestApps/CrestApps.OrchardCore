@@ -1,5 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
@@ -34,7 +36,10 @@ public sealed class AIProfileController : Controller
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IAITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
+    private readonly CopilotOptions _copilotOptions;
+    private readonly GitHubOAuthService _oauthService;
     private readonly AIToolDefinitionOptions _toolOptions;
+    private readonly IAIDataSourceStore _dataSourceStore;
 
     public AIProfileController(
         IAIProfileManager profileManager,
@@ -51,7 +56,10 @@ public sealed class AIProfileController : Controller
         ISearchIndexProfileStore indexProfileStore,
         IAITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
-        IOptions<AIToolDefinitionOptions> toolOptions)
+        IOptions<CopilotOptions> copilotOptions,
+        GitHubOAuthService oauthService,
+        IOptions<AIToolDefinitionOptions> toolOptions,
+        IAIDataSourceStore dataSourceStore)
     {
         _profileManager = profileManager;
         _deploymentCatalog = deploymentCatalog;
@@ -67,7 +75,10 @@ public sealed class AIProfileController : Controller
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
+        _copilotOptions = copilotOptions.Value;
+        _oauthService = oauthService;
         _toolOptions = toolOptions.Value;
+        _dataSourceStore = dataSourceStore;
     }
 
     public async Task<IActionResult> Index()
@@ -208,8 +219,29 @@ public sealed class AIProfileController : Controller
             .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
+        model.Orchestrators = [new SelectListItem("— Default orchestrator —", "")];
         model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+
+        // Copilot
+        model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
+        if (_copilotOptions.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+        {
+            var userId = User.Identity?.Name;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var isAuth = await _oauthService.IsAuthenticatedAsync(userId);
+                model.CopilotIsAuthenticated = isAuth;
+                if (isAuth)
+                {
+                    var cred = await _oauthService.GetCredentialAsync(userId);
+                    model.CopilotGitHubUsername = cred?.GitHubUsername;
+                    var models = await _oauthService.ListModelsAsync(userId);
+                    model.CopilotAvailableModels = models
+                        .Select(m => new SelectListItem(m.Name, m.Id))
+                        .ToList();
+                }
+            }
+        }
 
         var templates = await _templateCatalog.GetAllAsync();
         model.Templates = [new SelectListItem("— No Template —", "")];
@@ -260,6 +292,26 @@ public sealed class AIProfileController : Controller
                 IsSelected = selectedMcpIds.Contains(c.ItemId),
             })
             .ToList();
+
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+        var selectedAgentNames = new HashSet<string>(model.SelectedAgentNames ?? [], StringComparer.OrdinalIgnoreCase);
+        model.AvailableAgents = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .OrderBy(a => a.DisplayText ?? a.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(a => new AgentSelectionItem
+            {
+                Name = a.Name,
+                DisplayText = a.DisplayText ?? a.Name,
+                Description = a.Description,
+                IsSelected = selectedAgentNames.Contains(a.Name),
+            })
+            .ToList();
+
+        var allDataSources = await _dataSourceStore.GetAllAsync();
+        model.DataSources = [new SelectListItem("— No data source —", "")];
+        model.DataSources.AddRange(allDataSources
+            .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)));
 
         var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;

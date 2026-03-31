@@ -12,7 +12,7 @@
     <div class="row">
         <div class="col-md-8">
             <div class="mb-3">
-                <label asp-for="DisplayText" class="form-label">Display text <span class="text-danger">*</span></label>
+                <label asp-for="DisplayText" class="form-label">Title <span class="text-danger">*</span></label>
                 <input asp-for="DisplayText" class="form-control" required placeholder="e.g., Product Catalog" />
                 <span asp-validation-for="DisplayText" class="text-danger"></span>
                 <div class="form-text">A human-readable name for this data source.</div>
@@ -20,7 +20,7 @@
 
             <div class="mb-3">
                 <label asp-for="SourceIndexProfileName" class="form-label">Source index profile <span class="text-danger">*</span></label>
-                <select asp-for="SourceIndexProfileName" asp-items="Model.IndexProfiles" class="form-select" required>
+                <select asp-for="SourceIndexProfileName" asp-items="Model.SourceIndexProfiles" class="form-select" required>
                 </select>
                 <span asp-validation-for="SourceIndexProfileName" class="text-danger"></span>
                 <div class="form-text">The index to read source documents from.</div>
@@ -28,7 +28,7 @@
 
             <div class="mb-3">
                 <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label">Knowledge base index profile</label>
-                <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.IndexProfiles" class="form-select">
+                <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.KnowledgeBaseIndexProfiles" class="form-select">
                 </select>
                 <span asp-validation-for="AIKnowledgeBaseIndexProfileName" class="text-danger"></span>
                 <div class="form-text">The index where chunked and embedded documents are stored for AI retrieval.</div>

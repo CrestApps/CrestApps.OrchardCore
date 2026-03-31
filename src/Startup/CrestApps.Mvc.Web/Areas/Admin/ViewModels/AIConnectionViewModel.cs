@@ -9,7 +9,6 @@ public sealed class AIConnectionViewModel
     public string Name { get; set; }
     public string DisplayText { get; set; }
     public string Source { get; set; }
-    public bool IsDefault { get; set; }
 
     // Provider-specific connection settings.
     public string Endpoint { get; set; }
@@ -27,7 +26,6 @@ public sealed class AIConnectionViewModel
             Name = connection.Name,
             DisplayText = connection.DisplayText,
             Source = connection.Source,
-            IsDefault = connection.IsDefault,
         };
 
         // Read provider-specific settings from Properties dictionary.
@@ -46,7 +44,6 @@ public sealed class AIConnectionViewModel
         connection.Name = Name;
         connection.DisplayText = DisplayText;
         connection.Source = Source;
-        connection.IsDefault = IsDefault;
 
         // Store provider-specific settings in Properties dictionary.
         connection.Properties ??= new Dictionary<string, object>();

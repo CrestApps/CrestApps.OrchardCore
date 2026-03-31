@@ -4,23 +4,24 @@ using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Copilot;
 using CrestApps.AI.Chat.Tools;
 using CrestApps.AI.DataSources.AzureAI;
 using CrestApps.AI.DataSources.Elasticsearch;
 using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Handlers;
+using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Mcp.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Mcp.Services;
 using CrestApps.AI.Tools;
 using CrestApps.Data.YesSql;
 using CrestApps.Data.YesSql.Services;
 using CrestApps.Mvc.Web.BackgroundTasks;
 using CrestApps.Mvc.Web.Hubs;
 using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Models;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Mvc.Web.Tools;
 using CrestApps.Services;
@@ -28,7 +29,6 @@ using CrestApps.SignalR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -37,11 +37,37 @@ using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 
+// =============================================================================
+// CrestApps AI Framework — MVC Example Application
+// =============================================================================
+// This Program.cs demonstrates how to bootstrap an ASP.NET Core MVC application
+// using the CrestApps AI Framework. It shows each feature registration step in
+// the order they should be applied, with comments explaining what each extension
+// does and why it is needed.
+//
+// Sections:
+//   1. Logging
+//   2. Application Configuration (JSON-file-backed settings)
+//   3. Authentication & Authorization
+//   4. CrestApps AI Framework (core + orchestration + chat + documents + SignalR)
+//   5. AI Providers (OpenAI, Azure OpenAI, Ollama, Azure AI Inference)
+//   6. Data Sources (Elasticsearch, Azure AI Search)
+//   7. MCP — Model Context Protocol (client + server)
+//   8. Custom AI Tools
+//   9. Data Store (YesSql / SQLite — replaceable with any ORM)
+//  10. Background Tasks
+//  11. MVC & SignalR
+//  12. Middleware Pipeline
+// =============================================================================
+
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------------------------------------------------------------------------
-// Logging — NLog writes daily log files to App_Data/logs/.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 1. LOGGING
+// =============================================================================
+// NLog writes daily log files to App_Data/logs/. Replace with your preferred
+// logging provider (Serilog, Application Insights, etc.) if desired.
+// =============================================================================
 builder.Logging.ClearProviders();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 builder.WebHost.UseNLog();
@@ -49,15 +75,20 @@ builder.WebHost.UseNLog();
 var appDataPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(appDataPath);
 
-// ---------------------------------------------------------------------------
-// Default AI Deployment Settings — persisted in a dedicated JSON file so that
-// IOptionsMonitor<DefaultAIDeploymentSettings> reflects admin changes
-// automatically via the configuration reload-on-change mechanism.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 2. APPLICATION CONFIGURATION
+// =============================================================================
+// Settings are persisted in dedicated JSON files so that IOptionsMonitor<T>
+// reflects admin changes automatically via the configuration reload-on-change
+// mechanism. This is an application-level concern — replace these services with
+// your own persistence strategy (database, Azure App Configuration, etc.).
+// =============================================================================
 var deploymentDefaultsService = new JsonFileDeploymentDefaultsService(appDataPath);
 var interactionDocumentSettingsService = new JsonFileInteractionDocumentSettingsService(appDataPath);
 var aiDataSourceSettingsService = new JsonFileAIDataSourceSettingsService(appDataPath);
 var mcpServerSettingsService = new JsonFileMcpServerSettingsService(appDataPath);
+var chatInteractionSettingsService = new JsonFileChatInteractionSettingsService(appDataPath);
+var copilotSettingsService = new JsonFileCopilotSettingsService(appDataPath);
 
 builder.Configuration.AddJsonFile(
     deploymentDefaultsService.FilePath, optional: true, reloadOnChange: true);
@@ -65,6 +96,8 @@ builder.Configuration.AddJsonFile(
     interactionDocumentSettingsService.FilePath, optional: true, reloadOnChange: true);
 builder.Configuration.AddJsonFile(
     aiDataSourceSettingsService.FilePath, optional: true, reloadOnChange: true);
+builder.Configuration.AddJsonFile(
+    chatInteractionSettingsService.FilePath, optional: true, reloadOnChange: true);
 
 builder.Services.Configure<DefaultAIDeploymentSettings>(
     builder.Configuration.GetSection(JsonFileDeploymentDefaultsService.SectionKey));
@@ -72,15 +105,22 @@ builder.Services.Configure<InteractionDocumentSettings>(
     builder.Configuration.GetSection(JsonFileInteractionDocumentSettingsService.SectionKey));
 builder.Services.Configure<AIDataSourceSettings>(
     builder.Configuration.GetSection(JsonFileAIDataSourceSettingsService.SectionKey));
+builder.Services.Configure<ChatInteractionSettings>(
+    builder.Configuration.GetSection(JsonFileChatInteractionSettingsService.SectionKey));
 
 builder.Services.AddSingleton(deploymentDefaultsService);
 builder.Services.AddSingleton(interactionDocumentSettingsService);
 builder.Services.AddSingleton(aiDataSourceSettingsService);
 builder.Services.AddSingleton(mcpServerSettingsService);
+builder.Services.AddSingleton(chatInteractionSettingsService);
+builder.Services.AddSingleton(copilotSettingsService);
 
-// ---------------------------------------------------------------------------
-// Authentication & Authorization
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 3. AUTHENTICATION & AUTHORIZATION
+// =============================================================================
+// Cookie-based authentication with a simple "Admin" policy. Replace with your
+// preferred auth scheme (JWT, OpenID Connect, etc.).
+// =============================================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -91,83 +131,100 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Admin", policy => policy.RequireRole("Administrator"));
 
-// ---------------------------------------------------------------------------
-// CrestApps AI Framework — core services, orchestration, and SignalR.
-// These registrations are required regardless of the data store you choose.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 4. CRESTAPPS AI FRAMEWORK
+// =============================================================================
+// These are the core framework registrations that every CrestApps AI application
+// needs. Each extension adds a distinct feature — see the framework docs for
+// details on what each one provides and the interfaces you can implement.
+//
+//   AddCrestAppsCoreServices()          — Foundation services (OData validation).
+//   AddCrestAppsAI()                    — Core AI services: IAIClientFactory for
+//                                         creating chat/embedding/image clients,
+//                                         IAICompletionService, context builders.
+//   AddOrchestrationServices()          — The orchestration pipeline: IOrchestrator,
+//                                         tool registry, response handlers, RAG,
+//                                         and built-in tools (image/chart gen).
+//   AddChatInteractionHandlers()        — Chat interaction support: ad-hoc chat
+//                                         sessions with configurable parameters.
+//   AddDefaultDocumentProcessingServices() — Document processing tools: upload,
+//                                         text extraction, tabular data, and RAG
+//                                         search over attached documents.
+//   AddCrestAppsA2AClient()             — Agent-to-Agent (A2A) protocol: discover
+//                                         remote agents and use them as tools.
+//   AddCrestAppsSignalR()               — Real-time hub management for SignalR-
+//                                         based chat experiences.
+// =============================================================================
 builder.Services
     .AddCrestAppsCoreServices()
     .AddCrestAppsAI()
-    .AddCrestAppsA2AClient()
     .AddOrchestrationServices()
+    .AddCopilotOrchestrator()
     .AddChatInteractionHandlers()
     .AddDefaultDocumentProcessingServices()
+    .AddCrestAppsA2AClient()
     .AddCrestAppsSignalR();
 
-// ---------------------------------------------------------------------------
-// AI Providers — register the completion clients you want to use.
-// Each provider reads its configuration from appsettings.json automatically.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 5. AI PROVIDERS
+// =============================================================================
+// Register the AI completion providers you want to use. Each provider adds an
+// IAICompletionClient implementation that knows how to communicate with its
+// platform. Provider connection settings are read from appsettings.json under
+// "CrestApps:AI:Providers". You only need to register the providers you use.
+//
+//   AddOpenAIProvider()                 — OpenAI (api.openai.com)
+//   AddAzureOpenAIProvider()            — Azure OpenAI Service
+//   AddOllamaProvider()                 — Ollama (local/self-hosted models)
+//   AddAzureAIInferenceProvider()       — Azure AI Inference / GitHub Models
+// =============================================================================
 builder.Services
     .AddOpenAIProvider()
     .AddAzureOpenAIProvider()
     .AddOllamaProvider()
     .AddAzureAIInferenceProvider();
 
+// Application-specific provider options configuration.
 builder.Services.Configure<AIProviderOptions>(
     builder.Configuration.GetSection("CrestApps:AI:Providers"));
 builder.Services.AddSingleton<MvcAIProviderOptionsStore>();
 builder.Services.AddTransient<IConfigureOptions<AIProviderOptions>, MvcAIProviderOptionsConfiguration>();
 
-// ---------------------------------------------------------------------------
-// Search Providers — configure Elasticsearch and/or Azure AI Search for
-// vector search, data sources, and document indexing.
-// Connection settings are read from appsettings.json under "CrestApps:Search".
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 6. DATA SOURCES (Vector Search)
+// =============================================================================
+// Data sources enable retrieval-augmented generation (RAG) by connecting to
+// search backends. Each provider registers keyed services for index management,
+// document reading, and vector search. Connection settings are read from
+// appsettings.json under "CrestApps:Search".
+//
+//   AddElasticsearchDataSourceServices()   — Elasticsearch vector search
+//   AddAzureAISearchDataSourceServices()   — Azure AI Search vector search
+// =============================================================================
 builder.Services
     .AddElasticsearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
     .AddAzureAISearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
 
-builder.Services.AddMemoryCache();
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<McpService>();
-builder.Services.AddScoped<IOAuth2TokenService, DefaultOAuth2TokenService>();
-builder.Services.AddScoped<IMcpClientTransportProvider, SseClientTransportProvider>();
-builder.Services.AddScoped<IMcpClientTransportProvider, StdioClientTransportProvider>();
-builder.Services.AddScoped<IMcpServerPromptService, DefaultMcpServerPromptService>();
-builder.Services.AddScoped<IMcpServerResourceService, DefaultMcpServerResourceService>();
-builder.Services.Configure<McpClientAIOptions>(options =>
-{
-    options.AddTransportType(McpConstants.TransportTypes.Sse, entry =>
-    {
-        entry.DisplayName = new LocalizedString("Server-Sent Events", "Server-Sent Events");
-        entry.Description = new LocalizedString("Server-Sent Events Description", "Uses a remote MCP server over HTTP.");
-    });
-    options.AddTransportType(McpConstants.TransportTypes.StdIo, entry =>
-    {
-        entry.DisplayName = new LocalizedString("Standard Input/Output", "Standard Input/Output");
-        entry.Description = new LocalizedString("Standard Input/Output Description", "Uses a local MCP process over standard input/output.");
-    });
-});
-builder.Services.AddMcpResourceType<FtpResourceTypeHandler>(FtpResourceConstants.Type, entry =>
-{
-    entry.DisplayName = new LocalizedString("FTP", "FTP/FTPS");
-    entry.Description = new LocalizedString("FTP Description", "Reads content from FTP/FTPS servers.");
-    entry.SupportedVariables =
-    [
-        new McpResourceVariable("path") { Description = new LocalizedString("FTP Path", "The remote file path on the FTP server.") },
-    ];
-});
-builder.Services.AddMcpResourceType<SftpResourceTypeHandler>(SftpResourceConstants.Type, entry =>
-{
-    entry.DisplayName = new LocalizedString("SFTP", "SFTP");
-    entry.Description = new LocalizedString("SFTP Description", "Reads content from SFTP servers.");
-    entry.SupportedVariables =
-    [
-        new McpResourceVariable("path") { Description = new LocalizedString("SFTP Path", "The remote file path on the SFTP server.") },
-    ];
-});
+// =============================================================================
+// 7. MCP — MODEL CONTEXT PROTOCOL
+// =============================================================================
+// MCP enables your application to connect to remote MCP servers (client mode)
+// and to expose your AI tools, prompts, and resources to MCP clients (server
+// mode). The client and server features are independent — enable what you need.
+//
+//   AddCrestAppsMcpClient()             — MCP client: transport providers (SSE,
+//                                         StdIO), OAuth2, and the McpService for
+//                                         connecting to remote MCP servers.
+//   AddCrestAppsMcpServer()             — MCP server: prompt and resource serving,
+//                                         built-in resource types (FTP, SFTP).
+// =============================================================================
+builder.Services
+    .AddCrestAppsMcpClient()
+    .AddCrestAppsMcpServer();
 
+// MCP server endpoint configuration (using the ModelContextProtocol SDK).
+// This wires the CrestApps tool registry, prompt service, and resource service
+// into the MCP protocol handlers served at the /mcp endpoint.
 _ = builder.Services.AddMcpServer(options =>
 {
     options.ServerInfo = new()
@@ -279,9 +336,14 @@ _ = builder.Services.AddMcpServer(options =>
     return await resourceService.ReadAsync(request, cancellationToken);
 });
 
-// ---------------------------------------------------------------------------
-// AI Tools — register custom tools that AI profiles can invoke.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 8. CUSTOM AI TOOLS
+// =============================================================================
+// Register application-specific AI tools using the fluent builder pattern.
+// Tools marked as Selectable() are visible in the UI for user assignment to
+// profiles; system tools (no Selectable call) are used automatically by the
+// orchestrator based on their Purpose.
+// =============================================================================
 builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
     .WithTitle("Calculator")
     .WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
@@ -291,12 +353,16 @@ builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
 builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
     .WithPurpose(AIToolPurposes.DataSourceSearch);
 
-// ---------------------------------------------------------------------------
-// Data Store — YesSql with SQLite (default).
-// If you prefer a different ORM (e.g., EF Core), replace this entire section
-// with your own implementations of IAIProfileManager, IAIChatSessionManager,
-// IAIChatSessionPromptStore, and IAIDocumentStore.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 9. DATA STORE — YesSql with SQLite
+// =============================================================================
+// The framework does not impose a specific data store. You must provide
+// implementations of the store interfaces (IAIProfileManager,
+// IAIChatSessionManager, IAIChatSessionPromptStore, IAIDocumentStore, etc.).
+//
+// This example uses YesSql with SQLite. To use Entity Framework Core or another
+// ORM, replace this entire section with your own implementations.
+// =============================================================================
 builder.Services.AddSingleton(sp =>
 {
     var dbPath = Path.Combine(appDataPath, "crestapps.db");
@@ -347,6 +413,7 @@ builder.Services
     .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>()
     .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
     .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
+    .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
     .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
     .AddScoped<MvcAIDocumentIndexingService>()
     .AddDocumentCatalog<ChatInteraction, ChatInteractionIndex>()
@@ -360,16 +427,23 @@ builder.Services.AddSingleton(new FileSystemFileStore(
 // Settings service for managing AI settings.
 builder.Services.AddSingleton(new JsonFileSettingsService(appDataPath));
 
-// ---------------------------------------------------------------------------
-// Background Tasks
-// ---------------------------------------------------------------------------
+// Copilot orchestrator: credential store and options configuration.
+builder.Services.AddScoped<ICopilotCredentialStore, JsonFileCopilotCredentialStore>();
+builder.Services.ConfigureOptions<MvcCopilotOptionsConfiguration>();
+
+// =============================================================================
+// 10. BACKGROUND TASKS
+// =============================================================================
+// These hosted services run periodic maintenance work. Implement your own
+// IHostedService or use these as reference implementations.
+// =============================================================================
 builder.Services.AddHostedService<AIChatSessionCloseBackgroundService>();
 builder.Services.AddHostedService<DataSourceSyncBackgroundService>();
 builder.Services.AddHostedService<DataSourceAlignmentBackgroundService>();
 
-// ---------------------------------------------------------------------------
-// MVC & SignalR
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 11. MVC & SIGNALR
+// =============================================================================
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
@@ -379,10 +453,7 @@ builder.Services.AddSignalR()
 
 var app = builder.Build();
 
-// ---------------------------------------------------------------------------
-// YesSql Schema Initialization — creates tables on first run.
-// This block is only needed for YesSql; remove it if using another ORM.
-// ---------------------------------------------------------------------------
+// YesSql schema initialization — creates tables on first run.
 await InitializeYesSqlSchemaAsync(app.Services);
 using (var scope = app.Services.CreateScope())
 {
@@ -398,9 +469,9 @@ app.Services.GetRequiredService<IOptionsMonitorCache<AIProviderOptions>>()
     .TryRemove(Options.DefaultName);
 _ = app.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
 
-// ---------------------------------------------------------------------------
-// Middleware Pipeline
-// ---------------------------------------------------------------------------
+// =============================================================================
+// 12. MIDDLEWARE PIPELINE
+// =============================================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error")
@@ -474,9 +545,12 @@ app.MapControllerRoute(
 
 await app.RunAsync();
 
-// ---------------------------------------------------------------------------
-// YesSql schema helper — creates index tables if they do not already exist.
-// ---------------------------------------------------------------------------
+// =============================================================================
+// YesSql Schema Helper
+// =============================================================================
+// Creates index tables if they do not already exist. Remove this section if
+// you are using a different ORM that handles its own schema management.
+// =============================================================================
 async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
 {
     var store = services.GetRequiredService<IStore>();

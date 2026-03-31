@@ -8,13 +8,32 @@
 
     <div class="col-md-8">
         <div class="mb-3">
-            <label asp-for="Name" class="form-label">Name</label>
-            <input asp-for="Name" class="form-control" />
-            <span asp-validation-for="Name" class="text-danger"></span>
+            <label asp-for="Title" class="form-label">Title</label>
+            <input asp-for="Title" class="form-control" id="promptTitle" />
         </div>
         <div class="mb-3">
-            <label asp-for="Title" class="form-label">Title</label>
-            <input asp-for="Title" class="form-control" />
+            <label asp-for="Name" class="form-label">Technical name</label>
+            @{
+                var isEdit = !string.IsNullOrEmpty(Model.ItemId);
+            }
+            @if (isEdit)
+            {
+                <input asp-for="Name" class="form-control" id="promptName" disabled />
+                <input type="hidden" asp-for="Name" />
+            }
+            else
+            {
+                <input asp-for="Name" class="form-control" id="promptName" />
+            }
+            <span asp-validation-for="Name" class="text-danger"></span>
+            @if (string.IsNullOrEmpty(Model.ItemId))
+            {
+                <div class="form-text">Auto-generated from the title. You may override it before saving.</div>
+            }
+            else
+            {
+                <div class="form-text">The technical name cannot be changed after creation.</div>
+            }
         </div>
         <div class="mb-3">
             <label asp-for="Description" class="form-label">Description</label>
@@ -32,3 +51,10 @@
         </div>
     </div>
 </form>
+
+@if (string.IsNullOrEmpty(Model.ItemId))
+{
+    <script>
+        initAutoGenerateTechnicalName('promptTitle', 'promptName');
+    </script>
+}

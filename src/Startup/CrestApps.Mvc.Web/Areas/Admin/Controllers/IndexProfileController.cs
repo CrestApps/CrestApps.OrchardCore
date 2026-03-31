@@ -55,6 +55,12 @@ public sealed class IndexProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(IndexProfileViewModel model)
     {
+        // Auto-generate Name from IndexName when not provided.
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            model.Name = model.IndexName?.Trim();
+        }
+
         await ValidateAsync(model);
 
         if (!ModelState.IsValid)

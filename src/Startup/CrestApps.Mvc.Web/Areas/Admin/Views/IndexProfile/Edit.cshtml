@@ -12,14 +12,7 @@
     <div class="row">
         <div class="col-md-8">
             <div class="mb-3">
-                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
-                <input asp-for="Name" class="form-control" required placeholder="e.g., my-documents-index" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <div class="form-text">A unique name for this index profile.</div>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="DisplayText" class="form-label">Display text</label>
+                <label asp-for="DisplayText" class="form-label">Title</label>
                 <input asp-for="DisplayText" class="form-control" placeholder="e.g., My Documents Index" />
                 <span asp-validation-for="DisplayText" class="text-danger"></span>
                 <div class="form-text">A human-readable label (optional).</div>
@@ -27,10 +20,10 @@
 
             <div class="mb-3">
                 <label asp-for="IndexName" class="form-label">Index name <span class="text-danger">*</span></label>
-                <input asp-for="IndexName" class="form-control" required
-                       placeholder="e.g., ai-documents" />
+                <input asp-for="IndexName" class="form-control" disabled />
+                <input type="hidden" asp-for="IndexName" />
                 <span asp-validation-for="IndexName" class="text-danger"></span>
-                <div class="form-text">The actual index name in the search backend. Use lowercase letters, numbers, and hyphens.</div>
+                <div class="form-text">The index name cannot be changed after creation because it corresponds to an actual index on the remote server.</div>
             </div>
 
             <div class="mb-3">

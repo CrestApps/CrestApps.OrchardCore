@@ -22,10 +22,9 @@ else
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>Name</th>
-                    <th>Display Text</th>
+                    <th>Title</th>
+                    <th>Technical Name</th>
                     <th>Provider</th>
-                    <th>Default</th>
                     <th style="width: 180px;">Actions</th>
                 </tr>
             </thead>
@@ -33,20 +32,10 @@ else
                 @foreach (var connection in Model)
                 {
                     <tr>
-                        <td><strong>@connection.Name</strong></td>
-                        <td>@connection.DisplayText</td>
+                        <td><strong>@(connection.DisplayText ?? connection.Name)</strong></td>
+                        <td><code>@connection.Name</code></td>
                         <td>
                             <span class="badge bg-info">@(connection.Source ?? "—")</span>
-                        </td>
-                        <td>
-                            @if (connection.IsDefault)
-                            {
-                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Yes</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">No</span>
-                            }
                         </td>
                         <td>
                             <a asp-action="Edit" asp-route-id="@connection.ItemId" class="btn btn-sm btn-outline-primary">

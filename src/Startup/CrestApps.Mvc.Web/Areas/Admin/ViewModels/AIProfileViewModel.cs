@@ -1,4 +1,6 @@
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Chat.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Prompting.Models;
@@ -47,6 +49,14 @@ public sealed class AIProfileViewModel
     // AI Tools
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
+
+    // AI Agents
+    public string[] SelectedAgentNames { get; set; } = [];
+    public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
+
+    // Data Source
+    public string DataSourceId { get; set; }
+    public List<SelectListItem> DataSources { get; set; } = [];
 
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
@@ -98,6 +108,14 @@ public sealed class AIProfileViewModel
     // Memory
     public bool EnableUserMemory { get; set; }
 
+    // Copilot
+    public string CopilotModel { get; set; }
+    public bool CopilotIsAllowAll { get; set; }
+    public bool CopilotIsAuthenticated { get; set; }
+    public string CopilotGitHubUsername { get; set; }
+    public int CopilotAuthenticationType { get; set; }
+    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
     public static AIProfileViewModel FromProfile(AIProfile profile)
     {
         var metadata = profile.GetSettings<AIProfileMetadata>();
@@ -113,7 +131,7 @@ public sealed class AIProfileViewModel
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
         var promptMetadata = profile.As<PromptTemplateMetadata>();
 
-        return new AIProfileViewModel
+        var vm = new AIProfileViewModel
         {
             ItemId = profile.ItemId,
             Name = profile.Name,
@@ -146,6 +164,8 @@ public sealed class AIProfileViewModel
             IsRemovable = settings.IsRemovable,
 
             SelectedToolNames = toolMetadata?.Names ?? [],
+            SelectedAgentNames = profile.As<AgentInvocationMetadata>()?.Names ?? [],
+            DataSourceId = profile.As<DataSourceMetadata>()?.DataSourceId,
             SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
             SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
 
@@ -208,6 +228,15 @@ public sealed class AIProfileViewModel
 
             EnableUserMemory = memorySettings.EnableUserMemory,
         };
+
+        // Load Copilot metadata if present
+        if (profile.TryGet<CopilotSessionMetadata>(out var copilotMeta))
+        {
+            vm.CopilotModel = copilotMeta.CopilotModel;
+            vm.CopilotIsAllowAll = copilotMeta.IsAllowAll;
+        }
+
+        return vm;
     }
 
     public void ApplyTo(AIProfile profile)
@@ -268,6 +297,17 @@ public sealed class AIProfileViewModel
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.Ordinal)
                 .ToArray() ?? [],
+        });
+
+        var agentNames = SelectedAgentNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+        profile.Put(new AgentInvocationMetadata
+        {
+            Names = agentNames?.Length > 0 ? agentNames : [],
+        });
+
+        profile.Put(new DataSourceMetadata
+        {
+            DataSourceId = string.IsNullOrWhiteSpace(DataSourceId) ? null : DataSourceId,
         });
 
         var promptTemplateMetadata = new PromptTemplateMetadata();
@@ -366,6 +406,17 @@ public sealed class AIProfileViewModel
         {
             m.EnableUserMemory = EnableUserMemory;
         });
+
+        // Copilot metadata
+        if (!string.IsNullOrEmpty(OrchestratorName) &&
+            string.Equals(OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        {
+            profile.Put(new CopilotSessionMetadata
+            {
+                CopilotModel = CopilotModel,
+                IsAllowAll = CopilotIsAllowAll,
+            });
+        }
     }
 }
 

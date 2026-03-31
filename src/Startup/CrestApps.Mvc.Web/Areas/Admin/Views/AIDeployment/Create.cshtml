@@ -10,40 +10,40 @@
     <div class="row">
         <div class="col-md-8">
             <div class="mb-3">
-                <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
-                <input asp-for="Name" class="form-control" required placeholder="e.g., gpt-4o-mini" />
+                <label asp-for="Name" class="form-label">Title <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" id="deploymentTitle" required placeholder="e.g., gpt-4o-mini" />
                 <span asp-validation-for="Name" class="text-danger"></span>
                 <div class="form-text">The model or deployment name (e.g., gpt-4o-mini, llama3.2).</div>
             </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Deployment types <span class="text-danger">*</span></label>
-                        @foreach (var type in Model.Types)
-                        {
-                            var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
-                            <div class="form-check">
-                                <input id="SelectedTypes_@type.Value"
-                                       name="SelectedTypes"
-                                       type="checkbox"
-                                       value="@type.Value"
-                                       class="form-check-input"
-                                       @(isChecked ? "checked" : "") />
-                                <label class="form-check-label" for="SelectedTypes_@type.Value">@type.Text</label>
-                            </div>
-                        }
-                        <span asp-validation-for="SelectedTypes" class="text-danger"></span>
-                        <div class="form-text">Select one or more capability types for this deployment.</div>
+            <div class="mb-3">
+                <label asp-for="TechnicalName" class="form-label">Technical name <span class="text-danger">*</span></label>
+                <input asp-for="TechnicalName" class="form-control" id="deploymentTechName" required />
+                <span asp-validation-for="TechnicalName" class="text-danger"></span>
+                <div class="form-text">Auto-generated from the title.</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ClientName" class="form-label">Provider</label>
+                <select asp-for="ClientName" class="form-select" asp-items="Model.Providers" id="providerSelect">
+                    <option value="">— Select Provider —</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Deployment types <span class="text-danger">*</span></label>
+                @foreach (var type in Model.Types)
+                {
+                    var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
+                    <div class="form-check">
+                        <input id="SelectedTypes_@type.Value"
+                               name="SelectedTypes"
+                               type="checkbox"
+                               value="@type.Value"
+                               class="form-check-input"
+                               @(isChecked ? "checked" : "") />
+                        <label class="form-check-label" for="SelectedTypes_@type.Value">@type.Text</label>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label asp-for="ClientName" class="form-label">Provider</label>
-                        <select asp-for="ClientName" class="form-select" asp-items="Model.Providers" id="providerSelect">
-                            <option value="">— Select Provider —</option>
-                        </select>
-                    </div>
-                </div>
+                }
+                <span asp-validation-for="SelectedTypes" class="text-danger"></span>
+                <div class="form-text">Select one or more capability types for this deployment.</div>
             </div>
             <div class="mb-3" id="connectionGroup">
                 <label asp-for="ConnectionName" class="form-label">Connection</label>
@@ -66,7 +66,7 @@
                 <div class="mb-3">
                     <label asp-for="AuthenticationType" class="form-label">Authentication type</label>
                     <select asp-for="AuthenticationType" class="form-select" asp-items="Model.AuthenticationTypes" id="authTypeSelect">
-                        <option value="">— Select Authentication Type —</option>
+                        <option value="">— Select authentication type —</option>
                     </select>
                 </div>
                 <div class="mb-3" id="apiKeyGroup">
@@ -116,4 +116,5 @@
             updateVisibility();
         });
     </script>
+    <script>initAutoGenerateTechnicalName('deploymentTitle', 'deploymentTechName');</script>
 }

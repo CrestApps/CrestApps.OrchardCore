@@ -2,12 +2,60 @@
 sidebar_label: Getting Started
 sidebar_position: 2
 title: Getting Started
-description: How to set up and run CrestApps Orchard Core modules
+description: How to get started with the CrestApps AI Framework or CrestApps Orchard Core modules.
 ---
 
 # Getting Started
 
-Follow these steps to get started with CrestApps Orchard Core modules.
+Choose the path that matches your project:
+
+| Path | Description |
+|------|-------------|
+| **[Framework (any ASP.NET Core app)](#framework-quick-start)** | Use the AI framework in a standard MVC, Razor Pages, or Minimal API application |
+| **[Orchard Core modules](#orchard-core-quick-start)** | Add AI capabilities to an existing Orchard Core CMS site |
+
+## Framework Quick Start
+
+### Prerequisites
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download) or later
+
+### 1. Add NuGet Packages
+
+```bash
+dotnet add package CrestApps.AI
+dotnet add package CrestApps.AI.Chat
+dotnet add package CrestApps.AI.OpenAI        # or another provider
+dotnet add package CrestApps.Data.YesSql       # or your preferred storage
+```
+
+### 2. Register Services
+
+```csharp
+builder.Services
+    .AddCrestAppsCoreServices()
+    .AddCrestAppsAI()
+    .AddOrchestrationServices()
+    .AddChatInteractionHandlers()
+    .AddDefaultDocumentProcessingServices()
+    .AddOpenAIProvider();
+```
+
+### 3. Use the Orchestrator
+
+```csharp
+app.MapPost("/chat", async (IOrchestrator orchestrator, string message) =>
+{
+    // Build context and stream response
+    // See the Framework documentation for complete examples
+});
+```
+
+For a complete working example, see the [MVC Example walkthrough](framework/mvc-example.md) and the full [Framework documentation](framework/).
+
+---
+
+## Orchard Core Quick Start
 
 ## Prerequisites
 

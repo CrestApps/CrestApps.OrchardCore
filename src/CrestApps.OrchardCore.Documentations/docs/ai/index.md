@@ -13,6 +13,10 @@ The suite enables highly customizable chat experiences, along with robust prompt
 
 It supports most AI providers including **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and any provider that adheres to the OpenAI API standard.
 
+:::tip Framework Documentation
+The Orchard Core AI Suite is built on the **[CrestApps AI Framework](../framework/)**. For core concepts like orchestration, context builders, response handlers, and tool registration, see the [Framework documentation](../framework/). This section focuses on the **Orchard Core-specific** admin UI, features, recipes, and deployment steps.
+:::
+
 ## Architecture
 
 The AI Suite is built on [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), providing a standardized abstraction layer for AI services. The architecture follows a modular, feature-rich design, allowing you to enable only the components you need while still composing a larger AI integrations and solutions platform for your Orchard Core solution.

@@ -9,6 +9,10 @@ description: How to use IAIClientFactory, IAICompletionService, IOrchestrator, a
 
 This guide explains how to use the CrestApps AI services programmatically in your Orchard Core modules.
 
+:::tip Framework Reference
+For the full service hierarchy and framework-level usage (without Orchard Core), see the [Framework AI Core](../framework/ai-core.md) and [Orchestration](../framework/orchestration.md) documentation. This page focuses on using these services **within Orchard Core modules**.
+:::
+
 ## Service Overview
 
 The AI infrastructure provides several key services at different abstraction levels:

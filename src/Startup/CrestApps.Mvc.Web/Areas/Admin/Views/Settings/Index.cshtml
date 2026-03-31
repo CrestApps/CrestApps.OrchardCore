@@ -101,6 +101,21 @@
 
             <div class="card mb-4">
                 <div class="card-header">
+                    <h5 class="card-title mb-0">Chat Interaction</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="ChatInteractionEnableUserMemory" class="form-check-input" type="checkbox" />
+                            <label asp-for="ChatInteractionEnableUserMemory" class="form-check-label">Enable user memory by default</label>
+                        </div>
+                        <div class="form-text">When enabled, chat interactions automatically remember user preferences and context across sessions. Individual profiles can override this setting.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="card-title mb-0">Documents</h5>
                 </div>
                 <div class="card-body">
@@ -196,6 +211,164 @@
 
             <div class="card mb-4">
                 <div class="card-header">
+                    <h5 class="card-title mb-0">Copilot</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure how the Copilot orchestrator authenticates with the AI provider.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="CopilotAuthenticationType" class="form-label">Authentication type</label>
+                        <select asp-for="CopilotAuthenticationType" class="form-select" id="copilotAuthType">
+                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)">GitHub signed-in user</option>
+                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)">API key (BYOK)</option>
+                        </select>
+                        <div class="form-text">Choose how the Copilot orchestrator authenticates. "GitHub signed-in user" requires a GitHub Copilot subscription. "API key (BYOK)" uses your own API key from a model provider.</div>
+                    </div>
+
+                    @* GitHub OAuth Section *@
+                    <div id="copilotGitHubOAuthSection">
+                        <div class="mb-4">
+                            <h6 class="mb-2">How to create a GitHub app</h6>
+                            <div class="ps-3">
+                                <ol>
+                                    <li>
+                                        In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>.
+                                        You can also open <a href="https://github.com/settings/apps/new" target="_blank" rel="noopener noreferrer">this link</a>.
+                                    </li>
+                                    <li>Enter an <strong>App name</strong> (e.g., "MVC Copilot Integration") and your site's <strong>Homepage URL</strong>.</li>
+                                    <li>
+                                        Under <strong>Callback URL</strong>, enter the following value:
+                                        <div class="input-group mt-1 mb-2" style="max-width: 600px;">
+                                            <input type="text" class="form-control" readonly value="@Model.CopilotCallbackUrl" id="copilotComputedCallbackUrl" />
+                                            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('copilotComputedCallbackUrl').value)">
+                                                <i class="bi bi-clipboard"></i> Copy
+                                            </button>
+                                        </div>
+                                    </li>
+                                    <li>Webhooks are <strong>not required</strong> for this integration. Under <strong>Webhook</strong>, uncheck <strong>Active</strong>.</li>
+                                    <li>Under <strong>Permissions</strong>, grant <strong>Copilot Chat &rarr; Read-only</strong> access under "Account permissions" to allow model listing.</li>
+                                    <li>Choose where the app can be installed and click <strong>Create GitHub App</strong>.</li>
+                                    <li>On the app's settings page, copy the <strong>Client ID</strong> and paste it below.</li>
+                                    <li>Click <strong>Generate a new client secret</strong>, copy the secret, and paste it below.</li>
+                                </ol>
+                                <p class="text-muted">
+                                    Docs: <a href="https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps" target="_blank" rel="noopener noreferrer">About creating GitHub Apps</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotClientId" class="form-label">Client ID</label>
+                            <input asp-for="CopilotClientId" class="form-control" />
+                            <div class="form-text">The client ID from your GitHub app.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotClientSecret" class="form-label">Client secret</label>
+                            <input asp-for="CopilotClientSecret" type="password" class="form-control" placeholder="Enter a new secret to update" />
+                            @if (Model.CopilotHasSecret)
+                            {
+                                <div class="form-text text-success">A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret.</div>
+                            }
+                            else
+                            {
+                                <div class="form-text">The client secret from your GitHub app.</div>
+                            }
+                        </div>
+                    </div>
+
+                    @* BYOK (API Key) Section *@
+                    <div id="copilotApiKeySection">
+                        <div class="mb-4">
+                            <h6 class="mb-2">API key (BYOK) configuration</h6>
+                            <p class="text-muted">Use your own API key from a model provider. No GitHub Copilot subscription is required.
+                                <a href="https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md" target="_blank" rel="noopener noreferrer">Learn more about BYOK</a>
+                            </p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotProviderType" class="form-label">Provider type</label>
+                            <select asp-for="CopilotProviderType" class="form-select" id="copilotProviderType">
+                                <option value="openai">OpenAI / OpenAI-compatible</option>
+                                <option value="azure">Azure OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                            </select>
+                            <div class="form-text">Select the AI provider type.</div>
+                        </div>
+
+                        <div id="copilotProviderInstructions">
+                            <div class="copilot-hint copilot-hint-openai">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>OpenAI / OpenAI-compatible</strong><br />
+                                    Works with OpenAI API and any OpenAI-compatible endpoint (Ollama, vLLM, LiteLLM, etc.).<br />
+                                    <strong>Base URL</strong> should include the full path, e.g., <code>https://api.openai.com/v1</code> or <code>http://localhost:11434/v1</code> for Ollama.<br />
+                                    API key is optional for local providers like Ollama.
+                                </div>
+                            </div>
+                            <div class="copilot-hint copilot-hint-azure">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>Azure OpenAI</strong><br />
+                                    Use for native Azure OpenAI endpoints at <code>*.openai.azure.com</code>.<br />
+                                    <strong>Base URL</strong> should be the deployment URL, e.g., <code>https://&lt;deployment-name&gt;.openai.azure.com/</code>. Do <strong>not</strong> include <code>/openai/v1</code>.<br />
+                                    An <strong>API key</strong> and <strong>Azure API version</strong> are required.
+                                </div>
+                            </div>
+                            <div class="copilot-hint copilot-hint-anthropic">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>Anthropic</strong><br />
+                                    For direct Anthropic API access to Claude models.<br />
+                                    <strong>Base URL</strong> should be <code>https://api.anthropic.com</code>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotBaseUrl" class="form-label">Base URL</label>
+                            <input asp-for="CopilotBaseUrl" class="form-control" id="copilotBaseUrl" placeholder="https://api.openai.com/v1" />
+                            <div class="form-text">The API endpoint URL for your provider.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotApiKey" class="form-label">API key</label>
+                            <input asp-for="CopilotApiKey" type="password" class="form-control" placeholder="Enter API key" />
+                            @if (Model.CopilotHasApiKey)
+                            {
+                                <div class="form-text text-success">An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key.</div>
+                            }
+                            else
+                            {
+                                <div class="form-text">The API key from your provider. Optional for local providers like Ollama.</div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotDefaultModel" class="form-label">Default model</label>
+                            <input asp-for="CopilotDefaultModel" class="form-control" placeholder="gpt-4o" />
+                            <div class="form-text">The model name or deployment name to use (e.g., "gpt-4o", "claude-3.5-sonnet"). This is required for BYOK.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotWireApi" class="form-label">Wire API format</label>
+                            <select asp-for="CopilotWireApi" class="form-select">
+                                <option value="completions">Chat completions</option>
+                                <option value="responses">Responses</option>
+                            </select>
+                            <div class="form-text">"Chat completions" works for most models. Use "Responses" for GPT-5 series models that support the newer responses format.</div>
+                        </div>
+
+                        <div class="mb-3" id="copilotAzureVersionGroup">
+                            <label asp-for="CopilotAzureApiVersion" class="form-label">Azure API version</label>
+                            <input asp-for="CopilotAzureApiVersion" class="form-control" placeholder="2024-10-21" />
+                            <div class="form-text">Required for Azure provider. Default: <code>2024-10-21</code>.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
                     <h5 class="card-title mb-0">Model Context Protocol (MCP) server</h5>
                 </div>
                 <div class="card-body">
@@ -235,6 +408,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // MCP server visibility toggle.
         const authenticationType = document.getElementById('mcpServerAuthenticationType');
         const apiKeyFields = document.getElementById('mcpServerApiKeyFields');
 
@@ -244,5 +418,47 @@
 
         authenticationType.addEventListener('change', updateVisibility);
         updateVisibility();
+
+        // Copilot section visibility toggle.
+        var copilotAuthType = document.getElementById('copilotAuthType');
+        var copilotGitHubSection = document.getElementById('copilotGitHubOAuthSection');
+        var copilotApiKeySection = document.getElementById('copilotApiKeySection');
+        var copilotProviderType = document.getElementById('copilotProviderType');
+        var copilotAzureVersionGroup = document.getElementById('copilotAzureVersionGroup');
+        var copilotHints = document.querySelectorAll('.copilot-hint');
+
+        function toggleCopilotAuthSections() {
+            var isApiKey = copilotAuthType.value === '@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)';
+            copilotGitHubSection.style.display = isApiKey ? 'none' : '';
+            copilotApiKeySection.style.display = isApiKey ? '' : 'none';
+        }
+
+        function toggleCopilotProviderHints() {
+            var provider = copilotProviderType.value;
+            copilotHints.forEach(function (el) { el.style.display = 'none'; });
+            var activeHint = document.querySelector('.copilot-hint-' + provider);
+            if (activeHint) { activeHint.style.display = ''; }
+            copilotAzureVersionGroup.style.display = provider === 'azure' ? '' : 'none';
+
+            var baseUrlInput = document.getElementById('copilotBaseUrl');
+            if (baseUrlInput) {
+                var placeholders = {
+                    'openai': 'https://api.openai.com/v1',
+                    'azure': 'https://<deployment-name>.openai.azure.com/',
+                    'anthropic': 'https://api.anthropic.com',
+                };
+                baseUrlInput.setAttribute('placeholder', placeholders[provider] || 'https://api.openai.com/v1');
+            }
+        }
+
+        if (copilotAuthType) {
+            copilotAuthType.addEventListener('change', toggleCopilotAuthSections);
+            toggleCopilotAuthSections();
+        }
+
+        if (copilotProviderType) {
+            copilotProviderType.addEventListener('change', toggleCopilotProviderHints);
+            toggleCopilotProviderHints();
+        }
     });
 </script>

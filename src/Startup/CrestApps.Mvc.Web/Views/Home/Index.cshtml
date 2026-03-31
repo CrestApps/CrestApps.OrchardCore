@@ -2,6 +2,24 @@
     ViewData["Title"] = "Dashboard";
 }
 
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-rocket-takeoff"></i> Getting Started</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-2">Follow these steps to start using AI features in your application:</p>
+        <ol class="mb-3">
+            <li><strong>Add an AI Connection</strong> — configure a connection to your AI provider (OpenAI, Azure OpenAI, Ollama, etc.).</li>
+            <li><strong>Add an AI Deployment</strong> — map a model deployment (e.g., <code>gpt-4o-mini</code>) to your connection.</li>
+            <li><strong>Start chatting</strong> — use <strong>Chat Interactions</strong> as a playground, or create an <strong>AI Profile</strong> for reusable multi-session conversations via AI Chat.</li>
+        </ol>
+        <div class="alert alert-secondary mb-0 py-2">
+            <i class="bi bi-info-circle"></i>
+            <strong>Technical name</strong> — you'll see this field throughout the UI. It's an auto-generated, machine-friendly identifier (e.g., <code>MyOpenAIConnection</code>) used internally to reference entities. It is set once during creation and cannot be changed afterward.
+        </div>
+    </div>
+</div>
+
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
     <div class="col">
         <div class="card h-100 border-success">
@@ -52,7 +70,7 @@
                     <i class="bi bi-chat-dots fs-2 text-info me-3"></i>
                     <h5 class="card-title mb-0">AI Chat</h5>
                 </div>
-                <p class="card-text">Start real-time conversations with AI assistants using SignalR streaming.</p>
+                <p class="card-text">Manage reusable interaction sessions and orchestration-driven conversation flows.</p>
                 <a asp-area="Admin" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
                     <i class="bi bi-arrow-right"></i> Start Chat
                 </a>
@@ -66,7 +84,7 @@
                     <i class="bi bi-chat-left-dots fs-2 text-danger me-3"></i>
                     <h5 class="card-title mb-0">Chat Interactions</h5>
                 </div>
-                <p class="card-text">Manage reusable interaction sessions and orchestration-driven conversation flows.</p>
+                <p class="card-text">Start real-time conversations with AI assistants as playground.</p>
                 <a asp-area="Admin" asp-controller="ChatInteraction" asp-action="Index" class="btn btn-danger">
                     <i class="bi bi-arrow-right"></i> Manage Interactions
                 </a>
@@ -145,11 +163,11 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <i class="bi bi-hdd-network fs-2 text-primary me-3"></i>
-                        <h5 class="card-title mb-0">MCP Connections</h5>
+                        <h5 class="card-title mb-0">MCP Hosts</h5>
                     </div>
                     <p class="card-text">Configure remote SSE MCP servers and local stdio MCP tools for orchestration.</p>
                     <a asp-area="Admin" asp-controller="McpConnection" asp-action="Index" class="btn btn-primary">
-                        <i class="bi bi-arrow-right"></i> Manage MCP Connections
+                        <i class="bi bi-arrow-right"></i> Manage MCP Hosts
                     </a>
                 </div>
             </div>

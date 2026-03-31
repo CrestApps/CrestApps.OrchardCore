@@ -7,6 +7,16 @@ description: Changes that are available in the current development branch and no
 
 # Unreleased
 
+## Documentation
+
+- Added a new **Framework** documentation section that documents each framework feature independently — covering core services, AI core, orchestration, chat, document processing, AI templates, tools, response handlers, context builders, SignalR, data storage, providers, data sources, MCP, and A2A.
+- Each framework doc follows a consistent structure: quick start extension method, problem & solution, core interfaces, configuration, and implementation examples.
+- Added an [MVC Example walkthrough](../framework/mvc-example.md) that documents all 12 sections of the `CrestApps.Mvc.Web` startup configuration.
+- Updated the Introduction and Getting Started pages to present both Framework (standalone .NET) and Orchard Core paths.
+- Updated the AI Suite index to reference framework docs for core concepts (orchestration, context builders, tools, etc.).
+- Created `AddCrestAppsMcpClient()` and `AddCrestAppsMcpServer()` DI extensions that bundle previously scattered MCP service registrations into two cohesive calls.
+- Cleaned up `CrestApps.Mvc.Web/Program.cs` with comprehensive section documentation aligned with the new framework docs.
+
 ## AI
 
 - Restored shared framework-level A2A client support through a new `CrestApps.AI.A2A` project so Orchard Core and `CrestApps.Mvc.Web` now consume the same A2A connection models, authentication services, agent-card cache, tool registry provider, and discovery functions.

@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -18,6 +19,8 @@ public sealed class AITemplateController : Controller
     private readonly ICatalog<AIProfileTemplate> _catalog;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
+    private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
+    private readonly IAIProfileManager _profileManager;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly AIToolDefinitionOptions _toolOptions;
 
@@ -25,12 +28,16 @@ public sealed class AITemplateController : Controller
         ICatalog<AIProfileTemplate> catalog,
         ICatalog<AIDeployment> deploymentCatalog,
         ICatalog<A2AConnection> a2aConnectionCatalog,
+        ICatalog<McpConnection> mcpConnectionCatalog,
+        IAIProfileManager profileManager,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IOptions<AIToolDefinitionOptions> toolOptions)
     {
         _catalog = catalog;
         _deploymentCatalog = deploymentCatalog;
         _a2aConnectionCatalog = a2aConnectionCatalog;
+        _mcpConnectionCatalog = mcpConnectionCatalog;
+        _profileManager = profileManager;
         _orchestratorOptions = orchestratorOptions.Value;
         _toolOptions = toolOptions.Value;
     }
@@ -77,6 +84,8 @@ public sealed class AITemplateController : Controller
         };
 
         model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
+        model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
+        model.SelectedAgentNames = await GetValidAgentNamesAsync(model.SelectedAgentNames);
         model.ApplyTo(template);
 
         await _catalog.CreateAsync(template);
@@ -124,6 +133,8 @@ public sealed class AITemplateController : Controller
         }
 
         model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
+        model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
+        model.SelectedAgentNames = await GetValidAgentNamesAsync(model.SelectedAgentNames);
         model.ApplyTo(existing);
 
         await _catalog.UpdateAsync(existing);
@@ -194,12 +205,64 @@ public sealed class AITemplateController : Controller
                 IsSelected = selectedConnectionIds.Contains(connection.ItemId),
             })
             .ToList();
+
+        var mcpConnections = await _mcpConnectionCatalog.GetAllAsync();
+        var selectedMcpIds = new HashSet<string>(model.SelectedMcpConnectionIds ?? [], StringComparer.Ordinal);
+        model.AvailableMcpConnections = mcpConnections
+            .OrderBy(c => c.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(c => new McpConnectionSelectionItem
+            {
+                ItemId = c.ItemId,
+                DisplayText = c.DisplayText,
+                Source = c.Source,
+                IsSelected = selectedMcpIds.Contains(c.ItemId),
+            })
+            .ToList();
+
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+        var selectedAgentNames = new HashSet<string>(model.SelectedAgentNames ?? [], StringComparer.OrdinalIgnoreCase);
+        model.AvailableAgents = allAgents
+            .Where(a => !string.IsNullOrEmpty(a.Description))
+            .OrderBy(a => a.DisplayText ?? a.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(a => new AgentSelectionItem
+            {
+                Name = a.Name,
+                DisplayText = a.DisplayText ?? a.Name,
+                Description = a.Description,
+                IsSelected = selectedAgentNames.Contains(a.Name),
+            })
+            .ToList();
+    }
+
+    private async Task<string[]> GetValidAgentNamesAsync(IEnumerable<string> selectedNames)
+    {
+        var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+        var validNames = allAgents
+            .Select(a => a.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return (selectedNames ?? [])
+            .Where(name => !string.IsNullOrWhiteSpace(name) && validNames.Contains(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private async Task<string[]> GetValidA2AConnectionIdsAsync(IEnumerable<string> selectedIds)
     {
         var allIds = (await _a2aConnectionCatalog.GetAllAsync())
             .Select(connection => connection.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return (selectedIds ?? [])
+            .Where(id => !string.IsNullOrWhiteSpace(id) && allIds.Contains(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private async Task<string[]> GetValidMcpConnectionIdsAsync(IEnumerable<string> selectedIds)
+    {
+        var allIds = (await _mcpConnectionCatalog.GetAllAsync())
+            .Select(c => c.ItemId)
             .ToHashSet(StringComparer.Ordinal);
 
         return (selectedIds ?? [])

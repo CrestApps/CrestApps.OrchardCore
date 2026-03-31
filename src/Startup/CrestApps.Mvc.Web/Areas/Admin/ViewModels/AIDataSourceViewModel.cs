@@ -19,7 +19,9 @@ public sealed class AIDataSourceViewModel
 
     public string ContentFieldName { get; set; }
 
-    public List<SelectListItem> IndexProfiles { get; set; } = [];
+    public List<SelectListItem> SourceIndexProfiles { get; set; } = [];
+
+    public List<SelectListItem> KnowledgeBaseIndexProfiles { get; set; } = [];
 
     public static AIDataSourceViewModel FromDataSource(AIDataSource ds)
     {

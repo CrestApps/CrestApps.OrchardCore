@@ -23,7 +23,7 @@ else
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>Name</th>
+                    <th>Title</th>
                     <th>Index Name</th>
                     <th>Provider</th>
                     <th>Type</th>
@@ -36,10 +36,6 @@ else
                     <tr>
                         <td>
                             <strong>@(item.DisplayText ?? item.Name)</strong>
-                            @if (!string.IsNullOrEmpty(item.DisplayText))
-                            {
-                                <br /><small class="text-muted">@item.Name</small>
-                            }
                         </td>
                         <td><code>@item.IndexFullName</code></td>
                         <td>

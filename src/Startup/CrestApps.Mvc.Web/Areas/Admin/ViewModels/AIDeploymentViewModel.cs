@@ -7,6 +7,7 @@ public sealed class AIDeploymentViewModel
 {
     public string ItemId { get; set; }
     public string Name { get; set; }
+    public string TechnicalName { get; set; }
     public string[] SelectedTypes { get; set; } = [];
     public string ConnectionName { get; set; }
     public string ClientName { get; set; }
@@ -26,7 +27,8 @@ public sealed class AIDeploymentViewModel
         var model = new AIDeploymentViewModel
         {
             ItemId = deployment.ItemId,
-            Name = deployment.Name,
+            Name = deployment.ModelName,
+            TechnicalName = deployment.Name,
             SelectedTypes = deployment.Type.GetSupportedTypes()
                 .Select(static type => type.ToString())
                 .ToArray(),
@@ -46,7 +48,8 @@ public sealed class AIDeploymentViewModel
 
     public void ApplyTo(AIDeployment deployment)
     {
-        deployment.Name = Name;
+        deployment.Name = TechnicalName;
+        deployment.ModelName = Name;
         deployment.Type = GetDeploymentType();
         deployment.ConnectionName = ConnectionName;
         deployment.ClientName = ClientName;

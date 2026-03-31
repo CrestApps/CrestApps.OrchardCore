@@ -1,4 +1,4 @@
-﻿@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AIProfileViewModel
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AIProfileViewModel
 @{
     ViewData["Title"] = "Edit AI Profile";
 }
@@ -21,7 +21,7 @@
                     <button class="nav-link" id="capabilities-tab" data-bs-toggle="tab" data-bs-target="#capabilities" type="button" role="tab">Capabilities</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">Documents</button>
+                    <button class="nav-link" id="docs-tab" data-bs-toggle="tab" data-bs-target="#docs" type="button" role="tab">Knowledge Base</button>
                 </li>
                 <li class="nav-item">
                     <button class="nav-link" id="extraction-tab" data-bs-toggle="tab" data-bs-target="#extraction" type="button" role="tab">Data Extraction</button>
@@ -38,13 +38,14 @@
                 <!-- Basic Info Tab -->
                 <div class="tab-pane fade show active" id="basic" role="tabpanel">
                     <div class="mb-3">
-                        <label asp-for="Name" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input asp-for="Name" class="form-control" required placeholder="e.g., my-chat-assistant" />
-                        <span asp-validation-for="Name" class="text-danger"></span>
+                        <label asp-for="DisplayText" class="form-label">Title</label>
+                        <input asp-for="DisplayText" id="profileTitle" class="form-control" placeholder="e.g., My Chat Assistant" />
                     </div>
                     <div class="mb-3">
-                        <label asp-for="DisplayText" class="form-label">Display text</label>
-                        <input asp-for="DisplayText" class="form-control" placeholder="e.g., My Chat Assistant" />
+                        <label asp-for="Name" class="form-label">Technical name <span class="text-danger">*</span></label>
+                        <input asp-for="Name" id="profileName" class="form-control" required disabled placeholder="e.g., my-chat-assistant" />
+                        <input type="hidden" asp-for="Name" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -107,6 +108,17 @@
                             </div>
                         </div>
                     </div>
+
+                    @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData) {
+                        { "CopilotPrefix", "ap" },
+                        { "CopilotAuthType", Model.CopilotAuthenticationType },
+                        { "CopilotIsAuth", Model.CopilotIsAuthenticated },
+                        { "CopilotUsername", Model.CopilotGitHubUsername },
+                        { "CopilotModel", Model.CopilotModel },
+                        { "CopilotIsAllowAll", Model.CopilotIsAllowAll },
+                        { "CopilotModels", Model.CopilotAvailableModels },
+                    })
+
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
@@ -329,8 +341,35 @@
 
                 <!-- Capabilities Tab -->
                 <div class="tab-pane fade" id="capabilities" role="tabpanel">
+                    <!-- AI Agents Section -->
+                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-robot"></i> AI Agents</h6>
+                    @if (Model.AvailableAgents.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle"></i> No agent profiles are available. Create an agent profile first.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3 small">Select the agent profiles this profile can delegate tasks to during conversations.</p>
+                        @foreach (var agent in Model.AvailableAgents)
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="SelectedAgentNames" value="@agent.Name" id="agent_@agent.Name"
+                                       @(agent.IsSelected ? "checked" : "") />
+                                <label class="form-check-label" for="agent_@agent.Name">
+                                    <strong>@agent.DisplayText</strong>
+                                    @if (!string.IsNullOrEmpty(agent.Description))
+                                    {
+                                        <br /><small class="text-muted">@agent.Description</small>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    }
+
                     <!-- A2A Connections Section -->
-                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-diagram-3"></i> Agent to Agent Hosts</h6>
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-diagram-3"></i> Agent to Agent Hosts</h6>
                     @if (Model.AvailableA2AConnections.Count == 0)
                     {
                         <div class="alert alert-info mb-3">
@@ -353,12 +392,12 @@
                         }
                     }
 
-                    <!-- MCP Connections Section -->
-                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Connections</h6>
+                    <!-- MCP Hosts Section -->
+                    <h6 class="mb-2 mt-4 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Hosts</h6>
                     @if (Model.AvailableMcpConnections.Count == 0)
                     {
                         <div class="alert alert-info mb-3">
-                            <i class="bi bi-info-circle"></i> No MCP connections are configured. Add them under <strong>MCP Connections</strong> first.
+                            <i class="bi bi-info-circle"></i> No MCP hosts are configured. Add them under <strong>MCP Hosts</strong> first.
                         </div>
                     }
                     else
@@ -393,8 +432,8 @@
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <p class="text-muted mb-0 small">Select the tools this profile can use during conversations.</p>
                             <div class="btn-group btn-group-sm ms-3" role="group">
-                                <button type="button" class="btn btn-outline-primary" id="select-all-tools"><i class="bi bi-check-all"></i> Select All</button>
-                                <button type="button" class="btn btn-outline-secondary" id="deselect-all-tools"><i class="bi bi-x-lg"></i> Deselect All</button>
+                                <button type="button" class="btn btn-outline-primary" id="select-all-tools"><i class="bi bi-check-all"></i> Select all</button>
+                                <button type="button" class="btn btn-outline-secondary" id="deselect-all-tools"><i class="bi bi-x-lg"></i> Deselect all</button>
                             </div>
                         </div>
                         @foreach (var group in Model.AvailableTools.GroupBy(t => t.Category).OrderBy(g => g.Key))
@@ -418,8 +457,16 @@
                     }
                 </div>
 
-                <!-- Documents Tab -->
+                <!-- Knowledge Base Tab -->
                 <div class="tab-pane fade" id="docs" role="tabpanel">
+                    <!-- Data Source Section -->
+                    <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
+                    <div class="mb-3">
+                        <label asp-for="DataSourceId" class="form-label">RAG data source</label>
+                        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select"></select>
+                        <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for this profile.</div>
+                    </div>
+
                     @if (Model.HasDocumentIndexConfiguration)
                     {
                         <div class="alert alert-info">
@@ -563,72 +610,6 @@
                         <div class="form-text">When enabled, the AI will determine whether the user's issue was resolved during the session.</div>
                     </div>
 
-                    <h6 class="mb-2"><i class="bi bi-bullseye"></i> Conversion Goals</h6>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="EnableConversionMetrics" class="form-check-input" type="checkbox" id="enableConversionMetricsCheck" />
-                            <label asp-for="EnableConversionMetrics" class="form-check-label">Enable conversion metrics</label>
-                        </div>
-                        <div class="form-text">Evaluate each session against defined goals and assign scores to measure session success.</div>
-                    </div>
-                    <div id="conversionGoalsSection" class="@(Model.EnableConversionMetrics ? "" : "d-none")">
-                        <div id="conversionGoalsContainer">
-                            @for (var i = 0; i < Model.ConversionGoals.Count; i++)
-                            {
-                                var goal = Model.ConversionGoals[i];
-                                <div class="card mb-2 conversion-goal-card">
-                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
-                                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                           data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
-                                            <i class="fa-solid fa-chevron-down me-1"></i>
-                                            <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New Goal" : goal.Name)</span>
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                    <div id="goalCollapse_@i" class="collapse show">
-                                        <div class="card-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Name</label>
-                                                <input type="text" class="form-control goal-name-input"
-                                                       name="ConversionGoals[@i].Name" value="@goal.Name"
-                                                       pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />
-                                                <span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Description</label>
-                                                <textarea class="form-control" name="ConversionGoals[@i].Description"
-                                                          rows="3" placeholder="Describe what constitutes success for this goal">@goal.Description</textarea>
-                                                <span class="form-text">Provided to the AI model as evaluation criteria.</span>
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Min score</label>
-                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MinScore"
-                                                               value="@goal.MinScore" min="0" />
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Max score</label>
-                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MaxScore"
-                                                               value="@goal.MaxScore" min="1" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                        <button type="button" class="btn btn-sm btn-success" id="addConversionGoal">
-                            <i class="fa-solid fa-plus"></i> Add Goal
-                        </button>
-                    </div>
-
-                    <hr class="my-4" />
                     <h6 class="mb-2"><i class="bi bi-clipboard-check"></i> Post-session Processing</h6>
                     <div class="mb-3">
                         <div class="form-check form-switch">
@@ -693,6 +674,73 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary" id="add-task-btn">
                             <i class="bi bi-plus-circle"></i> Add Task
+                        </button>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h6 class="mb-2"><i class="bi bi-bullseye"></i> Conversion Goals</h6>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableConversionMetrics" class="form-check-input" type="checkbox" id="enableConversionMetricsCheck" />
+                            <label asp-for="EnableConversionMetrics" class="form-check-label">Enable conversion metrics</label>
+                        </div>
+                        <div class="form-text">Evaluate each session against defined goals and assign scores to measure session success.</div>
+                    </div>
+                    <div id="conversionGoalsSection" class="@(Model.EnableConversionMetrics ? "" : "d-none")">
+                        <div id="conversionGoalsContainer">
+                            @for (var i = 0; i < Model.ConversionGoals.Count; i++)
+                            {
+                                var goal = Model.ConversionGoals[i];
+                                <div class="card mb-2 conversion-goal-card">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
+                                           data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
+                                            <i class="fa-solid fa-chevron-down me-1"></i>
+                                            <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New goal" : goal.Name)</span>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div id="goalCollapse_@i" class="collapse show">
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Name</label>
+                                                <input type="text" class="form-control goal-name-input"
+                                                       name="ConversionGoals[@i].Name" value="@goal.Name"
+                                                       pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />
+                                                <span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Description</label>
+                                                <textarea class="form-control" name="ConversionGoals[@i].Description"
+                                                          rows="3" placeholder="Describe what constitutes success for this goal">@goal.Description</textarea>
+                                                <span class="form-text">Provided to the AI model as evaluation criteria.</span>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Min score</label>
+                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MinScore"
+                                                               value="@goal.MinScore" min="0" />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Max score</label>
+                                                        <input type="number" class="form-control" name="ConversionGoals[@i].MaxScore"
+                                                               value="@goal.MaxScore" min="1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success" id="addConversionGoal">
+                            <i class="fa-solid fa-plus"></i> Add Goal
                         </button>
                     </div>
                 </div>
@@ -1082,7 +1130,7 @@
                         var card = e.target.closest('.conversion-goal-card');
                         if (card) {
                             var display = card.querySelector('.goal-name-display');
-                            if (display) display.textContent = e.target.value || 'New Goal';
+                            if (display) display.textContent = e.target.value || 'New goal';
                         }
                     }
                 });

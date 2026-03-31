@@ -12,6 +12,10 @@ description: Extensible response handler system for routing chat prompts to AI o
 
 ## Overview
 
+:::tip Framework Reference
+For the framework-level `IChatResponseHandler` interface, handler types, and implementing handlers in any .NET application, see the [Framework Response Handlers](../framework/response-handlers.md) documentation. This page covers the **Orchard Core-specific** integration and admin configuration.
+:::
+
 By default, all chat prompts in both **AI Chat** and **Chat Interactions** are processed by the built-in AI handler, which routes prompts through the orchestration pipeline (AI completion services). The **Chat Response Handler** system makes this extensible — you can register custom handlers that route prompts to external systems such as live agent platforms (e.g., Genesys, Twilio Flex, LivePerson) instead of AI.
 
 This enables scenarios like:

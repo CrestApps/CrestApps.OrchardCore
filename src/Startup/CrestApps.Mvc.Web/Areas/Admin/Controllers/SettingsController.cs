@@ -1,9 +1,12 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Models;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -13,13 +16,18 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 [Authorize(Policy = "Admin")]
 public sealed class SettingsController : Controller
 {
+    private const string CopilotProtectorPurpose = "CrestApps.Mvc.Web.CopilotSettings";
+
     private readonly JsonFileSettingsService _settingsService;
     private readonly JsonFileDeploymentDefaultsService _deploymentDefaultsService;
     private readonly JsonFileInteractionDocumentSettingsService _interactionDocumentSettingsService;
     private readonly JsonFileAIDataSourceSettingsService _aiDataSourceSettingsService;
     private readonly JsonFileMcpServerSettingsService _mcpServerSettingsService;
+    private readonly JsonFileChatInteractionSettingsService _chatInteractionSettingsService;
+    private readonly JsonFileCopilotSettingsService _copilotSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public SettingsController(
         JsonFileSettingsService settingsService,
@@ -27,16 +35,22 @@ public sealed class SettingsController : Controller
         JsonFileInteractionDocumentSettingsService interactionDocumentSettingsService,
         JsonFileAIDataSourceSettingsService aiDataSourceSettingsService,
         JsonFileMcpServerSettingsService mcpServerSettingsService,
+        JsonFileChatInteractionSettingsService chatInteractionSettingsService,
+        JsonFileCopilotSettingsService copilotSettingsService,
         IAIDeploymentManager deploymentManager,
-        ISearchIndexProfileStore indexProfileStore)
+        ISearchIndexProfileStore indexProfileStore,
+        IDataProtectionProvider dataProtectionProvider)
     {
         _settingsService = settingsService;
         _deploymentDefaultsService = deploymentDefaultsService;
         _interactionDocumentSettingsService = interactionDocumentSettingsService;
         _aiDataSourceSettingsService = aiDataSourceSettingsService;
         _mcpServerSettingsService = mcpServerSettingsService;
+        _chatInteractionSettingsService = chatInteractionSettingsService;
+        _copilotSettingsService = copilotSettingsService;
         _deploymentManager = deploymentManager;
         _indexProfileStore = indexProfileStore;
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     public async Task<IActionResult> Index()
@@ -46,6 +60,8 @@ public sealed class SettingsController : Controller
         var documentSettings = await _interactionDocumentSettingsService.GetAsync();
         var dataSourceSettings = await _aiDataSourceSettingsService.GetAsync();
         var mcpServerSettings = await _mcpServerSettingsService.GetAsync();
+        var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
+        var copilotSettings = await _copilotSettingsService.GetAsync();
 
         var model = new SettingsViewModel
         {
@@ -53,6 +69,8 @@ public sealed class SettingsController : Controller
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
             EnableDistributedCaching = settings.EnableDistributedCaching,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
+
+            ChatInteractionEnableUserMemory = chatInteractionSettings.EnableUserMemory,
 
             DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
             DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
@@ -69,6 +87,17 @@ public sealed class SettingsController : Controller
             McpServerAuthenticationType = mcpServerSettings.AuthenticationType,
             McpServerApiKey = mcpServerSettings.ApiKey,
             McpServerRequireAccessPermission = mcpServerSettings.RequireAccessPermission,
+
+            CopilotAuthenticationType = copilotSettings.AuthenticationType,
+            CopilotClientId = copilotSettings.ClientId,
+            CopilotHasSecret = !string.IsNullOrWhiteSpace(copilotSettings.ProtectedClientSecret),
+            CopilotProviderType = copilotSettings.ProviderType,
+            CopilotBaseUrl = copilotSettings.BaseUrl,
+            CopilotHasApiKey = !string.IsNullOrWhiteSpace(copilotSettings.ProtectedApiKey),
+            CopilotWireApi = copilotSettings.WireApi ?? "completions",
+            CopilotDefaultModel = copilotSettings.DefaultModel,
+            CopilotAzureApiVersion = copilotSettings.AzureApiVersion,
+            CopilotCallbackUrl = Url.Action("OAuthCallback", "CopilotAuth", new { area = "Admin" }, Request.Scheme),
         };
 
         await NormalizeDeploymentSelectorsAsync(model);
@@ -156,6 +185,40 @@ public sealed class SettingsController : Controller
             ApiKey = model.McpServerApiKey?.Trim(),
             RequireAccessPermission = model.McpServerRequireAccessPermission,
         });
+
+        await _chatInteractionSettingsService.SaveAsync(new ChatInteractionSettings
+        {
+            EnableUserMemory = model.ChatInteractionEnableUserMemory,
+        });
+
+        // Save Copilot settings.
+        var existingCopilot = await _copilotSettingsService.GetAsync();
+        var protector = _dataProtectionProvider.CreateProtector(CopilotProtectorPurpose);
+
+        var copilotSettings = new CopilotSettings
+        {
+            AuthenticationType = model.CopilotAuthenticationType,
+            ClientId = model.CopilotClientId?.Trim(),
+            ProtectedClientSecret = existingCopilot.ProtectedClientSecret,
+            ProviderType = model.CopilotProviderType,
+            BaseUrl = model.CopilotBaseUrl?.Trim(),
+            ProtectedApiKey = existingCopilot.ProtectedApiKey,
+            WireApi = model.CopilotWireApi,
+            DefaultModel = model.CopilotDefaultModel?.Trim(),
+            AzureApiVersion = model.CopilotAzureApiVersion?.Trim(),
+        };
+
+        if (!string.IsNullOrWhiteSpace(model.CopilotClientSecret))
+        {
+            copilotSettings.ProtectedClientSecret = protector.Protect(model.CopilotClientSecret.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.CopilotApiKey))
+        {
+            copilotSettings.ProtectedApiKey = protector.Protect(model.CopilotApiKey.Trim());
+        }
+
+        await _copilotSettingsService.SaveAsync(copilotSettings);
 
         TempData["SuccessMessage"] = "Settings saved successfully.";
 

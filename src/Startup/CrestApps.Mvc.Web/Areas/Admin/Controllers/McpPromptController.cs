@@ -87,6 +87,9 @@ public sealed class McpPromptController : Controller
             return NotFound();
         }
 
+        // Preserve the original name since it is readonly after creation.
+        model.Name = prompt.Name;
+
         var arguments = ParseArguments(model);
 
         if (!ModelState.IsValid)

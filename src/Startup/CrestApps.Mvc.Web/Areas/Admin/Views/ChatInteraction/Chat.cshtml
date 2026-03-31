@@ -1,20 +1,15 @@
-@model CrestApps.AI.Models.ChatInteraction
+@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.ChatInteractionChatViewModel
 @{
-    var prompts = ViewData["Prompts"] as IReadOnlyCollection<CrestApps.AI.Models.ChatInteractionPrompt>;
     ViewData["Title"] = "Chat - " + (Model.Title ?? "Untitled Chat");
-    var messages = prompts?
-        .Where(p => p.Role.Value is "user" or "assistant")
-        .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId }) ?? [];
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
 <style>
     .chat-page-wrapper {
         display: flex;
         flex-direction: column;
-        min-height: calc(100vh - 180px);
+        height: calc(100vh - 180px);
     }
     .ai-chat-messages { padding: 1rem; }
     .ai-chat-messages .ai-chat-message-item { position: relative; padding: 0.25rem 0; }
@@ -41,80 +36,396 @@
         display: inline-block;
     }
     @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .chat-settings-panel {
-        max-height: calc(100vh - 220px);
+
+    /* Settings sidebar */
+    .chat-settings-sidebar {
+        height: calc(100vh - 180px);
         overflow-y: auto;
+        border-right: 1px solid var(--bs-border-color, #dee2e6);
+    }
+    .chat-settings-sidebar .nav-pills .nav-link {
+        font-size: 0.8125rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+    }
+    .chat-settings-sidebar .nav-pills .nav-link.active {
+        background-color: var(--bs-primary);
+    }
+    .settings-section label.form-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    .settings-section .form-control,
+    .settings-section .form-select {
+        font-size: 0.8125rem;
+    }
+    .settings-section .form-text {
+        font-size: 0.7rem;
+    }
+    .settings-section .form-check-label {
+        font-size: 0.8125rem;
+    }
+    .settings-save-indicator {
+        font-size: 0.75rem;
+        min-height: 1.25rem;
+        transition: opacity 0.3s ease;
+    }
+    .capability-section + .capability-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--bs-border-color, #dee2e6);
     }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-chat-left-dots"></i> @(Model.Title ?? "Untitled Chat")</h2>
-    <div>
-        <button id="toggle-settings" class="btn btn-outline-secondary btn-sm me-2" type="button" data-bs-toggle="collapse" data-bs-target="#settingsPanel">
-            <i class="bi bi-gear"></i> Settings
-        </button>
-        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Back
-        </a>
-    </div>
+    <h5 class="mb-0"><i class="bi bi-chat-left-dots"></i> @(Model.Title ?? "Untitled Chat")</h5>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
 </div>
 
-<div class="row">
-    <!-- Settings panel (collapsible) -->
-    <div class="col-md-4 collapse" id="settingsPanel">
-        <div class="card chat-settings-panel">
-            <div class="card-header">
-                <strong>Interaction settings</strong>
+<div class="row g-0 border rounded" style="height: calc(100vh - 180px);">
+    <!-- Left: Settings Sidebar -->
+    <div class="col-md-4 col-lg-3 chat-settings-sidebar bg-light">
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="small text-uppercase text-muted">Settings</strong>
+                <span id="settings-save-indicator" class="settings-save-indicator text-muted"></span>
             </div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">System message</label>
-                    <p class="small text-muted">@(string.IsNullOrEmpty(Model.SystemMessage) ? "Not set" : Model.SystemMessage)</p>
+
+            <!-- Settings Tabs -->
+            <ul class="nav nav-pills nav-fill mb-3" id="settingsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-settings" data-bs-toggle="pill" data-bs-target="#pane-settings" type="button" role="tab">
+                        <i class="bi bi-gear"></i> General
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-capabilities" data-bs-toggle="pill" data-bs-target="#pane-capabilities" type="button" role="tab">
+                        <i class="bi bi-lightning"></i> Capabilities
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-knowledge" data-bs-toggle="pill" data-bs-target="#pane-knowledge" type="button" role="tab">
+                        <i class="bi bi-database"></i> Knowledge
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content settings-section" id="settingsTabContent">
+                <!-- Tab 1: General Settings -->
+                <div class="tab-pane fade show active" id="pane-settings" role="tabpanel">
+                    <div class="mb-2">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-control form-control-sm setting-input" id="setting-title"
+                               value="@Model.Title" placeholder="e.g., Code Helper" data-setting="title" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Deployment</label>
+                        <select class="form-select form-select-sm setting-input" id="setting-deployment" data-setting="deploymentName">
+                            <option value="">— Select deployment —</option>
+                            @foreach (var d in Model.Deployments)
+                            {
+                                <option value="@d.Value" selected="@(d.Value == Model.ChatDeploymentName)">@d.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Orchestrator</label>
+                        <select class="form-select form-select-sm setting-input" id="setting-orchestratorName" data-setting="orchestratorName">
+                            @foreach (var o in Model.Orchestrators)
+                            {
+                                <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName)">@o.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    @* Copilot panel (shown/hidden by orchestrator-dependent JS in the partial) *@
+                    @await Html.PartialAsync("_CopilotConfig", null, new ViewDataDictionary(ViewData) {
+                        { "CopilotPrefix", "ci" },
+                        { "CopilotAuthType", Model.CopilotAuthenticationType },
+                        { "CopilotIsAuth", Model.CopilotIsAuthenticated },
+                        { "CopilotUsername", Model.CopilotGitHubUsername },
+                        { "CopilotModel", Model.CopilotModel },
+                        { "CopilotIsAllowAll", Model.CopilotIsAllowAll },
+                        { "CopilotModels", Model.CopilotAvailableModels },
+                    })
+
+                    <!-- Prompt Templates -->
+                    @if (Model.AvailablePromptTemplates.Count > 0)
+                    {
+                        <div class="mb-2">
+                            <label class="form-label">Prompt templates</label>
+                            <div class="dropdown mb-2">
+                                <button class="btn btn-sm btn-outline-primary dropdown-toggle w-100" type="button"
+                                        id="chatPromptTemplateBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-plus-lg"></i> Add template
+                                </button>
+                                <div class="dropdown-menu p-2" style="max-height:20rem;min-width:18rem;overflow-y:auto;">
+                                    <input type="search" class="form-control form-control-sm mb-2" id="chatPromptTemplateSearch" placeholder="Search..." />
+                                    <div class="chat-prompt-template-menu">
+                                        @foreach (var group in Model.AvailablePromptTemplates.GroupBy(t => t.Category).OrderBy(g => g.Key))
+                                        {
+                                            <div class="dropdown-header px-2 small">@group.Key</div>
+                                            @foreach (var option in group)
+                                            {
+                                                <button type="button"
+                                                        class="dropdown-item chat-prompt-add-btn text-wrap small"
+                                                        data-template-id="@option.TemplateId"
+                                                        data-template-title="@option.Title">
+                                                    @option.Title
+                                                </button>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="chatPromptTemplatesContainer"></div>
+                        </div>
+                    }
+
+                    <div class="mb-2">
+                        <label class="form-label">System message</label>
+                        <textarea class="form-control form-control-sm setting-input" id="setting-systemMessage"
+                                  rows="3" placeholder="You are a helpful assistant..." data-setting="systemMessage">@Model.SystemMessage</textarea>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Temperature</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-temperature"
+                                       step="0.1" min="0" max="2" value="@Model.Temperature" placeholder="0.7" data-setting="temperature" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Top P</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-topP"
+                                       step="0.1" min="0" max="1" value="@Model.TopP" placeholder="1.0" data-setting="topP" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Max tokens</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-maxTokens"
+                                       min="1" value="@Model.MaxTokens" placeholder="4096" data-setting="maxTokens" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Freq. penalty</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-frequencyPenalty"
+                                       step="0.1" min="-2" max="2" value="@Model.FrequencyPenalty" placeholder="0" data-setting="frequencyPenalty" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Pres. penalty</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-presencePenalty"
+                                       step="0.1" min="-2" max="2" value="@Model.PresencePenalty" placeholder="0" data-setting="presencePenalty" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="mb-2">
+                                <label class="form-label">Past msgs</label>
+                                <input type="number" class="form-control form-control-sm setting-input" id="setting-pastMessagesCount"
+                                       min="0" value="@Model.PastMessagesCount" placeholder="10" data-setting="pastMessagesCount" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">Temperature</label>
-                    <span class="small text-muted">@(Model.Temperature?.ToString("0.0") ?? "Default")</span>
+
+                <!-- Tab 2: Capabilities -->
+                <div class="tab-pane fade" id="pane-capabilities" role="tabpanel">
+                    <!-- AI Agents -->
+                    @if (Model.AvailableAgents.Count > 0)
+                    {
+                        <div class="capability-section">
+                            <h6 class="small fw-bold mb-2"><i class="bi bi-robot"></i> AI Agents</h6>
+                            @foreach (var agent in Model.AvailableAgents)
+                            {
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input capability-checkbox" type="checkbox"
+                                           value="@agent.Name" id="chat_agent_@agent.Name" data-group="agentNames"
+                                           @(agent.IsSelected ? "checked" : "") />
+                                    <label class="form-check-label" for="chat_agent_@agent.Name">
+                                        @agent.DisplayText
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- AI Tools -->
+                    @if (Model.AvailableTools.Count > 0)
+                    {
+                        <div class="capability-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="small fw-bold mb-0"><i class="bi bi-tools"></i> AI Tools</h6>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1" id="chat-select-all-tools" style="font-size:0.7rem;">All</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1" id="chat-deselect-all-tools" style="font-size:0.7rem;">None</button>
+                                </div>
+                            </div>
+                            @foreach (var group in Model.AvailableTools.GroupBy(t => t.Category).OrderBy(g => g.Key))
+                            {
+                                <div class="text-muted small fw-semibold mt-2 mb-1">@group.Key</div>
+                                @foreach (var tool in group)
+                                {
+                                    <div class="form-check mb-1">
+                                        <input class="form-check-input capability-checkbox chat-tool-checkbox" type="checkbox"
+                                               value="@tool.Name" id="chat_tool_@tool.Name" data-group="toolNames"
+                                               @(tool.IsSelected ? "checked" : "") />
+                                        <label class="form-check-label" for="chat_tool_@tool.Name">
+                                            @tool.Title
+                                            @if (!string.IsNullOrEmpty(tool.Description))
+                                            {
+                                                <br /><span class="text-muted" style="font-size:0.7rem;">@tool.Description</span>
+                                            }
+                                        </label>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+
+                    <!-- A2A Connections -->
+                    @if (Model.AvailableA2AConnections.Count > 0)
+                    {
+                        <div class="capability-section">
+                            <h6 class="small fw-bold mb-2"><i class="bi bi-diagram-3"></i> A2A Hosts</h6>
+                            @foreach (var connection in Model.AvailableA2AConnections)
+                            {
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input capability-checkbox" type="checkbox"
+                                           value="@connection.ItemId" id="chat_a2a_@connection.ItemId" data-group="a2aConnectionIds"
+                                           @(connection.IsSelected ? "checked" : "") />
+                                    <label class="form-check-label" for="chat_a2a_@connection.ItemId">
+                                        @connection.DisplayText
+                                        <br /><span class="text-muted" style="font-size:0.7rem;">@connection.Endpoint</span>
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- MCP Hosts -->
+                    @if (Model.AvailableMcpConnections.Count > 0)
+                    {
+                        <div class="capability-section">
+                            <h6 class="small fw-bold mb-2"><i class="bi bi-plug"></i> MCP Hosts</h6>
+                            @foreach (var connection in Model.AvailableMcpConnections)
+                            {
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input capability-checkbox" type="checkbox"
+                                           value="@connection.ItemId" id="chat_mcp_@connection.ItemId" data-group="mcpConnectionIds"
+                                           @(connection.IsSelected ? "checked" : "") />
+                                    <label class="form-check-label" for="chat_mcp_@connection.ItemId">
+                                        @connection.DisplayText
+                                        @if (!string.IsNullOrEmpty(connection.Source))
+                                        {
+                                            <br /><span class="text-muted" style="font-size:0.7rem;">@connection.Source</span>
+                                        }
+                                    </label>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (Model.AvailableAgents.Count == 0 && Model.AvailableTools.Count == 0
+                        && Model.AvailableA2AConnections.Count == 0 && Model.AvailableMcpConnections.Count == 0)
+                    {
+                        <div class="text-muted small text-center py-3">
+                            <i class="bi bi-info-circle"></i> No capabilities are available to configure.
+                        </div>
+                    }
                 </div>
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">Top P</label>
-                    <span class="small text-muted">@(Model.TopP?.ToString("0.0") ?? "Default")</span>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">Max tokens</label>
-                    <span class="small text-muted">@(Model.MaxTokens?.ToString() ?? "Default")</span>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">Past messages</label>
-                    <span class="small text-muted">@(Model.PastMessagesCount?.ToString() ?? "Default")</span>
+
+                <!-- Tab 3: Knowledge Base -->
+                <div class="tab-pane fade" id="pane-knowledge" role="tabpanel">
+                    <div class="mb-2">
+                        <label class="form-label">Data source</label>
+                        <select class="form-select form-select-sm setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
+                            <option value="">— None —</option>
+                            @foreach (var ds in Model.DataSources)
+                            {
+                                <option value="@ds.Value" selected="@(ds.Value == Model.DataSourceId)">@ds.Text</option>
+                            }
+                        </select>
+                        <div class="form-text">External data source for AI context.</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Document Top N</label>
+                        <input type="number" class="form-control form-control-sm setting-input" id="setting-documentTopN"
+                               min="1" max="20" value="@Model.DocumentTopN" placeholder="Default: 3" data-setting="documentTopN" />
+                        <div class="form-text">Number of top matching document chunks to include as context.</div>
+                    </div>
+
+                    @if (Model.HasDocumentIndexConfiguration)
+                    {
+                        <div class="alert alert-info small py-2 mb-2">
+                            <i class="bi bi-info-circle"></i> Documents are indexed into <strong>@Model.DocumentIndexProfileName</strong>.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning small py-2 mb-2">
+                            <i class="bi bi-exclamation-triangle"></i> Document indexing is not configured.
+                        </div>
+                    }
+
+                    <div class="mb-2">
+                        <label class="form-label"><i class="bi bi-paperclip"></i> Upload documents</label>
+                        <input type="file" class="form-control form-control-sm" id="chat-doc-upload" multiple
+                               accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
+                        <div class="form-text">Supported: Text, Markdown, JSON, XML, HTML, PDF, Office docs.</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Chat area -->
-    <div id="chat-column" class="col">
-        <div class="chat-page-wrapper">
-            <div class="border rounded flex-grow-1 d-flex flex-column" style="min-height: 500px;">
-                <div id="chat-container" class="flex-grow-1 overflow-auto">
-                    <div id="chat-placeholder">
-                        <div class="p-3 text-muted">
-                            <i class="bi bi-robot"></i> Start chatting! Your messages are sent directly to the AI with the parameters you configured.
-                        </div>
-                    </div>
-                    <div id="chat-app"></div>
+    <!-- Right: Chat Area -->
+    <div class="col-md-8 col-lg-9 d-flex flex-column" style="height: 100%;">
+        <!-- Chat header with Clear History -->
+        <div class="d-flex justify-content-between align-items-center border-bottom px-3 py-2 bg-white">
+            <span class="text-muted small" id="chat-title-display">
+                <i class="bi bi-chat-left-dots"></i> <span id="chat-title-text">@(Model.Title ?? "Untitled Chat")</span>
+            </span>
+            <button type="button" id="clear-history-btn" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-trash3"></i> Clear history
+            </button>
+        </div>
+
+        <!-- Messages container -->
+        <div id="chat-container" class="flex-grow-1 overflow-auto">
+            <div id="chat-placeholder">
+                <div class="p-3 text-muted">
+                    <i class="bi bi-robot"></i> Start chatting! Your messages are sent directly to the AI with the parameters you configured.
                 </div>
-                <div class="border-top p-3">
-                    <div class="d-flex gap-2">
-                        <textarea id="chat-input"
-                                  class="form-control"
-                                  rows="1"
-                                  placeholder="Type a message..."
-                                  data-item-id="@Model.ItemId"></textarea>
-                        <button type="button" id="send-btn" class="btn btn-primary">
-                            <i class="bi bi-send"></i> Send
-                        </button>
-                    </div>
-                </div>
+            </div>
+            <div id="chat-app"></div>
+        </div>
+
+        <!-- Input area -->
+        <div class="border-top p-3 bg-white">
+            <div class="d-flex gap-2">
+                <textarea id="chat-input"
+                          class="form-control"
+                          rows="1"
+                          placeholder="Type a message..."
+                          data-item-id="@Model.ItemId"></textarea>
+                <button type="button" id="send-btn" class="btn btn-primary">
+                    <i class="bi bi-send"></i> Send
+                </button>
             </div>
         </div>
     </div>
@@ -128,14 +439,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const itemId = '@Model.ItemId';
-            const hubUrl = '/hubs/chat-interaction';
-            const existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(messages));
+            var itemId = '@Model.ItemId';
+            var hubUrl = '/hubs/chat-interaction';
+            var existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExistingMessages));
 
             // --- Markdown rendering ---
-            const renderer = new marked.Renderer();
+            var renderer = new marked.Renderer();
             renderer.link = function (data) {
-                return `<a href="${DOMPurify.sanitize(data.href)}" target="_blank" rel="noopener noreferrer">${data.text}</a>`;
+                return '<a href="' + DOMPurify.sanitize(data.href) + '" target="_blank" rel="noopener noreferrer">' + data.text + '</a>';
             };
             marked.setOptions({
                 renderer: renderer,
@@ -152,98 +463,126 @@
             }
 
             // --- Vue app for messages ---
-            const app = Vue.createApp({
-                data() {
+            var app = Vue.createApp({
+                data: function () {
                     return {
-                        messages: existingMessages.map(m => ({
-                            ...m,
-                            htmlContent: renderMarkdown(m.content),
-                            isStreaming: false
-                        }))
+                        messages: existingMessages.map(function (m) {
+                            return {
+                                role: m.role,
+                                content: m.content,
+                                htmlContent: renderMarkdown(m.content),
+                                isStreaming: false,
+                                isSystem: false
+                            };
+                        })
                     };
                 },
                 methods: {
-                    addMessage(role, content, isStreaming = false) {
+                    addMessage: function (role, content, isStreaming, isSystem) {
                         this.messages.push({
-                            role,
-                            content,
+                            role: role,
+                            content: content,
                             htmlContent: renderMarkdown(content),
-                            isStreaming
+                            isStreaming: isStreaming || false,
+                            isSystem: isSystem || false
                         });
-                        this.$nextTick(() => this.scrollToBottom());
+                        var self = this;
+                        this.$nextTick(function () { self.scrollToBottom(); });
                     },
-                    appendToLast(token) {
-                        const last = this.messages[this.messages.length - 1];
+                    appendToLast: function (token) {
+                        var last = this.messages[this.messages.length - 1];
                         if (last && last.role === 'assistant') {
                             last.content += token;
                             last.htmlContent = renderMarkdown(last.content);
                         }
                     },
-                    finishStreaming() {
-                        const last = this.messages[this.messages.length - 1];
+                    finishStreaming: function () {
+                        var last = this.messages[this.messages.length - 1];
                         if (last) {
                             last.isStreaming = false;
                             last.htmlContent = renderMarkdown(last.content);
                         }
-                        this.$nextTick(() => this.scrollToBottom());
+                        var self = this;
+                        this.$nextTick(function () { self.scrollToBottom(); });
                     },
-                    scrollToBottom() {
-                        const container = document.getElementById('chat-container');
+                    clearAll: function () {
+                        this.messages = [];
+                    },
+                    scrollToBottom: function () {
+                        var container = document.getElementById('chat-container');
                         if (container) container.scrollTop = container.scrollHeight;
                     },
-                    copyResponse(content) {
+                    copyResponse: function (content) {
                         navigator.clipboard.writeText(content);
                     }
                 },
-                template: `
-                    <div class="ai-chat-messages">
-                        <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
-                            <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
-                            <div v-else class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                                <i :class="'fa fa-robot' + (message.isStreaming ? ' ai-streaming-icon' : ' ai-bot-icon')"></i>
-                                Assistant
-                            </div>
-                            <div class="lh-base">
-                                <div v-html="message.htmlContent"></div>
-                                <span class="message-buttons-container" v-if="message.role === 'assistant' && !message.isStreaming">
-                                    <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="Copy response">
-                                        <i class="fa-solid fa-copy"></i>
-                                    </button>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                `
+                template:
+                    '<div class="ai-chat-messages">' +
+                        '<div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">' +
+                            '<div v-if="message.isSystem" class="text-center py-2">' +
+                                '<span class="badge text-bg-secondary"><i class="bi bi-info-circle"></i> {{ message.content }}</span>' +
+                            '</div>' +
+                            '<template v-else>' +
+                                '<div v-if="message.role === \'user\'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>' +
+                                '<div v-else class="ai-chat-msg-role ai-chat-msg-role-assistant">' +
+                                    '<i :class="\'bi bi-robot\' + (message.isStreaming ? \' ai-streaming-icon\' : \' ai-bot-icon\')"></i> ' +
+                                    'Assistant' +
+                                '</div>' +
+                                '<div class="lh-base">' +
+                                    '<div v-html="message.htmlContent"></div>' +
+                                    '<span class="message-buttons-container" v-if="message.role === \'assistant\' && !message.isStreaming">' +
+                                        '<button class="btn btn-sm btn-link text-secondary p-0" v-on:click="copyResponse(message.content)" title="Copy response">' +
+                                            '<i class="bi bi-clipboard"></i>' +
+                                        '</button>' +
+                                    '</span>' +
+                                '</div>' +
+                            '</template>' +
+                        '</div>' +
+                    '</div>'
             });
 
-            const vm = app.mount('#chat-app');
+            var vm = app.mount('#chat-app');
 
             // --- SignalR connection ---
-            const connection = new signalR.HubConnectionBuilder()
+            var connection = new signalR.HubConnectionBuilder()
                 .withUrl(hubUrl)
                 .withAutomaticReconnect()
                 .build();
 
-            let isSending = false;
+            var isSending = false;
 
-            connection.start().then(() => {
+            connection.start().then(function () {
                 console.log('Connected to ChatInteraction hub.');
-            }).catch(err => {
+            }).catch(function (err) {
                 console.error('SignalR connection error:', err);
             });
 
-            // Handle errors from the hub
             connection.on('ReceiveError', function (error) {
-                vm.addMessage('assistant', '⚠️ ' + error);
+                vm.addMessage('assistant', '\u26a0\ufe0f ' + error);
+            });
+
+            connection.on('SettingsSaved', function (savedItemId, title) {
+                showSaveIndicator('Saved \u2713', 'text-success');
+                if (title) {
+                    var titleEl = document.getElementById('chat-title-text');
+                    if (titleEl) titleEl.textContent = title;
+                }
+            });
+
+            connection.on('HistoryCleared', function () {
+                vm.clearAll();
+                vm.addMessage('system', 'Chat history cleared.', false, true);
+                var placeholder = document.getElementById('chat-placeholder');
+                if (placeholder) placeholder.style.display = 'none';
             });
 
             // --- Send message ---
-            const inputEl = document.getElementById('chat-input');
-            const sendBtn = document.getElementById('send-btn');
-            const placeholder = document.getElementById('chat-placeholder');
+            var inputEl = document.getElementById('chat-input');
+            var sendBtn = document.getElementById('send-btn');
+            var placeholder = document.getElementById('chat-placeholder');
 
-            async function sendMessage() {
-                const prompt = inputEl.value.trim();
+            function sendMessage() {
+                var prompt = inputEl.value.trim();
                 if (!prompt || isSending) return;
 
                 isSending = true;
@@ -256,23 +595,23 @@
                 vm.addMessage('assistant', '', true);
 
                 try {
-                    const stream = connection.stream('SendMessage', itemId, prompt);
+                    var stream = connection.stream('SendMessage', itemId, prompt);
                     stream.subscribe({
-                        next(chunk) {
+                        next: function (chunk) {
                             if (chunk && chunk.content) {
                                 vm.appendToLast(chunk.content);
                             }
                         },
-                        complete() {
+                        complete: function () {
                             vm.finishStreaming();
                             isSending = false;
                             sendBtn.disabled = false;
                             inputEl.focus();
                         },
-                        error(err) {
+                        error: function (err) {
                             console.error('Stream error:', err);
                             vm.finishStreaming();
-                            vm.addMessage('assistant', '⚠️ An error occurred while streaming the response.');
+                            vm.addMessage('assistant', '\u26a0\ufe0f An error occurred while streaming the response.');
                             isSending = false;
                             sendBtn.disabled = false;
                         }
@@ -280,7 +619,7 @@
                 } catch (err) {
                     console.error('SendMessage error:', err);
                     vm.finishStreaming();
-                    vm.addMessage('assistant', '⚠️ Failed to send message.');
+                    vm.addMessage('assistant', '\u26a0\ufe0f Failed to send message.');
                     isSending = false;
                     sendBtn.disabled = false;
                 }
@@ -299,6 +638,152 @@
                 this.style.height = 'auto';
                 this.style.height = Math.min(this.scrollHeight, 120) + 'px';
             });
+
+            // --- Clear History ---
+            document.getElementById('clear-history-btn').addEventListener('click', function () {
+                if (!confirm('Clear all messages?')) return;
+                connection.invoke('ClearHistory', itemId).catch(function (err) {
+                    console.error('Failed to clear history:', err);
+                });
+            });
+
+            // --- Settings Auto-Save via SignalR ---
+            var saveIndicator = document.getElementById('settings-save-indicator');
+            var saveTimeout = null;
+
+            function showSaveIndicator(text, cssClass) {
+                saveIndicator.textContent = text;
+                saveIndicator.className = 'settings-save-indicator ' + (cssClass || 'text-muted');
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(function () {
+                    saveIndicator.textContent = '';
+                }, 3000);
+            }
+
+            function collectSettings() {
+                var settings = {};
+
+                // Scalar settings from inputs
+                document.querySelectorAll('.setting-input').forEach(function (el) {
+                    var key = el.dataset.setting;
+                    if (!key) return;
+                    var val = el.value.trim();
+                    if (el.type === 'number') {
+                        settings[key] = val === '' ? null : parseFloat(val);
+                    } else {
+                        settings[key] = val || null;
+                    }
+                });
+
+                // Capability checkboxes grouped by data-group
+                var groups = {};
+                document.querySelectorAll('.capability-checkbox').forEach(function (cb) {
+                    var group = cb.dataset.group;
+                    if (!groups[group]) groups[group] = [];
+                    if (cb.checked) groups[group].push(cb.value);
+                });
+                for (var g in groups) {
+                    settings[g] = groups[g];
+                }
+
+                // Prompt template IDs
+                var templateIds = [];
+                document.querySelectorAll('#chatPromptTemplatesContainer .chat-prompt-card').forEach(function (card) {
+                    var tid = card.dataset.templateId;
+                    if (tid) templateIds.push(tid);
+                });
+                settings.promptTemplateIds = templateIds;
+
+                return settings;
+            }
+
+            var debounceTimer = null;
+
+            function debounceSave() {
+                clearTimeout(debounceTimer);
+                showSaveIndicator('Saving...', 'text-warning');
+                debounceTimer = setTimeout(function () {
+                    var settings = collectSettings();
+                    connection.invoke('SaveSettings', itemId, settings).catch(function (err) {
+                        console.error('Failed to save settings:', err);
+                        showSaveIndicator('Save failed', 'text-danger');
+                    });
+                }, 500);
+            }
+
+            // Bind setting-input changes
+            document.querySelectorAll('.setting-input').forEach(function (el) {
+                el.addEventListener('input', debounceSave);
+                el.addEventListener('change', debounceSave);
+            });
+
+            // Bind capability checkbox changes
+            document.querySelectorAll('.capability-checkbox').forEach(function (cb) {
+                cb.addEventListener('change', debounceSave);
+            });
+
+            // Tool Select All / Deselect All
+            var selectAllToolsBtn = document.getElementById('chat-select-all-tools');
+            var deselectAllToolsBtn = document.getElementById('chat-deselect-all-tools');
+            if (selectAllToolsBtn) {
+                selectAllToolsBtn.addEventListener('click', function () {
+                    document.querySelectorAll('.chat-tool-checkbox').forEach(function (cb) { cb.checked = true; });
+                    debounceSave();
+                });
+            }
+            if (deselectAllToolsBtn) {
+                deselectAllToolsBtn.addEventListener('click', function () {
+                    document.querySelectorAll('.chat-tool-checkbox').forEach(function (cb) { cb.checked = false; });
+                    debounceSave();
+                });
+            }
+
+            // --- Prompt Template Management ---
+            (function () {
+                var container = document.getElementById('chatPromptTemplatesContainer');
+                var searchInput = document.getElementById('chatPromptTemplateSearch');
+                if (!container) return;
+
+                function createTemplateCard(templateId, title) {
+                    var card = document.createElement('div');
+                    card.className = 'badge text-bg-secondary d-inline-flex align-items-center me-1 mb-1 chat-prompt-card';
+                    card.dataset.templateId = templateId;
+                    card.innerHTML = '<span class="me-1">' + (title || templateId) + '</span>' +
+                        '<button type="button" class="btn-close btn-close-white" style="font-size:0.5rem;" aria-label="Remove"></button>';
+                    card.querySelector('.btn-close').addEventListener('click', function () {
+                        card.remove();
+                        debounceSave();
+                    });
+                    return card;
+                }
+
+                document.addEventListener('click', function (e) {
+                    var btn = e.target.closest('.chat-prompt-add-btn');
+                    if (!btn) return;
+                    e.preventDefault();
+                    var card = createTemplateCard(btn.dataset.templateId, btn.dataset.templateTitle);
+                    container.appendChild(card);
+                    debounceSave();
+                });
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', function () {
+                        var query = this.value.toLowerCase();
+                        document.querySelectorAll('.chat-prompt-add-btn').forEach(function (item) {
+                            var text = (item.textContent || '').toLowerCase();
+                            item.style.display = !query || text.indexOf(query) >= 0 ? '' : 'none';
+                        });
+                        document.querySelectorAll('.chat-prompt-template-menu .dropdown-header').forEach(function (h) {
+                            h.style.display = query ? 'none' : '';
+                        });
+                    });
+                }
+            })();
+
+            // Hide placeholder if we already have messages
+            if (existingMessages.length > 0 && placeholder) {
+                placeholder.style.display = 'none';
+            }
         });
     </script>
 }

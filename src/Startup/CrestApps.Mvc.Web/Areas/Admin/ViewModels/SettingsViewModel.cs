@@ -1,3 +1,4 @@
+using CrestApps.AI.Chat.Copilot.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Mcp.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -9,6 +10,9 @@ public sealed class SettingsViewModel
 {
     // General AI settings.
     public bool EnablePreemptiveMemoryRetrieval { get; set; } = true;
+
+    // Chat interaction settings.
+    public bool ChatInteractionEnableUserMemory { get; set; } = true;
 
     public int MaximumIterationsPerRequest { get; set; } = 10;
 
@@ -45,6 +49,29 @@ public sealed class SettingsViewModel
 
     public string DefaultTextToSpeechVoiceId { get; set; }
 
+    // Copilot settings.
+    public CopilotAuthenticationType CopilotAuthenticationType { get; set; }
+
+    public string CopilotClientId { get; set; }
+
+    public string CopilotClientSecret { get; set; }
+
+    public bool CopilotHasSecret { get; set; }
+
+    public string CopilotProviderType { get; set; }
+
+    public string CopilotBaseUrl { get; set; }
+
+    public string CopilotApiKey { get; set; }
+
+    public bool CopilotHasApiKey { get; set; }
+
+    public string CopilotWireApi { get; set; } = "completions";
+
+    public string CopilotDefaultModel { get; set; }
+
+    public string CopilotAzureApiVersion { get; set; }
+
     // Dropdown items — never bound from form data.
     [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
@@ -66,4 +93,7 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];
+
+    [BindNever]
+    public string CopilotCallbackUrl { get; set; }
 }

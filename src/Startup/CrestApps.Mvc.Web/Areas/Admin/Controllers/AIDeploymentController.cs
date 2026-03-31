@@ -65,7 +65,12 @@ public sealed class AIDeploymentController : Controller
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
-            ModelState.AddModelError(nameof(model.Name), "Name is required.");
+            ModelState.AddModelError(nameof(model.Name), "Title is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.TechnicalName))
+        {
+            ModelState.AddModelError(nameof(model.TechnicalName), "Technical name is required.");
         }
 
         if (!model.GetDeploymentType().IsValidSelection())
@@ -120,7 +125,12 @@ public sealed class AIDeploymentController : Controller
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
-            ModelState.AddModelError(nameof(model.Name), "Name is required.");
+            ModelState.AddModelError(nameof(model.Name), "Title is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(model.TechnicalName))
+        {
+            ModelState.AddModelError(nameof(model.TechnicalName), "Technical name is required.");
         }
 
         if (!model.GetDeploymentType().IsValidSelection())
