@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;

@@ -1031,6 +1031,32 @@ window.openAIChatManager = function () {
           }
           this.isPlaceholderVisible = true;
         },
+        isOrchestratorAvailable: function isOrchestratorAvailable() {
+          return config.isOrchestratorAvailable !== false;
+        },
+        applyOrchestratorAvailability: function applyOrchestratorAvailability() {
+          if (this.isOrchestratorAvailable()) {
+            return true;
+          }
+          var unavailableMessage = config.orchestratorUnavailableMessage || "This orchestrator is not currently available.";
+          if (this.inputElement) {
+            this.inputElement.disabled = true;
+            this.inputElement.value = '';
+            this.inputElement.placeholder = unavailableMessage;
+          }
+          if (this.buttonElement) {
+            this.buttonElement.disabled = true;
+          }
+          if (this.micButtonElement) {
+            this.micButtonElement.disabled = true;
+            this.micButtonElement.style.display = 'none';
+          }
+          if (this.conversationButtonElement) {
+            this.conversationButtonElement.disabled = true;
+            this.conversationButtonElement.style.display = 'none';
+          }
+          return false;
+        },
         fireEvent: function fireEvent(event) {
           document.dispatchEvent(event);
         },
@@ -1038,6 +1064,9 @@ window.openAIChatManager = function () {
           return message.role === 'indicator';
         },
         sendMessage: function sendMessage() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
           var trimmedPrompt = this.prompt.trim();
           if (!trimmedPrompt) {
             return;
@@ -1813,6 +1842,9 @@ window.openAIChatManager = function () {
           }
         },
         startNewSession: function startNewSession() {
+          if (!this.applyOrchestratorAvailability()) {
+            return;
+          }
           var profileId = this.getProfileId();
           if (!profileId || !this.connection) {
             return;
@@ -1827,10 +1859,11 @@ window.openAIChatManager = function () {
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
           this.placeholder = document.querySelector(config.placeholderElementSelector);
+          this.applyOrchestratorAvailability();
           var sessionId = this.getSessionId();
           if (!config.widget && sessionId) {
             this.loadSession(sessionId);
-          } else if (config.autoCreateSession && !config.widget && !sessionId) {
+          } else if (this.isOrchestratorAvailable() && config.autoCreateSession && !config.widget && !sessionId) {
             this.startNewSession();
           }
 

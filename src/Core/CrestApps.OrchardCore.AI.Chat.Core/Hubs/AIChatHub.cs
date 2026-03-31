@@ -151,6 +151,13 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
                 return;
             }
 
+            var availability = await GetOrchestratorAvailabilityAsync(services, profile);
+            if (!availability.IsAvailable)
+            {
+                await Clients.Caller.ReceiveError(availability.Message);
+                return;
+            }
+
             var chatSession = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
             // Allow the caller to override the initial response handler set by the profile.
@@ -276,6 +283,13 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
             {
                 await Clients.Caller.ReceiveError(S["You are not authorized to interact with the given profile."].Value);
 
+                return;
+            }
+
+            var availability = await GetOrchestratorAvailabilityAsync(services, profile);
+            if (!availability.IsAvailable)
+            {
+                await Clients.Caller.ReceiveError(availability.Message);
                 return;
             }
 
@@ -744,6 +758,21 @@ public class AIChatHub : ChatHubBase<IAIChatHubClient>
         return string.IsNullOrWhiteSpace(trimmedUserPrompt)
             ? initialPrompt
             : $"{initialPrompt}\n\n{trimmedUserPrompt}";
+    }
+
+    private static async Task<OrchestratorAvailability> GetOrchestratorAvailabilityAsync(IServiceProvider services, AIProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(profile.OrchestratorName))
+        {
+            return new OrchestratorAvailability();
+        }
+
+        var availabilityProvider = services.GetServices<IOrchestratorAvailabilityProvider>()
+            .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
+
+        return availabilityProvider is null
+            ? new OrchestratorAvailability()
+            : await availabilityProvider.GetAvailabilityAsync();
     }
 
     /// <summary>

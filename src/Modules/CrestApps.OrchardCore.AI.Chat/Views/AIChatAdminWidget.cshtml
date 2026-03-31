@@ -65,6 +65,17 @@
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+    var orchestratorAvailability = new OrchestratorAvailability();
+    if (!string.IsNullOrWhiteSpace(profile.OrchestratorName))
+    {
+        var availabilityProvider = ShellScope.Services.GetServices<IOrchestratorAvailabilityProvider>()
+            .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
+
+        if (availabilityProvider is not null)
+        {
+            orchestratorAvailability = await availabilityProvider.GetAvailabilityAsync();
+        }
+    }
 }
 
 <!-- Toggle Button (green circle ring with robot icon) -->
@@ -101,6 +112,13 @@
 
     <!-- Chat Body -->
     <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
+        @if (!orchestratorAvailability.IsAvailable)
+        {
+            <div class="alert alert-warning m-3 mb-0">
+                <i class="fas fa-exclamation-triangle"></i>
+                @orchestratorAvailability.Message
+            </div>
+        }
         <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder @(addInitialPrompt ? "d-none" : string.Empty)">
             <h4>@(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
         </div>
@@ -203,6 +221,8 @@
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
+        ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
     };
 
     if (sessionDocumentsEnabled)

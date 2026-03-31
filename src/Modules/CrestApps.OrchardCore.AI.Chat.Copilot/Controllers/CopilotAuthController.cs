@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Settings;
 using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
@@ -20,6 +22,7 @@ public sealed class CopilotAuthController : Controller
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
     private readonly AdminOptions _adminOptions;
+    private readonly ISiteService _siteService;
 
     internal readonly IHtmlLocalizer H;
 
@@ -27,6 +30,7 @@ public sealed class CopilotAuthController : Controller
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         INotifier notifier,
+        ISiteService siteService,
         IHtmlLocalizer<CopilotAuthController> htmlLocalizer,
         ILogger<CopilotAuthController> logger,
         IOptions<AdminOptions> adminOptions)
@@ -34,6 +38,7 @@ public sealed class CopilotAuthController : Controller
         _oauthService = oauthService;
         _userManager = userManager;
         _notifier = notifier;
+        _siteService = siteService;
         _logger = logger;
         _adminOptions = adminOptions.Value;
         H = htmlLocalizer;
@@ -54,10 +59,18 @@ public sealed class CopilotAuthController : Controller
                 ? returnUrl
                 : "~/" + _adminOptions.AdminUrlPrefix;
 
-        // Generate the GitHub authorization URL
-        var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);
+        try
+        {
+            var authUrl = await _oauthService.GetAuthorizationUrlAsync(safeReturnUrl);
 
-        return Redirect(authUrl);
+            return Redirect(authUrl);
+        }
+        catch (InvalidOperationException)
+        {
+            await _notifier.WarningAsync(H["Copilot is not configured and cannot be used until it has been configured."]);
+
+            return HandleOAuthReturn(safeReturnUrl, success: false, username: null);
+        }
     }
 
     /// <summary>
@@ -158,10 +171,18 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/api/status")]
     public async Task<IActionResult> GetAuthStatus()
     {
+        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
+        var isConfigured = settings.IsConfigured();
+
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             return Unauthorized();
+        }
+
+        if (!isConfigured)
+        {
+            return Json(new { isConfigured, isAuthenticated = false, gitHubUsername = (string)null });
         }
 
         var userId = await _userManager.GetUserIdAsync(user);
@@ -174,7 +195,7 @@ public sealed class CopilotAuthController : Controller
             gitHubUsername = credential?.GitHubUsername;
         }
 
-        return Json(new { isAuthenticated, gitHubUsername });
+        return Json(new { isConfigured, isAuthenticated, gitHubUsername });
     }
 
     /// <summary>
@@ -183,6 +204,12 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/api/models")]
     public async Task<IActionResult> GetModels()
     {
+        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
+        if (!settings.IsConfigured())
+        {
+            return Json(Array.Empty<object>());
+        }
+
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
