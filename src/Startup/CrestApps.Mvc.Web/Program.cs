@@ -5,7 +5,6 @@ using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Copilot;
-using CrestApps.AI.Chat.Tools;
 using CrestApps.AI.DataSources.AzureAI;
 using CrestApps.AI.DataSources.Elasticsearch;
 using CrestApps.AI.Mcp;
@@ -17,7 +16,6 @@ using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.Tools;
 using CrestApps.Data.YesSql;
-using CrestApps.Data.YesSql.Services;
 using CrestApps.Mvc.Web.BackgroundTasks;
 using CrestApps.Mvc.Web.Hubs;
 using CrestApps.Mvc.Web.Indexes;
@@ -185,8 +183,7 @@ builder.Services
     .AddAzureAIInferenceProvider();
 
 // Application-specific provider options configuration.
-builder.Services.Configure<AIProviderOptions>(
-    builder.Configuration.GetSection("CrestApps:AI:Providers"));
+builder.Services.Configure<AIProviderOptions>(builder.Configuration.GetSection("CrestApps:AI:Providers"));
 builder.Services.AddSingleton<MvcAIProviderOptionsStore>();
 builder.Services.AddTransient<IConfigureOptions<AIProviderOptions>, MvcAIProviderOptionsConfiguration>();
 
