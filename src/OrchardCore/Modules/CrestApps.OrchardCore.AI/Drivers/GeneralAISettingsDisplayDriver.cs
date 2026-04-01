@@ -19,9 +19,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     private readonly DefaultAIOptions _defaultAIOptions;
 
     internal readonly IStringLocalizer T;
-
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public GeneralAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -41,19 +39,19 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             model.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
             model.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
             model.MaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest
-                ? settings.MaximumIterationsPerRequest
-                : _defaultAIOptions.MaximumIterationsPerRequest;
+            ? settings.MaximumIterationsPerRequest
+            : _defaultAIOptions.MaximumIterationsPerRequest;
             model.AppSettingsMaximumIterationsPerRequest = _defaultAIOptions.MaximumIterationsPerRequest;
             model.AbsoluteMaximumIterationsPerRequest = _defaultAIOptions.AbsoluteMaximumIterationsPerRequest;
             model.OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching;
             model.EnableDistributedCaching = settings.OverrideEnableDistributedCaching
-                ? settings.EnableDistributedCaching
-                : _defaultAIOptions.EnableDistributedCaching;
+            ? settings.EnableDistributedCaching
+            : _defaultAIOptions.EnableDistributedCaching;
             model.AppSettingsEnableDistributedCaching = _defaultAIOptions.EnableDistributedCaching;
             model.OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry;
             model.EnableOpenTelemetry = settings.OverrideEnableOpenTelemetry
-                ? settings.EnableOpenTelemetry
-                : _defaultAIOptions.EnableOpenTelemetry;
+            ? settings.EnableOpenTelemetry
+            : _defaultAIOptions.EnableOpenTelemetry;
             model.AppSettingsEnableOpenTelemetry = _defaultAIOptions.EnableOpenTelemetry;
         }).Location("Content:1%General;1")
         .OnGroup(SettingsGroupId)

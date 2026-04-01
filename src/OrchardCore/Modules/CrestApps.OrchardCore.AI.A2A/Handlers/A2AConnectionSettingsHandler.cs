@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2AConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
-
     public A2AConnectionSettingsHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
@@ -17,10 +16,8 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
 
     public override Task InitializingAsync(InitializingContext<A2AConnection> context)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<A2AConnection> context)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
-
     private Task ProtectSensitiveFieldsAsync(A2AConnection connection, JsonNode data)
     {
         var metadataNode = data[nameof(A2AConnection.Properties)]?[nameof(A2AConnectionMetadata)]?.AsObject();
@@ -32,7 +29,6 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
 
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
         var metadata = connection.As<A2AConnectionMetadata>();
-
         ProtectField(protector, metadataNode, nameof(A2AConnectionMetadata.ApiKey), val =>
         {
             metadata.ApiKey = val;

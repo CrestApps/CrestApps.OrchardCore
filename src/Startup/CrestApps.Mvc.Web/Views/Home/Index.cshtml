@@ -37,7 +37,7 @@
                     <h5 class="card-title mb-0">AI Connections</h5>
                 </div>
                 <p class="card-text">Configure connections to AI providers (OpenAI, Azure OpenAI, Ollama, Azure AI Inference).</p>
-                <a asp-area="Admin" asp-controller="AIConnection" asp-action="Index" class="btn btn-success">
+                <a asp-area="AI" asp-controller="AIConnection" asp-action="Index" class="btn btn-success">
                     <i class="bi bi-arrow-right"></i> Manage Connections
                 </a>
             </div>
@@ -51,7 +51,7 @@
                     <h5 class="card-title mb-0">AI Deployments</h5>
                 </div>
                 <p class="card-text">Map model deployments to connections for fine-grained control over which models are used.</p>
-                <a asp-area="Admin" asp-controller="AIDeployment" asp-action="Index" class="btn btn-warning">
+                <a asp-area="AI" asp-controller="AIDeployment" asp-action="Index" class="btn btn-warning">
                     <i class="bi bi-arrow-right"></i> Manage Deployments
                 </a>
             </div>
@@ -65,7 +65,7 @@
                     <h5 class="card-title mb-0">AI Profiles</h5>
                 </div>
                 <p class="card-text">Create and manage AI profiles with system prompts, parameters, and provider configurations.</p>
-                <a asp-area="Admin" asp-controller="AIProfile" asp-action="Index" class="btn btn-primary">
+                <a asp-area="AI" asp-controller="AIProfile" asp-action="Index" class="btn btn-primary">
                     <i class="bi bi-arrow-right"></i> Manage Profiles
                 </a>
             </div>
@@ -79,7 +79,7 @@
                     <h5 class="card-title mb-0">AI Chat</h5>
                 </div>
                 <p class="card-text">Manage reusable interaction sessions and orchestration-driven conversation flows.</p>
-                <a asp-area="Admin" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
+                <a asp-area="AIChat" asp-controller="AIChat" asp-action="Index" class="btn btn-info text-white">
                     <i class="bi bi-arrow-right"></i> Start Chat
                 </a>
             </div>
@@ -93,7 +93,7 @@
                     <h5 class="card-title mb-0">Chat Interactions</h5>
                 </div>
                 <p class="card-text">Start real-time conversations with AI assistants as playground.</p>
-                <a asp-area="Admin" asp-controller="ChatInteraction" asp-action="Index" class="btn btn-danger">
+                <a asp-area="ChatInteractions" asp-controller="ChatInteraction" asp-action="Index" class="btn btn-danger">
                     <i class="bi bi-arrow-right"></i> Manage Interactions
                 </a>
             </div>
@@ -107,7 +107,7 @@
                     <h5 class="card-title mb-0">Index Profiles</h5>
                 </div>
                 <p class="card-text">Define search index profiles for Elasticsearch or Azure AI Search vector stores.</p>
-                <a asp-area="Admin" asp-controller="IndexProfile" asp-action="Index" class="btn btn-dark">
+                <a asp-area="Indexing" asp-controller="IndexProfile" asp-action="Index" class="btn btn-dark">
                     <i class="bi bi-arrow-right"></i> Manage Index Profiles
                 </a>
             </div>
@@ -121,7 +121,7 @@
                     <h5 class="card-title mb-0">Data Sources</h5>
                 </div>
                 <p class="card-text">Map existing search indexes to a knowledge base for AI-powered retrieval.</p>
-                <a asp-area="Admin" asp-controller="AIDataSource" asp-action="Index" class="btn text-white" style="background-color: #6f42c1;">
+                <a asp-area="DataSources" asp-controller="AIDataSource" asp-action="Index" class="btn text-white" style="background-color: #6f42c1;">
                     <i class="bi bi-arrow-right"></i> Manage Data Sources
                 </a>
             </div>
@@ -135,7 +135,7 @@
                     <h5 class="card-title mb-0">AI Templates</h5>
                 </div>
                 <p class="card-text">Create reusable system prompt and profile templates for consistent AI behavior.</p>
-                <a asp-area="Admin" asp-controller="AITemplate" asp-action="Index" class="btn btn-secondary">
+                <a asp-area="AI" asp-controller="Template" asp-action="Index" class="btn btn-secondary">
                     <i class="bi bi-arrow-right"></i> Manage Templates
                 </a>
             </div>
@@ -154,7 +154,7 @@
                         <h5 class="card-title mb-0">Agent to Agent Hosts</h5>
                     </div>
                     <p class="card-text">Manage remote A2A hosts and make their agents available to MVC orchestration.</p>
-                    <a asp-area="Admin" asp-controller="A2AConnection" asp-action="Index" class="btn btn-info text-white">
+                    <a asp-area="A2A" asp-controller="A2AConnection" asp-action="Index" class="btn btn-info text-white">
                         <i class="bi bi-arrow-right"></i> Manage A2A Hosts
                     </a>
                 </div>
@@ -174,7 +174,7 @@
                         <h5 class="card-title mb-0">MCP Hosts</h5>
                     </div>
                     <p class="card-text">Configure remote SSE MCP servers and local stdio MCP tools for orchestration.</p>
-                    <a asp-area="Admin" asp-controller="McpConnection" asp-action="Index" class="btn btn-primary">
+                    <a asp-area="Mcp" asp-controller="McpConnection" asp-action="Index" class="btn btn-primary">
                         <i class="bi bi-arrow-right"></i> Manage MCP Hosts
                     </a>
                 </div>
@@ -188,7 +188,7 @@
                         <h5 class="card-title mb-0">MCP Prompts</h5>
                     </div>
                     <p class="card-text">Define MCP prompts with optional arguments so external clients can discover reusable prompt templates.</p>
-                    <a asp-area="Admin" asp-controller="McpPrompt" asp-action="Index" class="btn btn-secondary">
+                    <a asp-area="Mcp" asp-controller="McpPrompt" asp-action="Index" class="btn btn-secondary">
                         <i class="bi bi-arrow-right"></i> Manage MCP Prompts
                     </a>
                 </div>
@@ -202,7 +202,7 @@
                         <h5 class="card-title mb-0">MCP Resources</h5>
                     </div>
                     <p class="card-text">Register FTP and SFTP-backed MCP resources, including template-based URI patterns for dynamic resources.</p>
-                    <a asp-area="Admin" asp-controller="McpResource" asp-action="Index" class="btn btn-dark">
+                    <a asp-area="Mcp" asp-controller="McpResource" asp-action="Index" class="btn btn-dark">
                         <i class="bi bi-arrow-right"></i> Manage MCP Resources
                     </a>
                 </div>

@@ -14,7 +14,6 @@ public sealed class DefaultAIOptionsTests
         };
 
         options.Normalize();
-
         Assert.Equal(100, options.AbsoluteMaximumIterationsPerRequest);
         Assert.Equal(100, options.MaximumIterationsPerRequest);
     }
@@ -29,7 +28,6 @@ public sealed class DefaultAIOptionsTests
         };
 
         options.Normalize();
-
         Assert.Equal(10, options.MaximumIterationsPerRequest);
         Assert.Equal(25, options.AbsoluteMaximumIterationsPerRequest);
     }

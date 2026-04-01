@@ -1,6 +1,9 @@
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,18 +20,18 @@ public sealed class OpenAICompletionClient : NamedAICompletionClient
         IOptions<AIProviderOptions> providerOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         IOptions<DefaultAIOptions> defaultOptions,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
-        : base(
-            OpenAIConstants.ImplementationName,
-            aIClientFactory, distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions.Value,
-            defaultOptions.Value,
-            handlers,
-            aiTemplateService,
-            deploymentManager)
+    : base(
+        OpenAIConstants.ImplementationName,
+        aIClientFactory, distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions.Value,
+        defaultOptions.Value,
+        handlers,
+        aiTemplateService,
+        deploymentManager)
     {
     }
 

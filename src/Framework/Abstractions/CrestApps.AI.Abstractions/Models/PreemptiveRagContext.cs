@@ -1,3 +1,5 @@
+using CrestApps.AI.Memory;
+
 namespace CrestApps.AI.Models;
 
 /// <summary>

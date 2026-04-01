@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <Title>CrestApps OrchardCore AI Data Sources - Azure AI Search</Title>
@@ -10,20 +9,16 @@
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources AzureAISearch</PackageTags>
   </PropertyGroup>
-
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
     <PackageReference Include="Azure.Search.Documents" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.AzureAI/CrestApps.AI.AzureAI.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.Azure.AISearch/CrestApps.Azure.AISearch.csproj" />
   </ItemGroup>
-
 </Project>

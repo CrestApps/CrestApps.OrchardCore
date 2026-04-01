@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 
@@ -8,12 +8,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIProfileManager : NamedCatalogManager<AIProfile>, IAIProfileManager
 {
     private readonly IAIProfileStore _profileStore;
-
     public DefaultAIProfileManager(
         IAIProfileStore profileStore,
         IEnumerable<ICatalogEntryHandler<AIProfile>> handlers,
         ILogger<DefaultAIProfileManager> logger)
-        : base(profileStore, handlers, logger)
+    : base(profileStore, handlers, logger)
     {
         _profileStore = profileStore;
     }

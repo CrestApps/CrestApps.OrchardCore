@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using OrchardCore.Deployment;
 
@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
 {
     private readonly IAIProfileStore _profileStore;
-
     public AIProfileDeploymentSource(IAIProfileStore profileStore)
     {
         _profileStore = profileStore;
@@ -18,12 +17,10 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
     protected override async Task ProcessAsync(AIProfileDeploymentStep step, DeploymentPlanResult result)
     {
         var profiles = await _profileStore.GetAllAsync();
-
         var profilesData = new JsonArray();
-
         var profileNames = step.IncludeAll
-            ? []
-            : step.ProfileNames ?? [];
+        ? []
+        : step.ProfileNames ?? [];
 
         foreach (var profile in profiles)
         {

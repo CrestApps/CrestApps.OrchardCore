@@ -14,7 +14,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
-
     public A2AConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<A2AConnectionDisplayDriver> stringLocalizer)
@@ -27,8 +26,8 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
     {
         return CombineAsync(
             View("A2AConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-            View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-            View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+        View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+        View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
         );
     }
 
@@ -38,7 +37,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         {
             model.DisplayText = connection.DisplayText;
             model.Endpoint = connection.Endpoint;
-
             var metadata = connection.As<A2AConnectionMetadata>();
             model.AuthenticationType = metadata.AuthenticationType;
 
@@ -51,18 +49,14 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             model.ApiKeyHeaderName = metadata.ApiKeyHeaderName;
             model.ApiKeyPrefix = metadata.ApiKeyPrefix;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
-
             model.BasicUsername = metadata.BasicUsername;
             model.HasBasicPassword = !string.IsNullOrEmpty(metadata.BasicPassword);
-
             model.OAuth2TokenEndpoint = metadata.OAuth2TokenEndpoint;
             model.OAuth2ClientId = metadata.OAuth2ClientId;
             model.OAuth2Scopes = metadata.OAuth2Scopes;
             model.HasOAuth2ClientSecret = !string.IsNullOrEmpty(metadata.OAuth2ClientSecret);
-
             model.OAuth2KeyId = metadata.OAuth2KeyId;
             model.HasOAuth2PrivateKey = !string.IsNullOrEmpty(metadata.OAuth2PrivateKey);
-
             model.HasOAuth2ClientCertificate = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificate);
             model.HasOAuth2ClientCertificatePassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword);
 
@@ -73,21 +67,20 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
             model.Schema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(A2AConnection connection, UpdateEditorContext context)
     {
         var model = new A2AConnectionFieldsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
@@ -100,26 +93,22 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint is required."]);
         }
         else if (!Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri) ||
-                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint must be a valid HTTP or HTTPS URL."]);
         }
 
         connection.DisplayText = model.DisplayText;
         connection.Endpoint = model.Endpoint;
-
         var metadata = connection.As<A2AConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
-
         var existingApiKey = metadata.ApiKey;
         var existingBasicPassword = metadata.BasicPassword;
         var existingOAuth2ClientSecret = metadata.OAuth2ClientSecret;
         var existingOAuth2PrivateKey = metadata.OAuth2PrivateKey;
         var existingOAuth2ClientCertificate = metadata.OAuth2ClientCertificate;
         var existingOAuth2ClientCertificatePassword = metadata.OAuth2ClientCertificatePassword;
-
         metadata.AuthenticationType = model.AuthenticationType;
-
         ClearAuthFields(metadata);
 
         switch (model.AuthenticationType)
@@ -127,23 +116,18 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             case A2AClientAuthenticationType.ApiKey:
                 ValidateAndPopulateApiKey(context, model, metadata, protector, existingApiKey);
                 break;
-
             case A2AClientAuthenticationType.Basic:
                 ValidateAndPopulateBasic(context, model, metadata, protector, existingBasicPassword);
                 break;
-
             case A2AClientAuthenticationType.OAuth2ClientCredentials:
                 ValidateAndPopulateOAuth2(context, model, metadata, protector, existingOAuth2ClientSecret);
                 break;
-
             case A2AClientAuthenticationType.OAuth2PrivateKeyJwt:
                 ValidateAndPopulateOAuth2PrivateKeyJwt(context, model, metadata, protector, existingOAuth2PrivateKey);
                 break;
-
             case A2AClientAuthenticationType.OAuth2Mtls:
                 ValidateAndPopulateOAuth2Mtls(context, model, metadata, protector, existingOAuth2ClientCertificate, existingOAuth2ClientCertificatePassword);
                 break;
-
             case A2AClientAuthenticationType.CustomHeaders:
                 ValidateAndPopulateCustomHeaders(context, model, metadata);
                 break;
@@ -163,7 +147,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
     {
         metadata.ApiKeyHeaderName = model.ApiKeyHeaderName;
         metadata.ApiKeyPrefix = model.ApiKeyPrefix;
-
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
         var hasExistingKey = !string.IsNullOrEmpty(existingEncryptedApiKey);
 
@@ -195,7 +178,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         }
 
         metadata.BasicUsername = model.BasicUsername;
-
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.BasicPassword);
         var hasExistingPassword = !string.IsNullOrEmpty(existingEncryptedPassword);
 
@@ -222,7 +204,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         string existingEncryptedClientSecret)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
-
         var hasNewSecret = !string.IsNullOrWhiteSpace(model.OAuth2ClientSecret);
         var hasExistingSecret = !string.IsNullOrEmpty(existingEncryptedClientSecret);
 
@@ -249,9 +230,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         string existingEncryptedPrivateKey)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
-
         metadata.OAuth2KeyId = model.OAuth2KeyId;
-
         var hasNewKey = !string.IsNullOrWhiteSpace(model.OAuth2PrivateKey);
         var hasExistingKey = !string.IsNullOrEmpty(existingEncryptedPrivateKey);
 
@@ -279,7 +258,6 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         string existingEncryptedCertificatePassword)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
-
         var hasNewCert = !string.IsNullOrWhiteSpace(model.OAuth2ClientCertificate);
         var hasExistingCert = !string.IsNullOrEmpty(existingEncryptedCertificate);
 

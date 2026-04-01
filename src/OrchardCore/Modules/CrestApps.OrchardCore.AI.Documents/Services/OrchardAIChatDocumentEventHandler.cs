@@ -15,7 +15,6 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OrchardAIChatDocumentEventHandler> _logger;
-
     public OrchardAIChatDocumentEventHandler(
         IIndexProfileStore indexProfileStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
@@ -36,6 +35,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         }
 
         var indexProfiles = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+
         if (!indexProfiles.Any())
         {
             return;
@@ -44,6 +44,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         foreach (var indexProfile in indexProfiles)
         {
             var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+
             if (documentIndexManager == null)
             {
                 continue;
@@ -100,6 +101,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         }
 
         var indexProfiles = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+
         if (!indexProfiles.Any())
         {
             return;
@@ -108,6 +110,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
         foreach (var indexProfile in indexProfiles)
         {
             var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+
             if (documentIndexManager == null)
             {
                 continue;

@@ -10,27 +10,25 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<ChatInteractionPromptIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(64))
-                .Column<string>("ChatInteractionId", column => column.WithLength(26))
-                .Column<string>("Role", column => column.WithLength(20))
-                .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.AICollectionName
+            .Column<string>("ItemId", column => column.WithLength(64))
+            .Column<string>("ChatInteractionId", column => column.WithLength(26))
+            .Column<string>("Role", column => column.WithLength(20))
+            .Column<DateTime>("CreatedUtc"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
             .CreateIndex("IDX_ChatInteractionPromptIndex_DocumentId",
-                "DocumentId",
-                "ItemId",
-                "ChatInteractionId"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "ItemId",
+        "ChatInteractionId"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
             .CreateIndex("IDX_ChatInteractionPromptIndex_ChatInteractionId",
-                "DocumentId",
-                "ChatInteractionId",
-                "CreatedUtc"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "ChatInteractionId",
+        "CreatedUtc"),
+        collection: AIConstants.AICollectionName
         );
 
         return 1;

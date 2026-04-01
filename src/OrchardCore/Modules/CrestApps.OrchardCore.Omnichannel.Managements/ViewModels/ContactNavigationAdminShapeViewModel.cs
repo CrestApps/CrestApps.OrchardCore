@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 public class ContactNavigationAdminShapeViewModel : ShapeViewModel
 {
     public ContactNavigationAdminShapeViewModel()
-        : base("ContactNavigationAdmin")
+    : base("ContactNavigationAdmin")
     {
     }
 

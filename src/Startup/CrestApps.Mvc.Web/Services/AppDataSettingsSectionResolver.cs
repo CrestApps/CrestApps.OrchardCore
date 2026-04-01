@@ -3,7 +3,6 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class AppDataSettingsSectionResolver
 {
     private readonly Dictionary<Type, string> _sectionKeys;
-
     public AppDataSettingsSectionResolver(IEnumerable<AppDataSettingsRegistration> registrations)
     {
         _sectionKeys = registrations.ToDictionary(
@@ -12,7 +11,6 @@ public sealed class AppDataSettingsSectionResolver
     }
 
     public string GetSectionKey<T>() => GetSectionKey(typeof(T));
-
     public string GetSectionKey(Type settingsType)
     {
         if (_sectionKeys.TryGetValue(settingsType, out var sectionKey))

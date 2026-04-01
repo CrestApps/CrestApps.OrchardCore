@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -17,7 +18,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
@@ -39,10 +39,8 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
             model.UtilityDeploymentName = profile.UtilityDeploymentName;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
-
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
-
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
         }).Location("Content:1%Deployments;2");
@@ -50,11 +48,8 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-
         var model = new EditProfileDeploymentViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         profile.ChatDeploymentName = model.ChatDeploymentName;
         profile.UtilityDeploymentName = model.UtilityDeploymentName;
 
@@ -76,14 +71,16 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
+
             });
     }
 }

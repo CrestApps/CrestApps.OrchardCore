@@ -1,5 +1,6 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 
@@ -8,7 +9,7 @@ namespace CrestApps.AI.Ollama.Services;
 public sealed class OllamaAIClientProvider : AIClientProviderBase
 {
     public OllamaAIClientProvider(IServiceProvider serviceProvider)
-        : base(serviceProvider)
+    : base(serviceProvider)
     {
     }
 

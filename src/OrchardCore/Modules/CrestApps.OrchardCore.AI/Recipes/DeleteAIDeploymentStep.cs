@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -12,11 +12,10 @@ internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
     private readonly IAIDeploymentManager _manager;
 
     internal readonly IStringLocalizer S;
-
     public DeleteAIDeploymentStep(
         IAIDeploymentManager manager,
         IStringLocalizer<DeleteAIDeploymentStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         S = stringLocalizer;
@@ -41,6 +40,7 @@ internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
         if (model.DeploymentNames is null || model.DeploymentNames.Length == 0)
         {
             context.Errors.Add(S["No deployment names were provided."]);
+
             return;
         }
 
@@ -56,6 +56,7 @@ internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
             if (deployment is null)
             {
                 context.Errors.Add(S["Unable to find a deployment with the name '{0}'.", deploymentName]);
+
                 continue;
             }
 

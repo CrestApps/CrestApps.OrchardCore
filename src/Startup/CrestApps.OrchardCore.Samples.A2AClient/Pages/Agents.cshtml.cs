@@ -10,7 +10,6 @@ public sealed class AgentsModel : PageModel
 {
     private readonly A2AClientFactory _clientFactory;
     private readonly ILogger<AgentsModel> _logger;
-
     public AgentsModel(A2AClientFactory clientFactory, ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
@@ -18,9 +17,7 @@ public sealed class AgentsModel : PageModel
     }
 
     public List<AgentCard> AgentCards { get; private set; } = [];
-
     public string ErrorMessage { get; private set; }
-
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadAgentCardsAsync(cancellationToken);
@@ -43,7 +40,6 @@ public sealed class AgentsModel : PageModel
         try
         {
             var client = _clientFactory.Create(agentUrl);
-
             var agentMessage = new AgentMessage
             {
                 Role = MessageRole.User,
@@ -71,7 +67,6 @@ public sealed class AgentsModel : PageModel
             }
 
             var response = await client.SendMessageAsync(sendParams, cancellationToken);
-
             var responseText = ExtractTextFromResponse(response);
 
             return new JsonResult(new { response = responseText ?? "The agent did not produce a text response." });
@@ -83,7 +78,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Authentication failed (401 Unauthorized). " +
-                        "The A2A host requires authentication. Check the agent card's security schemes for details."
+                "The A2A host requires authentication. Check the agent card's security schemes for details."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -93,7 +88,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Access denied (403 Forbidden). " +
-                        "You do not have permission to access this agent."
+                "You do not have permission to access this agent."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -101,8 +96,8 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "The A2A host returned a 404 Not Found response. " +
-                        "Please ensure the A2A Host feature is enabled on the default tenant " +
-                        "(Configuration > Features > search for 'A2A Host')."
+                "Please ensure the A2A Host feature is enabled on the default tenant " +
+                "(Configuration > Features > search for 'A2A Host')."
             });
         }
         catch (Exception ex)
@@ -131,7 +126,6 @@ public sealed class AgentsModel : PageModel
                 var artifactTexts = task.Artifacts
                     .SelectMany(a => a.Parts?.OfType<TextPart>() ?? [])
                     .Select(p => p.Text);
-
                 var combined = string.Join(string.Empty, artifactTexts);
 
                 if (!string.IsNullOrEmpty(combined))
@@ -143,7 +137,6 @@ public sealed class AgentsModel : PageModel
             if (task.Status.Message?.Parts is not null)
             {
                 var statusTexts = task.Status.Message.Parts.OfType<TextPart>().Select(p => p.Text);
-
                 var combined = string.Join(string.Empty, statusTexts);
 
                 if (!string.IsNullOrEmpty(combined))
@@ -165,8 +158,8 @@ public sealed class AgentsModel : PageModel
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             ErrorMessage = "The A2A host returned a 404 Not Found response. " +
-                           "Please ensure the A2A Host feature is enabled on the default tenant " +
-                           "(Configuration > Features > search for 'A2A Host').";
+            "Please ensure the A2A Host feature is enabled on the default tenant " +
+            "(Configuration > Features > search for 'A2A Host').";
         }
         catch (Exception ex)
         {
@@ -184,7 +177,6 @@ public sealed class AgentsModel : PageModel
         private readonly A2A.A2AClient _client;
         private readonly MessageSendParams _sendParams;
         private readonly ILogger _logger;
-
         public StreamingA2AResult(A2A.A2AClient client, MessageSendParams sendParams, ILogger logger)
         {
             _client = client;
@@ -198,9 +190,7 @@ public sealed class AgentsModel : PageModel
             httpResponse.ContentType = "text/event-stream";
             httpResponse.Headers.CacheControl = "no-cache";
             httpResponse.Headers.Connection = "keep-alive";
-
             var cancellationToken = context.HttpContext.RequestAborted;
-
             try
             {
                 await foreach (var sseItem in _client.SendMessageStreamingAsync(_sendParams, cancellationToken))
@@ -211,20 +201,20 @@ public sealed class AgentsModel : PageModel
                     if (a2aEvent is TaskArtifactUpdateEvent artifactUpdate)
                     {
                         chunk = string.Join(string.Empty,
-                            artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
+                        artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
                     }
                     else if (a2aEvent is TaskStatusUpdateEvent statusUpdate)
                     {
                         if (statusUpdate.Final)
                         {
                             // If the task failed, send the error message.
+
                             if (statusUpdate.Status.State == TaskState.Failed)
                             {
                                 var errorText = statusUpdate.Status.Message?.Parts
-                                    ?.OfType<TextPart>()
+                                ?.OfType<TextPart>()
                                     .Select(p => p.Text)
                                     .FirstOrDefault() ?? "Agent task failed.";
-
                                 await httpResponse.WriteAsync($"data: [ERROR]{errorText}\n\n", cancellationToken);
                                 await httpResponse.Body.FlushAsync(cancellationToken);
                                 break;

@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
-
     public AIProfileTemplatePromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
@@ -25,7 +24,6 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
 
         var promptMetadata = template.As<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
-
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);
 
         if (model.AvailablePrompts.Count == 0)
@@ -49,13 +47,11 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
 
         var model = new AITemplateSelectionViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var promptMetadata = await PromptTemplateSelectionEditorHelper.BuildMetadataAsync(
             model,
             _promptTemplateSelectionService,
             context.Updater.ModelState,
             Prefix);
-
         template.Put(promptMetadata);
 
         return await EditAsync(template, context);

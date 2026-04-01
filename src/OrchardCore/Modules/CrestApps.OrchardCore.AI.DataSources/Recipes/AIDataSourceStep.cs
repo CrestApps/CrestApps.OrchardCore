@@ -14,11 +14,10 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
     private readonly ICatalogManager<AIDataSource> _dataManager;
 
     internal readonly IStringLocalizer S;
-
     public AIDataSourceStep(
         ICatalogManager<AIDataSource> dataManager,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _dataManager = dataManager;
         S = stringLocalizer;
@@ -32,9 +31,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIDataSource dataSource = null;
-
             var id = token[nameof(AIDataSource.ItemId)]?.GetValue<string>();
-
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)

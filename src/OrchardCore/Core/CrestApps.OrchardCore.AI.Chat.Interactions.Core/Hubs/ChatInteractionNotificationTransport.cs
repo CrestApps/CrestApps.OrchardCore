@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 internal sealed class ChatInteractionNotificationTransport : IChatNotificationTransport
 {
     private readonly IHubContext<ChatInteractionHub, IChatInteractionHubClient> _hubContext;
-
     public ChatInteractionNotificationTransport(IHubContext<ChatInteractionHub, IChatInteractionHubClient> hubContext)
     {
         _hubContext = hubContext;

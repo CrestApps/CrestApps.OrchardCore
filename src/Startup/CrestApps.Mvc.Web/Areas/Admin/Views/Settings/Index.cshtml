@@ -221,9 +221,9 @@
                     <div class="mb-3">
                         <label asp-for="CopilotAuthenticationType" class="form-label">Authentication type</label>
                         <select asp-for="CopilotAuthenticationType" class="form-select" id="copilotAuthType">
-                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.NotConfigured)">Not configured</option>
-                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)">GitHub signed-in user</option>
-                            <option value="@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)">API key (BYOK)</option>
+                            <option value="@((int)CrestApps.AI.Copilot.Models.CopilotAuthenticationType.NotConfigured)">Not configured</option>
+                            <option value="@((int)CrestApps.AI.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)">GitHub signed-in user</option>
+                            <option value="@((int)CrestApps.AI.Copilot.Models.CopilotAuthenticationType.ApiKey)">API key (BYOK)</option>
                         </select>
                         <div class="form-text">Choose how the Copilot orchestrator authenticates. "Not configured" keeps Copilot disabled until you explicitly select and save an authentication mode.</div>
                     </div>
@@ -443,8 +443,8 @@
         var copilotHints = document.querySelectorAll('.copilot-hint');
 
         function toggleCopilotAuthSections() {
-            var isGitHubOAuth = copilotAuthType.value === '@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)';
-            var isApiKey = copilotAuthType.value === '@((int)CrestApps.AI.Chat.Copilot.Models.CopilotAuthenticationType.ApiKey)';
+            var isGitHubOAuth = copilotAuthType.value === '@((int)CrestApps.AI.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)';
+            var isApiKey = copilotAuthType.value === '@((int)CrestApps.AI.Copilot.Models.CopilotAuthenticationType.ApiKey)';
             copilotGitHubSection.style.display = isGitHubOAuth ? '' : 'none';
             copilotApiKeySection.style.display = isApiKey ? '' : 'none';
         }

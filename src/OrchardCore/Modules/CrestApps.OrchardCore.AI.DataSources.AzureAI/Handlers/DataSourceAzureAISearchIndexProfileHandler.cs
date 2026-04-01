@@ -1,5 +1,6 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
@@ -13,19 +14,16 @@ namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
     public DataSourceAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    : base(AzureAISearchConstants.ProviderName, aiClientFactory)
     {
     }
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -36,7 +34,6 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
         var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
-
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = DataSourceConstants.ColumnNames.ChunkId,

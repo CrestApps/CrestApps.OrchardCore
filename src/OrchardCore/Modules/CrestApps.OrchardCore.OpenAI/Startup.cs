@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Services;
@@ -17,7 +18,6 @@ namespace CrestApps.OrchardCore.OpenAI;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -44,7 +44,6 @@ public sealed class Startup : StartupBase
 public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
     {
         S = stringLocalizer;

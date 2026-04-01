@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.A2A.Services;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,13 +19,13 @@ internal sealed class ListAvailableAgentsFunction : AIFunction
     public const string TheName = "listAvailableAgents";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -125,7 +126,7 @@ internal sealed class ListAvailableAgentsFunction : AIFunction
         }
 
         return agents.Count > 0
-            ? JsonSerializer.Serialize(agents)
-            : "No agents are currently available.";
+        ? JsonSerializer.Serialize(agents)
+        : "No agents are currently available.";
     }
 }

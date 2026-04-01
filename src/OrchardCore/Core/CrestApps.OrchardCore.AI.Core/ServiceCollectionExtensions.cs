@@ -1,5 +1,7 @@
 using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
@@ -24,7 +26,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
-
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()

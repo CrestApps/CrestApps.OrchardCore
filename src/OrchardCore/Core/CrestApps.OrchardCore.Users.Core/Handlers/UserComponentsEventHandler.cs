@@ -9,7 +9,6 @@ public class UserComponentsEventHandler : UserEventHandlerBase
     private readonly IServiceProvider _serviceProvider;
 
     private IUserCacheService _userCacheService;
-
     public UserComponentsEventHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -17,19 +16,14 @@ public class UserComponentsEventHandler : UserEventHandlerBase
 
     public override Task CreatedAsync(UserCreateContext context)
         => RemoveTagAsync(context.User);
-
     public override Task DeletedAsync(UserDeleteContext context)
         => RemoveTagAsync(context.User);
-
     public override Task DisabledAsync(UserContext context)
         => RemoveTagAsync(context.User);
-
     public override Task EnabledAsync(UserContext context)
         => RemoveTagAsync(context.User);
-
     public override Task UpdatedAsync(UserUpdateContext context)
         => RemoveTagAsync(context.User);
-
     private Task RemoveTagAsync(IUser user)
     {
         _userCacheService ??= _serviceProvider.GetRequiredService<IUserCacheService>();

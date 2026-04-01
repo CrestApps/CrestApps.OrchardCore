@@ -24,7 +24,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
                 if (contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
                     bagPart.ContentItems is not null &&
-                    bagPart.ContentItems.Count > 0)
+                        bagPart.ContentItems.Count > 0)
                 {
                     foreach (var contentMethod in bagPart.ContentItems)
                     {

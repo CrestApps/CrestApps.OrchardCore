@@ -70,7 +70,6 @@ public sealed class DisplayNameStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddShapeTableProvider<DisplayNameShapeTableProvider>();
-
         var oldProvider = services.FirstOrDefault(x => x.ServiceType == typeof(IUserPickerResultProvider) && x.ImplementationType == typeof(DefaultUserPickerResultProvider));
 
         if (oldProvider is not null)
@@ -79,23 +78,17 @@ public sealed class DisplayNameStartup : StartupBase
         }
 
         services.AddScoped<IUserPickerResultProvider, DisplayNameUserPickerResultProvider>();
-
         services.AddDisplayNameProvider();
         services.AddContentPart<UserFullNamePart>();
         services.AddDisplayDriver<User, UserFullNamePartDisplayDriver>();
-
         services.AddDataMigration<UserFullNameMigrations>();
         services.AddIndexProvider<UserFullNameIndexProvider>();
-
         services.AddPermissionProvider<UserDisplayNamePermissionsProvider>();
-
         services.AddSiteDisplayDriver<DisplayNameSettingsDisplayDriver>();
         services.AddNavigationProvider<UserDisplayNameAdminMenu>();
-
         services.AddContentField<UserPickerField>()
             .RemoveDisplayDriver<UserPickerFieldDisplayDriver>()
             .UseDisplayDriver<DisplayNameUserPickerFieldDisplayDriver>(d => !string.Equals(d, "UserNames", StringComparison.OrdinalIgnoreCase));
-
         services.AddContentPart<CommonPart>()
             .ForEditor<PermissionDefinedEditorDriver>(editor => editor == PermissionDefinedEditorDriver.PermissionDefinedEditor)
             .ForEditor<OwnerEditorDriver>(editor => string.IsNullOrWhiteSpace(editor) || editor.Equals("Standard", StringComparison.OrdinalIgnoreCase));
@@ -131,7 +124,6 @@ public sealed class AvatarStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddShapeTableProvider<AvatarShapeTableProvider>();
-
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
         services.AddResourceConfiguration<AvatarResourceManagementOptionsConfiguration>();
@@ -139,6 +131,7 @@ public sealed class AvatarStartup : StartupBase
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
+
         services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();

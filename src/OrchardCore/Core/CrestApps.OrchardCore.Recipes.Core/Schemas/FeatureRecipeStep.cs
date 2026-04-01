@@ -9,9 +9,9 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class FeatureRecipeStep : IRecipeStep
 {
     private readonly IShellFeaturesManager _shellFeaturesManager;
+
     private JsonSchema _cached;
     public string Name => "feature";
-
     public FeatureRecipeStep(IShellFeaturesManager shellFeaturesManager)
     {
         _shellFeaturesManager = shellFeaturesManager;
@@ -25,23 +25,21 @@ public sealed class FeatureRecipeStep : IRecipeStep
         }
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
-
         var featureItemSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
             .Enum(features.Select(f => f.Id));
-
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
-                ("enable", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(featureItemSchema)
-                    .Description("Feature IDs to enable.")),
-                ("disable", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(featureItemSchema)
-                    .Description("Feature IDs to disable.")))
+        ("enable", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(featureItemSchema)
+            .Description("Feature IDs to enable.")),
+        ("disable", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(featureItemSchema)
+            .Description("Feature IDs to disable.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

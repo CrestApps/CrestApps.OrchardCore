@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.AI.Chat.Services;
 
 /// <summary>
-/// Caches tabular batch processing results using distributed cache to avoid 
+/// Caches tabular batch processing results using distributed cache to avoid
 /// re-processing documents on every chat message.
 /// Cache keys are based on document content hash + user prompt to ensure accurate cache hits.
 /// </summary>
@@ -58,7 +58,7 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
         {
             return string.Empty;
         }
-        var builder = ZString.CreateStringBuilder();
+        using var builder = ZString.CreateStringBuilder();
 
         foreach (var (fileName, content) in documents.OrderBy(d => d.FileName))
         {
@@ -189,8 +189,8 @@ public sealed class TabularBatchResultCache : ITabularBatchResultCache
     {
         var minutes = _settings.CacheExpirationMinutes;
         return minutes > 0
-            ? TimeSpan.FromMinutes(minutes)
-            : DefaultCacheExpiration;
+        ? TimeSpan.FromMinutes(minutes)
+        : DefaultCacheExpiration;
     }
 
     private static string ComputeHash(string input)

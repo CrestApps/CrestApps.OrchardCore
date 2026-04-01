@@ -6,6 +6,7 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,7 @@ public sealed class AzureOpenAIClientProvider : AIClientProviderBase
     public AzureOpenAIClientProvider(
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory)
-        : base(serviceProvider)
+    : base(serviceProvider)
     {
         _loggerFactory = loggerFactory;
     }

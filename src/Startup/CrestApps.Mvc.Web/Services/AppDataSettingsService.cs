@@ -6,7 +6,6 @@ public sealed class AppDataSettingsService<T>
     private readonly IConfiguration _configuration;
     private readonly AppDataConfigurationFileService _configurationFileService;
     private readonly AppDataSettingsSectionResolver _sectionResolver;
-
     public AppDataSettingsService(
         IConfiguration configuration,
         AppDataConfigurationFileService configurationFileService,
@@ -20,12 +19,14 @@ public sealed class AppDataSettingsService<T>
     public Task<T> GetAsync()
     {
         var sectionKey = _sectionResolver.GetSectionKey<T>();
+
         return Task.FromResult(_configuration.GetSection(sectionKey).Get<T>() ?? new T());
     }
 
     public Task SaveAsync(T settings)
     {
         var sectionKey = _sectionResolver.GetSectionKey<T>();
+
         return _configurationFileService.SaveSectionAsync(sectionKey, settings);
     }
 }

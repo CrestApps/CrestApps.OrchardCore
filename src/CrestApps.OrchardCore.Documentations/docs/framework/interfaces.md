@@ -477,7 +477,7 @@ Interfaces for creating and providing low-level AI clients (chat, embedding, ima
 
 ### IAIClientFactory
 
-Factory for creating AI clients. Returns `IChatClient`, `IEmbeddingGenerator`, `IImageGenerator`, `ISpeechToTextClient`, and `ITextToSpeechClient` instances from provider, connection, and deployment names.
+Factory for creating AI clients. Returns `IChatClient`, `IEmbeddingGenerator`, `IImageGenerator`, `ISpeechToTextClient`, and `Microsoft.Extensions.AI.ITextToSpeechClient` instances from provider, connection, and deployment names.
 
 - **Namespace**: `CrestApps.AI`
 - **Extends**: None
@@ -2348,18 +2348,18 @@ public interface IA2AConnectionAuthService
 
 ## Templates &amp; Prompting
 
-Discover, parse, render, and compose AI prompt templates.
+Discover, parse, render, and compose templates.
 
-### IAITemplateParser
+### ITemplateParser
 
-Parses AI template content into metadata and body. Implement this to add support for additional file formats.
+Parses template content into metadata and body. Implement this to add support for additional file formats.
 
-- **Namespace**: `CrestApps.AI.Prompting.Parsing`
+- **Namespace**: `CrestApps.Templates.Parsing`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
 ```csharp
-public interface IAITemplateParser
+public interface ITemplateParser
 {
     /// <summary>
     /// Gets the file extensions this parser supports (e.g., ".md", ".yaml").
@@ -2369,38 +2369,38 @@ public interface IAITemplateParser
     /// <summary>
     /// Parses the raw content of a template file, separating metadata from the body.
     /// </summary>
-    AITemplateParseResult Parse(string rawContent);
+    TemplateParseResult Parse(string rawContent);
 }
 ```
 
-### IAITemplateProvider
+### ITemplateProvider
 
 Provides prompt templates from a specific source. Implement this to add custom template discovery.
 
-- **Namespace**: `CrestApps.AI.Prompting.Providers`
+- **Namespace**: `CrestApps.Templates.Providers`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
 ```csharp
-public interface IAITemplateProvider
+public interface ITemplateProvider
 {
     /// <summary>
     /// Gets all prompt templates from this provider.
     /// </summary>
-    Task<IReadOnlyList<AITemplate>> GetTemplatesAsync();
+    Task<IReadOnlyList<Template>> GetTemplatesAsync();
 }
 ```
 
-### IAITemplateEngine
+### ITemplateEngine
 
 Processes AI Liquid templates: renders them with arguments and validates their syntax.
 
-- **Namespace**: `CrestApps.AI.Prompting.Rendering`
+- **Namespace**: `CrestApps.Templates.Rendering`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
 ```csharp
-public interface IAITemplateEngine
+public interface ITemplateEngine
 {
     /// <summary>
     /// Renders a Liquid template string with the given arguments.
@@ -2416,26 +2416,26 @@ public interface IAITemplateEngine
 }
 ```
 
-### IAITemplateService
+### ITemplateService
 
-High-level service for discovering, listing, rendering, and composing AI prompt templates.
+High-level service for discovering, listing, rendering, and composing templates.
 
-- **Namespace**: `CrestApps.AI.Prompting.Services`
+- **Namespace**: `CrestApps.Templates.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
 ```csharp
-public interface IAITemplateService
+public interface ITemplateService
 {
     /// <summary>
     /// Lists all available prompt templates.
     /// </summary>
-    Task<IReadOnlyList<AITemplate>> ListAsync();
+    Task<IReadOnlyList<Template>> ListAsync();
 
     /// <summary>
     /// Gets a prompt template by its unique identifier.
     /// </summary>
-    Task<AITemplate> GetAsync(string id);
+    Task<Template> GetAsync(string id);
 
     /// <summary>
     /// Renders a prompt template with the provided arguments.
@@ -2478,13 +2478,13 @@ public interface ISpeechVoiceResolver
 }
 ```
 
-### ITextToSpeechClient
+### Microsoft.Extensions.AI.ITextToSpeechClient
 
-Synthesizes text into audio speech, supporting both one-shot and streaming modes. Thread-safe for concurrent use.
+The framework now relies on the `Microsoft.Extensions.AI` speech abstractions directly instead of a CrestApps-specific text-to-speech contract. `IAIClientFactory` and `IAIClientProvider` return `Microsoft.Extensions.AI.ITextToSpeechClient`, along with the corresponding `TextToSpeechOptions`, `TextToSpeechResponse`, and `TextToSpeechResponseUpdate` types from the same package.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `Microsoft.Extensions.AI`
 - **Extends**: `IDisposable`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `Microsoft.Extensions.AI.Abstractions`
 
 ```csharp
 public interface ITextToSpeechClient : IDisposable
@@ -2522,7 +2522,7 @@ Interfaces for the GitHub Copilot-style embedded chat experience.
 
 Abstracts storage and retrieval of GitHub OAuth credentials per user. Implement with your preferred user store.
 
-- **Namespace**: `CrestApps.AI.Chat.Copilot`
+- **Namespace**: `CrestApps.AI.Copilot`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 

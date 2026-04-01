@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Copilot.Models;
 using CrestApps.Mvc.Web.Models;
 using CrestApps.Mvc.Web.Services;
 

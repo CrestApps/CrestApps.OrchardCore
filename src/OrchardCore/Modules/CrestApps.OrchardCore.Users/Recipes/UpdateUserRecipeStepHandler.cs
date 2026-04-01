@@ -13,9 +13,8 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
     private int _batchSize = DefaultBatchSize;
 
     private readonly ISession _session;
-
     public UpdateUserRecipeStepHandler(ISession session)
-        : base("IndexUsers")
+    : base("IndexUsers")
     {
         _session = session;
     }
@@ -31,13 +30,10 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
         }
 
         await GetTotalAsync(step);
-
         var currentBatch = 0;
-
         while (true)
         {
             var users = await GetNextBatchAsync(step, currentBatch);
-
             var totalUsers = users.Count();
 
             if (totalUsers == 0)

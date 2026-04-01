@@ -201,11 +201,11 @@ public sealed class OpenXmlIngestionDocumentReader : IngestionDocumentReader
 
         if (cell.DataType?.Value == CellValues.SharedString &&
             int.TryParse(value, out var index) &&
-            table != null)
+                table != null)
         {
             var item = table.ChildElements.Count > index
-                ? table.ChildElements[index]
-                : null;
+            ? table.ChildElements[index]
+            : null;
 
             return item?.InnerText ?? value;
         }

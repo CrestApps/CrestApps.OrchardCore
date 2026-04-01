@@ -44,7 +44,7 @@ Add the framework packages your application needs:
 In your `Program.cs`, register the CrestApps AI services:
 
 ```csharp
-using CrestApps.AI;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -139,7 +139,7 @@ Add provider configuration to `appsettings.json`:
 If you want to persist AI profiles, connections, and chat sessions, use the YesSql store:
 
 ```csharp
-using CrestApps.AI.Models;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.Data.YesSql;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -188,7 +188,7 @@ YesSql supports SQLite, PostgreSQL, SQL Server, and MySQL. Simply swap the provi
 
 ```csharp
 using System.Threading.Channels;
-using CrestApps.AI;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Chat.Hubs;
 using CrestApps.AI.Chat.Models;
 using Microsoft.AspNetCore.SignalR;

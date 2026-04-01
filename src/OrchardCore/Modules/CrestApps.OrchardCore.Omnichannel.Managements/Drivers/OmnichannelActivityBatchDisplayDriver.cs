@@ -26,7 +26,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
-
     public OmnichannelActivityBatchDisplayDriver(
         ICatalog<OmnichannelCampaign> campaignCatalog,
         UserManager<IUser> userManager,
@@ -79,9 +78,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.LeadCreatedFrom = batch.LeadCreatedFrom;
             model.LeadCreatedTo = batch.LeadCreatedTo;
             model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
-
             model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
-
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
 
@@ -99,15 +96,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             }
 
             var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
-
             var usersListItems = new List<SelectListItem>();
 
             foreach (var user in users)
             {
                 var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
-
                 var displayName = await _displayNameProvider.GetAsync(user);
-
                 usersListItems.Add(new SelectListItem(displayName, userId));
             }
 
@@ -120,7 +114,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(S["High"], nameof(ActivityUrgencyLevel.High)),
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
-
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
@@ -130,7 +123,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)
     {
         var model = new OmnichannelActivityBatchViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrEmpty(model.DisplayText))
@@ -167,7 +159,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.CampaignId = model.CampaignId;
         batch.SubjectContentType = model.SubjectContentType;
         batch.ContactContentType = model.ContactContentType;
-
         batch.Instructions = model.Instructions?.Trim();
         batch.UrgencyLevel = model.UrgencyLevel;
         batch.UserIds = model.UserIds ?? [];

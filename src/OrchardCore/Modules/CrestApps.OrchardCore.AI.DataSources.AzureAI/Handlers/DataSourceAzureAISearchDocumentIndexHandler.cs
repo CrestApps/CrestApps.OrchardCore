@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Search.AzureAI;
@@ -17,7 +17,7 @@ internal sealed class DataSourceAzureAISearchDocumentIndexHandler : IDocumentInd
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            indexProfile.ProviderName != AzureAISearchConstants.ProviderName)
+                indexProfile.ProviderName != AzureAISearchConstants.ProviderName)
         {
             return Task.CompletedTask;
         }

@@ -1,8 +1,9 @@
-using CrestApps.AI;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
-
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.AI.Memory.Tools;
+using CrestApps.Templates.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,14 +13,13 @@ namespace CrestApps.OrchardCore.AI.Memory.Handlers;
 
 internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly ILogger _logger;
-
     public AIMemoryOrchestrationHandler(
-        IAITemplateService templateService,
+        ITemplateService templateService,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
         IOptions<AIToolDefinitionOptions> toolDefinitions,
@@ -34,7 +34,6 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
         => Task.CompletedTask;
-
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
         if (context.OrchestrationContext.CompletionContext is null)
@@ -76,14 +75,11 @@ internal sealed class AIMemoryOrchestrationHandler : IOrchestrationContextBuilde
 
         context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasMemory] = true;
         AIInvocationScope.Current?.Items.TryAdd(MemoryConstants.CompletionContextKeys.UserId, userId);
-
         var memoryTools = _toolDefinitions.Tools
             .Where(t => t.Value.HasPurpose(AIToolPurposes.Memory))
             .Select(t => t.Value)
             .ToList();
-
         context.OrchestrationContext.MustIncludeTools.AddRange(memoryTools.Select(tool => tool.Name));
-
         var header = await _templateService.RenderAsync(
             MemoryConstants.TemplateIds.MemoryAvailability,
             new Dictionary<string, object>

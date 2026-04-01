@@ -23,8 +23,8 @@ Other modules can register additional template sources through the `AIOptions.Ad
 Templates can come from three discovery locations:
 
 - **Database-stored templates** — Created and managed through the admin UI at runtime.
-- **File-based templates (Modules)** — Discovered from `AITemplates/Profiles/` directories embedded in modules, using the same markdown front-matter format as [AI Prompt Templates](prompt-templates).
-- **File-based templates (App_Data)** — Discovered from `App_Data/AITemplates/Profiles/` (global) and `App_Data/Sites/{tenantName}/AITemplates/Profiles/` (tenant-specific) directories on the filesystem.
+- **File-based templates (Modules)** — Discovered from `Templates/Profiles/` directories embedded in modules, using the same markdown front-matter format as [AI Prompt Templates](prompt-templates).
+- **File-based templates (App_Data)** — Discovered from `App_Data/Templates/Profiles/` (global) and `App_Data/Sites/{tenantName}/Templates/Profiles/` (tenant-specific) directories on the filesystem.
 
 Both file-based and database sources are merged by a unified service, with database templates taking precedence when names conflict.
 
@@ -118,7 +118,7 @@ The template editor mirrors the AI Profile editor with the same tabbed layout (C
 
 ### Module-Embedded Templates
 
-Create `.md` files in the `AITemplates/Profiles/` directory of any module:
+Create `.md` files in the `Templates/Profiles/` directory of any module:
 
 ```
 MyModule/
@@ -134,8 +134,8 @@ The filename (without extension) becomes the template name. For example, `custom
 
 You can also place template files in the `App_Data` directory for local customization without modifying module code. Two locations are scanned:
 
-- **Global** — `App_Data/AITemplates/Profiles/` — Templates available to all tenants.
-- **Tenant-specific** — `App_Data/Sites/{tenantName}/AITemplates/Profiles/` — Templates specific to a tenant.
+- **Global** — `App_Data/Templates/Profiles/` — Templates available to all tenants.
+- **Tenant-specific** — `App_Data/Sites/{tenantName}/Templates/Profiles/` — Templates specific to a tenant.
 
 Templates in App_Data use the same markdown front-matter format as module-embedded templates. The `Source` front-matter field can be used to override the default source (which is `Profile`).
 
@@ -347,7 +347,7 @@ AI Profile Templates can be exported and imported using Orchard Core's deploymen
 3. Add the **AI Profile Templates** step.
 4. Choose **Include all** to export all templates, or select specific templates by name.
 
-The deployment step exports database-stored templates as JSON. File-based templates (from module `AITemplates/Profiles/` directories or App_Data folders) are not included in deployments since they are shipped with module code or managed locally.
+The deployment step exports database-stored templates as JSON. File-based templates (from module `Templates/Profiles/` directories or App_Data folders) are not included in deployments since they are shipped with module code or managed locally.
 
 ---
 

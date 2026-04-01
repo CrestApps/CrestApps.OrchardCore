@@ -62,6 +62,7 @@ public static class AIFunctionArgumentsExtensions
         }
 
         // Allow unauthenticated MCP requests since MCP server handles auth via policy.
+
         return arguments.Context?.ContainsKey("mcpRequest") == true;
     }
 

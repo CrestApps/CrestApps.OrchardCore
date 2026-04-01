@@ -11,7 +11,6 @@ public sealed class SpeechVoiceLocalizationHelperTests
         var cultures = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
             [],
             new CultureInfo("en-US"));
-
         Assert.Contains("en-US", cultures);
         Assert.Contains("en", cultures);
     }
@@ -25,9 +24,7 @@ public sealed class SpeechVoiceLocalizationHelperTests
         var allowedCultures = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
             [],
             new CultureInfo("en-US"));
-
         var result = SpeechVoiceLocalizationHelper.IsLanguageAllowed(language, allowedCultures);
-
         Assert.Equal(expected, result);
     }
 }

@@ -1,9 +1,11 @@
 using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -21,9 +23,7 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
     {
         var handler = CreateHandler([], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query");
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         Assert.Equal(string.Empty, context.SystemMessageBuilder.ToString());
     }
 
@@ -36,9 +36,7 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "");
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         Assert.Equal(string.Empty, context.SystemMessageBuilder.ToString());
         fakeHandler.Verify(h => h.CanHandleAsync(It.IsAny<OrchestrationContextBuiltContext>()), Times.Never);
     }
@@ -52,9 +50,7 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: false);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query");
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         Assert.Equal(string.Empty, context.SystemMessageBuilder.ToString());
     }
 
@@ -69,9 +65,7 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: false);
         var context = CreateOrchestrationContext(userMessage: "test query", disableTools: false);
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagToolSearchRelaxed}]", message);
     }
@@ -86,12 +80,10 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: false);
         var context = CreateOrchestrationContext(userMessage: "test query", disableTools: false);
-
         var profile = new AIProfile();
         profile.Put(new AIDataSourceRagMetadata { IsInScope = true });
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagToolSearchStrict}]", message);
     }
@@ -106,12 +98,9 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query");
-
         var profile = new AIProfile();
         // No AIDataSourceRagMetadata → IsInScope is null (not true).
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagResponseGuidelines}]", message);
     }
@@ -126,12 +115,10 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: false);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query", disableTools: true);
-
         var profile = new AIProfile();
         profile.Put(new AIDataSourceRagMetadata { IsInScope = true });
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagScopeNoRefsToolsDisabled}]", message);
     }
@@ -146,12 +133,10 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: false);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query", disableTools: false);
-
         var profile = new AIProfile();
         profile.Put(new AIDataSourceRagMetadata { IsInScope = true });
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagScopeNoRefsToolsEnabled}]", message);
     }
@@ -166,12 +151,10 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query", disableTools: false);
-
         var profile = new AIProfile();
         profile.Put(new AIDataSourceRagMetadata { IsInScope = true });
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagScopeWithRefs}]", message);
     }
@@ -186,12 +169,9 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: false);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query");
-
         var profile = new AIProfile();
         // No AIDataSourceRagMetadata → IsInScope is null (not true).
-
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
-
         Assert.Equal(string.Empty, context.SystemMessageBuilder.ToString());
     }
 
@@ -204,12 +184,10 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var fakeHandler = CreateFakeRagHandler(canHandle: true, addDataSourceRefs: true);
         var handler = CreateHandler([fakeHandler.Object], enablePreemptiveRag: true);
         var context = CreateOrchestrationContext(userMessage: "test query");
-
         var interaction = new ChatInteraction();
         interaction.Put(new AIDataSourceRagMetadata { IsInScope = true });
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(interaction, context));
-
         var message = context.SystemMessageBuilder.ToString();
         Assert.Contains($"[Template: {AITemplateIds.RagScopeWithRefs}]", message);
     }
@@ -222,10 +200,9 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         var deploymentManager = new Mock<IAIDeploymentManager>();
         var queryProvider = new PreemptiveSearchQueryProvider(
             new NullAIClientFactory(),
-            deploymentManager.Object,
-            templateService,
-            NullLogger<PreemptiveSearchQueryProvider>.Instance);
-
+        deploymentManager.Object,
+        templateService,
+        NullLogger<PreemptiveSearchQueryProvider>.Instance);
         var settings = Options.Create(new DefaultOrchestratorSettings { EnablePreemptiveRag = enablePreemptiveRag });
 
         return new PreemptiveRagOrchestrationHandler(
@@ -267,17 +244,15 @@ public sealed class PreemptiveRagOrchestrationHandlerTests
         };
     }
 
-    private sealed class FakeAITemplateService : IAITemplateService
+    private sealed class FakeAITemplateService : ITemplateService
     {
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
-            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+        public Task<IReadOnlyList<Template>> ListAsync()
+            => Task.FromResult<IReadOnlyList<Template>>([]);
 
-        public Task<AITemplate> GetAsync(string id)
-            => Task.FromResult<AITemplate>(null);
-
+        public Task<Template> GetAsync(string id)
+            => Task.FromResult<Template>(null);
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
             => Task.FromResult($"[Template: {id}]");
-
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => Task.FromResult(string.Join(separator, ids.Select(id => $"[Template: {id}]")));
     }

@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,42 +12,41 @@ namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 public sealed class ListAIProfilesTool : AIFunction
 {
     public const string TheName = "listAIProfiles";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "description": "Optional. Filter profiles by type: 'Chat', 'Utility', or 'Embedding'.",
-              "enum": ["Chat", "Utility", "Embedding"]
-            },
-            "onlyWithMetricsEnabled": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have session analytics metrics enabled."
-            },
-            "onlyWithDataExtraction": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have data extraction enabled."
-            },
-            "onlyWithPostSessionProcessing": {
-              "type": "boolean",
-              "description": "Optional. When true, only return profiles that have post-session processing enabled."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Optional. Filter profiles by type: 'Chat', 'Utility', or 'Embedding'.",
+          "enum": [
+            "Chat",
+            "Utility",
+            "Embedding"
+          ]
+        },
+        "onlyWithMetricsEnabled": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have session analytics metrics enabled."
+        },
+        "onlyWithDataExtraction": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have data extraction enabled."
+        },
+        "onlyWithPostSessionProcessing": {
+          "type": "boolean",
+          "description": "Optional. When true, only return profiles that have post-session processing enabled."
         }
-        """);
-
+      },
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description =>
         "Lists AI profiles with optional filters. " +
         "Can filter by profile type and by enabled features such as session analytics, data extraction, or post-session processing.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -59,13 +58,13 @@ public sealed class ListAIProfilesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
-
         var profiles = (await profileManager.GetAllAsync()).ToList();
 
         if (arguments.TryGetFirstString("type", out var typeStr)

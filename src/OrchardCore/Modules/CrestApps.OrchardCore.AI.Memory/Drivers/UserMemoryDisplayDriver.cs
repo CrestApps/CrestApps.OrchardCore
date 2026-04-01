@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.AI;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using CrestApps.Services;
@@ -22,7 +22,6 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ICatalogManager<AIMemoryEntry> memoryManager,
@@ -70,6 +69,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
         if (!model.ConfirmClearMemories)
         {
             context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.ConfirmClearMemories)}", S["Please confirm that you want to permanently clear all saved AI memory."]);
+
             return Edit(user, context);
         }
 
@@ -78,6 +78,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
         if (memories.Count == 0)
         {
             await _notifier.WarningAsync(H["No saved AI memory was found for your account."]);
+
             return Edit(user, context);
         }
 
@@ -98,6 +99,6 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
         return !string.IsNullOrEmpty(currentUserId) &&
             !string.IsNullOrEmpty(user?.UserId) &&
-            string.Equals(currentUserId, user.UserId, StringComparison.Ordinal);
+                string.Equals(currentUserId, user.UserId, StringComparison.Ordinal);
     }
 }

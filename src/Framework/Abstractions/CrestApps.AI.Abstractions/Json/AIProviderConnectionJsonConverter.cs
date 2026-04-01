@@ -20,19 +20,19 @@ public sealed class AIProviderConnectionJsonConverter : JsonConverter<AIProvider
         {
             ItemId = GetString(node, nameof(AIProviderConnection.ItemId)),
             Source = GetString(node, nameof(AIProviderConnection.Source))
-                ?? GetString(node, nameof(AIProviderConnection.ClientName))
-                ?? GetString(node, "ProviderName"),
+            ?? GetString(node, nameof(AIProviderConnection.ClientName))
+            ?? GetString(node, "ProviderName"),
             Name = GetString(node, nameof(AIProviderConnection.Name)),
             DisplayText = GetString(node, nameof(AIProviderConnection.DisplayText)),
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
             ChatDeploymentName = GetString(node, nameof(AIProviderConnection.ChatDeploymentName))
-                ?? GetString(node, "DefaultDeploymentName"),
+            ?? GetString(node, "DefaultDeploymentName"),
             EmbeddingDeploymentName = GetString(node, nameof(AIProviderConnection.EmbeddingDeploymentName))
-                ?? GetString(node, "DefaultEmbeddingDeploymentName"),
+            ?? GetString(node, "DefaultEmbeddingDeploymentName"),
             ImagesDeploymentName = GetString(node, nameof(AIProviderConnection.ImagesDeploymentName))
-                ?? GetString(node, "DefaultImagesDeploymentName"),
+            ?? GetString(node, "DefaultImagesDeploymentName"),
             UtilityDeploymentName = GetString(node, nameof(AIProviderConnection.UtilityDeploymentName))
-                ?? GetString(node, "DefaultUtilityDeploymentName"),
+            ?? GetString(node, "DefaultUtilityDeploymentName"),
 #pragma warning restore CS0618
             CreatedUtc = GetDateTime(node, nameof(AIProviderConnection.CreatedUtc)),
             Author = GetString(node, nameof(AIProviderConnection.Author)),

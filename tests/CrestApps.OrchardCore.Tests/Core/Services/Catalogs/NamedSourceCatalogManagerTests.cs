@@ -12,6 +12,7 @@ public sealed class NamedSourceCatalogManagerTests
         records ??= [];
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
+
         return new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, Enumerable.Empty<ICatalogEntryHandler<TestNamedSourceCatalogEntry>>(), logger);
     }
 
@@ -19,7 +20,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var manager = CreateManager([entry]);
+
         var result = await manager.FindByNameAsync("Test");
         Assert.Equal(entry, result);
     }
@@ -28,7 +31,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task GetAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var manager = CreateManager([entry]);
+
         var result = await manager.GetAsync("Test", "A");
         Assert.Equal(entry, result);
     }
@@ -37,12 +42,13 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task FindByNameAsync_InvokesLoadedHandler()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var records = new List<TestNamedSourceCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
-
         var handler = new TestCatalogEntryHandler<TestNamedSourceCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -54,7 +60,6 @@ public sealed class NamedSourceCatalogManagerTests
 
         var manager = new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, [handler], logger);
         await manager.FindByNameAsync("Test");
-
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);
@@ -64,12 +69,13 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task GetAsync_InvokesLoadedHandler()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var records = new List<TestNamedSourceCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
-
         var handler = new TestCatalogEntryHandler<TestNamedSourceCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -81,7 +87,6 @@ public sealed class NamedSourceCatalogManagerTests
 
         var manager = new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, [handler], logger);
         await manager.GetAsync("Test", "A");
-
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);

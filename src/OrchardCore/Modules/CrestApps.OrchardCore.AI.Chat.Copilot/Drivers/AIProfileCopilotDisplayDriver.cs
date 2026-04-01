@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat.Copilot.Models;
-using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.AI.Copilot.Models;
+using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
@@ -22,7 +22,6 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
@@ -42,10 +41,8 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
         {
             var copilotSettings = profile.As<CopilotSessionMetadata>();
-
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
-
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
@@ -54,6 +51,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             if (!model.IsCopilotConfigured)
             {
                 model.AvailableModels = [];
+
                 return;
             }
 
@@ -66,16 +64,18 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             {
                 // GitHub OAuth mode — check auth and load models from GitHub API.
                 var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+
                 if (user != null)
                 {
                     var userId = await _userManager.GetUserIdAsync(user);
                     model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+
                     if (model.IsAuthenticated)
                     {
                         var credential = await _oauthService.GetCredentialAsync(userId);
                         model.GitHubUsername = credential?.GitHubUsername;
-
                         var models = await _oauthService.ListModelsAsync(userId);
+
                         if (models.Count > 0)
                         {
                             model.AvailableModels = models
@@ -97,10 +97,9 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new EditCopilotProfileViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         // Only save Copilot settings if Copilot orchestrator is selected
+
         if (string.Equals(profile.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
             var copilotSettings = new CopilotSessionMetadata
@@ -116,6 +115,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                 // Copy the current user's GitHub credential to the profile so
                 // any chat session using this profile can reuse the token.
                 var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+
                 if (user is not null)
                 {
                     var userId = await _userManager.GetUserIdAsync(user);

@@ -1,13 +1,14 @@
 using System.Text.Json;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-namespace CrestApps.AI.Tools;
-
+namespace CrestApps.AI.Tooling;
 /// <summary>
 /// System tool that generates images from text descriptions using DALL-E or compatible image generation models.
 /// Returns markdown image syntax for inline rendering.
@@ -17,19 +18,19 @@ public sealed class GenerateImageTool : AIFunction
     public const string TheName = SystemToolNames.GenerateImage;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "prompt": {
-              "type": "string",
-              "description": "A detailed description of the image to generate."
-            }
-          },
-          "required": ["prompt"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "A detailed description of the image to generate."
         }
-        """);
+      },
+      "required": ["prompt"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -41,7 +42,6 @@ public sealed class GenerateImageTool : AIFunction
     {
         ["Strict"] = false,
     };
-
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,

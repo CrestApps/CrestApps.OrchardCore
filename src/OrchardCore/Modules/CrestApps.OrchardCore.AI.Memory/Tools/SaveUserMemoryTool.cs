@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI;
 using CrestApps.AI.Extensions;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
@@ -13,36 +13,35 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class SaveUserMemoryTool : AIFunction
 {
     public const string TheName = "save_user_memory";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "A short, stable name that identifies the memory."
-            },
-            "description": {
-              "type": "string",
-              "description": "A short semantic description of what this memory represents. Do not repeat the content verbatim."
-            },
-            "content": {
-              "type": "string",
-              "description": "The durable memory content to store, such as a preference, project, recurring topic, interest, or other reusable background detail."
-            }
-          },
-          "required": ["name", "description", "content"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A short, stable name that identifies the memory."
+        },
+        "description": {
+          "type": "string",
+          "description": "A short semantic description of what this memory represents. Do not repeat the content verbatim."
+        },
+        "content": {
+          "type": "string",
+          "description": "The durable memory content to store, such as a preference, project, recurring topic, interest, or other reusable background detail."
         }
-        """);
-
+      },
+      "required": [
+        "name",
+        "description",
+        "content"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Creates or updates a durable memory for the current authenticated user, such as a preference, project, recurring topic, interest, or other reusable background detail.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
@@ -55,9 +54,10 @@ public sealed class SaveUserMemoryTool : AIFunction
 
         if (!arguments.TryGetFirstString("name", out var name) ||
             !arguments.TryGetFirstString("description", out var description) ||
-            !arguments.TryGetFirstString("content", out var content))
+                !arguments.TryGetFirstString("content", out var content))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required arguments.", Name);
+
             return "'name', 'description', and 'content' arguments are required.";
         }
 
@@ -66,6 +66,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         if (string.IsNullOrEmpty(userId))
         {
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
+
             return "User memory is only available for authenticated users.";
         }
 

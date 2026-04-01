@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Clients;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
@@ -12,11 +12,10 @@ using OrchardCore.Search.Elasticsearch.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 
-
 public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
     public AIDocumentElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, aiClientFactory)
     {
     }
 
@@ -28,10 +27,8 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
 
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -40,14 +37,11 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
         }
 
         var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
-
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
-
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
-
         metadata.IndexMappings.KeyFieldName = AIConstants.ColumnNames.ChunkId;
         metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.DocumentId] = new KeywordProperty();
@@ -81,7 +75,6 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
             [
                 AIConstants.ColumnNames.Content,
             ];
-
             indexProfile.Put(metadata);
         }
     }

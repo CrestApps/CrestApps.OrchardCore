@@ -1,3 +1,4 @@
+using CrestApps.AI.Clients;
 using CrestApps.AI.Ollama.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

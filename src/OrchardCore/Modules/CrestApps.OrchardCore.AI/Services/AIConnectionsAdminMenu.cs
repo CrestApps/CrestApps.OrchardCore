@@ -7,7 +7,6 @@ namespace CrestApps.OrchardCore.AI.Services;
 public sealed class AIConnectionsAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
-
     public AIConnectionsAdminMenu(IStringLocalizer<AIConnectionsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -17,13 +16,13 @@ public sealed class AIConnectionsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Provider Connections"], S["Provider Connections"].PrefixPosition(), connections => connections
-                    .AddClass("openai-connections")
-                    .Id("openaiConnection")
-                    .Action("Index", "ProviderConnections", AIConstants.Feature.Area)
-                    .Permission(AIPermissions.ManageProviderConnections)
-                    .LocalNav()
-                ));
+            .Add(S["Provider Connections"], S["Provider Connections"].PrefixPosition(), connections => connections
+            .AddClass("openai-connections")
+            .Id("openaiConnection")
+            .Action("Index", "ProviderConnections", AIConstants.Feature.Area)
+            .Permission(AIPermissions.ManageProviderConnections)
+            .LocalNav()
+        ));
 
         return ValueTask.CompletedTask;
     }

@@ -22,7 +22,6 @@ public static class AIFunctionArgumentsExtensions
 
     public static bool TryGetFirstString(this AIFunctionArguments arguments, string key, out string value)
         => arguments.TryGetFirstString(key, false, out value);
-
     public static bool TryGetFirstString(this AIFunctionArguments arguments, string key, bool allowEmptyString, out string value)
     {
         if (arguments.TryGetFirst(key, out value))
@@ -69,9 +68,7 @@ public static class AIFunctionArgumentsExtensions
 
             // Handle nullable types (e.g. int?, DateTime?).
             var targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
-
             var safeValue = Convert.ChangeType(unsafeValue, targetType);
-
             value = (T)safeValue;
 
             return true;

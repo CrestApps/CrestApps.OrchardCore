@@ -22,12 +22,11 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
     private readonly IContentManager _contentManager;
     private readonly DocumentJsonSerializerOptions _jsonOptions;
     private readonly ILogger _logger;
-
     public ContentByIdResourceTypeHandler(
         IContentManager contentManager,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
         ILogger<ContentByIdResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _contentManager = contentManager;
         _jsonOptions = jsonOptions.Value;
@@ -63,8 +62,8 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
         if (contentItem is null)
         {
             var identifier = !string.IsNullOrEmpty(contentItemVersionId)
-                ? $"version '{contentItemVersionId}'"
-                : $"'{contentItemId}'";
+            ? $"version '{contentItemVersionId}'"
+            : $"'{contentItemId}'";
 
             return CreateErrorResult(resource.Resource.Uri, $"Content item not found: {identifier}");
         }
@@ -77,10 +76,11 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
                 }
+
             ]
         };
     }

@@ -2,14 +2,12 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "AI Documents",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
-
+    )]
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatDocuments,
     Name = "AI Documents",
@@ -18,11 +16,10 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatInteractions,
-        "OrchardCore.Indexing",
+    ChatInteractionsConstants.Feature.ChatInteractions,
+    "OrchardCore.Indexing",
     ]
-)]
-
+    )]
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatInteractionDocuments,
     Name = "AI Documents for Chat Interactions",
@@ -30,10 +27,9 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
+    ChatInteractionsConstants.Feature.ChatDocuments,
     ]
-)]
-
+    )]
 [assembly: Feature(
     Id = AIConstants.Feature.ProfileDocuments,
     Name = "AI Documents for Profiles",
@@ -41,11 +37,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        AIConstants.Feature.ChatCore,
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    AIConstants.Feature.ChatCore,
     ]
-)]
-
+    )]
 [assembly: Feature(
     Id = AIConstants.Feature.ChatSessionDocuments,
     Name = "AI Documents for Chat Sessions",
@@ -53,7 +48,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        AIConstants.Feature.Chat,
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    AIConstants.Feature.Chat,
     ]
-)]
+    )]

@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI;
 using CrestApps.AI.Extensions;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
@@ -12,28 +12,25 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class RemoveUserMemoryTool : AIFunction
 {
     public const string TheName = "remove_user_memory";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The stable name of the memory to remove."
-            }
-          },
-          "required": ["name"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The stable name of the memory to remove."
         }
-        """);
-
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Removes a previously saved long-term memory for the current authenticated user when it should be forgotten.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
@@ -47,6 +44,7 @@ public sealed class RemoveUserMemoryTool : AIFunction
         if (!arguments.TryGetFirstString("name", out var name))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'name'.", Name);
+
             return "The 'name' argument is required.";
         }
 
@@ -55,6 +53,7 @@ public sealed class RemoveUserMemoryTool : AIFunction
         if (string.IsNullOrEmpty(userId))
         {
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
+
             return "User memory is only available for authenticated users.";
         }
 

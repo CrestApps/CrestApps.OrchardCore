@@ -21,6 +21,7 @@ public sealed class OrchestratorBuilder<TOrchestrator>
     public OrchestratorBuilder<TOrchestrator> WithTitle(string title)
     {
         _entry.Title = title;
+
         return this;
     }
 }

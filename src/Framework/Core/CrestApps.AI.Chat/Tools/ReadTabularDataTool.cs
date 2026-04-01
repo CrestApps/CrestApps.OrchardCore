@@ -1,8 +1,9 @@
 using System.Text.Json;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using Cysharp.Text;
-
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,23 +22,23 @@ public sealed class ReadTabularDataTool : AIFunction
     private const int DefaultMaxRows = 100;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "document_id": {
-              "type": "string",
-              "description": "The unique identifier of the tabular document to read."
-            },
-            "max_rows": {
-              "type": "integer",
-              "description": "Maximum number of data rows to return. Defaults to 100."
-            }
-          },
-          "required": ["document_id"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "description": "The unique identifier of the tabular document to read."
+        },
+        "max_rows": {
+          "type": "integer",
+          "description": "Maximum number of data rows to return. Defaults to 100."
         }
-        """);
+      },
+      "required": ["document_id"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -95,7 +96,7 @@ public sealed class ReadTabularDataTool : AIFunction
             // Documents could be attached at the profile or the session level.
             if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                 sessionObj is AIChatSession session &&
-                session.Documents is { Count: > 0 })
+                    session.Documents is { Count: > 0 })
             {
                 validReferenceIds.Add(session.SessionId);
             }

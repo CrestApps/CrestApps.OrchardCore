@@ -12,13 +12,12 @@ namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 internal sealed class A2AApiKeyAuthenticationHandler : AuthenticationHandler<A2AApiKeyAuthenticationOptions>
 {
     private readonly IOptionsMonitor<A2AHostOptions> _hostOptionsMonitor;
-
     public A2AApiKeyAuthenticationHandler(
         IOptionsMonitor<A2AApiKeyAuthenticationOptions> options,
         IOptionsMonitor<A2AHostOptions> hostOptionsMonitor,
         ILoggerFactory loggerFactory,
         UrlEncoder encoder)
-        : base(options, loggerFactory, encoder)
+    : base(options, loggerFactory, encoder)
     {
         _hostOptionsMonitor = hostOptionsMonitor;
     }

@@ -113,15 +113,15 @@ The **Framework Layer** contains all abstractions, core services, and provider i
 | `CrestApps.AI.OpenAI.Azure.Core` | Azure OpenAI provider with data source integration |
 | `CrestApps.AI.Ollama.Core` | Ollama provider for locally hosted LLMs |
 | `CrestApps.AI.AzureAIInference.Core` | Azure AI Inference / GitHub Models provider |
-| `CrestApps.AI.Chat.Copilot` | GitHub Copilot chat orchestration, OAuth flow, credential management |
-| `CrestApps.AI.AzureAI` | Azure AI Search provider integration for indexing, document management, vector search, and OData filters |
-| `CrestApps.AI.Elasticsearch` | Elasticsearch provider integration for indexing, document management, vector search, and query/filter translation |
+| `CrestApps.AI.Copilot` | GitHub Copilot chat orchestration, OAuth flow, credential management |
+| `CrestApps.Azure.AISearch` | Azure AI Search provider integration for indexing, document management, vector search, and OData filters |
+| `CrestApps.Elasticsearch` | Elasticsearch provider integration for indexing, document management, vector search, and query/filter translation |
 | `CrestApps.AI.Mcp.Core` | Model Context Protocol (MCP) client and server |
 | `CrestApps.Azure.Core` | Azure-specific utilities (data protection, connection settings) |
 | `CrestApps.SignalR.Core` | SignalR hub abstractions for real-time AI chat |
 | `CrestApps.Support` | General utility classes |
 | `CrestApps.AI.Resources` | Shared frontend JavaScript resources for AI chat UI |
-| `CrestApps.AI.Prompting` | Prompt template engine |
+| `CrestApps.Templates` | Prompt template engine |
 
 ### Optional Middle Layer
 

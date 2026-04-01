@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
-
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
@@ -11,27 +10,22 @@
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI Copilot</PackageTags>
   </PropertyGroup>
-
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Users.Core" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Chat.Copilot/CrestApps.AI.Chat.Copilot.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <!-- Ensure direct dependencies so consumers don't need to manually include packages -->
     <ProjectReference Include="../CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
   </ItemGroup>
-
 </Project>

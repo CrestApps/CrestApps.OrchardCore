@@ -1,7 +1,9 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
-
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -11,7 +13,6 @@ namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 internal sealed class TestOrchestrator : IOrchestrator
 {
     public string Name => "custom";
-
     public async IAsyncEnumerable<ChatResponseUpdate> ExecuteStreamingAsync(
         OrchestrationContext context,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -20,6 +21,7 @@ internal sealed class TestOrchestrator : IOrchestrator
         {
             Contents = [new TextContent("test response")],
         };
+
         await Task.CompletedTask;
     }
 }
@@ -45,6 +47,7 @@ internal sealed class NullCompletionService : IAICompletionService
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
+
         yield break;
     }
 }
@@ -78,26 +81,20 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 {
     public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName)
         => new((IChatClient)null);
-
     public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName)
         => new((IEmbeddingGenerator<string, Embedding<float>>)null);
-
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
-        => new((IImageGenerator)null);
-
+    => new((IImageGenerator)null);
     public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
         => new((ISpeechToTextClient)null);
-
     public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
         => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
-
 #pragma warning disable MEAI001
-    public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-        => new((CrestApps.AI.ITextToSpeechClient)null);
-
-    public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-        => new((CrestApps.AI.ITextToSpeechClient)null);
+    public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+    => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
+    public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+        => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
 }

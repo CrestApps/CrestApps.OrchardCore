@@ -17,11 +17,10 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
 
     private readonly RecipeSchemaService _recipeSchemaService;
     private readonly ILogger _logger;
-
     public RecipeSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeSchemaResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _recipeSchemaService = recipeSchemaService;
         _logger = logger;
@@ -30,7 +29,6 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
     protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Returning full recipe schema.");
-
         var recipeSchema = await _recipeSchemaService.GetRecipeSchemaAsync();
 
         return new ReadResourceResult
@@ -39,10 +37,11 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/schema+json",
-                    Text = JsonSerializer.Serialize(recipeSchema),
+                Uri = resource.Resource.Uri,
+                MimeType = "application/schema+json",
+                Text = JsonSerializer.Serialize(recipeSchema),
                 }
+
             ]
         };
     }

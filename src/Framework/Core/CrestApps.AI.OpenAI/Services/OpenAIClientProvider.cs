@@ -1,6 +1,7 @@
 using System.ClientModel;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 using OpenAI;
 
@@ -9,7 +10,7 @@ namespace CrestApps.AI.OpenAI.Services;
 public sealed class OpenAIClientProvider : AIClientProviderBase
 {
     public OpenAIClientProvider(IServiceProvider serviceProvider)
-        : base(serviceProvider)
+    : base(serviceProvider)
     {
     }
 
@@ -21,8 +22,8 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
         var client = GetOpenAIClient(connection);
 
         return client
-             .GetChatClient(deploymentName)
-             .AsIChatClient();
+            .GetChatClient(deploymentName)
+            .AsIChatClient();
     }
 
     protected override IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator(AIProviderConnectionEntry connection, string deploymentName)
@@ -38,8 +39,8 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         var client = GetOpenAIClient(connection);
-
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
         return client.GetImageClient(deploymentName)
             .AsIImageGenerator();
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -50,8 +51,8 @@ public sealed class OpenAIClientProvider : AIClientProviderBase
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     {
         var client = GetOpenAIClient(connection);
-
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
         return client.GetAudioClient(deploymentName)
             .AsISpeechToTextClient();
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.

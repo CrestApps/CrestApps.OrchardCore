@@ -12,14 +12,13 @@ namespace CrestApps.OrchardCore.Tests.Mcp;
 public sealed class SseClientTransportProviderTests
 {
     private const string TestEndpoint = "https://mcp.example.com/sse";
-
     [Fact]
     public void CanHandle_SseConnection_ReturnsTrue()
     {
         // Arrange
         var connection = new McpConnection { Source = McpConstants.TransportTypes.Sse };
-        var provider = CreateProvider();
 
+        var provider = CreateProvider();
         // Act & Assert
         Assert.True(provider.CanHandle(connection));
     }
@@ -29,8 +28,8 @@ public sealed class SseClientTransportProviderTests
     {
         // Arrange
         var connection = new McpConnection { Source = McpConstants.TransportTypes.StdIo };
-        var provider = CreateProvider();
 
+        var provider = CreateProvider();
         // Act & Assert
         Assert.False(provider.CanHandle(connection));
     }
@@ -41,10 +40,8 @@ public sealed class SseClientTransportProviderTests
         // Arrange
         var connection = CreateConnection(McpClientAuthenticationType.Anonymous);
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.Empty(headers);
     }
@@ -70,12 +67,9 @@ public sealed class SseClientTransportProviderTests
         metadata.ApiKeyPrefix = prefix;
         metadata.ApiKey = apiKey;
         connection.Put(metadata);
-
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.True(headers.ContainsKey(expectedHeaderName));
         Assert.Equal(expectedHeaderValue, headers[expectedHeaderName]);
@@ -92,12 +86,9 @@ public sealed class SseClientTransportProviderTests
         metadata.BasicUsername = username;
         metadata.BasicPassword = password;
         connection.Put(metadata);
-
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         var expectedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
         Assert.True(headers.ContainsKey("Authorization"));
@@ -113,12 +104,9 @@ public sealed class SseClientTransportProviderTests
         metadata.BasicUsername = "testuser";
         metadata.BasicPassword = null;
         connection.Put(metadata);
-
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         var expectedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes("testuser:"));
         Assert.True(headers.ContainsKey("Authorization"));
@@ -134,7 +122,6 @@ public sealed class SseClientTransportProviderTests
         var clientId = "my-client-id";
         var clientSecret = "my-client-secret";
         var scopes = "read write";
-
         var connection = CreateConnection(McpClientAuthenticationType.OAuth2ClientCredentials);
         var metadata = connection.As<SseMcpConnectionMetadata>();
         metadata.OAuth2TokenEndpoint = tokenEndpoint;
@@ -142,20 +129,17 @@ public sealed class SseClientTransportProviderTests
         metadata.OAuth2ClientSecret = clientSecret;
         metadata.OAuth2Scopes = scopes;
         connection.Put(metadata);
-
         var tokenService = new Mock<IOAuth2TokenService>();
         tokenService
             .Setup(x => x.AcquireTokenAsync(tokenEndpoint, clientId, clientSecret, scopes, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedToken);
-
         var provider = CreateProvider(tokenService: tokenService.Object);
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.True(headers.ContainsKey("Authorization"));
         Assert.Equal($"Bearer {expectedToken}", headers["Authorization"]);
+
         tokenService.Verify(x => x.AcquireTokenAsync(tokenEndpoint, clientId, clientSecret, scopes, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -169,7 +153,6 @@ public sealed class SseClientTransportProviderTests
         var privateKey = "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----";
         var keyId = "key-001";
         var scopes = "api";
-
         var connection = CreateConnection(McpClientAuthenticationType.OAuth2PrivateKeyJwt);
         var metadata = connection.As<SseMcpConnectionMetadata>();
         metadata.OAuth2TokenEndpoint = tokenEndpoint;
@@ -178,20 +161,17 @@ public sealed class SseClientTransportProviderTests
         metadata.OAuth2KeyId = keyId;
         metadata.OAuth2Scopes = scopes;
         connection.Put(metadata);
-
         var tokenService = new Mock<IOAuth2TokenService>();
         tokenService
             .Setup(x => x.AcquireTokenWithPrivateKeyJwtAsync(tokenEndpoint, clientId, privateKey, keyId, scopes, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedToken);
-
         var provider = CreateProvider(tokenService: tokenService.Object);
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.True(headers.ContainsKey("Authorization"));
         Assert.Equal($"Bearer {expectedToken}", headers["Authorization"]);
+
         tokenService.Verify(x => x.AcquireTokenWithPrivateKeyJwtAsync(tokenEndpoint, clientId, privateKey, keyId, scopes, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -203,13 +183,12 @@ public sealed class SseClientTransportProviderTests
         var tokenEndpoint = "https://auth.example.com/token";
         var clientId = "my-client-id";
         var rawCertBytes = new byte[] { 1, 2, 3, 4, 5 };
+
         var certBase64 = Convert.ToBase64String(rawCertBytes);
         var certPassword = "cert-password";
         var scopes = "admin";
-
         // Protect values like the display driver does before storing.
         var protector = new PassthroughDataProtectionProvider().CreateProtector("test");
-
         var connection = CreateConnection(McpClientAuthenticationType.OAuth2Mtls);
         var metadata = connection.As<SseMcpConnectionMetadata>();
         metadata.OAuth2TokenEndpoint = tokenEndpoint;
@@ -218,23 +197,19 @@ public sealed class SseClientTransportProviderTests
         metadata.OAuth2ClientCertificatePassword = protector.Protect(certPassword);
         metadata.OAuth2Scopes = scopes;
         connection.Put(metadata);
-
         var tokenService = new Mock<IOAuth2TokenService>();
         tokenService
             .Setup(x => x.AcquireTokenWithMtlsAsync(
                 tokenEndpoint,
                 clientId,
                 It.Is<byte[]>(b => b.SequenceEqual(rawCertBytes)),
-                certPassword,
-                scopes,
-                It.IsAny<CancellationToken>()))
+        certPassword,
+        scopes,
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedToken);
-
         var provider = CreateProvider(tokenService: tokenService.Object);
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.True(headers.ContainsKey("Authorization"));
         Assert.Equal($"Bearer {expectedToken}", headers["Authorization"]);
@@ -251,16 +226,15 @@ public sealed class SseClientTransportProviderTests
             ["X-Custom-Header"] = "custom-value",
             ["Authorization"] = "Bearer custom-token",
         };
+
         connection.Put(metadata);
-
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.Equal(2, headers.Count);
         Assert.Equal("custom-value", headers["X-Custom-Header"]);
+
         Assert.Equal("Bearer custom-token", headers["Authorization"]);
     }
 
@@ -272,12 +246,9 @@ public sealed class SseClientTransportProviderTests
         var metadata = connection.As<SseMcpConnectionMetadata>();
         metadata.AdditionalHeaders = null;
         connection.Put(metadata);
-
         var provider = CreateProvider();
-
         // Act
         var headers = await GetHeadersAsync(provider, connection);
-
         // Assert
         Assert.Empty(headers);
     }
@@ -292,14 +263,11 @@ public sealed class SseClientTransportProviderTests
         metadata.OAuth2ClientId = "client-id";
         metadata.OAuth2ClientSecret = "client-secret";
         connection.Put(metadata);
-
         var tokenService = new Mock<IOAuth2TokenService>();
         tokenService
             .Setup(x => x.AcquireTokenAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("Token request failed"));
-
         var provider = CreateProvider(tokenService: tokenService.Object);
-
         // Act & Assert
         await Assert.ThrowsAsync<HttpRequestException>(() => provider.GetAsync(connection));
     }
@@ -334,14 +302,13 @@ public sealed class SseClientTransportProviderTests
     private static async Task<Dictionary<string, string>> GetHeadersAsync(SseClientTransportProvider provider, McpConnection connection)
     {
         var transport = await provider.GetAsync(connection);
-
         // Extract headers via reflection since HttpClientTransport doesn't expose them directly.
         var optionsField = typeof(HttpClientTransport)
             .GetField("_options", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var options = optionsField?.GetValue(transport) as HttpClientTransportOptions;
 
         return options?.AdditionalHeaders as Dictionary<string, string>
-            ?? new Dictionary<string, string>();
+        ?? new Dictionary<string, string>();
     }
 
     /// <summary>
@@ -356,9 +323,7 @@ public sealed class SseClientTransportProviderTests
     private sealed class PassthroughDataProtector : IDataProtector
     {
         public IDataProtector CreateProtector(string purpose) => this;
-
         public byte[] Protect(byte[] plaintext) => plaintext;
-
         public byte[] Unprotect(byte[] protectedData) => protectedData;
     }
 }

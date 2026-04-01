@@ -1,7 +1,8 @@
 using System.Globalization;
-using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
+using CrestApps.AI.Speech;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
@@ -14,7 +15,6 @@ public sealed class DefaultSpeechVoicePresenter
     private readonly ISpeechVoiceResolver _speechVoiceResolver;
     private readonly ILocalizationService _localizationService;
     private readonly ILogger _logger;
-
     public DefaultSpeechVoicePresenter(
         IAIDeploymentManager deploymentManager,
         ISpeechVoiceResolver speechVoiceResolver,
@@ -32,8 +32,8 @@ public sealed class DefaultSpeechVoicePresenter
         try
         {
             var deployment = !string.IsNullOrEmpty(deploymentName)
-                ? await _deploymentManager.FindByNameAsync(deploymentName)
-                : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
+            ? await _deploymentManager.FindByNameAsync(deploymentName)
+            : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
 
             if (deployment == null)
             {
@@ -41,13 +41,11 @@ public sealed class DefaultSpeechVoicePresenter
             }
 
             var speechVoices = await _speechVoiceResolver.GetSpeechVoicesAsync(deployment);
-
             var supportedCultures = await _localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
                 supportedCultures,
                 CultureInfo.CurrentCulture,
                 CultureInfo.CurrentUICulture);
-
             var voices = new List<SelectListItem>();
 
             foreach (var voiceGroup in speechVoices
@@ -73,5 +71,4 @@ public sealed class DefaultSpeechVoicePresenter
             return [];
         }
     }
-
 }

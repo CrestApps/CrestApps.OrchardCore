@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 
 namespace CrestApps.Support;
+
 /// <summary>
 /// Provides methods for parsing and manipulating query strings.
 /// </summary>
@@ -20,9 +21,7 @@ public static class QueryHelpers
     public static string AddQueryString(string uri, string name, string value)
     {
         ArgumentNullException.ThrowIfNull(uri);
-
         ArgumentNullException.ThrowIfNull(name);
-
         ArgumentNullException.ThrowIfNull(value);
 
         return AddQueryString(
@@ -45,7 +44,6 @@ public static class QueryHelpers
         return AddQueryString(uri, (IEnumerable<KeyValuePair<string, string>>)queryString);
     }
 
-
     /// <summary>
     /// Append the given query keys and values to the URI.
     /// </summary>
@@ -57,13 +55,13 @@ public static class QueryHelpers
     public static string AddQueryString(string uri, IEnumerable<KeyValuePair<string, string>> queryString)
     {
         ArgumentNullException.ThrowIfNull(uri);
-
         ArgumentNullException.ThrowIfNull(queryString);
 
         var anchorIndex = uri.IndexOf('#');
         var uriToBeAppended = uri;
         var anchorText = "";
         // If there is an anchor, then the query string must be inserted before its first occurrence.
+
         if (anchorIndex != -1)
         {
             anchorText = uri.Substring(anchorIndex);
@@ -73,6 +71,7 @@ public static class QueryHelpers
         var hasQuery = uriToBeAppended.Contains('?');
         var sb = new StringBuilder();
         sb.Append(uriToBeAppended);
+
         foreach (var parameter in queryString)
         {
             if (parameter.Value == null)
@@ -88,6 +87,7 @@ public static class QueryHelpers
         }
 
         sb.Append(anchorText);
+
         return sb.ToString();
     }
 }

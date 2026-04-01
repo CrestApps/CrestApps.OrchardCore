@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI;
 using CrestApps.AI.Extensions;
+using CrestApps.AI.Memory;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,27 +10,22 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class ListUserMemoriesTool : AIFunction
 {
     public const string TheName = "list_user_memories";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "limit": {
-              "type": "integer",
-              "description": "Maximum number of memories to return."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of memories to return."
         }
-        """);
-
+      },
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Lists the current authenticated user's private memories.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
@@ -45,12 +40,12 @@ public sealed class ListUserMemoriesTool : AIFunction
         if (string.IsNullOrEmpty(userId))
         {
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
+
             return "User memory is only available for authenticated users.";
         }
 
         var limit = arguments.GetFirstValueOrDefault("limit", 25);
         limit = Math.Clamp(limit, 1, 100);
-
         var store = arguments.Services.GetRequiredService<IAIMemoryStore>();
         var memories = await store.GetByUserAsync(userId, limit);
 

@@ -10,10 +10,8 @@ namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 internal sealed class ChatInteractionIndexingHandler : CatalogEntryHandlerBase<ChatInteraction>
 {
     private readonly IIndexingTaskManager _indexingTaskManager;
-
     private readonly HashSet<string> _updatedIndexIds = [];
     private readonly HashSet<string> _deletedIndexIds = [];
-
     public ChatInteractionIndexingHandler(IIndexingTaskManager indexingTaskManager)
     {
         _indexingTaskManager = indexingTaskManager;

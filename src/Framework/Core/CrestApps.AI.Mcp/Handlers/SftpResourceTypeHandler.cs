@@ -17,7 +17,7 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
     public SftpResourceTypeHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<SftpResourceTypeHandler> logger)
-        : base(SftpResourceConstants.Type)
+    : base(SftpResourceConstants.Type)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
@@ -48,8 +48,8 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
         {
             using var keyStream = new MemoryStream(Encoding.UTF8.GetBytes(privateKey));
             var privateKeyFile = string.IsNullOrEmpty(passphrase)
-                ? new PrivateKeyFile(keyStream)
-                : new PrivateKeyFile(keyStream, passphrase);
+            ? new PrivateKeyFile(keyStream)
+            : new PrivateKeyFile(keyStream, passphrase);
             authMethods.Add(new PrivateKeyAuthenticationMethod(username, privateKeyFile));
         }
 
@@ -105,9 +105,9 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                        Uri = resource.Resource.Uri,
-                        MimeType = mimeType,
-                        Text = content,
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Text = content,
                     }
                 ]
             };

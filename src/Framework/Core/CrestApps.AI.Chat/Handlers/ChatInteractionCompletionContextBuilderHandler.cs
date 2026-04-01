@@ -1,13 +1,13 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Services;
 
 namespace CrestApps.AI.Chat.Handlers;
 
 internal sealed class ChatInteractionCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private readonly IAITemplateService _aiTemplateService;
-
-    public ChatInteractionCompletionContextBuilderHandler(IAITemplateService aiTemplateService)
+    private readonly ITemplateService _aiTemplateService;
+    public ChatInteractionCompletionContextBuilderHandler(ITemplateService aiTemplateService)
     {
         _aiTemplateService = aiTemplateService;
     }

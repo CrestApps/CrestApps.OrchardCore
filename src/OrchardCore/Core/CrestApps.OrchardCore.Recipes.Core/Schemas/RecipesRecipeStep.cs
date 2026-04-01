@@ -15,7 +15,6 @@ public sealed class RecipesRecipeStep : IRecipeStep
     private readonly IShellFeaturesManager _shellFeaturesManager;
 
     private JsonSchema _cached;
-
     public RecipesRecipeStep(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager)
@@ -25,7 +24,6 @@ public sealed class RecipesRecipeStep : IRecipeStep
     }
 
     public string Name => "recipes";
-
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -35,14 +33,12 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(_recipeHarvesters, features);
-
         var recipeNames = recipes
             .Select(r => r.Name)
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-
         _cached = CreateSchema(recipeNames);
 
         return _cached;
@@ -54,15 +50,15 @@ public sealed class RecipesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("recipes")),
-                ("Values", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
-                        .Required("executionid", "name")
-                        .AdditionalProperties(true))))
+        ("Values", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("executionid", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum(recipeNames)))
+            .Required("executionid", "name")
+            .AdditionalProperties(true))))
             .Required("name", "Values")
             .AdditionalProperties(true)
             .Build();
@@ -78,6 +74,6 @@ public sealed class RecipesRecipeStep : IRecipeStep
             .Where(r => !r.IsSetupRecipe
                 && features.Any(f => r.BasePath != null
                     && f.Extension?.SubPath != null
-                    && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                        && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
     }
 }

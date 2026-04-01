@@ -1,4 +1,6 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -38,18 +40,16 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
     {
         if (!context.IsFunctionInvocationSupported ||
             context.CompletionContext is null ||
-            !context.CompletionContext.AdditionalProperties.TryGetValue(ScopedEntriesKey, out var entriesObj) ||
-            entriesObj is not IReadOnlyList<ToolRegistryEntry> scopedEntries ||
-            scopedEntries.Count == 0)
+                !context.CompletionContext.AdditionalProperties.TryGetValue(ScopedEntriesKey, out var entriesObj) ||
+                    entriesObj is not IReadOnlyList<ToolRegistryEntry> scopedEntries ||
+                        scopedEntries.Count == 0)
         {
             return;
         }
 
         context.ChatOptions.Tools ??= [];
-
         var user = _httpContextAccessor.HttpContext?.User;
         var addedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         // Process entries in priority order: Local/System first, then MCP.
         // This ensures local tools win name collisions over MCP tools.
         var orderedEntries = scopedEntries

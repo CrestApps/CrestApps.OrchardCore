@@ -1,6 +1,8 @@
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -30,7 +32,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
 
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
-        => throw new NotSupportedException("Azure AI Speech deployments only support speech services.");
+    => throw new NotSupportedException("Azure AI Speech deployments only support speech services.");
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
     public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)

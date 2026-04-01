@@ -13,7 +13,6 @@ public sealed class McpResourceHandlerTests
     public void BuildUri_ConstructsCorrectUri(string source, string itemId, string path, string expected)
     {
         var result = McpResourceHandler.BuildUri(source, itemId, path);
-
         Assert.Equal(expected, result);
     }
 
@@ -25,7 +24,6 @@ public sealed class McpResourceHandlerTests
     public void ExtractPath_ReturnsCorrectPath(string uri, string source, string itemId, string expectedPath)
     {
         var result = McpResourceHandler.ExtractPath(uri, source, itemId);
-
         Assert.Equal(expectedPath, result);
     }
 
@@ -33,7 +31,6 @@ public sealed class McpResourceHandlerTests
     public void ExtractPath_WithMismatchedPrefix_ReturnsFullUri()
     {
         var result = McpResourceHandler.ExtractPath("other://xyz/path", "file", "abc123");
-
         Assert.Equal("other://xyz/path", result);
     }
 }

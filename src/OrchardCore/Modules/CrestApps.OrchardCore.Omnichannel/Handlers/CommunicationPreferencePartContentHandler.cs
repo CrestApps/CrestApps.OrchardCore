@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Handlers;
 internal sealed class CommunicationPreferencePartContentHandler : ContentDisplayDriver
 {
     private readonly IClock _clock;
-
     public CommunicationPreferencePartContentHandler(IClock clock)
     {
         _clock = clock;
@@ -27,16 +26,12 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
         return Initialize<CommunicationPreferenceViewModel>("CommunicationPreference_Edit", model =>
         {
             var part = contentItem.As<CommunicationPreferencePart>();
-
             model.DoNotChat = part.DoNotChat;
             model.DoNotChatUtc = part.DoNotChatUtc;
-
             model.DoNotSms = part.DoNotSms;
             model.DoNotSmsUtc = part.DoNotSmsUtc;
-
             model.DoNotEmail = part.DoNotEmail;
             model.DoNotEmailUtc = part.DoNotEmailUtc;
-
             model.DoNotCall = part.DoNotCall;
             model.DoNotCallUtc = part.DoNotCallUtc;
         }).Location("Parts:2");
@@ -45,9 +40,7 @@ internal sealed class CommunicationPreferencePartContentHandler : ContentDisplay
     public override async Task<IDisplayResult> UpdateAsync(ContentItem contentItem, UpdateEditorContext context)
     {
         var model = new CommunicationPreferenceViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var part = contentItem.As<CommunicationPreferencePart>();
 
         if (!part.DoNotCall && model.DoNotCall)

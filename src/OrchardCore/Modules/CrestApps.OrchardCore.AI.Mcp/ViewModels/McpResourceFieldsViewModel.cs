@@ -13,10 +13,8 @@ public class McpResourceFieldsViewModel
     public string MimeType { get; set; }
 
     public string DisplayText { get; set; }
-
     [BindNever]
     public bool IsNew { get; set; }
-
     [BindNever]
     public string Source { get; set; }
 

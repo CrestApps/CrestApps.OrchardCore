@@ -1,3 +1,5 @@
+using CrestApps.AI.Chat;
+
 namespace CrestApps.AI.Models;
 
 /// <summary>

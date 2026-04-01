@@ -28,8 +28,8 @@ internal sealed class DefaultOrchestratorResolver : IOrchestratorResolver
     public IOrchestrator Resolve(string orchestratorName = null)
     {
         var name = string.IsNullOrWhiteSpace(orchestratorName)
-            ? _options.DefaultOrchestratorName
-            : orchestratorName;
+        ? _options.DefaultOrchestratorName
+        : orchestratorName;
 
         if (_options.Orchestrators.TryGetValue(name, out var entry))
         {

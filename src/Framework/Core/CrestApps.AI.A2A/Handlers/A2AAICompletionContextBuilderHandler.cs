@@ -1,4 +1,5 @@
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 
 namespace CrestApps.AI.A2A.Handlers;

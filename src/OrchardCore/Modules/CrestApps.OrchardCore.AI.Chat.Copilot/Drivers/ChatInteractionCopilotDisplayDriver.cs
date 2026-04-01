@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat.Copilot.Models;
-using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.AI.Copilot.Models;
+using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
@@ -22,7 +22,6 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
-
     public ChatInteractionCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
@@ -42,10 +41,8 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
         return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
             var copilotSettings = interaction.As<CopilotSessionMetadata>();
-
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
-
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
@@ -54,6 +51,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             if (!model.IsCopilotConfigured)
             {
                 model.AvailableModels = [];
+
                 return;
             }
 
@@ -65,6 +63,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             else if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
             {
                 // GitHub OAuth mode — only fetch auth/models when the orchestrator is Copilot.
+
                 if (string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase) &&
                     _httpContextAccessor.HttpContext?.User is not null)
                 {
@@ -74,12 +73,13 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                     {
                         var userId = await _userManager.GetUserIdAsync(user);
                         model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+
                         if (model.IsAuthenticated)
                         {
                             var credential = await _oauthService.GetCredentialAsync(userId);
                             model.GitHubUsername = credential?.GitHubUsername;
-
                             var models = await _oauthService.ListModelsAsync(userId);
+
                             if (models.Count > 0)
                             {
                                 model.AvailableModels = models

@@ -8,9 +8,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class DeleteAIDeploymentsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
-
     public string Name => "DeleteAIDeployments";
-
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();
@@ -24,11 +22,11 @@ public sealed class DeleteAIDeploymentsRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("DeleteAIDeployments")),
-                ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, all deployments will be removed.")),
-                ("DeploymentNames", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                    .Description("Specific deployment names to delete. Ignored when IncludeAll is true.")))
+        ("IncludeAll", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("When true, all deployments will be removed.")),
+        ("DeploymentNames", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description("Specific deployment names to delete. Ignored when IncludeAll is true.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

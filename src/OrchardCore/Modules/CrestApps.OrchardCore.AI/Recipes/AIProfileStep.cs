@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -14,11 +14,10 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
     private readonly IAIProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileStep(
         IAIProfileManager profileManager,
         IStringLocalizer<AIProfileStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _profileManager = profileManager;
         S = stringLocalizer;
@@ -32,9 +31,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProfile profile = null;
-
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
-
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)

@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "AI Data Sources - Azure AI Search",
     Description = "Adds Azure AI Search support for AI data source document embeddings, vector search, and indexing.",
@@ -11,8 +10,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.DataSources,
-        "OrchardCore.Indexing",
-        "OrchardCore.Search.AzureAI",
+    AIConstants.Feature.DataSources,
+    "OrchardCore.Indexing",
+    "OrchardCore.Search.AzureAI",
     ]
-)]
+    )]

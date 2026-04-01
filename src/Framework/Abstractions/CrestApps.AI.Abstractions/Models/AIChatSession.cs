@@ -1,5 +1,4 @@
-
-
+using CrestApps.AI.ResponseHandling;
 namespace CrestApps.AI.Models;
 
 public sealed class AIChatSession : ExtensibleEntity

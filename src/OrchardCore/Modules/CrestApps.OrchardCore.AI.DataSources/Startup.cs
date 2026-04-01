@@ -1,7 +1,8 @@
 using CrestApps.AI;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
-using CrestApps.AI.Tools;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
@@ -47,15 +48,12 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
         services.AddScoped<IAIDataSourceSettingsProvider, OrchardCoreAIDataSourceSettingsProvider>();
-
         services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
-
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddSingleton<IBackgroundTask, DataSourceSyncBackgroundTask>();
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
-
         services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
             .WithPurpose(AIToolPurposes.DataSourceSearch);
     }

@@ -1,10 +1,13 @@
 using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Chat.Tools;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Extensions;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using CrestApps.Services;
+using CrestApps.Templates.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -20,9 +23,8 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddChatInteractionHandlers(this IServiceCollection services)
     {
-        // Register AI templates embedded in this assembly.
-        services.AddAITemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
-
+        // Register templates embedded in this assembly.
+        services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, ChatInteractionCompletionContextBuilderHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>());
 
@@ -47,14 +49,14 @@ public static class ServiceCollectionExtensions
         services.AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(
             ".txt",
             new ExtractorExtension(".csv", false),
-            ".md",
-            ".json",
-            ".xml",
-            ".html",
-            ".htm",
-            ".log",
-            ".yaml",
-            ".yml");
+        ".md",
+        ".json",
+        ".xml",
+        ".html",
+        ".htm",
+        ".log",
+        ".yaml",
+        ".yml");
         services.AddIngestionDocumentReader<OpenXmlIngestionDocumentReader>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
         services.AddIngestionDocumentReader<PdfIngestionDocumentReader>(".pdf");
 

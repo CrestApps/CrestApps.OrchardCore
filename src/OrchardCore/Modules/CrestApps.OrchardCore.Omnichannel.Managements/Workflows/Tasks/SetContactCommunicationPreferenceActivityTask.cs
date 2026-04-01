@@ -16,7 +16,6 @@ public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
-
     public SetContactCommunicationPreferenceActivityTask(
         ISession session,
         IClock clock,
@@ -28,9 +27,7 @@ public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity
     }
 
     public override LocalizedString DisplayText => S["Set Contact Communication Preferences Task"];
-
     public override LocalizedString Category => S["Omnichannel"];
-
     public bool? SetDoNotCall
     {
         get => GetProperty<bool?>();
@@ -70,9 +67,9 @@ public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity
         }
 
         if (!SetDoNotCall.HasValue &&
-           !SetDoNotEmail.HasValue &&
-           !SetDoNotSms.HasValue &&
-           !SetDoNotChat.HasValue)
+            !SetDoNotEmail.HasValue &&
+                !SetDoNotSms.HasValue &&
+                    !SetDoNotChat.HasValue)
         {
             return Outcomes("Done");
         }

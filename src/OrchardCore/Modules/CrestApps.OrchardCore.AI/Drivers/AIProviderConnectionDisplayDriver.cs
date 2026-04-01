@@ -15,7 +15,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
     private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
-
     public AIProviderConnectionDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IShellReleaseManager shellReleaseManager,
@@ -30,9 +29,9 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
     {
         return CombineAsync(
             View("AIProviderConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-            View("AIProviderConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-            View("AIProviderConnection_DefaultTags_SummaryAdmin", connection).Location("Tags:5"),
-            View("AIProviderConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+        View("AIProviderConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+        View("AIProviderConnection_DefaultTags_SummaryAdmin", connection).Location("Tags:5"),
+        View("AIProviderConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
         );
     }
 
@@ -45,14 +44,12 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
             model.IsNew = context.IsNew;
-
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)
     {
         var model = new AIProviderConnectionFieldsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (context.IsNew)
@@ -75,7 +72,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
         }
 
         connection.DisplayText = model.DisplayText;
-
         _shellReleaseManager.RequestRelease();
 
         return Edit(connection, context);

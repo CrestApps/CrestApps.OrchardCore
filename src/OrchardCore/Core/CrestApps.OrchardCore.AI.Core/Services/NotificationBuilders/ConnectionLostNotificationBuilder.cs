@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.Localization;
 
@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 internal sealed class ConnectionLostNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
     public string NotificationType => ChatNotificationTypes.ConnectionLost;
-
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Content = relayEvent.Content ?? T["Connection lost. Attempting to reconnect..."].Value;

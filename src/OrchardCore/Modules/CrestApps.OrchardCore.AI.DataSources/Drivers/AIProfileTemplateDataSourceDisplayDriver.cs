@@ -17,7 +17,6 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
     private readonly ICatalog<AIDataSource> _dataSourceStore;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateDataSourceDisplayDriver(
         ISiteService siteService,
         IODataValidator oDataValidator,
@@ -37,7 +36,6 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
             await PopulateViewModelAsync(template, model);
         }).Location("Content:7%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
-
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
@@ -55,9 +53,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         }
 
         var model = new EditProfileDataSourcesViewModel();
-
         var metadata = template.As<DataSourceMetadata>();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (!string.IsNullOrEmpty(model.DataSourceId))
@@ -77,20 +73,19 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
         var strictness = dataSourceSettings.GetStrictness(model.Strictness);
         var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
 
         if (strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
-                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+            S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
         if (topN != model.TopNDocuments)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
-                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+            S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
         }
 
         if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))
@@ -99,7 +94,6 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         }
 
         template.Put(metadata);
-
         template.Alter<AIDataSourceRagMetadata>(t =>
         {
             t.Filter = model.Filter;
@@ -114,14 +108,11 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
     private async Task PopulateViewModelAsync(AIProfileTemplate template, EditProfileDataSourcesViewModel model)
     {
         var ragMetadata = template.As<AIDataSourceRagMetadata>();
-
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
         model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
         model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
         model.IsInScope = ragMetadata.IsInScope;
         model.Filter = ragMetadata.Filter;
-
         var metadata = template.As<DataSourceMetadata>();
         model.DataSourceId = metadata.DataSourceId;
         model.DataSources = await _dataSourceStore.GetAllAsync();

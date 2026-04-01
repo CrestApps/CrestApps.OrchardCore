@@ -16,7 +16,6 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
-
     public OmnichannelActivityBatchHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -29,10 +28,8 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
 
     public override Task InitializingAsync(InitializingContext<OmnichannelActivityBatch> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<OmnichannelActivityBatch> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task ValidatingAsync(ValidatingContext<OmnichannelActivityBatch> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
@@ -46,7 +43,6 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
     public override Task InitializedAsync(InitializedContext<OmnichannelActivityBatch> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
-
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
@@ -72,6 +68,7 @@ internal sealed class OmnichannelActivityBatchHandler : CatalogEntryHandlerBase<
         if (properties != null)
         {
             enabpoint.Properties ??= new Dictionary<string, object>();
+
             foreach (var (key, value) in properties)
             {
                 enabpoint.Properties[key] = value;

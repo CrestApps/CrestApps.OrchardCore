@@ -12,7 +12,7 @@ public class NamedSourceCatalogManager<T> : SourceCatalogManager<T>, INamedCatal
         INamedSourceCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<NamedSourceCatalogManager<T>> logger)
-        : base(catalog, handlers, logger)
+    : base(catalog, handlers, logger)
     {
         NamedSourceCatalog = catalog;
     }

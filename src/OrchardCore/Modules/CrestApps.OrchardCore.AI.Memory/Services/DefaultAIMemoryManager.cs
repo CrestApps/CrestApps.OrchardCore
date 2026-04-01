@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
@@ -11,7 +11,7 @@ public sealed class DefaultAIMemoryManager : CatalogManager<AIMemoryEntry>
         IAIMemoryStore catalog,
         IEnumerable<ICatalogEntryHandler<AIMemoryEntry>> handlers,
         ILogger<DefaultAIMemoryManager> logger)
-        : base(catalog, handlers, logger)
+    : base(catalog, handlers, logger)
     {
     }
 }

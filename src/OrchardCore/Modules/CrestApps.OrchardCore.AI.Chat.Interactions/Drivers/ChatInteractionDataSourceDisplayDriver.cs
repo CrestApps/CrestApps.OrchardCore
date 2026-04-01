@@ -19,7 +19,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
     private readonly IODataValidator _oDataValidator;
 
     internal readonly IStringLocalizer<ChatInteractionDataSourceDisplayDriver> S;
-
     public ChatInteractionDataSourceDisplayDriver(
         ISiteService siteService,
         ICatalog<AIDataSource> dataSourceStore,
@@ -37,17 +36,13 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         return Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
             var metadata = interaction.As<DataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
-
             var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
-
             model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
             model.IsInScope = ragMetadata.IsInScope;
             model.Filter = ragMetadata.Filter;
-
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:5#Settings;1");
     }
@@ -55,7 +50,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
         var model = new EditChatInteractionDataSourceViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (!string.IsNullOrEmpty(model.DataSourceId))
@@ -77,20 +71,19 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
-
         var strictness = dataSourceSettings.GetStrictness(model.Strictness);
         var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
 
         if (strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
-                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+            S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
         if (topN != model.TopNDocuments)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
-                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+            S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
         }
 
         if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))

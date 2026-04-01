@@ -1,8 +1,10 @@
 using CrestApps.AI;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
@@ -44,7 +46,6 @@ namespace CrestApps.OrchardCore.AI.Mcp;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -55,7 +56,6 @@ public sealed class Startup : StartupBase
         // Register McpInvokeFunction as a keyed singleton only (not via AddAITool)
         // so it can be resolved by name at runtime but does not appear in the UI tool list.
         services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
-
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
@@ -71,11 +71,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
         services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
-
         services.AddOrchardCoreAgentSkillServices();
-
         services.AddOptions<McpMetadataCacheOptions>();
-
         // Register SSE transport type.
         services
             .AddScoped<IMcpClientTransportProvider, OrchardSseClientTransportProvider>()
@@ -89,6 +86,7 @@ public sealed class Startup : StartupBase
                     entity.DisplayName = S["Server-Sent Events"];
                     entity.Description = S["Uses Server-Sent Events over HTTP to receive streaming responses from a remote model server. Great for real-time output from hosted models."];
                 });
+
             });
     }
 }
@@ -97,7 +95,6 @@ public sealed class Startup : StartupBase
 public sealed class StdIoStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public StdIoStartup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -115,6 +112,7 @@ public sealed class StdIoStartup : StartupBase
                     entity.DisplayName = S["Standard Input/Output"];
                     entity.Description = S["Uses standard input/output streams to communicate with a locally running model process. Ideal for local subprocess integration."];
                 });
+
             });
     }
 }
@@ -145,7 +143,6 @@ public sealed class McpServerStartup : StartupBase
     private const string McpServerPolicyName = "McpServerPolicy";
 
     internal readonly IStringLocalizer S;
-
     public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -158,10 +155,8 @@ public sealed class McpServerStartup : StartupBase
         services.AddScoped<OrchardMcpServerResourceService, OrchardDefaultMcpServerResourceService>();
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
-
         // Register the authorization handler for MCP server.
         services.AddScoped<IAuthorizationHandler, McpServerAuthorizationHandler>();
-
         // Register API key authentication scheme.
         services.AddAuthentication()
             .AddScheme<McpApiKeyAuthenticationOptions, McpApiKeyAuthenticationHandler>(
@@ -171,15 +166,12 @@ public sealed class McpServerStartup : StartupBase
         services.AddNavigationProvider<McpPromptsAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
-
         // Register MCP Resource services.
         services.AddNavigationProvider<McpResourcesAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
-
         // Register the file provider resolver.
         services.AddScoped<IMcpFileProviderResolver, DefaultMcpFileProviderResolver>();
-
         // Register built-in File resource type handler.
         services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
@@ -199,6 +191,7 @@ public sealed class McpServerStartup : StartupBase
                 Name = "Orchard Core MCP Server",
                 Version = CrestAppsManifestConstants.Version,
             };
+
         })
         .WithHttpTransport()
         .WithListToolsHandler((request, cancellationToken) =>
@@ -224,7 +217,6 @@ public sealed class McpServerStartup : StartupBase
                 catch (Exception ex)
                 {
                     logger ??= request.Services.GetRequiredService<ILogger<McpServerStartup>>();
-
                     logger.LogError(ex, "Error creating tool instance for '{ToolName}'", name);
                 }
             }
@@ -244,6 +236,7 @@ public sealed class McpServerStartup : StartupBase
             }
 
             return ValueTask.FromResult(new ListToolsResult { Tools = tools });
+
         })
         .WithCallToolHandler(async (request, cancellationToken) =>
         {
@@ -301,6 +294,7 @@ public sealed class McpServerStartup : StartupBase
             {
                 Prompts = await promptService.ListAsync(),
             };
+
         })
         .WithGetPromptHandler(async (request, cancellationToken) =>
         {
@@ -316,6 +310,7 @@ public sealed class McpServerStartup : StartupBase
             {
                 Resources = await resourceService.ListAsync(),
             };
+
         })
         .WithListResourceTemplatesHandler(async (request, cancellationToken) =>
         {
@@ -325,6 +320,7 @@ public sealed class McpServerStartup : StartupBase
             {
                 ResourceTemplates = await resourceService.ListTemplatesAsync(),
             };
+
         })
         .WithReadResourceHandler(async (request, cancellationToken) =>
         {
@@ -401,7 +397,6 @@ public sealed class McpResourceDeploymentsStartup : StartupBase
 public sealed class McpContentResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public McpContentResourceStartup(IStringLocalizer<McpContentResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -437,7 +432,6 @@ public sealed class McpContentResourceStartup : StartupBase
 public sealed class McpRecipeSchemaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public McpRecipeSchemaResourceStartup(IStringLocalizer<McpRecipeSchemaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -478,7 +472,6 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
 public sealed class McpMediaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public McpMediaResourceStartup(IStringLocalizer<McpMediaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;

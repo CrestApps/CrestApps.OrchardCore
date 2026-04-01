@@ -50,7 +50,7 @@ src/Framework/
 │   └── CrestApps.Data.YesSql          # YesSql document store implementation
 └── Utilities/
     ├── CrestApps.Support              # General utilities
-    └── CrestApps.AI.Prompting         # Prompt template engine
+    └── CrestApps.Templates         # Prompt template engine
 ```
 
 ## Getting Started

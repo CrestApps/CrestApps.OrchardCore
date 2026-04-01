@@ -17,7 +17,6 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
-
     public AzureOpenAIConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureOpenAIConnectionHandler> stringLocalizer)
@@ -28,10 +27,8 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
 
     public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
         if (!string.Equals(context.Model.Source, AzureOpenAIConstants.ClientName, StringComparison.Ordinal))
@@ -64,7 +61,6 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         }
 
         var metadata = connection.As<AzureOpenAIConnectionMetadata>();
-
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 
         if (endpoint is not null && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
@@ -73,17 +69,14 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         }
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>()
-            ?? AzureAuthenticationType.Default;
-
+        ?? AzureAuthenticationType.Default;
         var identityId = metadataNode[nameof(metadata.IdentityId)]?.GetValue<string>()?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(identityId) ? null : identityId;
-
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
             metadata.ApiKey = protector.Protect(apiKey);
         }
 

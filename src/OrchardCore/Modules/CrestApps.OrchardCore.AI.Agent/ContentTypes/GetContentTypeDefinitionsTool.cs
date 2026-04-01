@@ -10,28 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 public sealed class GetContentTypeDefinitionsTool : AIFunction
 {
     public const string TheName = "getContentTypeDefinition";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the content type for which to retrieve the definitions."
-            }
-          },
-          "required": ["name"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the content type for which to retrieve the definitions."
         }
-        """);
-
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Retrieves the content type definition for a given content type.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -43,6 +40,7 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentTypeDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);

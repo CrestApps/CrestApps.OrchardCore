@@ -10,32 +10,29 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class SearchUserMemoriesTool : AIFunction
 {
     public const string TheName = "search_user_memories";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "description": "The memory search query."
-            },
-            "top_n": {
-              "type": "integer",
-              "description": "Maximum number of matching memories to return."
-            }
-          },
-          "required": ["query"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The memory search query."
+        },
+        "top_n": {
+          "type": "integer",
+          "description": "Maximum number of matching memories to return."
         }
-        """);
-
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Searches the current authenticated user's private memories for relevant preferences, projects, recurring topics, interests, and other durable details.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
@@ -49,6 +46,7 @@ public sealed class SearchUserMemoriesTool : AIFunction
         if (!arguments.TryGetFirstString("query", out var query))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
+
             return "Unable to find a 'query' argument in the arguments parameter.";
         }
 
@@ -57,6 +55,7 @@ public sealed class SearchUserMemoriesTool : AIFunction
         if (string.IsNullOrEmpty(userId))
         {
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
+
             return "User memory is only available for authenticated users.";
         }
 
@@ -65,7 +64,7 @@ public sealed class SearchUserMemoriesTool : AIFunction
             userId,
             query,
             arguments.GetFirstValueOrDefault<int?>("top_n", null),
-            cancellationToken);
+        cancellationToken);
 
         if (!results.Any())
         {

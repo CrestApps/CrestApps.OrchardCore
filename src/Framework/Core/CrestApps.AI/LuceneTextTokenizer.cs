@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using CrestApps.AI.Speech;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Core;
 using Lucene.Net.Analysis.En;

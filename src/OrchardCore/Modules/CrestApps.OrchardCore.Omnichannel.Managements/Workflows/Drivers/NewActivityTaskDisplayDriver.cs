@@ -26,7 +26,6 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     internal readonly IStringLocalizer S;
-
     public NewActivityTaskDisplayDriver(
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
@@ -46,7 +45,6 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
         model.UrgencyLevel = activity.UrgencyLevel;
         model.CampaignId = activity.CampaignId;
         model.SubjectContentType = activity.SubjectContentType;
-
         model.NormalizedUserName = activity.NormalizedUserName;
         model.DefaultScheduleHours = activity.DefaultScheduleHours;
         model.UrgencyLevels =
@@ -58,27 +56,20 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
             new(S["High"], nameof(ActivityUrgencyLevel.High)),
             new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
         ];
-
         model.Campaigns = (await _campaignCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
-
         var subjectContentTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
             .Where(contentType => contentType.StereotypeEquals(OmnichannelConstants.Sterotypes.OmnichannelSubject))
             .Select(contentType => new SelectListItem(contentType.DisplayName, contentType.Name))
             .OrderBy(x => x.Text)
             .ToList();
-
         model.SubjectContentTypes = subjectContentTypes;
-
         var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
-
         var userItems = new List<SelectListItem>();
 
         foreach (var user in users)
         {
             var displayName = await _displayNameProvider.GetAsync(user);
-
             var normalizedUserName = user is User su ? su.NormalizedUserName : _userManager.NormalizeName(user.UserName);
-
             userItems.Add(new SelectListItem
             {
                 Text = displayName,
@@ -92,7 +83,6 @@ internal sealed class NewActivityTaskDisplayDriver : ActivityDisplayDriver<NewAc
     public override async Task<IDisplayResult> UpdateAsync(NewActivityTask activity, UpdateEditorContext context)
     {
         var model = new NewActivityTaskViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (model.DefaultScheduleHours.HasValue && model.DefaultScheduleHours < 1)

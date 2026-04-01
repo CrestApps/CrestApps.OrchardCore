@@ -1,9 +1,11 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,7 +17,6 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 public class OpenAICompletionClient : DeploymentAwareAICompletionClient
 {
     private readonly IEnumerable<IOpenAIChatOptionsConfiguration> _openAIChatOptionsConfigurations;
-
     public OpenAICompletionClient(
         IAIClientFactory aIClientFactory,
         ILoggerFactory loggerFactory,
@@ -26,20 +27,20 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager
         ) : base(
-            OpenAIConst.ImplementationName,
-            aIClientFactory,
-            distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions.Value,
-            defaultOptions,
-            handlers,
-            deploymentStore,
-            aiTemplateService,
-            deploymentManager)
+        OpenAIConst.ImplementationName,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions.Value,
+        defaultOptions,
+        handlers,
+        deploymentStore,
+        aiTemplateService,
+        deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
@@ -55,27 +56,26 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
         IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager
         ) : base(
-            implementationName,
-            aIClientFactory,
-            distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions,
-            defaultOptions,
-            handlers,
-            deploymentStore,
-            aiTemplateService,
-            deploymentManager)
+        implementationName,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions,
+        defaultOptions,
+        handlers,
+        deploymentStore,
+        aiTemplateService,
+        deploymentManager)
     {
         _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
     }
 
     protected override string ProviderName
         => OpenAIConstants.ClientName;
-
     protected override async ValueTask ConfigureChatOptionsAsync(CompletionServiceConfigureContext configureContext)
     {
         foreach (var handler in _openAIChatOptionsConfigurations)

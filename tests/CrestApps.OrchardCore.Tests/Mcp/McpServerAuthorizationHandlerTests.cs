@@ -14,12 +14,10 @@ public sealed class McpServerAuthorizationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // Default configuration safety
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public void DefaultOptions_AuthenticationType_IsOpenId()
     {
         var options = new McpServerOptions();
-
         Assert.Equal(McpServerAuthenticationType.OpenId, options.AuthenticationType);
     }
 
@@ -27,7 +25,6 @@ public sealed class McpServerAuthorizationHandlerTests
     public void DefaultOptions_RequireAccessPermission_IsTrue()
     {
         var options = new McpServerOptions();
-
         Assert.True(options.RequireAccessPermission);
     }
 
@@ -35,7 +32,6 @@ public sealed class McpServerAuthorizationHandlerTests
     public void DefaultOptions_ApiKey_IsNull()
     {
         var options = new McpServerOptions();
-
         Assert.Null(options.ApiKey);
     }
 
@@ -48,7 +44,6 @@ public sealed class McpServerAuthorizationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // AuthenticationType = None
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task None_AnonymousUser_Succeeds()
     {
@@ -59,7 +54,6 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAnonymousPrincipal());
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
@@ -73,14 +67,12 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // AuthenticationType = ApiKey
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKey_AuthenticatedWithCorrectScheme_Succeeds()
     {
@@ -91,7 +83,6 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAuthenticatedPrincipal(McpApiKeyAuthenticationDefaults.AuthenticationScheme));
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
@@ -105,7 +96,6 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
@@ -119,14 +109,12 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAnonymousPrincipal());
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // AuthenticationType = OpenId, RequireAccessPermission = true
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task OpenId_RequirePermission_AuthenticatedWithPermission_Succeeds()
     {
@@ -137,10 +125,8 @@ public sealed class McpServerAuthorizationHandlerTests
                 RequireAccessPermission = true,
             },
             authorizeResult: true);
-
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
@@ -154,10 +140,8 @@ public sealed class McpServerAuthorizationHandlerTests
                 RequireAccessPermission = true,
             },
             authorizeResult: false);
-
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
@@ -171,17 +155,14 @@ public sealed class McpServerAuthorizationHandlerTests
                 RequireAccessPermission = true,
             },
             authorizeResult: true);
-
         var context = CreateContext(CreateAnonymousPrincipal());
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // AuthenticationType = OpenId, RequireAccessPermission = false
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task OpenId_NoPermissionRequired_AuthenticatedUser_Succeeds()
     {
@@ -193,7 +174,6 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
@@ -208,14 +188,12 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAnonymousPrincipal());
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // Default / fallback behavior (unrecognized enum value falls through to OpenId)
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task DefaultFallback_AuthenticatedWithPermission_Succeeds()
     {
@@ -226,10 +204,8 @@ public sealed class McpServerAuthorizationHandlerTests
                 RequireAccessPermission = true,
             },
             authorizeResult: true);
-
         var context = CreateContext(CreateAuthenticatedPrincipal("Bearer"));
         await handler.HandleAsync(context);
-
         Assert.True(context.HasSucceeded);
     }
 
@@ -245,14 +221,12 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAnonymousPrincipal());
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // Cross-authentication scheme security tests
     // ───────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData("Bearer")]
     [InlineData("Cookies")]
@@ -266,7 +240,6 @@ public sealed class McpServerAuthorizationHandlerTests
 
         var context = CreateContext(CreateAuthenticatedPrincipal(scheme));
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
@@ -280,36 +253,30 @@ public sealed class McpServerAuthorizationHandlerTests
                 RequireAccessPermission = true,
             },
             authorizeResult: false);
-
         var context = CreateContext(CreateAuthenticatedPrincipal(McpApiKeyAuthenticationDefaults.AuthenticationScheme));
         await handler.HandleAsync(context);
-
         Assert.False(context.HasSucceeded);
     }
 
     // ───────────────────────────────────────────────────────────────
     // Helpers
     // ───────────────────────────────────────────────────────────────
-
     private static McpServerAuthorizationHandler CreateHandler(
         McpServerOptions options,
         bool authorizeResult = false)
     {
         var services = new ServiceCollection();
         services.AddSingleton(Options.Create(options));
-
         var authServiceMock = new Mock<IAuthorizationService>();
         authServiceMock
             .Setup(s => s.AuthorizeAsync(
                 It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+        It.IsAny<object>(),
+        It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
             .ReturnsAsync(authorizeResult
-                ? AuthorizationResult.Success()
-                : AuthorizationResult.Failed());
-
+        ? AuthorizationResult.Success()
+        : AuthorizationResult.Failed());
         services.AddSingleton(authServiceMock.Object);
-
         var serviceProvider = services.BuildServiceProvider();
 
         return new McpServerAuthorizationHandler(serviceProvider);

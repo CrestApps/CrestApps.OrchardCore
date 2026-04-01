@@ -1,4 +1,5 @@
 using CrestApps.AI.AzureAIInference.Services;
+using CrestApps.AI.Clients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;

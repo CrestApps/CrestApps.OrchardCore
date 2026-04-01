@@ -10,28 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class PublishContentTool : AIFunction
 {
     public const string TheName = "publishContentItem";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
         }
-        """);
-
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Publishes the draft version of a content item, making it the active published version.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

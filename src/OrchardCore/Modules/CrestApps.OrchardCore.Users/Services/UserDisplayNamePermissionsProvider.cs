@@ -12,16 +12,14 @@ public sealed class UserDisplayNamePermissionsProvider : IPermissionProvider
     [
         UserPermissions.ManageDisplaySettings,
     ];
-
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
-
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype
         {
-            Name = OrchardCoreConstants.Roles.Administrator,
-            Permissions = _allPermissions
+        Name = OrchardCoreConstants.Roles.Administrator,
+        Permissions = _allPermissions
         },
     ];
 }

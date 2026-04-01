@@ -13,7 +13,6 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
     private readonly ICatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileMcpConnectionsDisplayDriver> stringLocalizer)
@@ -34,7 +33,6 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
             var mcpMetadata = profile.As<AIProfileMcpMetadata>();
-
             model.Connections = connections
             .Select(entry => new ToolEntry
             {
@@ -42,8 +40,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
                 DisplayText = entry.DisplayText,
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Content:3#Capabilities;8");
     }
 
@@ -57,11 +54,8 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         }
 
         var model = new EditProfileMcpConnectionsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
-
         var metadata = new AIProfileMcpMetadata();
 
         if (ids is null || ids.Length == 0)
@@ -80,4 +74,3 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
         return Edit(profile, context);
     }
 }
-

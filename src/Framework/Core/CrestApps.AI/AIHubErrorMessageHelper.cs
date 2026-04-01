@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Localization;
-
 namespace CrestApps.AI;
-
 /// <summary>
 /// Provides shared error message formatting for AI chat hubs.
 /// </summary>
@@ -38,19 +36,19 @@ internal static class AIHubErrorMessageHelper
                 return code switch
                 {
                     System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden
-                      => S["Authentication failed. Please check your API credentials."],
+                        => S["Authentication failed. Please check your API credentials."],
 
                     System.Net.HttpStatusCode.BadRequest
-                      => S["Invalid request. Please verify your connection settings."],
+                        => S["Invalid request. Please verify your connection settings."],
 
                     System.Net.HttpStatusCode.NotFound
-                      => S["The provider endpoint could not be found. Please verify the API URL."],
+                        => S["The provider endpoint could not be found. Please verify the API URL."],
 
                     System.Net.HttpStatusCode.TooManyRequests
-                      => S["Rate limit reached. Please wait and try again later."],
+                        => S["Rate limit reached. Please wait and try again later."],
 
                     >= System.Net.HttpStatusCode.InternalServerError
-                      => S["The provider service is currently unavailable. Please try again later."],
+                        => S["The provider service is currently unavailable. Please try again later."],
 
                     _ => S["An error occurred while communicating with the provider."]
                 };

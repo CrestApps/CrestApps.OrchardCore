@@ -7,10 +7,6 @@ using CrestApps.Azure.Core.Models;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using TextToSpeechOptions = CrestApps.AI.Models.TextToSpeechOptions;
-using TextToSpeechResponse = CrestApps.AI.Models.TextToSpeechResponse;
-using TextToSpeechResponseUpdate = CrestApps.AI.Models.TextToSpeechResponseUpdate;
-using TextToSpeechResponseUpdateKind = CrestApps.AI.Models.TextToSpeechResponseUpdateKind;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.AI.OpenAI.Azure.Services;
@@ -189,7 +185,6 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         {
             yield return update;
         }
-
         // Await the task to propagate any startup exceptions.
         await speakTask;
 
@@ -234,7 +229,7 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
                     Language = v.Locale,
                     Gender = MapGender(v.Gender),
                 })
-                .ToArray();
+            .ToArray();
         }
 
         _logger.LogWarning("Failed to retrieve voices. Reason: {Reason}", result.Reason);
@@ -351,14 +346,14 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         TokenCredential credential = _authType switch
         {
             AzureAuthenticationType.ManagedIdentity => string.IsNullOrEmpty(_identityId)
-                ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
-                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
+            ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+            : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
             _ => new DefaultAzureCredential(),
         };
 
         var tokenResult = await credential.GetTokenAsync(
             new TokenRequestContext([CognitiveServicesScope]),
-            cancellationToken);
+        cancellationToken);
 
         _cachedToken = tokenResult.Token;
         _tokenExpires = tokenResult.ExpiresOn;

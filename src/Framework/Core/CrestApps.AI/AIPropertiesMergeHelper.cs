@@ -85,7 +85,7 @@ internal static class AIPropertiesMergeHelper
             }
 
             var existingIndex = result.FindIndex(e =>
-                string.Equals(getName(e), name, StringComparison.OrdinalIgnoreCase));
+            string.Equals(getName(e), name, StringComparison.OrdinalIgnoreCase));
 
             if (existingIndex >= 0)
             {

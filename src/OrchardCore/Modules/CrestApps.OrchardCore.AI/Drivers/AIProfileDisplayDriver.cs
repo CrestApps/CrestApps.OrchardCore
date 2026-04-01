@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -26,7 +27,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
@@ -51,10 +51,10 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     {
         return CombineAsync(
             View("AIProfile_Fields_SummaryAdmin", profile).Location("Content:1"),
-            View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
-            View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
-            View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
-             View("AIProfile_ActionsMenu_SummaryAdmin", profile)
+        View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
+        View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
+        View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
+        View("AIProfile_ActionsMenu_SummaryAdmin", profile)
             .Location("ActionsMenu:10")
             .RenderWhen(async () => profile.GetSettings<AIProfileSettings>().IsRemovable && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         );
@@ -80,7 +80,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
             ];
-
             model.ProfileTypes =
             [
                 new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
@@ -88,7 +87,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
                 new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
             ];
-
             model.AvailabilityTypes =
             [
                 new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
@@ -99,7 +97,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         void PopulateParameters(ProfileMetadataViewModel model)
         {
             var metadata = profile.As<AIProfileMetadata>();
-
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
             model.PastMessagesCount = context.IsNew ? _defaultAIOptions.PastMessagesCount : metadata.PastMessagesCount;
@@ -109,7 +106,6 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.TopP = context.IsNew ? _defaultAIOptions.TopP : metadata.TopP;
             model.UseCaching = metadata.UseCaching;
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
-
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }
 
@@ -119,31 +115,26 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.DisplayText = profile.DisplayText;
             model.IsNew = context.IsNew;
         }).Location("Content:1%General;1");
-
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
             var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
+
             if (orchestrators.Count > 1)
             {
                 model.OrchestratorName = profile.OrchestratorName;
                 model.Orchestrators = orchestrators
-                    .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
-                    .ToArray();
+                .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
+                .ToArray();
             }
         }).Location("Content:2%General;1");
-
         var generalFieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", PopulateProfileFields)
             .Location("Content:5%General;1");
-
         var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
             .Location("Content:1%Interactions;3");
-
         var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
             .Location("Content:5%Instructions;4");
-
         var systemInstructionsResult = Initialize<ProfileMetadataViewModel>("AIProfileSystemInstructions_Edit", PopulateParameters)
             .Location("Content:10%Instructions;4");
-
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", PopulateParameters)
             .Location("Content:1%Parameters;5");
 
@@ -160,11 +151,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var mainFieldsModel = new EditProfileMainFieldsViewModel();
-
         var model = new EditProfileViewModel();
-
         var connectionModel = new EditConnectionProfileViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
         await context.Updater.TryUpdateModelAsync(mainFieldsModel, Prefix);
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
@@ -223,14 +211,10 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.OrchestratorName = connectionModel.OrchestratorName;
-
         var parametersModel = new ProfileMetadataViewModel();
-
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
-
         var metadata = profile.As<AIProfileMetadata>();
         metadata.InitialPrompt = model.AddInitialPrompt ? model.InitialPrompt?.Trim() : null;
-
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
 
         if (model.ProfileType == AIProfileType.Chat && model.AddInitialPrompt && string.IsNullOrWhiteSpace(metadata.InitialPrompt))

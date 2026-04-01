@@ -18,9 +18,7 @@ public sealed class AIChatSessionListOptionsDisplayDriver : DisplayDriver<AIChat
     public override async Task<IDisplayResult> UpdateAsync(AIChatSessionListOptions options, UpdateEditorContext context)
     {
         var model = new ChatSessionListOptionsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         options.SearchText = model.SearchText;
 
         return Edit(options, context);

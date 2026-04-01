@@ -19,21 +19,19 @@ internal sealed class UserFullNameMigrations : DataMigration
                 .Column<string>("MiddleName", column => column.WithLength(255))
                 .Column<string>("DisplayName", column => column.WithLength(255))
             );
-
             await SchemaBuilder.AlterIndexTableAsync<UserFullNameIndex>(table => table
                 .CreateIndex("IDX_UserFullNameIndex_DocumentId",
-                    "DocumentId",
-                    "FirstName",
-                    "LastName",
-                    "MiddleName"
-                )
+            "DocumentId",
+            "FirstName",
+            "LastName",
+            "MiddleName"
+            )
             );
-
             await SchemaBuilder.AlterIndexTableAsync<UserFullNameIndex>(table => table
                 .CreateIndex("IDX_UserDisplayNameIndex_DocumentId",
-                    "DocumentId",
-                    "DisplayName"
-                )
+            "DocumentId",
+            "DisplayName"
+            )
             );
         }
         catch { }

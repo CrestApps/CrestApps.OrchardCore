@@ -17,7 +17,6 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellReleaseManager _shellReleaseManager;
-
     public UserAvatarOptionsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -30,7 +29,6 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
 
     protected override string SettingsGroupId
         => GroupId;
-
     public override IDisplayResult Edit(ISite site, UserAvatarOptions settings, BuildEditorContext context)
     {
         return Initialize<UserAvatarOptions>("UserAvatarOptions_Edit", model =>
@@ -50,9 +48,7 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
         }
 
         var model = new UserAvatarOptions();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.Required = model.Required;
         settings.UseDefaultStyle |= model.UseDefaultStyle;
 

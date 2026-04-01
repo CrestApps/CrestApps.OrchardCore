@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Models;
+namespace CrestApps.AI.Models;
 
 /// <summary>
 /// Describes how an assistant message should be presented in the chat UI.

@@ -1,13 +1,16 @@
 using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -17,7 +20,6 @@ public sealed class DefaultOrchestratorTests
     public void Name_ReturnsDefault()
     {
         var orchestrator = CreateOrchestrator();
-
         Assert.Equal("default", orchestrator.Name);
     }
 
@@ -29,10 +31,8 @@ public sealed class DefaultOrchestratorTests
         var registry = new FakeToolRegistry(tools);
         var completionService = new FakeCompletionService("Hello from AI");
         var orchestrator = CreateOrchestrator(completionService, registry);
-
         var context = CreateContext("Say hello");
         var result = await CollectStreamAsync(orchestrator, context);
-
         Assert.Equal("Hello from AI", result);
         Assert.Equal(0, completionService.CompleteCallCount);
         Assert.Equal(1, completionService.StreamCallCount);
@@ -47,11 +47,8 @@ public sealed class DefaultOrchestratorTests
         var registry = new FakeToolRegistry(tools);
         var completionService = new FakeCompletionService("OK");
         var orchestrator = CreateOrchestrator(completionService, registry);
-
         var context = CreateContext("Do something");
-
         await CollectStreamAsync(orchestrator, context);
-
         // All tool names should be present when below planning threshold.
         Assert.Contains("tool0", context.CompletionContext.ToolNames);
         Assert.Contains("tool1", context.CompletionContext.ToolNames);
@@ -65,6 +62,7 @@ public sealed class DefaultOrchestratorTests
         // With ScopingThreshold=30, 35 tools exceeds the threshold and
         // MCP presence triggers the full planning phase.
         var tools = new List<ToolRegistryEntry>();
+
         for (var i = 0; i < 5; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -74,6 +72,7 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.Local,
             });
         }
+
         for (var i = 0; i < 30; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -83,25 +82,24 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.McpServer,
             });
         }
-        var registry = new FakeToolRegistry(tools);
 
+        var registry = new FakeToolRegistry(tools);
         // Planning call returns a plan mentioning "Jira" and "ticket".
         var completionService = new FakeCompletionService("Stream result");
         completionService.PlanningResponse = "Step 1: Use Jira ticket tool to create the ticket.";
-
         var orchestrator = CreateOrchestrator(completionService, registry);
         var context = CreateContext("Create a Jira ticket");
-
         var result = await CollectStreamAsync(orchestrator, context);
-
         Assert.Equal("Stream result", result);
         // Planning phase should have been called (MCP tools present + above scoping threshold).
         Assert.Equal(1, completionService.CompleteCallCount);
         // All 5 local tools should always be included.
+
         for (var i = 0; i < 5; i++)
         {
             Assert.Contains($"local_tool{i}", context.CompletionContext.ToolNames);
         }
+
         // Total should be fewer than all 35 (local 5 + scoped MCP subset).
         Assert.True(context.CompletionContext.ToolNames.Length < 35);
     }
@@ -110,13 +108,11 @@ public sealed class DefaultOrchestratorTests
     public async Task ExecuteStreamingAsync_EmptyToolRegistry_DoesNotThrow()
     {
         var registry = new FakeToolRegistry([]);
+
         var completionService = new FakeCompletionService("OK");
         var orchestrator = CreateOrchestrator(completionService, registry);
-
         var context = CreateContext("Test");
-
         var result = await CollectStreamAsync(orchestrator, context);
-
         Assert.Equal("OK", result);
     }
 
@@ -127,6 +123,7 @@ public sealed class DefaultOrchestratorTests
         // → should scope without LLM planner call.
         // All tools are scored by relevance; only relevant ones are included.
         var tools = new List<ToolRegistryEntry>();
+
         for (var i = 0; i < 35; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -136,13 +133,12 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.System,
             });
         }
+
         var registry = new FakeToolRegistry(tools);
         var completionService = new FakeCompletionService("Response");
         var orchestrator = CreateOrchestrator(completionService, registry);
-
         var context = CreateContext("Create an article about AI");
         var result = await CollectStreamAsync(orchestrator, context);
-
         Assert.Equal("Response", result);
         // NO planning call should have been made (no MCP, below PlanningThreshold).
         Assert.Equal(0, completionService.CompleteCallCount);
@@ -156,13 +152,11 @@ public sealed class DefaultOrchestratorTests
     public async Task ExecuteStreamingAsync_EmptyRegistry_ProducesOutput()
     {
         var registry = new FakeToolRegistry([]);
+
         var completionService = new FakeCompletionService("No tools response");
         var orchestrator = CreateOrchestrator(completionService, registry);
-
         var context = CreateContext("What is AI?");
-
         var result = await CollectStreamAsync(orchestrator, context);
-
         Assert.Equal("No tools response", result);
     }
 
@@ -172,9 +166,7 @@ public sealed class DefaultOrchestratorTests
         var tools = CreateToolEntries(5);
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Do something");
-
         var result = await orchestrator.ScopeToolsAsync(null, context, tools);
-
         Assert.Equal(5, result.Count);
     }
 
@@ -183,6 +175,7 @@ public sealed class DefaultOrchestratorTests
     {
         // 10 local + 10 MCP tools. Empty plan → local all preserved, non-local capped.
         var tools = new List<ToolRegistryEntry>();
+
         for (var i = 0; i < 10; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -192,6 +185,7 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.Local,
             });
         }
+
         for (var i = 0; i < 10; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -201,13 +195,13 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.McpServer,
             });
         }
+
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Do something");
-
         var result = await orchestrator.ScopeToolsAsync("   ", context, tools);
         var resultNames = result.Select(e => e.Name).ToList();
-
         // All 10 local tools must be included.
+
         for (var i = 0; i < 10; i++)
         {
             Assert.Contains($"local{i}", resultNames);
@@ -227,13 +221,12 @@ public sealed class DefaultOrchestratorTests
             new() { Name = "parseJson", Description = "Parse JSON data", Source = ToolRegistryEntrySource.System },
             new() { Name = "updateDatabase", Description = "Update database records", Source = ToolRegistryEntrySource.System },
         };
+
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Create a Jira ticket");
-
         var plan = "Step 1: Create a Jira ticket for the issue.";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
         var resultNames = result.Select(e => e.Name).ToList();
-
         // Jira tool matched by plan.
         Assert.Contains("createJiraTicket", resultNames);
     }
@@ -249,14 +242,13 @@ public sealed class DefaultOrchestratorTests
             new() { Name = "mcpSlackTool", Description = "Send a Slack message", Source = ToolRegistryEntrySource.McpServer },
             new() { Name = "systemImageTool", Description = "Generate an image", Source = ToolRegistryEntrySource.System },
         };
+
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Create a Jira ticket");
-
         // Plan mentions only Jira.
         var plan = "Step 1: Create a Jira ticket.";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
         var resultNames = result.Select(e => e.Name).ToList();
-
         // Local and MCP Jira tools should be included due to plan match.
         Assert.Contains("createJiraTicket", resultNames);
         Assert.Contains("mcpJiraTool", resultNames);
@@ -274,6 +266,7 @@ public sealed class DefaultOrchestratorTests
             new() { Name = "local1", Description = "Local tool", Source = ToolRegistryEntrySource.Local },
             new() { Name = "sys0", Description = "System tool", Source = ToolRegistryEntrySource.System },
         };
+
         for (var i = 0; i < 5; i++)
         {
             tools.Add(new ToolRegistryEntry
@@ -283,12 +276,11 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.McpServer,
             });
         }
+
         var orchestrator = CreateOrchestrator();
         var context = CreateContext("Do something");
-
         var plan = "xyz completely unrelated zzz qqq";
         var result = await orchestrator.ScopeToolsAsync(plan, context, tools);
-
         // When no tools match, fallback fills the budget by original order.
         Assert.True(result.Count > 0);
     }
@@ -300,10 +292,8 @@ public sealed class DefaultOrchestratorTests
         completionService.PlanningResponse = "Plan: Use tool1 and tool2";
         var tools = CreateToolEntries(3);
         var orchestrator = CreateOrchestrator(completionService);
-
         var context = CreateContext("Do complex task");
         var plan = await orchestrator.PlanAsync(context, tools, TestContext.Current.CancellationToken);
-
         Assert.Equal("Plan: Use tool1 and tool2", plan);
     }
 
@@ -314,10 +304,8 @@ public sealed class DefaultOrchestratorTests
         completionService.PlanningException = new InvalidOperationException("API error");
         var tools = CreateToolEntries(3);
         var orchestrator = CreateOrchestrator(completionService);
-
         var context = CreateContext("Do something");
         var plan = await orchestrator.PlanAsync(context, tools, TestContext.Current.CancellationToken);
-
         Assert.Null(plan);
     }
 
@@ -332,18 +320,19 @@ public sealed class DefaultOrchestratorTests
 
         return new DefaultOrchestrator(
             completionService ?? new FakeCompletionService("default response"),
-            new FakeAIClientFactory(),
-            new FakeAITemplateService(),
-            deploymentManager.Object,
-            toolRegistry ?? new FakeToolRegistry([]),
-            new LuceneTextTokenizer(),
-            Options.Create(new DefaultOrchestratorOptions()),
-            NullLogger<DefaultOrchestrator>.Instance);
+        new FakeAIClientFactory(),
+        new FakeAITemplateService(),
+        deploymentManager.Object,
+        toolRegistry ?? new FakeToolRegistry([]),
+        new LuceneTextTokenizer(),
+        Options.Create(new DefaultOrchestratorOptions()),
+        NullLogger<DefaultOrchestrator>.Instance);
     }
 
     private static List<ToolRegistryEntry> CreateToolEntries(int count)
     {
         var entries = new List<ToolRegistryEntry>();
+
         for (var i = 0; i < count; i++)
         {
             entries.Add(new ToolRegistryEntry
@@ -353,6 +342,7 @@ public sealed class DefaultOrchestratorTests
                 Source = ToolRegistryEntrySource.Local,
             });
         }
+
         return entries;
     }
 
@@ -381,6 +371,7 @@ public sealed class DefaultOrchestratorTests
         {
             sb.Append(chunk.Text);
         }
+
         return sb.ToString();
     }
 
@@ -390,17 +381,18 @@ public sealed class DefaultOrchestratorTests
     private sealed class FakeCompletionService : IAICompletionService
     {
         private readonly string _streamText;
-
         public FakeCompletionService(string streamText)
         {
             _streamText = streamText;
         }
 
         public string PlanningResponse { get; set; }
-        public Exception PlanningException { get; set; }
-        public int CompleteCallCount { get; private set; }
-        public int StreamCallCount { get; private set; }
 
+        public Exception PlanningException { get; set; }
+
+        public int CompleteCallCount { get; private set; }
+
+        public int StreamCallCount { get; private set; }
         public Task<ChatResponse> CompleteAsync(
             AIDeployment deployment,
             IEnumerable<ChatMessage> messages,
@@ -416,17 +408,19 @@ public sealed class DefaultOrchestratorTests
 
             var text = PlanningResponse ?? "No plan";
             var response = new ChatResponse([new ChatMessage(ChatRole.Assistant, text)]);
+
             return Task.FromResult(response);
         }
 
         public async IAsyncEnumerable<ChatResponseUpdate> CompleteStreamingAsync(
-            AIDeployment deployment,
-            IEnumerable<ChatMessage> messages,
-            AICompletionContext context,
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+                AIDeployment deployment,
+                IEnumerable<ChatMessage> messages,
+                AICompletionContext context,
+                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             StreamCallCount++;
             await Task.CompletedTask;
+
             yield return new ChatResponseUpdate
             {
                 Contents = [new TextContent(_streamText)],
@@ -440,7 +434,6 @@ public sealed class DefaultOrchestratorTests
     private sealed class FakeToolRegistry : IToolRegistry
     {
         private readonly IReadOnlyList<ToolRegistryEntry> _entries;
-
         public FakeToolRegistry(IReadOnlyList<ToolRegistryEntry> entries)
         {
             _entries = entries;
@@ -471,43 +464,35 @@ public sealed class DefaultOrchestratorTests
     {
         public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName)
             => new((IChatClient)null);
-
         public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName)
             => new((IEmbeddingGenerator<string, Embedding<float>>)null);
-
 #pragma warning disable MEAI001
         public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((IImageGenerator)null);
-
+    => new((IImageGenerator)null);
         public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ISpeechToTextClient)null);
-
         public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment)
             => new((ISpeechToTextClient)null);
 #pragma warning restore MEAI001
-
 #pragma warning disable MEAI001
-        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((CrestApps.AI.ITextToSpeechClient)null);
-
-        public ValueTask<CrestApps.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-            => new((CrestApps.AI.ITextToSpeechClient)null);
+        public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+    => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
+        public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
     }
+
     /// </summary>
-    private sealed class FakeAITemplateService : IAITemplateService
+    private sealed class FakeAITemplateService : ITemplateService
     {
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
-            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+        public Task<IReadOnlyList<Template>> ListAsync()
+            => Task.FromResult<IReadOnlyList<Template>>([]);
 
-        public Task<AITemplate> GetAsync(string id)
-            => Task.FromResult<AITemplate>(null);
-
+        public Task<Template> GetAsync(string id)
+            => Task.FromResult<Template>(null);
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
             => Task.FromResult<string>(null);
-
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => Task.FromResult<string>(null);
     }
-
 }

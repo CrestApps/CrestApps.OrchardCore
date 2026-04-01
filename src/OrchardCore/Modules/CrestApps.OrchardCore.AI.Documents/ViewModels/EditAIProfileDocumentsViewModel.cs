@@ -6,7 +6,6 @@ namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
 public class EditAIProfileDocumentsViewModel
 {
     public string ProfileId { get; set; }
-
     public IList<ChatDocumentInfo> Documents { get; set; } = [];
 
     /// <summary>

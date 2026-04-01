@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Clients;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Entities;
@@ -14,19 +14,16 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
     public AIDocumentAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    : base(AzureAISearchConstants.ProviderName, aiClientFactory)
     {
     }
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -37,7 +34,6 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
-
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.ChunkId,
@@ -45,41 +41,48 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
             IsKey = true,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.DocumentId,
             Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.Content,
             Type = DocumentIndex.Types.Text,
             IsSearchable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.FileName,
             Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.ReferenceId,
             Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.ReferenceType,
             Type = DocumentIndex.Types.Text,
             IsFilterable = true,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.ChunkIndex,
             Type = DocumentIndex.Types.Integer,
         });
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.Embedding,

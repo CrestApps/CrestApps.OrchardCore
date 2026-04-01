@@ -17,8 +17,8 @@ public static class AIDeploymentConnectionEntryFactory
             foreach (var property in deployment.Properties)
             {
                 values[property.Key] = property.Value is JsonNode jsonNode
-                    ? ConvertJsonNode(jsonNode)
-                    : property.Value;
+                ? ConvertJsonNode(jsonNode)
+                : property.Value;
             }
         }
 
@@ -34,7 +34,7 @@ public static class AIDeploymentConnectionEntryFactory
             JsonObject jsonObject => jsonObject.ToDictionary(
                 property => property.Key,
                 property => ConvertJsonNode(property.Value),
-                StringComparer.OrdinalIgnoreCase),
+            StringComparer.OrdinalIgnoreCase),
             JsonArray jsonArray => jsonArray.Select(ConvertJsonNode).ToList(),
             JsonValue jsonValue when jsonValue.TryGetValue<string>(out var s) => s,
             JsonValue jsonValue when jsonValue.TryGetValue<bool>(out var b) => b,
@@ -60,7 +60,7 @@ public static class AIDeploymentConnectionEntryFactory
                     break;
 
                 case string encryptedKey when
-                    string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(encryptedKey):
                     {
                         var protector = dataProtectionProvider.CreateProtector(ConnectionProtectorName);

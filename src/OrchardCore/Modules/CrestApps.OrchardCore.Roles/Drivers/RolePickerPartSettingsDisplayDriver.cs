@@ -14,7 +14,6 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
         return Initialize<RolePickerPartSettingsViewModel>("RolePickerPartSettings_Edit", model =>
         {
             var settings = contentTypePartDefinition.GetSettings<RolePickerPartSettings>();
-
             model.Hint = settings.Hint;
             model.Required = settings.Required;
             model.AllowSelectMultiple = settings.AllowSelectMultiple;
@@ -25,9 +24,7 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {
         var model = new RolePickerPartSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         context.Builder.WithSettings(
             new RolePickerPartSettings
             {
@@ -36,7 +33,6 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
                 AllowSelectMultiple = model.AllowSelectMultiple,
                 ExcludedRoles = model.ExcludedRoles ?? [],
             });
-
 
         return Edit(contentTypePartDefinition, context);
     }

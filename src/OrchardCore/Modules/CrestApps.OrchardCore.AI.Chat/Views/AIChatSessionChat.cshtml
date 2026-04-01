@@ -1,228 +1,457 @@
 @using CrestApps.AI
+
 @using CrestApps.OrchardCore.AI
+
 @using CrestApps.OrchardCore.AI.Core
+
 @using CrestApps.OrchardCore.AI.Core.Services
+
 @using CrestApps.OrchardCore.AI.Chat.Hubs
+
 @using CrestApps.AI.Models
+
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+
 @using CrestApps.Services
+
 @using CrestApps.SignalR.Services
+
 @using OrchardCore.DisplayManagement
+
 @using OrchardCore.DisplayManagement.ModelBinding
+
 @using OrchardCore.Entities
+
 @using System.Text.Json
+
 @using OrchardCore.Environment.Shell
+
 @using OrchardCore.Environment.Shell.Scope
+
 @using Microsoft.Extensions.DependencyInjection
+
 @using Microsoft.Extensions.Options
+
+@using CrestApps.AI.Profiles
+
+
 
 @model ChatSessionCapsuleViewModel
 
+
+
 @inject IUpdateModelAccessor UpdateModelAccessor
+
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
+
 @inject IAIProfileStore ProfilesCatalog
+
 @inject HubRouteManager HubRouteManager
+
 @inject IAIChatSessionPromptStore PromptStore
+
 @{
+
     var baseId = Html.IdForModel();
+
     var chatAppHtmlId = $"{baseId}_ChatApp";
+
     var buttonHtmlId = $"{baseId}_SendButton";
+
     var userPromptHtmlId = $"{baseId}_UserPrompt";
+
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
+
     var documentBarHtmlId = $"{baseId}_DocumentBar";
+
+
 
     var promptGeneratedProfiles = await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
 
+
+
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
+
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
+
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
+
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
+
         && Model.Profile != null
+
         && Model.Profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+
     var allowedExtensions = string.Empty;
+
     if (sessionDocumentsEnabled)
+
     {
+
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
+
         allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
+
     }
+
+
 
     var metricsEnabled = Model.Profile != null
+
         && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
+
         && Model.Profile.As<AnalyticsMetadata>().EnableSessionMetrics;
+
     var profileMetadata = Model.Profile?.As<AIProfileMetadata>();
+
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata?.InitialPrompt);
+
     ChatModeProfileSettings chatModeSettings = null;
+
     var chatMode = Model.Profile != null && Model.Profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings)
+
         ? chatModeSettings.ChatMode
+
         : ChatMode.TextInput;
+
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
+
     var textToSpeechEnabled = chatMode == ChatMode.Conversation;
+
     var ttsVoiceName = chatModeSettings?.VoiceName;
+
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
+
     var micBtnHtmlId = $"{baseId}_MicBtn";
+
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+
     var orchestratorAvailability = new OrchestratorAvailability();
+
     if (!string.IsNullOrWhiteSpace(Model.Profile?.OrchestratorName))
+
     {
+
         var availabilityProvider = ViewContext.HttpContext.RequestServices.GetServices<IOrchestratorAvailabilityProvider>()
+
             .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, Model.Profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
 
+
+
         if (availabilityProvider is not null)
+
         {
+
             orchestratorAvailability = await availabilityProvider.GetAvailabilityAsync();
+
         }
+
     }
+
 }
+
+
 
 <div class="container-fluid d-flex flex-column h-100">
+
     <div class="flex-grow-1 overflow-y-auto p-3 mb-3 rounded-2 border bg-theme" id="@chatContainerHtmlId">
+
         <div class="w-100 ai-chat-messages">
+
             @{
+
                 var sessionPrompts = !string.IsNullOrEmpty(Model.Session?.SessionId)
+
                 ? await PromptStore.GetPromptsAsync(Model.Session.SessionId)
+
                 : Array.Empty<AIChatSessionPrompt>();
+
             }
+
             @if (sessionPrompts.Count == 0)
+
             {
+
                 <div id="@placeholderHtmlId" class="text-center p-3 @(addInitialPrompt ? "d-none" : string.Empty)">
+
                     <h1 class="mb-3">
+
                         @(addInitialPrompt || string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
+
                     </h1>
+
                 </div>
+
             }
+
+
 
             <div id="@chatAppHtmlId"></div>
+
         </div>
+
     </div>
+
+
 
     <div class="flex-shrink-0">
+
         @if (!orchestratorAvailability.IsAvailable)
+
         {
+
             <div class="alert alert-warning mb-3">
+
                 <i class="fas fa-exclamation-triangle"></i>
+
                 @orchestratorAvailability.Message
+
             </div>
+
         }
+
+
 
         <div class="text-bg-light rounded border w-100">
+
             @if (sessionDocumentsEnabled)
+
             {
+
                 <div id="@documentBarHtmlId" class="d-none"></div>
+
             }
+
             <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
+
+
             <div class="d-flex justify-content-between px-3 my-2">
-                <div>
-                    @if (promptGeneratedProfiles.Any())
-                    {
-                        <div class="d-flex justify-content-center">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fa-solid fa-screwdriver-wrench"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-                                    {
-                                        <li>
-                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.DisplayText</button>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        </div>
-                    }
-                </div>
 
                 <div>
-                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
-                        <i class="fa-solid fa-microphone"></i>
-                    </button>
-                    @if (conversationModeEnabled)
+
+                    @if (promptGeneratedProfiles.Any())
+
                     {
-                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
-                            <i class="fa-solid fa-wave-square"></i>
-                        </button>
+
+                        <div class="d-flex justify-content-center">
+
+                            <div class="dropdown">
+
+                                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+                                    <i class="fa-solid fa-screwdriver-wrench"></i>
+
+                                </button>
+
+                                <ul class="dropdown-menu">
+
+                                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+
+                                    {
+
+                                        <li>
+
+                                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.DisplayText</button>
+
+                                        </li>
+
+                                    }
+
+                                </ul>
+
+                            </div>
+
+                        </div>
+
                     }
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
-                        <i class="fa-solid fa-arrow-up"></i>
-                    </button>
+
                 </div>
+
+
+
+                <div>
+
+                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
+
+                        <i class="fa-solid fa-microphone"></i>
+
+                    </button>
+
+                    @if (conversationModeEnabled)
+
+                    {
+
+                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+
+                            <i class="fa-solid fa-wave-square"></i>
+
+                        </button>
+
+                    }
+
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+
+                        <i class="fa-solid fa-arrow-up"></i>
+
+                    </button>
+
+                </div>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
 @{
+
     var prompts = new List<object>();
 
+
+
     if (sessionPrompts.Count > 0)
+
     {
+
         foreach (var prompt in sessionPrompts)
+
         {
+
             prompts.Add(new
+
             {
+
                 Id = prompt.ItemId,
+
                 prompt.Role,
+
                 prompt.Content,
+
                 prompt.Title,
+
                 prompt.IsGeneratedPrompt,
+
                 prompt.UserRating,
+
                 prompt.References,
+
                 Appearance = prompt.As<AssistantMessageAppearance>(),
+
             });
+
         }
+
     }
+
 }
+
+
 
 <style asp-name="AIChatApp" at="Head"></style>
+
 <style asp-name="highlightjs" at="Head"></style>
+
 @if (speechToTextEnabled)
+
 {
+
     <style asp-name="SpeechToText" at="Head"></style>
+
 }
+
 <script asp-name="AIChatApp" at="Foot"></script>
+
 <script at="Foot" depends-on="AIChatApp">
+
     var configEl = document.getElementById('@($"{baseId}_Config")');
+
     if (configEl) {
+
         openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+
     }
+
 </script>
+
 @{
+
     var chatConfig = new Dictionary<string, object>
+
     {
+
         ["signalRHubUrl"] = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext),
+
         ["appElementSelector"] = $"#{chatAppHtmlId}",
+
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
+
         ["inputElementSelector"] = $"#{userPromptHtmlId}",
+
         ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
+
         ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
+
         ["autoCreateSession"] = addInitialPrompt,
+
         ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+
         ["messages"] = prompts,
+
         ["metricsEnabled"] = metricsEnabled,
+
         ["chatMode"] = chatMode.ToString(),
+
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
+
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
+
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+
         ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
+
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
+
     };
 
+
+
     if (sessionDocumentsEnabled)
+
     {
+
         chatConfig["sessionDocumentsEnabled"] = true;
+
         chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
+
         chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
+
         chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
+
         chatConfig["allowedExtensions"] = allowedExtensions;
+
         chatConfig["existingDocuments"] = Model.Session.Documents ?? new List<ChatDocumentInfo>();
+
     }
+
 }
+
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
+
+
 <style at="Head">
+
     .chat-user-prompt-input:focus {
+
         border: none;
+
         box-shadow: none;
+
     }
+
 </style>

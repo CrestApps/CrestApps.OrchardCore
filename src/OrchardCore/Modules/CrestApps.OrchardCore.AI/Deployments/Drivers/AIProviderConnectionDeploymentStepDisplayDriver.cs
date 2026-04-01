@@ -15,7 +15,6 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
-
     public AIProviderConnectionDeploymentStepDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)
@@ -27,10 +26,10 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
     public override Task<IDisplayResult> DisplayAsync(AIProviderConnectionDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIProviderConnectionDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIProviderConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIProviderConnectionDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIProviderConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIProviderConnectionDeploymentStep step, BuildEditorContext context)
@@ -44,17 +43,16 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
                 DisplayText = x.DisplayText,
                 IsSelected = step.ConnectionIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
-            .ToArray();
+        .ToArray();
         }).Location("Content");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnectionDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIProviderConnectionDeploymentStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.Connections);
+        p => p.IncludeAll,
+        p => p.Connections);
 
         if (model.IncludeAll)
         {

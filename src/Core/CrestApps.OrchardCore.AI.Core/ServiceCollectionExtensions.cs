@@ -1,11 +1,15 @@
-using CrestApps.AI.Prompting.Extensions;
+using CrestApps.Templates.Extensions;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 using CrestApps.OrchardCore.AI.Core.Tools;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +26,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
-            .AddAIPrompting()
+            .AddAITemplating()
             .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
@@ -178,7 +182,6 @@ public static class ServiceCollectionExtensions
 
         // Register the concrete type once as a singleton.
         services.TryAddSingleton<T>();
-
         // Register a keyed IngestionDocumentReader for each extension, resolving
         // back to the shared singleton so only one instance is created per reader type.
         foreach (var extension in supportedExtensions)
@@ -199,45 +202,34 @@ public static class ServiceCollectionExtensions
     {
         services.AddOptions<OrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorOptions>();
-
         // Register the shared tokenizer used by the tool registry and orchestrator.
         services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();
-
         // Register the orchestration context builder and core handlers.
         services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
-
         // Register the agent context handler that enriches the system message with available agent descriptions.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AgentOrchestrationContextBuilderHandler>());
-
         // Register the preemptive search query provider (shared by DataSource and Document RAG handlers).
         services.AddScoped<PreemptiveSearchQueryProvider>();
-
         // Register the preemptive RAG coordinator that dispatches to all IPreemptiveRagHandler implementations.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, PreemptiveRagOrchestrationHandler>());
-
         // Register the tool registry and default providers.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, AgentToolRegistryProvider>());
         services.AddScoped<IToolRegistry, DefaultToolRegistry>();
-
         // Register the default orchestrator.
         services.AddOrchestrator<DefaultOrchestrator>(DefaultOrchestrator.OrchestratorName)
             .WithTitle("Default Orchestrator");
-
         // Register the resolver.
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
-
         // Register the default AI chat response handler and resolver.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
         services.AddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
-
         // Register the external chat relay infrastructure for protocol-agnostic 3rd-party integration.
         services.AddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
         services.AddScoped<IExternalChatRelayEventHandler, DefaultExternalChatRelayEventHandler>();
         services.AddScoped<IExternalChatRelayNotificationHandler, DefaultExternalChatRelayNotificationHandler>();
-
         // Register keyed notification builders for built-in relay event types.
         services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentTyping);
         services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentStoppedTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentStoppedTyping);
@@ -248,13 +240,11 @@ public static class ServiceCollectionExtensions
         services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, ConnectionRestoredNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionRestored);
         services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, WaitTimeUpdatedNotificationBuilder>(ExternalChatRelayEventTypes.WaitTimeUpdated);
         services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SessionEndedNotificationBuilder>(ExternalChatRelayEventTypes.SessionEnded);
-
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
             .WithTitle("Generate Image")
             .WithDescription("Generates an image from a text description using an AI image generation model.")
             .WithPurpose(AIToolPurposes.ContentGeneration);
-
         services.AddAITool<GenerateChartTool>(GenerateChartTool.TheName)
             .WithTitle("Generate Chart")
             .WithDescription("Generates a Chart.js configuration from a data description.")
@@ -285,7 +275,6 @@ public static class ServiceCollectionExtensions
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         services.TryAddScoped<TOrchestrator>();
-
         var entry = new OrchestratorEntry
         {
             Type = typeof(TOrchestrator),

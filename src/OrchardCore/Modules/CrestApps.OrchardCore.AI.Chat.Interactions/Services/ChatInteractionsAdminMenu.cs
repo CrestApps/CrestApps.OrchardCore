@@ -8,7 +8,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 public sealed class ChatInteractionsAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
-
     public ChatInteractionsAdminMenu(IStringLocalizer<ChatInteractionsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -17,15 +16,15 @@ public sealed class ChatInteractionsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-           .Add(S["Artificial Intelligence"], artificialIntelligence =>
-           {
-               artificialIntelligence
-                   .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
-                       .Action("Index", "Admin", ChatInteractionsConstants.Feature.ChatInteractions)
-                       .Permission(AIPermissions.ListChatInteractions)
-                       .LocalNav()
-                   );
-           });
+            .Add(S["Artificial Intelligence"], artificialIntelligence =>
+            {
+                artificialIntelligence
+                .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
+                .Action("Index", "Admin", ChatInteractionsConstants.Feature.ChatInteractions)
+                .Permission(AIPermissions.ListChatInteractions)
+                .LocalNav()
+                );
+            });
 
         return ValueTask.CompletedTask;
     }

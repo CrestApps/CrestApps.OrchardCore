@@ -15,18 +15,18 @@ description: Centralized management for AI system prompts with Liquid template r
 
 The **AI Templates** module provides a centralized system for managing AI system prompts. Instead of scattering hardcoded prompt strings across your codebase, you define prompts as reusable `.md` files with metadata and Liquid template support.
 
-This module is built on top of the standalone **CrestApps.AI.Prompting** library, which can be used in any .NET project — not just Orchard Core.
+This module is built on top of the standalone **CrestApps.Templates** library, which can be used in any .NET project — not just Orchard Core.
 
 ### Key Benefits
 
-- **Centralized Management** — All prompts live in dedicated `AITemplates/Prompts/` directories, easy to find and maintain.
+- **Centralized Management** — All prompts live in dedicated `Templates/Prompts/` directories, easy to find and maintain.
 - **Liquid Templates** — Use Liquid syntax (via [Fluid](https://github.com/sebastienros/fluid)) for dynamic prompt generation with variables, conditionals, and loops.
 - **Metadata** — Add title, description, category, and custom properties to each prompt via front matter.
 - **JSON Compaction** — Fenced ` ```json ``` ` blocks are automatically compacted during parsing to reduce token usage while keeping source files readable.
 - **Caching** — Parsed templates are cached in memory and invalidated when the tenant shell is released or the application restarts.
-- **Composition** — Merge multiple prompts together, use the `AITemplateBuilder` for efficient assembly, or compose templates with shared scope using the `render_ai_template` tag.
+- **Composition** — Merge multiple prompts together, use the `TemplateBuilder` for efficient assembly, or compose templates with shared scope using the `render_ai_template` tag.
 - **Feature-Aware** — In Orchard Core, prompts are automatically tied to module features and only available when those features are enabled.
-- **Extensible Parsers** — Markdown front matter parsing ships by default; add YAML, JSON, or other formats by implementing `IAITemplateParser`.
+- **Extensible Parsers** — Markdown front matter parsing ships by default; add YAML, JSON, or other formats by implementing `ITemplateParser`.
 - **Extensible** — Register prompts via code, files, or custom providers.
 
 ---
@@ -35,7 +35,7 @@ This module is built on top of the standalone **CrestApps.AI.Prompting** library
 
 ### File-Based Prompts
 
-Create a `.md` file in the `AITemplates/Prompts/` directory of any module or project:
+Create a `.md` file in the `Templates/Prompts/` directory of any module or project:
 
 ```
 MyModule/
@@ -147,16 +147,16 @@ Non-JSON fenced blocks and invalid JSON are left unchanged.
 
 ### Code-Based Registration
 
-Register prompts programmatically via `AITemplateOptions`:
+Register prompts programmatically via `TemplateOptions`:
 
 ```csharp
-services.Configure<AITemplateOptions>(options =>
+services.Configure<TemplateOptions>(options =>
 {
-    options.Templates.Add(new AITemplate
+    options.Templates.Add(new Template
     {
         Id = "my-code-prompt",
         Content = "You are a helpful {{ role }} assistant.",
-        Metadata = new AITemplateMetadata
+        Metadata = new TemplateMetadata
         {
             Title = "Code-Registered Prompt",
             Description = "Registered via C# code. Parameters - role (string): the assistant role.",
@@ -173,13 +173,13 @@ For class libraries (non-module projects), embed prompt `.md` files as assembly 
 ```xml
 <!-- In your .csproj -->
 <ItemGroup>
-  <EmbeddedResource Include="AITemplates\Prompts\*.md" />
+  <EmbeddedResource Include="Templates\Prompts\*.md" />
 </ItemGroup>
 ```
 
 ```csharp
 // In your service registration
-services.AddAITemplatesFromAssembly(typeof(MyService).Assembly);
+services.AddTemplatesFromAssembly(typeof(MyService).Assembly);
 ```
 
 ---
@@ -243,22 +243,22 @@ The template ID can be a variable:
 ```
 
 :::tip
-The `render_ai_template` tag is available in the standalone **CrestApps.AI.Prompting** library and can be used in any .NET project — not just Orchard Core.
+The `render_ai_template` tag is available in the standalone **CrestApps.Templates** library and can be used in any .NET project — not just Orchard Core.
 :::
 
 ---
 
 ## Using the Service
 
-### IAITemplateService
+### ITemplateService
 
 The main service interface for working with prompts:
 
 ```csharp
-public interface IAITemplateService
+public interface ITemplateService
 {
-    Task<IReadOnlyList<AITemplate>> ListAsync();
-    Task<AITemplate> GetAsync(string id);
+    Task<IReadOnlyList<Template>> ListAsync();
+    Task<Template> GetAsync(string id);
     // Throws KeyNotFoundException if the template ID is not found.
     Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null);
     Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n");
@@ -275,9 +275,9 @@ public interface IAITemplateService
 // Inject the service
 public class MyService
 {
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
 
-    public MyService(IAITemplateService templateService)
+    public MyService(ITemplateService templateService)
     {
         _templateService = templateService;
     }
@@ -305,21 +305,21 @@ public class MyService
 }
 ```
 
-### AITemplateBuilder
+### TemplateBuilder
 
-For composing prompts from multiple sources (raw strings, `AITemplate` objects, and template IDs), use the `AITemplateBuilder`. It uses pooled buffers to minimize allocations:
+For composing prompts from multiple sources (raw strings, `Template` objects, and template IDs), use the `TemplateBuilder`. It uses pooled buffers to minimize allocations:
 
 ```csharp
-// Build from raw strings and AITemplate objects (synchronous)
-var result = new AITemplateBuilder()
+// Build from raw strings and Template objects (synchronous)
+var result = new TemplateBuilder()
     .WithSeparator("\n\n")
     .Append("You are a helpful assistant.")
     .Append(someAITemplate)
     .Append("Always respond in English.")
     .Build();
 
-// Build with template ID resolution (asynchronous, requires IAITemplateService)
-var result = await new AITemplateBuilder()
+// Build with template ID resolution (asynchronous, requires ITemplateService)
+var result = await new TemplateBuilder()
     .WithSeparator("\n\n")
     .Append("Base instructions.")
     .AppendTemplate("rag-response-guidelines")
@@ -331,24 +331,24 @@ var result = await new AITemplateBuilder()
 
 ## Extending Parsers
 
-The library ships with a Markdown front matter parser (`DefaultMarkdownAITemplateParser`) which handles `.md` files. To add support for other formats (e.g., YAML, JSON), implement `IAITemplateParser`:
+The library ships with a Markdown front matter parser (`DefaultMarkdownTemplateParser`) which handles `.md` files. To add support for other formats (e.g., YAML, JSON), implement `ITemplateParser`:
 
 ```csharp
-public class YamlAITemplateParser : IAITemplateParser
+public class YamlAITemplateParser : ITemplateParser
 {
     public IReadOnlyList<string> SupportedExtensions => [".yaml", ".yml"];
 
-    public AITemplateParseResult Parse(string content) { /* ... */ }
+    public TemplateParseResult Parse(string content) { /* ... */ }
 }
 ```
 
 Register your parser in DI:
 
 ```csharp
-services.TryAddEnumerable(ServiceDescriptor.Singleton<IAITemplateParser, YamlAITemplateParser>());
+services.TryAddEnumerable(ServiceDescriptor.Singleton<ITemplateParser, YamlAITemplateParser>());
 ```
 
-Providers (`FileSystemAITemplateProvider`, `EmbeddedResourceAITemplateProvider`, `ModuleAITemplateProvider`) automatically select the correct parser based on file extension.
+Providers (`FileSystemTemplateProvider`, `EmbeddedResourceTemplateProvider`, `ModuleTemplateProvider`) automatically select the correct parser based on file extension.
 
 ---
 
@@ -356,8 +356,8 @@ Providers (`FileSystemAITemplateProvider`, `EmbeddedResourceAITemplateProvider`,
 
 When the `CrestApps.OrchardCore.AI.Prompting` feature is enabled:
 
-- **Module Discovery** — Prompts in `AITemplates/Prompts/` directories of all Orchard Core modules are automatically discovered.
-- **Feature Filtering** — Prompts placed in `AITemplates/Prompts/{featureId}/` subdirectories are only available when that feature is enabled.
+- **Module Discovery** — Prompts in `Templates/Prompts/` directories of all Orchard Core modules are automatically discovered.
+- **Feature Filtering** — Prompts placed in `Templates/Prompts/{featureId}/` subdirectories are only available when that feature is enabled.
 - **Caching** — Templates are parsed once and cached in memory. The cache is invalidated when the tenant shell is released or the application restarts.
 - **Runtime Template Consumption** — When a prompt template is selected on an AI Profile or Chat Interaction, the template is rendered at runtime during orchestration. The rendered output replaces the custom system message.
 - **UI Integration** — A prompt selection dropdown is added to AI Profile and Chat Interaction editors:
@@ -371,24 +371,24 @@ When the `CrestApps.OrchardCore.AI.Prompting` feature is enabled:
 
 ## Using in Non-OrchardCore Projects
 
-The standalone `CrestApps.AI.Prompting` library can be used in any .NET project:
+The standalone `CrestApps.Templates` library can be used in any .NET project:
 
 ```csharp
 // In your Program.cs or Startup.cs
-services.AddAIPrompting();
+services.AddTemplating();
 
 // Optionally configure discovery paths
-services.Configure<AITemplateOptions>(options =>
+services.Configure<TemplateOptions>(options =>
 {
     options.DiscoveryPaths.Add(Path.Combine(AppContext.BaseDirectory));
 });
 ```
 
 This registers:
-- `IAITemplateParser` — Parses front matter metadata (markdown by default; extensible). JSON blocks inside fenced code blocks are automatically compacted.
-- `IAITemplateEngine` — Processes Liquid templates (rendering and validation)
-- `IAITemplateService` — Main service for listing, getting, and rendering prompts
-- `IAITemplateProvider` — File system and options-based providers
+- `ITemplateParser` — Parses front matter metadata (markdown by default; extensible). JSON blocks inside fenced code blocks are automatically compacted.
+- `ITemplateEngine` — Processes Liquid templates (rendering and validation)
+- `ITemplateService` — Main service for listing, getting, and rendering prompts
+- `ITemplateProvider` — File system and options-based providers
 
 ---
 
@@ -404,6 +404,6 @@ The CI pipeline validates all prompt template files on every pull request:
 To validate locally:
 
 ```csharp
-var engine = serviceProvider.GetRequiredService<IAITemplateEngine>();
+var engine = serviceProvider.GetRequiredService<ITemplateEngine>();
 bool isValid = engine.TryValidate(templateBody, out var errors);
 ```

@@ -18,7 +18,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
     private readonly IClock _clock;
     private readonly McpMetadataCacheOptions _cacheOptions;
     private readonly ILogger _logger;
-
     public DefaultMcpServerMetadataProvider(
         McpService mcpService,
         IDistributedCache cache,
@@ -40,7 +39,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
         ArgumentNullException.ThrowIfNull(connection);
 
         var cacheKey = _cacheKeyPrefix + connection.ItemId;
-
         var cached = await TryGetCachedCapabilitiesAsync(cacheKey);
 
         if (cached is not null)
@@ -97,7 +95,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
             };
 
             var jsonBytes = JsonSerializer.SerializeToUtf8Bytes(capabilities, JOptions.CamelCase);
-
             await _cache.SetAsync(cacheKey, jsonBytes, cacheEntryOptions);
         }
         catch (Exception ex)
@@ -129,7 +126,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
             var tools = new List<McpServerCapability>();
             var prompts = new List<McpServerCapability>();
             var resources = new List<McpServerCapability>();
-
             // Fetch tools.
             try
             {
@@ -186,7 +182,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
 
             // Fetch resource templates.
             var resourceTemplates = new List<McpServerCapability>();
-
             try
             {
                 foreach (var template in await client.ListResourceTemplatesAsync())
@@ -214,7 +209,6 @@ internal sealed class DefaultMcpServerMetadataProvider : IMcpServerMetadataCache
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch capabilities for MCP connection '{ConnectionId}' ('{ConnectionName}').", connection.ItemId, connection.DisplayText);
-
             capabilities.IsHealthy = false;
         }
 

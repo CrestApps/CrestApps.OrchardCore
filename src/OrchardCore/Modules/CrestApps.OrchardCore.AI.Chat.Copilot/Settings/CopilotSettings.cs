@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Copilot.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 
@@ -11,7 +11,6 @@ public sealed class CopilotSettings
     /// The authentication method used by the Copilot orchestrator.
     /// </summary>
     public CopilotAuthenticationType AuthenticationType { get; set; }
-
     // ── GitHub OAuth fields ──
 
     /// <summary>
@@ -28,7 +27,6 @@ public sealed class CopilotSettings
     /// OAuth scopes required for Copilot.
     /// </summary>
     public string[] Scopes { get; set; } = ["user:email", "read:org"];
-
     // ── BYOK (API Key) fields ──
 
     /// <summary>

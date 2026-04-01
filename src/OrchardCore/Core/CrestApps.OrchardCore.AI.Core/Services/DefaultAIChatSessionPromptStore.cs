@@ -13,11 +13,10 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSessionPrompt, AIChatSessionPromptIndex>, IAIChatSessionPromptStore
 {
     private readonly IClock _clock;
-
     public DefaultAIChatSessionPromptStore(
         ISession session,
         IClock clock)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
         _clock = clock;
@@ -31,9 +30,9 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         var prompts = await Session.Query<AIChatSessionPrompt, AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .OrderBy(x => x.CreatedUtc)
-            .ThenBy(x => x.Id)
-            .ListAsync();
+                .OrderBy(x => x.CreatedUtc)
+                .ThenBy(x => x.Id)
+                .ListAsync();
 
         return prompts.ToArray();
     }
@@ -46,9 +45,9 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         var prompts = await Session.Query<AIChatSessionPrompt, AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .ListAsync();
-
+                .ListAsync();
         var count = 0;
+
         foreach (var prompt in prompts)
         {
             Session.Delete(prompt, CollectionName);
@@ -66,7 +65,7 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         return await Session.QueryIndex<AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .CountAsync();
+                .CountAsync();
     }
 
     /// <inheritdoc />

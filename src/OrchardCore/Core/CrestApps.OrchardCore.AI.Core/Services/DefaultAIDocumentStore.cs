@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDocumentStore : DocumentCatalog<AIDocument, AIDocumentIndex>, IAIDocumentStore
 {
     public DefaultAIDocumentStore(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AIDocsCollectionName;
     }

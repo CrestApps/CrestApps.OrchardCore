@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -27,11 +27,11 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
             if (session is null)
             {
                 logger.LogWarning("End session failed: session '{SessionId}' not found.", context.SessionId);
+
                 return;
             }
 
             var clock = context.Services.GetRequiredService<IClock>();
-
             session.Status = ChatSessionStatus.Closed;
             session.ClosedAtUtc = clock.UtcNow;
             await sessionManager.SaveAsync(session);

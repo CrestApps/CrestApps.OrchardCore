@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
@@ -13,7 +13,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 public sealed class DataSourceIndexProfileHandler : IndexProfileHandlerBase
 {
     private readonly DataSourceIndexingService _indexingService;
-
     public DataSourceIndexProfileHandler(DataSourceIndexingService indexingService)
     {
         _indexingService = indexingService;

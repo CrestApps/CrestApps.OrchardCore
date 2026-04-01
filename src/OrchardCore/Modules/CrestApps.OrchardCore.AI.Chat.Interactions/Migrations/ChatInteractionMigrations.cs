@@ -10,30 +10,28 @@ internal sealed class ChatInteractionMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<ChatInteractionIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("Source", column => column.WithLength(255))
-                .Column<string>("Title", column => column.WithLength(255))
-                .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.AICollectionName
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("UserId", column => column.WithLength(26))
+            .Column<string>("Source", column => column.WithLength(255))
+            .Column<string>("Title", column => column.WithLength(255))
+            .Column<DateTime>("CreatedUtc"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionIndex>(table => table
             .CreateIndex("IDX_ChatInteractionIndex_DocumentId",
-                "DocumentId",
-                "ItemId",
-                "UserId",
-                "Source",
-                "Title",
-                "CreatedUtc"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "ItemId",
+        "UserId",
+        "Source",
+        "Title",
+        "CreatedUtc"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionIndex>(table => table
             .CreateIndex("IDX_ChatInteractionIndex_UserId",
-                "DocumentId",
-                "UserId"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "UserId"),
+        collection: AIConstants.AICollectionName
         );
 
         return 1;

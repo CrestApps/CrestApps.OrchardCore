@@ -12,7 +12,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnection>
 {
     internal readonly IStringLocalizer S;
-
     public StdioMcpConnectionDisplayDriver(IStringLocalizer<StdioMcpConnectionDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -51,26 +50,24 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 
             model.ArgumentsSchema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-            """;
-
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "array",
+  "items": {
+    "type": "string"
+  }
+}
+""";
             model.EnvironmentVariablesSchema =
-            """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
-
+        """
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
         }).Location("Content:1");
     }
 
@@ -82,7 +79,6 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
         }
 
         var model = new StdioConnectionFieldsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.Command))

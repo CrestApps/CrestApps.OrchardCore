@@ -10,29 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class DeleteContentTool : AIFunction
 {
     public const string TheName = "deleteContentItem";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
         }
-        
-        """);
-
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Permanently removes a content item from the site, including all of its versions.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

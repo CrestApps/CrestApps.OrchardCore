@@ -5,7 +5,6 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Memory.Services;
 public sealed class DefaultAIMemorySafetyServiceTests
 {
     private readonly DefaultAIMemorySafetyService _service = new();
-
     [Fact]
     public void TryValidate_WhenMemoryIsSafe_ShouldReturnTrue()
     {
@@ -14,7 +13,6 @@ public sealed class DefaultAIMemorySafetyServiceTests
             "The user's response format preference.",
             "The user prefers concise bullet points.",
             out var errorMessage);
-
         Assert.True(result);
         Assert.Null(errorMessage);
     }
@@ -28,7 +26,6 @@ public sealed class DefaultAIMemorySafetyServiceTests
     public void TryValidate_WhenMemoryContainsDurableContext_ShouldReturnTrue(string name, string description, string content)
     {
         var result = _service.TryValidate(name, description, content, out var errorMessage);
-
         Assert.True(result);
         Assert.Null(errorMessage);
     }
@@ -41,7 +38,6 @@ public sealed class DefaultAIMemorySafetyServiceTests
     public void TryValidate_WhenMemoryLooksSensitive_ShouldReturnFalse(string name, string description, string content)
     {
         var result = _service.TryValidate(name, description, content, out var errorMessage);
-
         Assert.False(result);
         Assert.Equal("Sensitive information must not be stored in user memory.", errorMessage);
     }

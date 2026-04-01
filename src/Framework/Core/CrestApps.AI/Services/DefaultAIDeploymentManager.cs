@@ -1,8 +1,8 @@
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 namespace CrestApps.AI.Services;
 
 public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment>, IAIDeploymentManager
@@ -14,7 +14,7 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
         IOptionsMonitor<DefaultAIDeploymentSettings> deploymentSettings,
         ILogger<DefaultAIDeploymentManager> logger)
-        : base(deploymentStore, handlers, logger)
+    : base(deploymentStore, handlers, logger)
     {
         _deploymentSettings = deploymentSettings;
     }
@@ -23,8 +23,8 @@ public class DefaultAIDeploymentManager : NamedSourceCatalogManager<AIDeployment
     {
         var deployments = (await Catalog.GetAllAsync())
             .Where(x => string.Equals(x.ClientName, clientName, StringComparison.OrdinalIgnoreCase) &&
-            (string.Equals(x.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
+                (string.Equals(x.ConnectionName ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.ConnectionNameAlias ?? string.Empty, connectionName, StringComparison.OrdinalIgnoreCase)));
 
         foreach (var deployment in deployments)
         {

@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Settings;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -21,9 +21,7 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
     private readonly IAIProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
-
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public AIChatAdminWidgetSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -43,7 +41,6 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
             model.ProfileId = settings.ProfileId;
             model.MaxSessions = settings.MaxSessions;
             model.PrimaryColor = settings.PrimaryColor;
-
             var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
             model.Profiles = profiles.Select(p => new SelectListItem(p.DisplayText, p.ItemId));
         })
@@ -60,9 +57,7 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
         }
 
         var model = new AIChatAdminWidgetSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.ProfileId = model.ProfileId;
         settings.MaxSessions = Math.Clamp(
             model.MaxSessions,

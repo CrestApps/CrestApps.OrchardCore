@@ -14,11 +14,10 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInteractionPrompt, ChatInteractionPromptIndex>, IChatInteractionPromptStore
 {
     private readonly IClock _clock;
-
     public DefaultChatInteractionPromptStore(
         ISession session,
         IClock clock)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
         _clock = clock;
@@ -32,9 +31,9 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
         var prompts = await Session.Query<ChatInteractionPrompt, ChatInteractionPromptIndex>(
             x => x.ChatInteractionId == chatInteractionId,
             collection: CollectionName)
-            .OrderBy(x => x.CreatedUtc)
-            .ThenBy(x => x.Id)
-            .ListAsync();
+                .OrderBy(x => x.CreatedUtc)
+                .ThenBy(x => x.Id)
+                .ListAsync();
 
         return prompts.ToArray();
     }
@@ -47,9 +46,9 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
         var prompts = await Session.Query<ChatInteractionPrompt, ChatInteractionPromptIndex>(
             x => x.ChatInteractionId == chatInteractionId,
             collection: CollectionName)
-            .ListAsync();
-
+                .ListAsync();
         var count = 0;
+
         foreach (var prompt in prompts)
         {
             Session.Delete(prompt, CollectionName);
@@ -63,6 +62,7 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
     protected override ValueTask SavingAsync(ChatInteractionPrompt record)
     {
         // Ensure CreatedUtc is set when creating a new prompt
+
         if (record.CreatedUtc == default)
         {
             record.CreatedUtc = _clock.UtcNow;

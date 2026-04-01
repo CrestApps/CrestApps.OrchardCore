@@ -10,8 +10,8 @@ namespace CrestApps.OrchardCore.Recipes.Core.Services;
 public sealed class OrchardFeatureSchemaProvider : IFeatureSchemaProvider
 {
     private const string ThemeManifestType = "Theme";
-    private readonly IExtensionManager _extensionManager;
 
+    private readonly IExtensionManager _extensionManager;
     public OrchardFeatureSchemaProvider(IExtensionManager extensionManager)
     {
         _extensionManager = extensionManager;

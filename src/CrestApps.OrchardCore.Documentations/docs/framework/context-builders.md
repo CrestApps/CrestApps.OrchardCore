@@ -152,7 +152,7 @@ The orchestration level runs during orchestrated conversations (e.g., the chat i
 ```csharp
 public sealed class UserPreferencesOrchestrationHandler(
     IHttpContextAccessor httpContextAccessor,
-    IAITemplateService templateService) : IOrchestrationContextBuilderHandler
+    ITemplateService templateService) : IOrchestrationContextBuilderHandler
 {
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
     {

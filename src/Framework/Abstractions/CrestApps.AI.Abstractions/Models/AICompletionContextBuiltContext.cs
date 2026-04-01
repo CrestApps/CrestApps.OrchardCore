@@ -1,3 +1,5 @@
+using CrestApps.AI.Completions;
+
 namespace CrestApps.AI.Models;
 
 /// <summary>

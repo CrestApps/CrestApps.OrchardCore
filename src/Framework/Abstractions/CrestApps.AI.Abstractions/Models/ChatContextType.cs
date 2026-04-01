@@ -1,3 +1,5 @@
+using CrestApps.AI.ResponseHandling;
+
 namespace CrestApps.AI.Models;
 
 /// <summary>

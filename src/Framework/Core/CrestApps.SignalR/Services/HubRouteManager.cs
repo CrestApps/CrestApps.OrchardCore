@@ -80,7 +80,7 @@ public sealed class HubRouteManager
 
         if (!string.IsNullOrEmpty(siteBasePath) &&
             siteBasePath != "/" &&
-            relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
+                relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
         {
             relativePath = relativePath[siteBasePath.Length..];
         }

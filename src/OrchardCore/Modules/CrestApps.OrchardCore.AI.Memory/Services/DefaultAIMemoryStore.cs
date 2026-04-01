@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.Indexes;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -10,9 +10,8 @@ namespace CrestApps.OrchardCore.AI.Memory.Services;
 public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemoryEntryIndex>, IAIMemoryStore
 {
     private readonly ILookupNormalizer _lookupNormalizer;
-
     public DefaultAIMemoryStore(ISession session, ILookupNormalizer lookupNormalizer)
-        : base(session)
+    : base(session)
     {
         _lookupNormalizer = lookupNormalizer;
         CollectionName = MemoryConstants.CollectionName;
@@ -42,16 +41,16 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
         return await Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
             x => x.UserId == userId && x.NormalizedName == normalizedName,
             CollectionName)
-            .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync();
     }
 
     public async Task<IReadOnlyCollection<AIMemoryEntry>> GetByUserAsync(string userId, int limit = 100)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
+
         IQuery<AIMemoryEntry> query = Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
             x => x.UserId == userId,
             CollectionName);
-
         query = query
             .With<AIMemoryEntryIndex>()
             .OrderByDescending(x => x.UpdatedUtc);

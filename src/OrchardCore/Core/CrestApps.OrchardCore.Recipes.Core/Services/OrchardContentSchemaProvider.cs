@@ -14,7 +14,6 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
     private readonly IContentDefinitionManager _defManager;
     private readonly IEnumerable<Type> _partTypes;
     private readonly IEnumerable<Type> _fieldTypes;
-
     public OrchardContentSchemaProvider(
         IContentDefinitionManager defManager,
         IEnumerable<ContentPart> parts,
@@ -22,10 +21,8 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
         IOptions<ContentOptions> options)
     {
         _defManager = defManager;
-
         _partTypes = parts.Select(p => p.GetType())
             .Union(options.Value.ContentPartOptions.Select(o => o.Type));
-
         _fieldTypes = fields.Select(f => f.GetType())
             .Union(options.Value.ContentFieldOptions.Select(o => o.Type));
     }
@@ -34,11 +31,9 @@ public sealed class OrchardContentSchemaProvider : IContentSchemaProvider
     {
         var typeNames = new HashSet<string>(
             (await _defManager.ListTypeDefinitionsAsync()).Select(t => t.Name));
-
         var definedPartNames = (await _defManager.ListPartDefinitionsAsync())
             .Where(pd => !typeNames.Contains(pd.Name))
             .Select(pd => pd.Name);
-
         var codePartNames = _partTypes
             .Select(t => t.Name)
             .Where(n => !typeNames.Contains(n));

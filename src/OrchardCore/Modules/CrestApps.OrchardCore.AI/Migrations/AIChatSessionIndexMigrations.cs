@@ -10,58 +10,53 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<AIChatSessionIndex>(table => table
-                .Column<string>("ProfileId", column => column.WithLength(26))
-                .Column<string>("SessionId", column => column.WithLength(26))
-                .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("ClientId", column => column.WithLength(64))
-                .Column<string>("Status", column => column.WithDefault("Active"))
-                .Column<string>("PostSessionProcessingStatus", column => column.WithDefault("None"))
-                .Column<DateTime>("LastActivityUtc")
-                .Column<DateTime>("CreatedUtc")
-                .Column<string>("Title", column => column.WithLength(255)),
-            collection: AIConstants.AICollectionName
+            .Column<string>("ProfileId", column => column.WithLength(26))
+            .Column<string>("SessionId", column => column.WithLength(26))
+            .Column<string>("UserId", column => column.WithLength(26))
+            .Column<string>("ClientId", column => column.WithLength(64))
+            .Column<string>("Status", column => column.WithDefault("Active"))
+            .Column<string>("PostSessionProcessingStatus", column => column.WithDefault("None"))
+            .Column<DateTime>("LastActivityUtc")
+            .Column<DateTime>("CreatedUtc")
+            .Column<string>("Title", column => column.WithLength(255)),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
             .CreateIndex("IDX_AIChatSessionIndex_DocumentId",
-                "DocumentId",
-                "SessionId",
-                "ProfileId",
-                "UserId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "SessionId",
+        "ProfileId",
+        "UserId",
+        "ClientId",
+        "CreatedUtc",
+        "Title"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
             .CreateIndex("IDX_AIChatSessionIndex_UserId",
-                "DocumentId",
-                "SessionId",
-                "UserId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "SessionId",
+        "UserId",
+        "CreatedUtc",
+        "Title"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
             .CreateIndex("IDX_AIChatSessionIndex_ClientId",
-                "DocumentId",
-                "SessionId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "SessionId",
+        "ClientId",
+        "CreatedUtc",
+        "Title"),
+        collection: AIConstants.AICollectionName
         );
-
-
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
             .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "ProfileId",
+        "Status",
+        "LastActivityUtc"),
+        collection: AIConstants.AICollectionName
         );
 
         return 3;
@@ -74,14 +69,13 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
             table.AddColumn<string>("Status", column => column.WithDefault("Active"));
             table.AddColumn<DateTime>("LastActivityUtc");
         }, collection: AIConstants.AICollectionName);
-
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
+        .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
+        "DocumentId",
+        "ProfileId",
+        "Status",
+        "LastActivityUtc"),
+        collection: AIConstants.AICollectionName
         );
 
         return 3;

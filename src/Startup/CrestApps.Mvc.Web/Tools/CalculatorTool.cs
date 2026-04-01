@@ -10,37 +10,41 @@ namespace CrestApps.Mvc.Web.Tools;
 public sealed class CalculatorTool : AIFunction
 {
     public const string TheName = "calculator";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "required": ["operation", "a", "b"],
-          "properties": {
-            "operation": {
-              "type": "string",
-              "enum": ["add", "subtract", "multiply", "divide"],
-              "description": "The arithmetic operation to perform."
-            },
-            "a": {
-              "type": "number",
-              "description": "The first operand."
-            },
-            "b": {
-              "type": "number",
-              "description": "The second operand."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "required": [
+        "operation",
+        "a",
+        "b"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "add",
+            "subtract",
+            "multiply",
+            "divide"
+          ],
+          "description": "The arithmetic operation to perform."
+        },
+        "a": {
+          "type": "number",
+          "description": "The first operand."
+        },
+        "b": {
+          "type": "number",
+          "description": "The second operand."
         }
-        """);
-
+      },
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Performs basic arithmetic: add, subtract, multiply, or divide two numbers.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>
     {
         ["Strict"] = true,
@@ -92,10 +96,15 @@ public sealed class CalculatorTool : AIFunction
         }
 
         if (raw is double d) { value = d; return true; }
+
         if (raw is int i) { value = i; return true; }
+
         if (raw is long l) { value = l; return true; }
+
         if (raw is float f) { value = f; return true; }
+
         if (raw is decimal m) { value = (double)m; return true; }
+
         if (raw is JsonElement je && je.TryGetDouble(out var jd)) { value = jd; return true; }
 
         return double.TryParse(raw?.ToString(), out value);

@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -48,20 +48,17 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
-
         // Chat notification services.
         services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
         services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
-
         services.Configure<HubOptions<AIChatHub>>(options =>
         {
             // Allow long-running operations (e.g., multi-step MCP tool calls)
             // without the server dropping the connection prematurely.
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-
             // Allow larger messages for audio transcription payloads.
             options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });
@@ -81,7 +78,6 @@ public sealed class WidgetsStartup : StartupBase
         services
             .AddContentPart<AIProfilePart>()
             .UseDisplayDriver<AIChatProfilePartDisplayDriver>();
-
         services.AddDataMigration<AIChatMigrations>();
     }
 }
@@ -94,7 +90,6 @@ public sealed class AdminWidgetStartup : StartupBase
         services
             .AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-
         services.Configure<MvcOptions>(options =>
         {
             options.Filters.Add<AIChatAdminWidgetFilter>();

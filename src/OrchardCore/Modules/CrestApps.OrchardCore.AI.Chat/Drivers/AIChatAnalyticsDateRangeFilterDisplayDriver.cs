@@ -23,13 +23,11 @@ public sealed class AIChatAnalyticsDateRangeFilterDisplayDriver : DisplayDriver<
     public override async Task<IDisplayResult> UpdateAsync(AIChatAnalyticsFilter filter, UpdateEditorContext context)
     {
         var model = new ChatAnalyticsFilterViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         filter.StartDateUtc = model.StartDate;
         filter.EndDateUtc = model.EndDate;
-
         // Add date range conditions to the query.
+
         if (filter.StartDateUtc.HasValue)
         {
             var start = filter.StartDateUtc.Value;

@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers;
 internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver : ActivityDisplayDriver<SetContactCommunicationPreferenceActivityTask, SetContactCommunicationPreferenceActivityTaskViewModel>
 {
     internal readonly IStringLocalizer S;
-
     public SetContactCommunicationPreferenceActivityTaskDisplayDriver(IStringLocalizer<TryAgainActivityTaskDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -28,13 +27,12 @@ internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver
     public override async Task<IDisplayResult> UpdateAsync(SetContactCommunicationPreferenceActivityTask activity, UpdateEditorContext context)
     {
         var model = new SetContactCommunicationPreferenceActivityTaskViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (!model.SetDoNotCall.HasValue &&
             !model.SetDoNotSms.HasValue &&
-            !model.SetDoNotEmail.HasValue &&
-            !model.SetDoNotChat.HasValue)
+                !model.SetDoNotEmail.HasValue &&
+                    !model.SetDoNotChat.HasValue)
         {
             context.Updater.ModelState.AddModelError(Prefix, string.Empty, S["At least one of the preferences must be set"]);
         }

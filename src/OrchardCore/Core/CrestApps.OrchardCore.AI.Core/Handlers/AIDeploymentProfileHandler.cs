@@ -13,7 +13,6 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
-
     public AIDeploymentProfileHandler(
         INamedCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<AIProfileHandler> stringLocalizer)
@@ -24,10 +23,8 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 
     public override Task InitializingAsync(InitializingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
         if (!string.IsNullOrEmpty(context.Model.ChatDeploymentName) &&
@@ -55,9 +52,8 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
-
             profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
         }
 
@@ -72,15 +68,13 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 #pragma warning disable CS0618 // Type or member is obsolete
             var utilityDeploymentId = data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
-
             profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
         }
     }
 
     private async Task<AIDeployment> FindDeploymentAsync(string selector)
         => await _deploymentsCatalog.FindByIdAsync(selector)
-        ?? await _deploymentsCatalog.FindByNameAsync(selector);
-
+    ?? await _deploymentsCatalog.FindByNameAsync(selector);
     private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
     {
         if (!string.IsNullOrWhiteSpace(deploymentId))

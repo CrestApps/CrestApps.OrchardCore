@@ -66,42 +66,42 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AIConnection" asp-action="Index">
+                        <a class="nav-link" asp-area="AI" asp-controller="AIConnection" asp-action="Index">
                             <i class="bi bi-plug"></i> AI Connections
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AIDeployment" asp-action="Index">
+                        <a class="nav-link" asp-area="AI" asp-controller="AIDeployment" asp-action="Index">
                             <i class="bi bi-box-seam"></i> AI Deployments
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AIProfile" asp-action="Index">
+                        <a class="nav-link" asp-area="AI" asp-controller="AIProfile" asp-action="Index">
                             <i class="bi bi-person-gear"></i> AI Profiles
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AIChat" asp-action="Index">
+                        <a class="nav-link" asp-area="AIChat" asp-controller="AIChat" asp-action="Index">
                             <i class="bi bi-chat-dots"></i> AI Chat
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="ChatInteraction" asp-action="Index">
+                        <a class="nav-link" asp-area="ChatInteractions" asp-controller="ChatInteraction" asp-action="Index">
                             <i class="bi bi-chat-left-dots"></i> Chat Interactions
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="IndexProfile" asp-action="Index">
+                        <a class="nav-link" asp-area="Indexing" asp-controller="IndexProfile" asp-action="Index">
                             <i class="bi bi-database-gear"></i> Index Profiles
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AIDataSource" asp-action="Index">
+                        <a class="nav-link" asp-area="DataSources" asp-controller="AIDataSource" asp-action="Index">
                             <i class="bi bi-collection"></i> Data Sources
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="AITemplate" asp-action="Index">
+                        <a class="nav-link" asp-area="AI" asp-controller="Template" asp-action="Index">
                             <i class="bi bi-file-earmark-text"></i> AI Templates
                         </a>
                     </li>
@@ -114,23 +114,23 @@
                     <hr class="my-2" />
 
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="A2AConnection" asp-action="Index">
+                        <a class="nav-link" asp-area="A2A" asp-controller="A2AConnection" asp-action="Index">
                             <i class="bi bi-diagram-3"></i> Agent to Agent Hosts
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="McpConnection" asp-action="Index">
+                        <a class="nav-link" asp-area="Mcp" asp-controller="McpConnection" asp-action="Index">
                             <i class="bi bi-hdd-network"></i> MCP Hosts
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="McpPrompt" asp-action="Index">
+                        <a class="nav-link" asp-area="Mcp" asp-controller="McpPrompt" asp-action="Index">
                             <i class="bi bi-chat-square-text"></i> MCP Prompts
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" asp-area="Admin" asp-controller="McpResource" asp-action="Index">
+                        <a class="nav-link" asp-area="Mcp" asp-controller="McpResource" asp-action="Index">
                             <i class="bi bi-folder2-open"></i> MCP Resources
                         </a>
                     </li>
@@ -157,7 +157,7 @@
 
     @if (User.Identity.IsAuthenticated)
     {
-        @await Html.PartialAsync("_ChatWidget")
+        @await Html.PartialAsync("~/Areas/AIChat/Views/Shared/_ChatWidget.cshtml")
     }
 </body>
 </html>

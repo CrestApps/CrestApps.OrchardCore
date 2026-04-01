@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIDataSourceDeploymentStep>
 {
     private readonly ICatalog<AIDataSource> _store;
-
     public AIDataSourceDeploymentSource(ICatalog<AIDataSource> store)
     {
         _store = store;
@@ -18,12 +17,10 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
     protected override async Task ProcessAsync(AIDataSourceDeploymentStep step, DeploymentPlanResult result)
     {
         var dataSources = await _store.GetAllAsync();
-
         var sourceObjects = new JsonArray();
-
         var sourceIds = step.IncludeAll
-            ? []
-            : step.SourceIds ?? [];
+        ? []
+        : step.SourceIds ?? [];
 
         foreach (var dataSource in dataSources)
         {
@@ -57,4 +54,3 @@ internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIData
         });
     }
 }
-

@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIProfileManager _profileManager;
-
     public ChatInteractionAgentsDisplayDriver(IAIProfileManager profileManager)
     {
         _profileManager = profileManager;
@@ -18,10 +17,8 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
-
         var alwaysAvailableCount = allAgents
             .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
-
         var onDemandAgents = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
@@ -36,20 +33,15 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 Description = agent.Description,
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
         }).Location("Parameters:5#Capabilities;5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
         var model = new EditChatInteractionAgentsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var selectedAgentNames = model.Agents?.Where(a => a.IsSelected).Select(a => a.ItemId);
-
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
-
         var validAgentNames = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)

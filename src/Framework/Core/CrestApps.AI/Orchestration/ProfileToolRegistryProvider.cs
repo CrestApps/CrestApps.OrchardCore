@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

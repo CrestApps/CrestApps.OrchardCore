@@ -68,7 +68,7 @@ public static class SentenceBoundaryDetector
 
         while (i >= 0)
         {
-            char c = span[i];
+            var c = span[i];
 
             if (IsTrailingWrapper(c))
             {

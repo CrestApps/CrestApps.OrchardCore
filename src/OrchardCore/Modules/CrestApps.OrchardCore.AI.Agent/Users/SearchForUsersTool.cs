@@ -18,33 +18,30 @@ namespace CrestApps.OrchardCore.AI.Agent.Users;
 public sealed class SearchForUsersTool : AIFunction
 {
     public const string TheName = "searchForUsers";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "term": {
-              "type": "string",
-              "description": "The query string to search for."
-            },
-            "pageNumber": {
-              "type": "integer",
-              "description": "The page number of results to return.",
-              "default": 1
-            }
-          },
-          "required": ["term"],
-          "additionalProperties": false
-        }     
-        """);
-
+    """
+    {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Search for users that match the given query along with a way to paginate the results.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -56,6 +53,7 @@ public sealed class SearchForUsersTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SearchForUsersTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -69,6 +67,7 @@ public sealed class SearchForUsersTool : AIFunction
         if (!arguments.TryGetFirstString("term", out var term))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "term");
+
             return "Unable to find a term argument in the function arguments.";
         }
 
@@ -80,7 +79,6 @@ public sealed class SearchForUsersTool : AIFunction
         }
 
         var startingIndex = (page - 1) * pagerOptions.PageSize;
-
         var query = await usersAdminListQueryService.QueryAsync(new UserIndexOptions()
         {
             SearchText = term,
@@ -88,9 +86,7 @@ public sealed class SearchForUsersTool : AIFunction
             StartIndex = startingIndex,
             FilterResult = new QueryFilterResult<User>(new Dictionary<string, QueryTermOption<User>>()),
         }, updateModelAccessor.ModelUpdater);
-
         var contentItemsCount = await query.CountAsync(cancellationToken);
-
         var contentItems = await query.Skip(startingIndex)
             .Take(pagerOptions.PageSize)
             .ListAsync(cancellationToken);
@@ -102,12 +98,12 @@ public sealed class SearchForUsersTool : AIFunction
 
         return
         $$"""
-            {
-                "users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "usersCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}}
-            }
-            """;
+{
+"users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"usersCount": {{contentItemsCount}},
+"totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

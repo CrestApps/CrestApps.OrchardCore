@@ -51,6 +51,7 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
         }
 
         var sdkPrompt = _sdkPrompts.FirstOrDefault(prompt => prompt.ProtocolPrompt.Name == request.Params.Name);
+
         if (sdkPrompt is not null)
         {
             return await sdkPrompt.GetAsync(request, cancellationToken);

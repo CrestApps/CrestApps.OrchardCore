@@ -16,12 +16,11 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
     private readonly McpClientAIOptions _mcpClientOptions;
 
     internal readonly IStringLocalizer S;
-
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _mcpClientOptions = mcpClientOptions.Value;
@@ -36,9 +35,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             McpConnection connection = null;
-
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
-
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)
@@ -58,6 +55,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
+
                     continue;
                 }
 

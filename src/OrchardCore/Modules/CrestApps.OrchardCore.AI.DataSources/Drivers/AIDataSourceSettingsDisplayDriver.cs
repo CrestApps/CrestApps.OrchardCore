@@ -14,9 +14,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public AIDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
@@ -44,9 +42,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
         }
 
         var model = new AIDataSourceSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.DefaultStrictness = Math.Clamp(model.DefaultStrictness, 1, 5);
         settings.DefaultTopNDocuments = Math.Clamp(model.DefaultTopNDocuments, 3, 20);
 

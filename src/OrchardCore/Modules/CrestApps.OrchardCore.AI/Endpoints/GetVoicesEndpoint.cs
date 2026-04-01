@@ -1,7 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
-using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Services;
+using CrestApps.AI.Speech;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -46,9 +47,9 @@ internal static class GetVoicesEndpoint
         }
 
         var deployment = !string.IsNullOrWhiteSpace(deploymentName)
-            ? await deploymentManager.FindByNameAsync(deploymentSelector)
-            : await deploymentManager.FindByIdAsync(deploymentSelector)
-                ?? await deploymentManager.FindByNameAsync(deploymentSelector);
+        ? await deploymentManager.FindByNameAsync(deploymentSelector)
+        : await deploymentManager.FindByIdAsync(deploymentSelector)
+        ?? await deploymentManager.FindByNameAsync(deploymentSelector);
 
         if (deployment is null)
         {
@@ -58,13 +59,11 @@ internal static class GetVoicesEndpoint
         try
         {
             var allVoices = await speechVoiceResolver.GetSpeechVoicesAsync(deployment);
-
             var supportedCultures = await localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
                 supportedCultures,
                 CultureInfo.CurrentCulture,
                 CultureInfo.CurrentUICulture);
-
             var voices = allVoices
                 .Where(v => SpeechVoiceLocalizationHelper.IsLanguageAllowed(v.Language, supportedSet))
                 .OrderBy(v => v.Language)

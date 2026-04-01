@@ -7,7 +7,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Migrations;
 internal sealed class AIChatMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
-
     public AIChatMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
@@ -20,7 +19,6 @@ internal sealed class AIChatMigrations : DataMigration
             .WithDisplayName("Artificial Intelligence Chat")
             .WithDescription("Provides a way to add a Artificial Intelligence Chat to a content item.")
         );
-
         await _contentDefinitionManager.AlterTypeDefinitionAsync("AIChat", type => type
             .Draftable(false)
             .Listable(false)

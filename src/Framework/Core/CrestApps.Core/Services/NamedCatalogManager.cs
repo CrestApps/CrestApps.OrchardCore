@@ -12,7 +12,7 @@ public class NamedCatalogManager<T> : CatalogManager<T>, INamedCatalogManager<T>
         INamedCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<NamedCatalogManager<T>> logger)
-        : base(catalog, handlers, logger)
+    : base(catalog, handlers, logger)
     {
         NamedCatalog = catalog;
     }
@@ -21,7 +21,7 @@ public class NamedCatalogManager<T> : CatalogManager<T>, INamedCatalogManager<T>
         INamedCatalog<T> catalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger logger)
-        : base(catalog, handlers, logger)
+    : base(catalog, handlers, logger)
     {
         NamedCatalog = catalog;
     }

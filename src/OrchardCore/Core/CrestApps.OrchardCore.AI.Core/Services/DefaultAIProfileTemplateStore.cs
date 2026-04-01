@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIProfileTemplateStore : NamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>
 {
     public DefaultAIProfileTemplateStore(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
     }

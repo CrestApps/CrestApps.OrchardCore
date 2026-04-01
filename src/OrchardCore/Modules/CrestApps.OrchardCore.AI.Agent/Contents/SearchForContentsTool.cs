@@ -18,33 +18,30 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class SearchForContentsTool : AIFunction
 {
     public const string TheName = "searchForContentItems";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "term": {
-              "type": "string",
-              "description": "The query string to search for."
-            },
-            "pageNumber": {
-              "type": "integer",
-              "description": "The page number of results to return.",
-              "default": 1
-            }
-          },
-          "required": ["term"],
-          "additionalProperties": false
-        }     
-        """);
-
+    """
+    {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Search for content items that match the given query along with a way to paginate the results.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -76,9 +73,7 @@ public sealed class SearchForContentsTool : AIFunction
         }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
-
         var startingIndex = (Math.Max(1, page) - 1) * pagerOptions.PageSize;
-
         var query = await contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
         {
             SearchText = term,
@@ -86,9 +81,7 @@ public sealed class SearchForContentsTool : AIFunction
             StartIndex = startingIndex,
             FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
         }, updateModelAccessor.ModelUpdater);
-
         var contentItemsCount = await query.CountAsync(cancellationToken);
-
         var contentItems = await query.Skip(startingIndex)
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
@@ -100,12 +93,12 @@ public sealed class SearchForContentsTool : AIFunction
 
         return
         $$"""
-            {
-                "contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "contentItemsCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}}
-            }
-            """;
+{
+"contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"contentItemsCount": {{contentItemsCount}},
+"totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

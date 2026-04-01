@@ -8,7 +8,6 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 public sealed class AIChatSessionClosedEvent : EventActivity
 {
     internal readonly IStringLocalizer S;
-
     public AIChatSessionClosedEvent(
         IStringLocalizer<AIChatSessionClosedEvent> stringLocalizer)
     {
@@ -16,11 +15,8 @@ public sealed class AIChatSessionClosedEvent : EventActivity
     }
 
     public override string Name => nameof(AIChatSessionClosedEvent);
-
     public override LocalizedString DisplayText => S["AI Chat Session Closed"];
-
     public override LocalizedString Category => S["AI Chat"];
-
     public string ProfileId
     {
         get => GetProperty<string>();
@@ -34,19 +30,19 @@ public sealed class AIChatSessionClosedEvent : EventActivity
         return new ValueTask<IEnumerable<Outcome>>(
         [
             Outcome(S["Done"]),
-        ]);
+            ]);
     }
 
     public override ActivityExecutionResult Resume(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }
 
     public override ActivityExecutionResult Execute(
-        WorkflowExecutionContext workflowContext,
-        ActivityContext activityContext)
+    WorkflowExecutionContext workflowContext,
+    ActivityContext activityContext)
     {
         return Outcomes("Done");
     }

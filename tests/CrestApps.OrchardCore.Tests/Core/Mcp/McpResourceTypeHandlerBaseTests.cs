@@ -10,7 +10,6 @@ public sealed class McpResourceTypeHandlerBaseTests
     public void Constructor_SetsTypeProperty()
     {
         var handler = new TestHandler("test-type");
-
         Assert.Equal("test-type", handler.Type);
     }
 
@@ -31,7 +30,6 @@ public sealed class McpResourceTypeHandlerBaseTests
     {
         var handler = new TestHandler("test");
         var resource = CreateResource("test://item1/some/path");
-
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => handler.ReadAsync(resource, null, TestContext.Current.CancellationToken));
     }
@@ -41,7 +39,6 @@ public sealed class McpResourceTypeHandlerBaseTests
     {
         var handler = new TestHandler("test");
         var variables = new Dictionary<string, string>();
-
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => handler.ReadAsync(null, variables, TestContext.Current.CancellationToken));
     }
@@ -57,7 +54,6 @@ public sealed class McpResourceTypeHandlerBaseTests
         };
 
         var result = await handler.ReadAsync(resource, variables, TestContext.Current.CancellationToken);
-
         Assert.NotNull(result);
         Assert.NotNull(handler.LastVariables);
         Assert.Equal("some/path", handler.LastVariables["path"]);
@@ -69,9 +65,7 @@ public sealed class McpResourceTypeHandlerBaseTests
         var handler = new TestHandler("test");
         var resource = CreateResource("test://item1/some/path");
         var variables = new Dictionary<string, string>();
-
         var result = await handler.ReadAsync(resource, variables, TestContext.Current.CancellationToken);
-
         Assert.NotNull(result);
         Assert.NotNull(handler.LastVariables);
         Assert.Empty(handler.LastVariables);
@@ -94,7 +88,6 @@ public sealed class McpResourceTypeHandlerBaseTests
     private sealed class TestHandler : McpResourceTypeHandlerBase
     {
         public IReadOnlyDictionary<string, string> LastVariables { get; private set; }
-
         public TestHandler(string type) : base(type)
         {
         }

@@ -1,5 +1,8 @@
+using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -114,7 +117,6 @@ public static class AIChatDocumentEndpoints
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 
         interaction.Documents ??= [];
-
         var uploadedDocuments = new List<AIChatUploadedDocument>();
         var failedFiles = new List<object>();
 
@@ -518,7 +520,7 @@ public static class AIChatDocumentEndpoints
     private static async Task<AIDeployment> ResolveSessionDeploymentAsync(AIProfile profile, IAIDeploymentManager deploymentManager)
     {
         return await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: profile.ChatDeploymentName)
-            ?? await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Utility, deploymentName: profile.UtilityDeploymentName);
+        ?? await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Utility, deploymentName: profile.UtilityDeploymentName);
     }
 
     private static async Task InvokeUploadedHandlersAsync(IEnumerable<IAIChatDocumentEventHandler> eventHandlers, AIChatDocumentUploadContext context, CancellationToken cancellationToken)

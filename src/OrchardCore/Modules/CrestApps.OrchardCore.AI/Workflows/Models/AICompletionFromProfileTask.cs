@@ -1,4 +1,5 @@
-using CrestApps.AI;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Fluid;
@@ -23,7 +24,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
-
     public AICompletionFromProfileTask(
         INamedCatalogManager<AIProfile> profileManager,
         IAICompletionService completionService,
@@ -43,9 +43,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     }
 
     public override LocalizedString DisplayText => S["AI Completion using Profile"];
-
     public override LocalizedString Category => S["Artificial Intelligence"];
-
     public string ProfileId
     {
         get => GetProperty<string>();
@@ -79,10 +77,10 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         }
 
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default,
-            new Dictionary<string, FluidValue>()
-            {
-                ["Profile"] = new ObjectValue(profile),
-            });
+        new Dictionary<string, FluidValue>()
+        {
+            ["Profile"] = new ObjectValue(profile),
+        });
 
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -95,10 +93,8 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         {
             var context = await _completionContextBuilder.BuildAsync(profile);
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
-
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
             var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
-
             var bestChoice = completion.Messages.FirstOrDefault();
 
             if (string.IsNullOrEmpty(bestChoice?.Text))

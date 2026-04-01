@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultChatInteractionCatalog : DocumentCatalog<ChatInteraction, ChatInteractionIndex>, ICatalog<ChatInteraction>
 {
     public DefaultChatInteractionCatalog(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
     }

@@ -10,17 +10,14 @@ namespace CrestApps.OrchardCore.AI.DataSources.ViewModels;
 public class EditAIDataSourceViewModel
 {
     public string DisplayText { get; set; }
-
     [Required(AllowEmptyStrings = false)]
     public string SourceIndexProfileName { get; set; }
-
     [Required(AllowEmptyStrings = false)]
     public string AIKnowledgeBaseIndexProfileName { get; set; }
 
     public string KeyFieldName { get; set; }
 
     public string TitleFieldName { get; set; }
-
     [Required(AllowEmptyStrings = false)]
     public string ContentFieldName { get; set; }
 
@@ -29,13 +26,10 @@ public class EditAIDataSourceViewModel
     /// </summary>
     [BindNever]
     public bool IsLocked { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> SourceIndexProfileNames { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> AIKnowledgeBaseIndexProfileNames { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> FieldNames { get; set; }
 }

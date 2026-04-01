@@ -11,7 +11,7 @@ internal static class OmnichannelHelper
     {
         if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
             bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
+                bagPart.ContentItems.Count == 0)
         {
             return null;
         }
@@ -34,6 +34,7 @@ internal static class OmnichannelHelper
         if (channel == OmnichannelConstants.Channels.Phone)
         {
             var phoneNumbers = new PriorityQueue<string, int>();
+
             foreach (var contentMethod in bagPart.ContentItems)
             {
                 var phonePart = contentMethod.As<PhoneNumberInfoPart>();

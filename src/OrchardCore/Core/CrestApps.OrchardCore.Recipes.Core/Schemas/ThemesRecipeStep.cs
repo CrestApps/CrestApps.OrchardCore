@@ -8,9 +8,9 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class ThemesRecipeStep : IRecipeStep
 {
     private readonly IFeatureSchemaProvider _featureProvider;
+
     private JsonSchema _cached;
     public string Name => "themes";
-
     public ThemesRecipeStep(IFeatureSchemaProvider featureProvider)
     {
         _featureProvider = featureProvider;
@@ -24,19 +24,18 @@ public sealed class ThemesRecipeStep : IRecipeStep
         }
 
         var themeIds = await _featureProvider.GetThemeIdsAsync();
-
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("themes")),
-                ("site", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
-                    .Enum(themeIds)
-                    .Description("The theme ID to use for the front-end site.")),
-                ("admin", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.String)
-                    .Enum(themeIds)
-                    .Description("The theme ID to use for the admin dashboard.")))
+        ("site", new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(themeIds)
+            .Description("The theme ID to use for the front-end site.")),
+        ("admin", new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum(themeIds)
+            .Description("The theme ID to use for the admin dashboard.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

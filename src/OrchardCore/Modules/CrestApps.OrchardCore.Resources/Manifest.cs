@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "CrestApps Resources",
     Author = CrestAppsManifestConstants.Author,
@@ -9,4 +8,4 @@ using OrchardCore.Modules.Manifest;
     Description = "Extends the Resources module with additional reusable scripts and stylesheets.",
     Category = "Resources",
     IsAlwaysEnabled = false
-)]
+    )]

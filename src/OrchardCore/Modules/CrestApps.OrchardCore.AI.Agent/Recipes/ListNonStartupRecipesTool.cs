@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,22 +12,17 @@ namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 public sealed class ListNonStartupRecipesTool : AIFunction
 {
     public const string TheName = "listNonStartupRecipes";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
-
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Retrieves a list of predefined recipes that can be executed manually and are not designated to run at application startup.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -39,6 +34,7 @@ public sealed class ListNonStartupRecipesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListNonStartupRecipesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
@@ -46,7 +42,6 @@ public sealed class ListNonStartupRecipesTool : AIFunction
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
-
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(recipeHarvesters, features);
 
@@ -64,7 +59,7 @@ public sealed class ListNonStartupRecipesTool : AIFunction
         var recipes = recipeCollections.SelectMany(x => x)
             .Where(r => !r.IsSetupRecipe &&
                 (r.Tags == null || !r.Tags.Contains("hidden", StringComparer.InvariantCultureIgnoreCase)) &&
-                features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
+                    features.Any(f => r.BasePath != null && f.Extension?.SubPath != null && r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)));
 
         return recipes;
     }

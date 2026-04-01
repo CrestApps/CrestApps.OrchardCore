@@ -12,7 +12,6 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
-
     public AzureAISearchMemoryVectorSearchService(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchMemoryVectorSearchService> logger)
@@ -65,15 +64,13 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 
             var response = await searchClient.SearchAsync<SearchDocument>(null, options, cancellationToken);
             var results = new List<AIMemorySearchResult>();
-
             await foreach (var result in response.Value.GetResultsAsync())
             {
                 var document = result.Document;
                 var updatedUtc = document.TryGetValue(MemoryConstants.ColumnNames.UpdatedUtc, out var updatedObj) &&
                     DateTime.TryParse(updatedObj?.ToString(), out var parsedUpdatedUtc)
-                    ? parsedUpdatedUtc
-                    : null as DateTime?;
-
+                ? parsedUpdatedUtc
+                : null as DateTime?;
                 results.Add(new AIMemorySearchResult
                 {
                     MemoryId = document.TryGetValue(MemoryConstants.ColumnNames.MemoryId, out var idObj) ? idObj?.ToString() : null,
@@ -94,11 +91,13 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
         catch (RequestFailedException ex)
         {
             _logger.LogError(ex, "Azure AI Search request failed for AI memory index '{IndexName}'.", indexProfile.IndexFullName);
+
             return [];
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching AI memory index '{IndexName}'.", indexProfile.IndexFullName);
+
             return [];
         }
     }

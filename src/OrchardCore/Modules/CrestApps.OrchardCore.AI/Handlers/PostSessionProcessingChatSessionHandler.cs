@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -20,7 +20,6 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-
     public PostSessionProcessingChatSessionHandler(
         PostSessionProcessingService postSessionProcessingService,
         IServiceProvider serviceProvider,
@@ -36,12 +35,14 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
     public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
     {
         // Only process when the session has just been closed.
+
         if (context.ChatSession.Status != ChatSessionStatus.Closed)
         {
             return;
         }
 
         // Skip if post-session tasks have already been processed.
+
         if (context.ChatSession.IsPostSessionTasksProcessed)
         {
             return;
@@ -56,10 +57,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
         }
 
         var taskNames = settings.PostSessionTasks.Select(t => t.Name).ToList();
-
         // Mark as pending so the background task can retry if this attempt fails.
         context.ChatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Pending;
-
         try
         {
             context.ChatSession.PostSessionProcessingAttempts++;
@@ -75,6 +74,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             }
 
             // Initialize any tasks not yet tracked as Pending.
+
             foreach (var taskName in taskNames)
             {
                 if (!context.ChatSession.PostSessionResults.ContainsKey(taskName))
@@ -91,8 +91,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 context.Profile,
                 context.ChatSession,
                 context.Prompts);
-
             // Merge new results into the session's PostSessionResults.
+
             if (results is not null && results.Count > 0)
             {
                 foreach (var (taskName, result) in results)
@@ -113,9 +113,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
 
             // Determine if all tasks are now Succeeded.
             var allSucceeded = taskNames.All(name =>
-                context.ChatSession.PostSessionResults.TryGetValue(name, out var r)
+            context.ChatSession.PostSessionResults.TryGetValue(name, out var r)
                 && r.Status == PostSessionTaskResultStatus.Succeeded);
-
             context.ChatSession.IsPostSessionTasksProcessed = allSucceeded;
 
             if (_logger.IsEnabled(LogLevel.Information))
@@ -123,7 +122,6 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 var succeededCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Succeeded);
                 var failedCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Failed);
                 var pendingCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Pending);
-
                 _logger.LogInformation(
                     "Inline post-session tasks for session '{SessionId}': {Succeeded} succeeded, {Failed} failed, {Pending} pending out of {Total} total.",
                     context.ChatSession.SessionId,
@@ -148,8 +146,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 context.ChatSession.SessionId,
                 context.ChatSession.PostSessionProcessingAttempts,
                 string.Join(", ", taskNames));
-
             // Mark all non-succeeded tasks as Failed.
+
             foreach (var taskName in taskNames)
             {
                 if (context.ChatSession.PostSessionResults.TryGetValue(taskName, out var result)
@@ -181,8 +179,8 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionPostProcessedEvent),
-                input,
-                correlationId: context.ChatSession.SessionId);
+            input,
+            correlationId: context.ChatSession.SessionId);
         }
         catch (Exception ex)
         {

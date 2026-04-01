@@ -7,15 +7,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public sealed class OmnichannelChannelEndpointManager : CatalogManager<OmnichannelChannelEndpoint>, IOmnichannelChannelEndpointManager
 {
     private readonly IOmnichannelChannelEndpointStore _store;
-
     public OmnichannelChannelEndpointManager(
         IOmnichannelChannelEndpointStore store,
         IEnumerable<ICatalogEntryHandler<OmnichannelChannelEndpoint>> handlers,
         ILogger<CatalogManager<OmnichannelChannelEndpoint>> logger)
-        : base(store, handlers, logger)
+    : base(store, handlers, logger)
     {
         _store = store;
     }
+
     public ValueTask<OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress)
     {
         return _store.GetByServiceAddressAsync(channel, serviceAddress);

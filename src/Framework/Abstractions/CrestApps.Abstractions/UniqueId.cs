@@ -6,10 +6,8 @@ namespace CrestApps;
 public static class UniqueId
 {
     private const int _idLength = 26;
-
     // Some confusing chars are ignored: http://www.crockford.com/wrmg/base32.html
     private static readonly char[] _encode32Chars = "0123456789abcdefghjkmnpqrstvwxyz".ToCharArray();
-
     private static readonly HashSet<char> _allowedChars = [.. "0123456789abcdefghjkmnpqrstvwxyz"];
 
     /// <summary>
@@ -23,10 +21,8 @@ public static class UniqueId
         {
             var hs = BitConverter.ToInt64(guid, 0);
             var ls = BitConverter.ToInt64(guid, 8);
-
             // Using a local copy prevents additional bound checks by the JIT.
             var encode32Chars = _encode32Chars;
-
             // A char array allows a long as the indexer, so without any cast.
             buffer[0] = encode32Chars[(hs >> 60) & 31];
             buffer[1] = encode32Chars[(hs >> 55) & 31];
@@ -41,7 +37,6 @@ public static class UniqueId
             buffer[10] = encode32Chars[(hs >> 10) & 31];
             buffer[11] = encode32Chars[(hs >> 5) & 31];
             buffer[12] = encode32Chars[hs & 31];
-
             buffer[13] = encode32Chars[(ls >> 60) & 31];
             buffer[14] = encode32Chars[(ls >> 55) & 31];
             buffer[15] = encode32Chars[(ls >> 50) & 31];

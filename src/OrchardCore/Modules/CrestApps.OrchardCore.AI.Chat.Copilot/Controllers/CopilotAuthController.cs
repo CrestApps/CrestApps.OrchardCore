@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.AI.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +11,6 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Settings;
 using USR = OrchardCore.Users;
-
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 
 [Authorize]
@@ -24,9 +23,7 @@ public sealed class CopilotAuthController : Controller
     private readonly AdminOptions _adminOptions;
     private readonly ISiteService _siteService;
     private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
-
     internal readonly IHtmlLocalizer H;
-
     public CopilotAuthController(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
@@ -46,7 +43,6 @@ public sealed class CopilotAuthController : Controller
         _adminOptions = adminOptions.Value;
         H = htmlLocalizer;
     }
-
     /// <summary>
     /// Initiates the GitHub OAuth flow.
     /// </summary>
@@ -57,16 +53,14 @@ public sealed class CopilotAuthController : Controller
         // Fallback to admin home — never to OAuthCallback itself (which would trigger a loop).
         // Special case: "__popup__" is a sentinel value for popup-based auth flows.
         var safeReturnUrl = string.Equals(returnUrl, "__popup__", StringComparison.Ordinal)
-            ? "__popup__"
-            : returnUrl != null && Url.IsLocalUrl(returnUrl)
-                ? returnUrl
-                : "~/" + _adminOptions.AdminUrlPrefix;
-
+        ? "__popup__"
+        : returnUrl != null && Url.IsLocalUrl(returnUrl)
+        ? returnUrl
+        : "~/" + _adminOptions.AdminUrlPrefix;
         try
         {
             var callbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
             var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
-
             return Redirect(authUrl);
         }
         catch (InvalidOperationException)
@@ -75,7 +69,6 @@ public sealed class CopilotAuthController : Controller
             return HandleOAuthReturn(safeReturnUrl, success: false, username: null);
         }
     }
-
     /// <summary>
     /// Handles the OAuth callback from GitHub.
     /// </summary>
@@ -86,34 +79,26 @@ public sealed class CopilotAuthController : Controller
         {
             _logger.LogWarning("GitHub OAuth error: {Error}", error.SanitizeLogValue());
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
-
             return HandleOAuthReturn(state, success: false, username: null);
         }
-
         if (string.IsNullOrEmpty(code))
         {
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
-
             return HandleOAuthReturn(state, success: false, username: null);
         }
-
         // Get current user
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             _logger.LogWarning("No authenticated user found during OAuth callback");
-
             return Unauthorized();
         }
-
         try
         {
             // Exchange code for tokens and store on user
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
-
             await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
-
             return HandleOAuthReturn(state, success: true, username: credential.GitHubUsername);
         }
         catch (Exception ex)
@@ -121,10 +106,8 @@ public sealed class CopilotAuthController : Controller
             _logger.LogError(ex, "Failed to exchange GitHub authorization code for tokens");
             await _notifier.ErrorAsync(H["Failed to connect to GitHub. Please try again."]);
         }
-
         return HandleOAuthReturn(state, success: false, username: null);
     }
-
     /// <summary>
     /// Routes the OAuth callback to a popup close page or a standard redirect.
     /// When the returnUrl/state is "__popup__", the callback was initiated from a popup window
@@ -136,7 +119,6 @@ public sealed class CopilotAuthController : Controller
         if (string.Equals(state, "__popup__", StringComparison.Ordinal))
         {
             var safeUsername = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(username ?? string.Empty);
-
             return Content(
                 "<!DOCTYPE html><html><body><script>" +
                 $"window.opener.postMessage({{ type: 'github-auth-complete', success: {(success ? "true" : "false")}, username: '{safeUsername}' }}, window.location.origin);" +
@@ -144,10 +126,8 @@ public sealed class CopilotAuthController : Controller
                 "</script></body></html>",
                 "text/html");
         }
-
         return RedirectToLocal(state);
     }
-
     /// <summary>
     /// Disconnects the user's GitHub account.
     /// </summary>
@@ -160,14 +140,10 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
-
         await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
-
         await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
-
         return RedirectToLocal(returnUrl);
     }
-
     /// <summary>
     /// Returns the current user's GitHub authentication status.
     /// </summary>
@@ -179,20 +155,16 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
-
         var userId = await _userManager.GetUserIdAsync(user);
         var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
         string gitHubUsername = null;
-
         if (isAuthenticated)
         {
             var credential = await _oauthService.GetCredentialAsync(userId);
             gitHubUsername = credential?.GitHubUsername;
         }
-
         return Json(new { isAuthenticated, gitHubUsername });
     }
-
     /// <summary>
     /// Returns the list of available Copilot models for the authenticated user.
     /// </summary>
@@ -204,13 +176,10 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
-
         var userId = await _userManager.GetUserIdAsync(user);
         var models = await _oauthService.ListModelsAsync(userId);
-
         return Json(models.Select(m => new { m.Id, m.Name }));
     }
-
     /// <summary>
     /// Disconnects the user's GitHub account via AJAX.
     /// </summary>
@@ -223,19 +192,15 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
-
         await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
-
         return Json(new { success = true });
     }
-
     private IActionResult RedirectToLocal(string returnUrl)
     {
         if (Url.IsLocalUrl(returnUrl))
         {
             return Redirect(returnUrl);
         }
-
         return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
     }
 }

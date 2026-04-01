@@ -1,0 +1,508 @@
+using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Copilot.Models;
+using CrestApps.AI.Copilot.Services;
+using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
+
+namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+
+public sealed class AIProfileViewModel
+{
+    // Basic Info
+    public string ItemId { get; set; }
+
+    public string Name { get; set; }
+
+    public string DisplayText { get; set; }
+
+    public AIProfileType Type { get; set; }
+
+    public string Source { get; set; }
+
+    public string ChatDeploymentName { get; set; }
+
+    public string UtilityDeploymentName { get; set; }
+
+    public string OrchestratorName { get; set; }
+
+    public string PromptTemplate { get; set; }
+
+    public string PromptSubject { get; set; }
+
+    public string Description { get; set; }
+
+    public AISessionTitleType? TitleType { get; set; }
+    // Chat-type interaction fields
+    public string WelcomeMessage { get; set; }
+
+    public bool AddInitialPrompt { get; set; }
+
+    public string InitialPrompt { get; set; }
+    // AI Parameters (from AIProfileMetadata)
+    public string SystemMessage { get; set; }
+
+    public float? Temperature { get; set; }
+
+    public float? TopP { get; set; }
+
+    public float? FrequencyPenalty { get; set; }
+
+    public float? PresencePenalty { get; set; }
+
+    public int? MaxTokens { get; set; }
+
+    public int? PastMessagesCount { get; set; }
+    public bool UseCaching { get; set; } = true;
+    // Settings (from AIProfileSettings)
+    public bool LockSystemMessage { get; set; }
+    public bool IsListable { get; set; } = true;
+    public bool IsRemovable { get; set; } = true;
+    // AI Tools
+    public string[] SelectedToolNames { get; set; } = [];
+    public List<ToolSelectionItem> AvailableTools { get; set; } = [];
+    // AI Agents
+    public string[] SelectedAgentNames { get; set; } = [];
+    public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
+    // Data Source
+    public string DataSourceId { get; set; }
+    public List<SelectListItem> DataSources { get; set; } = [];
+    // A2A Connections
+    public string[] SelectedA2AConnectionIds { get; set; } = [];
+    public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+    // MCP Connections
+    public string[] SelectedMcpConnectionIds { get; set; } = [];
+    public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+    // Prompt Templates
+    public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
+    public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+    // Documents
+    public List<DocumentItem> AttachedDocuments { get; set; } = [];
+    public int? DocumentTopN { get; set; }
+
+    public bool AllowSessionDocuments { get; set; }
+
+    public bool HasDocumentIndexConfiguration { get; set; }
+
+    public string DocumentIndexProfileName { get; set; }
+    // Data Extraction
+    public bool EnableDataExtraction { get; set; }
+    public int ExtractionCheckInterval { get; set; } = 1;
+    public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
+    public List<DataExtractionEntryItem> DataExtractionEntries { get; set; } = [];
+    // Session Metrics
+    public bool EnableSessionMetrics { get; set; }
+    public bool EnableAIResolutionDetection { get; set; } = true;
+    public bool EnableConversionMetrics { get; set; }
+    public List<ConversionGoalItem> ConversionGoals { get; set; } = [];
+    // Post Session Processing
+    public bool EnablePostSessionProcessing { get; set; }
+    public List<PostSessionTaskItem> PostSessionTasks { get; set; } = [];
+    // Dropdowns
+    public List<SelectListItem> Orchestrators { get; set; } = [];
+    public List<SelectListItem> ChatDeployments { get; set; } = [];
+    public List<SelectListItem> UtilityDeployments { get; set; } = [];
+    public List<SelectListItem> Templates { get; set; } = [];
+    // Template
+    public string SelectedTemplateId { get; set; }
+    // Apply Template (templates with source "Profile" for pre-filling)
+    public List<SelectListItem> AvailableProfileTemplates { get; set; } = [];
+    // Memory
+    public bool EnableUserMemory { get; set; }
+    // Copilot
+    public string CopilotModel { get; set; }
+
+    public bool CopilotIsAllowAll { get; set; }
+
+    public bool CopilotIsConfigured { get; set; }
+
+    public bool CopilotIsAuthenticated { get; set; }
+
+    public string CopilotGitHubUsername { get; set; }
+
+    public int CopilotAuthenticationType { get; set; }
+    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+    public static AIProfileViewModel FromProfile(AIProfile profile)
+    {
+        var metadata = profile.GetSettings<AIProfileMetadata>();
+        var settings = profile.GetSettings<AIProfileSettings>();
+        var toolMetadata = profile.GetSettings<FunctionInvocationMetadata>();
+        var docMetadata = profile.GetSettings<DocumentsMetadata>();
+        var sessionDocMetadata = profile.GetSettings<AIProfileSessionDocumentsMetadata>();
+        var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
+        var analyticsMetadata = profile.As<AnalyticsMetadata>();
+        var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
+        var memorySettings = profile.GetSettings<MemorySettings>();
+        var a2aMetadata = profile.As<AIProfileA2AMetadata>();
+        var mcpMetadata = profile.As<AIProfileMcpMetadata>();
+        var promptMetadata = profile.As<PromptTemplateMetadata>();
+        var vm = new AIProfileViewModel
+        {
+            ItemId = profile.ItemId,
+            Name = profile.Name,
+            DisplayText = profile.DisplayText,
+            Type = profile.Type,
+            Source = profile.Source,
+            ChatDeploymentName = profile.ChatDeploymentName,
+            UtilityDeploymentName = profile.UtilityDeploymentName,
+            OrchestratorName = profile.OrchestratorName,
+            WelcomeMessage = profile.WelcomeMessage,
+            PromptTemplate = profile.PromptTemplate,
+            PromptSubject = profile.PromptSubject,
+            Description = profile.Description,
+            TitleType = profile.TitleType,
+            AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt),
+            InitialPrompt = metadata.InitialPrompt,
+            SystemMessage = metadata.SystemMessage,
+            Temperature = metadata.Temperature,
+            TopP = metadata.TopP,
+            FrequencyPenalty = metadata.FrequencyPenalty,
+            PresencePenalty = metadata.PresencePenalty,
+            MaxTokens = metadata.MaxTokens,
+            PastMessagesCount = metadata.PastMessagesCount,
+            UseCaching = metadata.UseCaching,
+            LockSystemMessage = settings.LockSystemMessage,
+            IsListable = settings.IsListable,
+            IsRemovable = settings.IsRemovable,
+            SelectedToolNames = toolMetadata?.Names ?? [],
+            SelectedAgentNames = profile.As<AgentInvocationMetadata>()?.Names ?? [],
+            DataSourceId = profile.As<DataSourceMetadata>()?.DataSourceId,
+            SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
+            SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
+            PromptTemplates = (promptMetadata.Templates ?? [])
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                .Select(t => new PromptTemplateSelectionItem
+                {
+                    TemplateId = t.TemplateId,
+                    PromptParameters = t.Parameters is { Count: > 0 }
+                ? System.Text.Json.JsonSerializer.Serialize(t.Parameters)
+                : null,
+                })
+            .ToList(),
+            DocumentTopN = docMetadata?.DocumentTopN,
+            AllowSessionDocuments = sessionDocMetadata?.AllowSessionDocuments ?? false,
+            AttachedDocuments = (docMetadata?.Documents ?? []).Select(d => new DocumentItem
+            {
+                DocumentId = d.DocumentId,
+                FileName = d.FileName,
+                ContentType = d.ContentType,
+                FileSize = d.FileSize,
+            }).ToList(),
+            EnableDataExtraction = dataExtractionSettings.EnableDataExtraction,
+            ExtractionCheckInterval = dataExtractionSettings.ExtractionCheckInterval,
+            SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes,
+            DataExtractionEntries = dataExtractionSettings.DataExtractionEntries
+                .Select(e => new DataExtractionEntryItem
+                {
+                    Name = e.Name,
+                    Description = e.Description,
+                    AllowMultipleValues = e.AllowMultipleValues,
+                    IsUpdatable = e.IsUpdatable,
+                })
+            .ToList(),
+            EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics,
+            EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection,
+            EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics,
+            ConversionGoals = analyticsMetadata.ConversionGoals
+                .Select(g => new ConversionGoalItem
+                {
+                    Name = g.Name,
+                    Description = g.Description,
+                    MinScore = g.MinScore,
+                    MaxScore = g.MaxScore,
+                })
+            .ToList(),
+            EnablePostSessionProcessing = postSessionSettings.EnablePostSessionProcessing,
+            PostSessionTasks = postSessionSettings.PostSessionTasks.Select(t => new PostSessionTaskItem
+            {
+                Name = t.Name,
+                Type = t.Type,
+                Instructions = t.Instructions,
+                AllowMultipleValues = t.AllowMultipleValues,
+                Options = string.Join(Environment.NewLine, t.Options.Select(o => o.Value)),
+            }).ToList(),
+            EnableUserMemory = memorySettings.EnableUserMemory,
+        };
+
+        // Load Copilot metadata if present
+
+        if (profile.TryGet<CopilotSessionMetadata>(out var copilotMeta))
+        {
+            vm.CopilotModel = copilotMeta.CopilotModel;
+            vm.CopilotIsAllowAll = copilotMeta.IsAllowAll;
+        }
+
+        return vm;
+    }
+
+    public void ApplyTo(AIProfile profile)
+    {
+        profile.Name = Name;
+        profile.DisplayText = DisplayText;
+        profile.Type = Type;
+        profile.Source = Source;
+        profile.ChatDeploymentName = ChatDeploymentName;
+        profile.UtilityDeploymentName = UtilityDeploymentName;
+        profile.OrchestratorName = OrchestratorName;
+        profile.PromptTemplate = PromptTemplate;
+        profile.PromptSubject = PromptSubject;
+        profile.Description = Description;
+        profile.TitleType = TitleType;
+        // Welcome message is only used when initial prompt is not enabled.
+        profile.WelcomeMessage = AddInitialPrompt ? null : WelcomeMessage;
+        profile.AlterSettings<AIProfileMetadata>(m =>
+        {
+            m.SystemMessage = SystemMessage;
+            m.InitialPrompt = AddInitialPrompt ? InitialPrompt?.Trim() : null;
+            m.Temperature = Temperature;
+            m.TopP = TopP;
+            m.FrequencyPenalty = FrequencyPenalty;
+            m.PresencePenalty = PresencePenalty;
+            m.MaxTokens = MaxTokens;
+            m.PastMessagesCount = PastMessagesCount;
+            m.UseCaching = UseCaching;
+        });
+
+        profile.AlterSettings<AIProfileSettings>(s =>
+        {
+            s.LockSystemMessage = LockSystemMessage;
+            s.IsListable = IsListable;
+            s.IsRemovable = IsRemovable;
+        });
+
+        var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+        profile.WithSettings(new FunctionInvocationMetadata
+        {
+            Names = toolNames?.Length > 0 ? toolNames : null,
+        });
+
+        profile.Put(new AIProfileA2AMetadata
+        {
+            ConnectionIds = SelectedA2AConnectionIds?
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray() ?? [],
+        });
+
+        profile.Put(new AIProfileMcpMetadata
+        {
+            ConnectionIds = SelectedMcpConnectionIds?
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray() ?? [],
+        });
+
+        var agentNames = SelectedAgentNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+        profile.Put(new AgentInvocationMetadata
+        {
+            Names = agentNames?.Length > 0 ? agentNames : [],
+        });
+
+        profile.Put(new DataSourceMetadata
+        {
+            DataSourceId = string.IsNullOrWhiteSpace(DataSourceId) ? null : DataSourceId,
+        });
+
+        var promptTemplateMetadata = new PromptTemplateMetadata();
+        promptTemplateMetadata.SetSelections(
+            (PromptTemplates ?? [])
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                .Select(t =>
+                {
+                    var entry = new PromptTemplateSelectionEntry { TemplateId = t.TemplateId };
+
+                    if (!string.IsNullOrWhiteSpace(t.PromptParameters))
+                    {
+                        try
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(t.PromptParameters);
+
+                            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                            {
+                                entry.Parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+                                foreach (var prop in doc.RootElement.EnumerateObject())
+                                {
+                                    if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                                    {
+                                        entry.Parameters[prop.Name] = prop.Value.GetString();
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    return entry;
+                }));
+        profile.Put(promptTemplateMetadata);
+        profile.AlterSettings<DocumentsMetadata>(m =>
+        {
+            m.DocumentTopN = DocumentTopN;
+        });
+
+        profile.AlterSettings<AIProfileSessionDocumentsMetadata>(m =>
+        {
+            m.AllowSessionDocuments = AllowSessionDocuments;
+        });
+
+        profile.AlterSettings<AIProfileDataExtractionSettings>(s =>
+        {
+            s.EnableDataExtraction = EnableDataExtraction;
+            s.ExtractionCheckInterval = ExtractionCheckInterval;
+            s.SessionInactivityTimeoutInMinutes = SessionInactivityTimeoutInMinutes;
+            s.DataExtractionEntries = (DataExtractionEntries ?? [])
+            .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+            .Select(e => new DataExtractionEntry
+            {
+                Name = e.Name,
+                Description = e.Description,
+                AllowMultipleValues = e.AllowMultipleValues,
+                IsUpdatable = e.IsUpdatable,
+            })
+        .ToList();
+        });
+
+        profile.Put(new AnalyticsMetadata
+        {
+            EnableSessionMetrics = EnableSessionMetrics,
+            EnableAIResolutionDetection = EnableAIResolutionDetection,
+            EnableConversionMetrics = EnableConversionMetrics,
+            ConversionGoals = (ConversionGoals ?? [])
+                .Where(g => !string.IsNullOrWhiteSpace(g.Name))
+                .Select(g => new ConversionGoal
+                {
+                    Name = g.Name,
+                    Description = g.Description,
+                    MinScore = g.MinScore,
+                    MaxScore = g.MaxScore > 0 ? g.MaxScore : 10,
+                })
+            .ToList(),
+        });
+
+        profile.AlterSettings<AIProfilePostSessionSettings>(s =>
+        {
+            s.EnablePostSessionProcessing = EnablePostSessionProcessing;
+            s.PostSessionTasks = PostSessionTasks
+            .Where(t => !string.IsNullOrWhiteSpace(t.Name))
+            .Select(t => new PostSessionTask
+            {
+                Name = t.Name,
+                Type = t.Type,
+                Instructions = t.Instructions,
+                AllowMultipleValues = t.AllowMultipleValues,
+                Options = (t.Options ?? "")
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Select(o => new PostSessionTaskOption { Value = o.Trim() })
+            .ToList(),
+            }).ToList();
+        });
+
+        profile.AlterSettings<MemorySettings>(m =>
+        {
+            m.EnableUserMemory = EnableUserMemory;
+        });
+
+        // Copilot metadata
+
+        if (!string.IsNullOrEmpty(OrchestratorName) &&
+            string.Equals(OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        {
+            profile.Put(new CopilotSessionMetadata
+            {
+                CopilotModel = CopilotModel,
+                IsAllowAll = CopilotIsAllowAll,
+            });
+        }
+        else
+        {
+            profile.Remove<CopilotSessionMetadata>();
+        }
+    }
+}
+
+public sealed class ToolSelectionItem
+{
+    public string Name { get; set; }
+
+    public string Title { get; set; }
+
+    public string Description { get; set; }
+
+    public string Category { get; set; }
+
+    public bool IsSelected { get; set; }
+}
+
+public sealed class DocumentItem
+{
+    public string DocumentId { get; set; }
+
+    public string FileName { get; set; }
+
+    public string ContentType { get; set; }
+
+    public long FileSize { get; set; }
+}
+
+public sealed class PostSessionTaskItem
+{
+    public string Name { get; set; }
+
+    public PostSessionTaskType Type { get; set; }
+
+    public string Instructions { get; set; }
+
+    public bool AllowMultipleValues { get; set; }
+
+    public string Options { get; set; }
+}
+
+public sealed class PromptTemplateSelectionItem
+{
+    public string TemplateId { get; set; }
+
+    public string PromptParameters { get; set; }
+}
+
+public sealed class PromptTemplateOptionItem
+{
+    public string TemplateId { get; set; }
+
+    public string Title { get; set; }
+
+    public string Description { get; set; }
+
+    public string Category { get; set; }
+    public List<PromptTemplateParameterItem> Parameters { get; set; } = [];
+}
+
+public sealed class PromptTemplateParameterItem
+{
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+}
+
+public sealed class DataExtractionEntryItem
+{
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public bool AllowMultipleValues { get; set; }
+
+    public bool IsUpdatable { get; set; }
+}
+
+public sealed class ConversionGoalItem
+{
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public int MinScore { get; set; }
+    public int MaxScore { get; set; } = 10;
+}

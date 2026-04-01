@@ -49,11 +49,11 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 {
                     var apiKey = Unprotect(protector, metadata.ApiKey);
                     var headerName = string.IsNullOrWhiteSpace(metadata.ApiKeyHeaderName)
-                        ? "Authorization"
-                        : metadata.ApiKeyHeaderName;
+                    ? "Authorization"
+                    : metadata.ApiKeyHeaderName;
                     headers[headerName] = !string.IsNullOrWhiteSpace(metadata.ApiKeyPrefix)
-                        ? $"{metadata.ApiKeyPrefix} {apiKey}"
-                        : apiKey;
+                    ? $"{metadata.ApiKeyPrefix} {apiKey}"
+                    : apiKey;
                 }
                 break;
 
@@ -61,8 +61,8 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 if (!string.IsNullOrEmpty(metadata.BasicUsername))
                 {
                     var password = !string.IsNullOrEmpty(metadata.BasicPassword)
-                        ? Unprotect(protector, metadata.BasicPassword)
-                        : string.Empty;
+                    ? Unprotect(protector, metadata.BasicPassword)
+                    : string.Empty;
                     var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{metadata.BasicUsername}:{password}"));
                     headers["Authorization"] = $"Basic {credentials}";
                 }
@@ -71,7 +71,7 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
             case McpClientAuthenticationType.OAuth2ClientCredentials:
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
                     !string.IsNullOrEmpty(metadata.OAuth2ClientId) &&
-                    !string.IsNullOrEmpty(metadata.OAuth2ClientSecret))
+                        !string.IsNullOrEmpty(metadata.OAuth2ClientSecret))
                 {
                     var clientSecret = Unprotect(protector, metadata.OAuth2ClientSecret);
                     var token = await _oauth2TokenService.AcquireTokenAsync(
@@ -86,7 +86,7 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
             case McpClientAuthenticationType.OAuth2PrivateKeyJwt:
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
                     !string.IsNullOrEmpty(metadata.OAuth2ClientId) &&
-                    !string.IsNullOrEmpty(metadata.OAuth2PrivateKey))
+                        !string.IsNullOrEmpty(metadata.OAuth2PrivateKey))
                 {
                     var privateKey = Unprotect(protector, metadata.OAuth2PrivateKey);
                     var token = await _oauth2TokenService.AcquireTokenWithPrivateKeyJwtAsync(
@@ -102,12 +102,12 @@ public sealed class SseClientTransportProvider : IMcpClientTransportProvider
             case McpClientAuthenticationType.OAuth2Mtls:
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
                     !string.IsNullOrEmpty(metadata.OAuth2ClientId) &&
-                    !string.IsNullOrEmpty(metadata.OAuth2ClientCertificate))
+                        !string.IsNullOrEmpty(metadata.OAuth2ClientCertificate))
                 {
                     var certificateBytes = Convert.FromBase64String(Unprotect(protector, metadata.OAuth2ClientCertificate));
                     var certificatePassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword)
-                        ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
-                        : null;
+                    ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
+                    : null;
                     var token = await _oauth2TokenService.AcquireTokenWithMtlsAsync(
                         metadata.OAuth2TokenEndpoint,
                         metadata.OAuth2ClientId,

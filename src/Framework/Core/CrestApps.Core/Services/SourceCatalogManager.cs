@@ -14,7 +14,7 @@ public class SourceCatalogManager<T> : CatalogManager<T>, ISourceCatalogManager<
         ISourceCatalog<T> sourceCatalog,
         IEnumerable<ICatalogEntryHandler<T>> handlers,
         ILogger<SourceCatalogManager<T>> logger)
-        : base(sourceCatalog, handlers, logger)
+    : base(sourceCatalog, handlers, logger)
     {
         SourceCatalog = sourceCatalog;
     }

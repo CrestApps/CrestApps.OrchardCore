@@ -1,9 +1,11 @@
-using CrestApps.AI;
 using CrestApps.AI.AzureAIInference;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,20 +23,20 @@ public sealed class AzureAIInferenceCompletionClient : DeploymentAwareAICompleti
         IServiceProvider serviceProvider,
         DefaultAIOptions defaultOptions,
         INamedCatalog<AIDeployment> deploymentStore,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager
         ) : base(
-            AzureAIInferenceConstants.ImplementationName,
-            aIClientFactory,
-            distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions.Value,
-            defaultOptions,
-            handlers,
-            deploymentStore,
-            aiTemplateService,
-            deploymentManager)
+        AzureAIInferenceConstants.ImplementationName,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions.Value,
+        defaultOptions,
+        handlers,
+        deploymentStore,
+        aiTemplateService,
+        deploymentManager)
     {
     }
 

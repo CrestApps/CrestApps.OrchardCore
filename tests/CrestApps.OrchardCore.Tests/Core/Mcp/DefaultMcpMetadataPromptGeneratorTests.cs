@@ -6,12 +6,10 @@ namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 public sealed class DefaultMcpMetadataPromptGeneratorTests
 {
     private readonly DefaultMcpMetadataPromptGenerator _generator = new();
-
     [Fact]
     public void Generate_WithNullCapabilities_ReturnsNull()
     {
         var result = _generator.Generate(null);
-
         Assert.Null(result);
     }
 
@@ -39,7 +37,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.Null(result);
     }
 
@@ -56,8 +53,8 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "search",
-                        Description = "Search the web",
+                    Name = "search",
+                    Description = "Search the web",
                     },
                 ],
                 Prompts = [],
@@ -66,7 +63,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("mcp_invoke", result);
         Assert.Contains("My Server", result);
@@ -90,8 +86,8 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "summarize",
-                        Description = "Summarize text",
+                    Name = "summarize",
+                    Description = "Summarize text",
                     },
                 ],
                 Resources = [],
@@ -99,7 +95,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("Prompts:", result);
         Assert.Contains("summarize", result);
@@ -121,16 +116,15 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "docs",
-                        Description = "Documentation files",
-                        Uri = "file://docs/readme.md",
+                    Name = "docs",
+                    Description = "Documentation files",
+                    Uri = "file://docs/readme.md",
                     },
                 ],
             },
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("Resources (use the URI as 'id' when invoking):", result);
         Assert.Contains("file://docs/readme.md", result);
@@ -167,7 +161,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("Server A", result);
         Assert.Contains("conn1", result);
@@ -204,7 +197,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.DoesNotContain("Empty Server", result);
         Assert.Contains("Active Server", result);
@@ -229,7 +221,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("conn-id-123", result);
     }
@@ -259,7 +250,6 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
         };
 
         var result = _generator.Generate(capabilities);
-
         Assert.NotNull(result);
         Assert.Contains("Tools (pass required arguments via 'inputs'):", result);
         Assert.Contains("calc", result);

@@ -27,9 +27,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
         }
 
         var model = new EditAIProfileSessionDocumentsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var metadata = template.As<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
         template.Put(metadata);

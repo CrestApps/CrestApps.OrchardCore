@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -34,7 +34,6 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
     private readonly IExternalChatRelayNotificationHandler _notificationHandler;
     private readonly IStringLocalizer T;
     private readonly ILogger _logger;
-
     public DefaultExternalChatRelayEventHandler(
         IServiceProvider serviceProvider,
         IExternalChatRelayNotificationHandler notificationHandler,
@@ -72,6 +71,7 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
         }
 
         ChatNotification notification = null;
+
         if (!string.IsNullOrEmpty(builder.NotificationType))
         {
             notification = new ChatNotification(builder.NotificationType);

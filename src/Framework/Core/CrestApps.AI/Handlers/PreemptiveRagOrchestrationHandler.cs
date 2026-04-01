@@ -1,11 +1,12 @@
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 namespace CrestApps.AI.Handlers;
-
 /// <summary>
 /// Orchestration handler that coordinates preemptive RAG across all registered
 /// <see cref="IPreemptiveRagHandler"/> implementations. Extracts focused search queries
@@ -17,14 +18,13 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
 {
     private readonly IEnumerable<IPreemptiveRagHandler> _handlers;
     private readonly PreemptiveSearchQueryProvider _queryProvider;
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
     private readonly DefaultOrchestratorSettings _settings;
     private readonly ILogger _logger;
-
     public PreemptiveRagOrchestrationHandler(
         IEnumerable<IPreemptiveRagHandler> handlers,
         PreemptiveSearchQueryProvider queryProvider,
-        IAITemplateService templateService,
+        ITemplateService templateService,
         IOptions<DefaultOrchestratorSettings> settings,
         ILogger<PreemptiveRagOrchestrationHandler> logger)
     {
@@ -183,14 +183,14 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
     }
 
     private static Dictionary<string, object> CreateSearchToolArguments() =>
-        new()
+    new()
+    {
+        ["searchToolNames"] = new[]
         {
-            ["searchToolNames"] = new[]
-            {
-                SystemToolNames.SearchDataSources,
-                SystemToolNames.SearchDocuments,
-            },
-        };
+            SystemToolNames.SearchDataSources,
+            SystemToolNames.SearchDocuments,
+        },
+    };
 
     private static AIDataSourceRagMetadata GetRagMetadata(object resource)
     {

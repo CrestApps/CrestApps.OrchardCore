@@ -26,7 +26,6 @@ public sealed class AIDeploymentTests
         };
 
         var clone = deployment.Clone();
-
         Assert.Equal("azure-chat", clone.Name);
         Assert.Equal("azure-chat", clone.ModelName);
     }
@@ -35,13 +34,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_WhenModelNameIsPresent_ShouldPreserveStoredModelName()
     {
         var deployment = JsonSerializer.Deserialize<AIDeployment>(
-            """
-            {
-              "Name": "openai-chat",
-              "ModelName": "gpt-4.1"
-            }
-            """);
-
+        """
+        {
+          "Name": "openai-chat",
+          "ModelName": "gpt-4.1"
+        }
+        """);
         Assert.NotNull(deployment);
         Assert.Equal("openai-chat", deployment.Name);
         Assert.Equal("gpt-4.1", deployment.ModelName);
@@ -51,14 +49,13 @@ public sealed class AIDeploymentTests
     public void Deserialize_DefaultSettings_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var settings = JsonSerializer.Deserialize<DefaultAIDeploymentSettings>(
-            """
-            {
-              "DefaultChatDeploymentId": "chat-technical-name",
-              "DefaultUtilityDeploymentId": "utility-technical-name",
-              "DefaultEmbeddingDeploymentId": "embedding-technical-name"
-            }
-            """);
-
+        """
+        {
+          "DefaultChatDeploymentId": "chat-technical-name",
+          "DefaultUtilityDeploymentId": "utility-technical-name",
+          "DefaultEmbeddingDeploymentId": "embedding-technical-name"
+        }
+        """);
         Assert.NotNull(settings);
         Assert.Equal("chat-technical-name", settings.DefaultChatDeploymentName);
         Assert.Equal("utility-technical-name", settings.DefaultUtilityDeploymentName);
@@ -69,13 +66,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_Profile_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var profile = JsonSerializer.Deserialize<AIProfile>(
-            """
-            {
-              "ChatDeploymentId": "chat-technical-name",
-              "UtilityDeploymentId": "utility-technical-name"
-            }
-            """);
-
+        """
+        {
+          "ChatDeploymentId": "chat-technical-name",
+          "UtilityDeploymentId": "utility-technical-name"
+        }
+        """);
         Assert.NotNull(profile);
         Assert.Equal("chat-technical-name", profile.ChatDeploymentName);
         Assert.Equal("utility-technical-name", profile.UtilityDeploymentName);
@@ -85,13 +81,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_ChatInteraction_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var interaction = JsonSerializer.Deserialize<ChatInteraction>(
-            """
-            {
-              "DeploymentId": "chat-technical-name",
-              "UtilityDeploymentId": "utility-technical-name"
-            }
-            """);
-
+        """
+        {
+          "DeploymentId": "chat-technical-name",
+          "UtilityDeploymentId": "utility-technical-name"
+        }
+        """);
         Assert.NotNull(interaction);
         Assert.Equal("chat-technical-name", interaction.ChatDeploymentName);
         Assert.Equal("utility-technical-name", interaction.UtilityDeploymentName);

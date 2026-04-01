@@ -1,5 +1,4 @@
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Models;
 
 namespace CrestApps.AI.Chat.Models;
 

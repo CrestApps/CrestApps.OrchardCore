@@ -1,5 +1,5 @@
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.ResponseHandling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Core;
@@ -28,7 +28,6 @@ public sealed class ChatResponseHandlerContextTests
         };
 
         var result = context.AssistantAppearance;
-
         Assert.NotNull(result);
         Assert.Equal("Mike", result.Label);
         Assert.Equal("fa-solid fa-headset", result.Icon);

@@ -1,6 +1,6 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;
@@ -12,7 +12,6 @@ internal sealed class CopilotOrchestratorAvailabilityProvider : IOrchestratorAva
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
-
     public CopilotOrchestratorAvailabilityProvider(
         ISiteService siteService,
         IStringLocalizer<CopilotOrchestratorAvailabilityProvider> stringLocalizer)
@@ -22,17 +21,16 @@ internal sealed class CopilotOrchestratorAvailabilityProvider : IOrchestratorAva
     }
 
     public string OrchestratorName => CopilotOrchestrator.OrchestratorName;
-
     public async Task<OrchestratorAvailability> GetAvailabilityAsync(CancellationToken cancellationToken = default)
     {
         var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
 
         return settings.IsConfigured()
-            ? new OrchestratorAvailability()
-            : new OrchestratorAvailability
-            {
-                IsAvailable = false,
-                Message = S["Copilot is not configured and cannot be used until it has been configured."],
-            };
+        ? new OrchestratorAvailability()
+        : new OrchestratorAvailability
+        {
+            IsAvailable = false,
+            Message = S["Copilot is not configured and cannot be used until it has been configured."],
+        };
     }
 }

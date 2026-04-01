@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
 {
     private readonly IAIProfileManager _openAIChatProfileManager;
-
     public AIChatSessionDisplayDriver(IAIProfileManager openAIChatProfileManager)
     {
         _openAIChatProfileManager = openAIChatProfileManager;
@@ -35,7 +34,6 @@ public sealed class AIChatSessionDisplayDriver : DisplayDriver<AIChatSession>
             model.Profile = profile;
             model.IsNew = context.IsNew;
         }).Location("Header");
-
         var contentResult = Initialize<ChatSessionCapsuleViewModel>("AIChatSessionChat", model =>
         {
             model.Session = session;

@@ -10,20 +10,21 @@
     <Project Path="src/Framework/Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
   </Folder>
   <Folder Name="/Framework/Utilities/">
-    <Project Path="src/Framework/Utilities/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj" />
     <Project Path="src/Framework/Utilities/CrestApps.Support/CrestApps.Support.csproj" />
   </Folder>
   <Folder Name="/Framework/Core/">
     <Project Path="src/Framework/Core/CrestApps.Azure/CrestApps.Azure.csproj" />
     <Project Path="src/Framework/Core/CrestApps.Core/CrestApps.Core.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
-      <Project Path="src/Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
-      <Project Path="src/Framework/Core/CrestApps.AI.AzureAI/CrestApps.AI.AzureAI.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Chat.Copilot/CrestApps.AI.Chat.Copilot.csproj" />
-      <Project Path="src/Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
-      <Project Path="src/Framework/Core/CrestApps.AI.Elasticsearch/CrestApps.AI.Elasticsearch.csproj" />
-      <Project Path="src/Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.Templates/CrestApps.Templates.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.Azure.AISearch/CrestApps.Azure.AISearch.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.Elasticsearch/CrestApps.Elasticsearch.csproj" />
+    <Project Path="src/Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
     <Project Path="src/Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />

@@ -13,28 +13,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class GetContentItemSchemaTool : AIFunction
 {
     public const string TheName = "getSampleContentItemForContentType";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentType": {
-              "type": "string",
-              "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
-            }
-          },
-          "required": ["contentType"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "The name of the Orchard Core content type to generate a sample JSON structure for."
         }
-        """);
-
+      },
+      "required": [
+        "contentType"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

@@ -13,7 +13,6 @@ public sealed class A2AClientFactory
 
     private readonly IConfiguration _configuration;
     private readonly IHttpClientFactory _httpClientFactory;
-
     public A2AClientFactory(
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory)
@@ -34,13 +33,10 @@ public sealed class A2AClientFactory
     {
         var endpoint = GetEndpoint();
         var httpClient = _httpClientFactory.CreateClient();
-
         var cardUrl = $"{endpoint.TrimEnd('/')}/.well-known/agent-card.json";
         var response = await httpClient.GetAsync(cardUrl, cancellationToken);
         response.EnsureSuccessStatusCode();
-
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
-
         // Try to parse as array first (multi-agent mode), then as single card (skill mode).
         try
         {

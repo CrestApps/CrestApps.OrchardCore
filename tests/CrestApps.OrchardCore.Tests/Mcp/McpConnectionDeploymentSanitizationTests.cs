@@ -20,7 +20,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
         nameof(SseMcpConnectionMetadata.OAuth2ClientCertificate),
         nameof(SseMcpConnectionMetadata.OAuth2ClientCertificatePassword),
     ];
-
     [Fact]
     public void SanitizeSensitiveData_ApiKey_ClearsApiKey()
     {
@@ -36,7 +35,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert
         var metadata = GetMetadataNode(properties);
         Assert.Equal(string.Empty, metadata[nameof(SseMcpConnectionMetadata.ApiKey)]?.GetValue<string>());
@@ -58,7 +56,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert
         var metadata = GetMetadataNode(properties);
         Assert.Equal(string.Empty, metadata[nameof(SseMcpConnectionMetadata.BasicPassword)]?.GetValue<string>());
@@ -81,7 +78,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert
         var metadata = GetMetadataNode(properties);
         Assert.Equal(string.Empty, metadata[nameof(SseMcpConnectionMetadata.OAuth2ClientSecret)]?.GetValue<string>());
@@ -106,7 +102,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert
         var metadata = GetMetadataNode(properties);
         Assert.Equal(string.Empty, metadata[nameof(SseMcpConnectionMetadata.OAuth2PrivateKey)]?.GetValue<string>());
@@ -130,7 +125,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert
         var metadata = GetMetadataNode(properties);
         Assert.Equal(string.Empty, metadata[nameof(SseMcpConnectionMetadata.OAuth2ClientCertificate)]?.GetValue<string>());
@@ -156,7 +150,6 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert — every sensitive field must be empty.
         var metadata = GetMetadataNode(properties);
 
@@ -176,11 +169,10 @@ public sealed class McpConnectionDeploymentSanitizationTests
         };
 
         var customData = new JsonObject { ["Command"] = "docker" };
-        connection.Properties["StdioMcpConnectionMetadata"] = JsonSerializer.SerializeToNode(customData);
 
+        connection.Properties["StdioMcpConnectionMetadata"] = JsonSerializer.SerializeToNode(customData);
         // Act
         var properties = ExportAndSanitize(connection);
-
         // Assert — properties should remain unchanged.
         Assert.Equal("docker", properties["StdioMcpConnectionMetadata"]?["Command"]?.GetValue<string>());
     }
@@ -214,8 +206,8 @@ public sealed class McpConnectionDeploymentSanitizationTests
         // Act
         var properties = ExportAndSanitize(connection);
         var serialized = properties.ToJsonString();
-
         // Assert — the serialized JSON must not contain any of the secret values.
+
         foreach (var secret in secretValues)
         {
             Assert.DoesNotContain(secret, serialized);
@@ -238,6 +230,7 @@ public sealed class McpConnectionDeploymentSanitizationTests
         }
 
         // Apply the same sanitization logic used in McpConnectionDeploymentSource.
+
         if (string.Equals(connection.Source, McpConstants.TransportTypes.Sse, StringComparison.Ordinal))
         {
             var metadataNode = properties[nameof(SseMcpConnectionMetadata)]?.AsObject();
@@ -256,8 +249,7 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
     private static JsonObject GetMetadataNode(JsonObject properties)
         => properties[nameof(SseMcpConnectionMetadata)]?.AsObject()
-            ?? throw new InvalidOperationException("SseMcpConnectionMetadata not found in properties.");
-
+    ?? throw new InvalidOperationException("SseMcpConnectionMetadata not found in properties.");
     private static McpConnection CreateSseConnectionWithMetadata(SseMcpConnectionMetadata metadata)
     {
         var connection = new McpConnection

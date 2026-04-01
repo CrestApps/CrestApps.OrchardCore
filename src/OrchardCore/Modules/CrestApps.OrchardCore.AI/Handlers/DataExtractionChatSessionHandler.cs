@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -21,7 +21,6 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
-
     public DataExtractionChatSessionHandler(
         DataExtractionService dataExtractionService,
         IServiceProvider serviceProvider,
@@ -50,8 +49,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
             var now = _clock.UtcNow;
             var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
-
             // Trigger workflow events for each newly extracted field.
+
             if (workflowManager is not null)
             {
                 foreach (var field in changeSet.NewFields)
@@ -64,6 +63,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
             }
 
             // Close the session if the model detected a natural farewell.
+
             if (changeSet.SessionEnded && context.ChatSession.Status != ChatSessionStatus.Closed)
             {
                 context.ChatSession.Status = ChatSessionStatus.Closed;
@@ -110,8 +110,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionFieldExtractedEvent),
-                input,
-                correlationId: context.ChatSession.SessionId);
+            input,
+            correlationId: context.ChatSession.SessionId);
         }
         catch (Exception ex)
         {
@@ -137,8 +137,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionClosedEvent),
-                input,
-                correlationId: context.ChatSession.SessionId);
+            input,
+            correlationId: context.ChatSession.SessionId);
         }
         catch (Exception ex)
         {
@@ -165,8 +165,8 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionAllFieldsExtractedEvent),
-                input,
-                correlationId: context.ChatSession.SessionId);
+            input,
+            correlationId: context.ChatSession.SessionId);
         }
         catch (Exception ex)
         {

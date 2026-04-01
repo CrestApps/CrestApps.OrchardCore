@@ -1,8 +1,10 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 
 namespace CrestApps.AI.Handlers;
 
@@ -21,12 +23,11 @@ namespace CrestApps.AI.Handlers;
 public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderHandler
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
-
     public DocumentOrchestrationHandler(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAITemplateService templateService,
+        ITemplateService templateService,
         ILogger<DocumentOrchestrationHandler> logger)
     {
         _toolDefinitions = toolDefinitions.Value;
@@ -42,7 +43,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("Populating {DocCount} document(s) from ChatInteraction '{ItemId}' into orchestration context.",
-                    interaction.Documents.Count, interaction.ItemId);
+                interaction.Documents.Count, interaction.ItemId);
             }
 
             context.Context.Documents ??= [];
@@ -57,7 +58,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     _logger.LogDebug("Populating {DocCount} document(s) from AIProfile '{ProfileId}' into orchestration context.",
-                        documentsMetadata.Documents.Count, profile.ItemId);
+                    documentsMetadata.Documents.Count, profile.ItemId);
                 }
 
                 context.Context.Documents ??= [];
@@ -88,8 +89,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
 
             if (context.OrchestrationContext.CompletionContext?.AdditionalProperties is not null &&
                 context.OrchestrationContext.CompletionContext.AdditionalProperties.TryGetValue("Session", out var sessionObj) &&
-                sessionObj is AIChatSession session &&
-                session.Documents is { Count: > 0 })
+                    sessionObj is AIChatSession session &&
+                        session.Documents is { Count: > 0 })
             {
                 userSuppliedDocuments = session.Documents;
             }
@@ -136,14 +137,12 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         // Signal document availability so system tools (e.g., search_documents)
         // are included in the tool registry for this completion context.
         context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
-
         // Discover document processing tools dynamically by purpose
         // to list their descriptions in the system message.
         var docTools = _toolDefinitions.Tools
             .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
             .Select(t => t.Value)
             .ToList();
-
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,

@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.AI.Models;
-
 namespace CrestApps.AI.Models;
 
 public class AIResponseMessage

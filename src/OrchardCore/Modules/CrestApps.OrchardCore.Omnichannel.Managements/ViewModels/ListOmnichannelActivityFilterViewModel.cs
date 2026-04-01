@@ -17,16 +17,12 @@ public class ListOmnichannelActivityFilterViewModel
     public string ScheduledFrom { get; set; }
 
     public string ScheduledTo { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> AttemptFilters { get; set; }
 }

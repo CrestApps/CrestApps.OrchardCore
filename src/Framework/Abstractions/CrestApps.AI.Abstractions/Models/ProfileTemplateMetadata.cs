@@ -1,9 +1,8 @@
 using System.Text.Json.Serialization;
-
+using CrestApps.AI.ResponseHandling;
 namespace CrestApps.AI.Models;
-
 /// <summary>
-/// Metadata for AI templates with a "Profile" source.
+/// Metadata for templates with a "Profile" source.
 /// Stored in the template's <see cref="OrchardCore.Entities.Entity.Properties"/> via
 /// <c>Put&lt;ProfileTemplateMetadata&gt;</c> / <c>As&lt;ProfileTemplateMetadata&gt;</c>.
 /// </summary>
@@ -75,7 +74,6 @@ public sealed class ProfileTemplateMetadata
     /// Gets or sets the welcome message shown to users.
     /// </summary>
     public string WelcomeMessage { get; set; }
-
     /// <summary>
     /// Gets or sets the template for the prompt.
     /// </summary>

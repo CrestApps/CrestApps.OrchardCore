@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateDataExtractionDisplayDriver(
         IStringLocalizer<AIProfileTemplateDataExtractionDisplayDriver> stringLocalizer)
     {
@@ -23,18 +22,17 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
         return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
             var settings = template.As<AIProfileDataExtractionSettings>();
-
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
-                .Select(e => new DataExtractionEntryViewModel
-                {
-                    Name = e.Name,
-                    Description = e.Description,
-                    AllowMultipleValues = e.AllowMultipleValues,
-                    IsUpdatable = e.IsUpdatable,
-                })
-                .ToList();
+            .Select(e => new DataExtractionEntryViewModel
+            {
+                Name = e.Name,
+                Description = e.Description,
+                AllowMultipleValues = e.AllowMultipleValues,
+                IsUpdatable = e.IsUpdatable,
+            })
+        .ToList();
         }).Location("Content:5#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -47,9 +45,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
         }
 
         var model = new AIProfileDataExtractionViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var entries = model.Entries?.Where(e => !string.IsNullOrWhiteSpace(e.Name)).ToList() ?? [];
 
         if (model.EnableDataExtraction)

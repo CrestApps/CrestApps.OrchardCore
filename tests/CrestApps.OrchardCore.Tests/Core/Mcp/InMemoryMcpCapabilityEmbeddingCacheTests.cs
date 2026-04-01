@@ -8,13 +8,12 @@ namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
 {
     private readonly InMemoryMcpCapabilityEmbeddingCacheProvider _cache = new(NullLogger<InMemoryMcpCapabilityEmbeddingCacheProvider>.Instance);
-
     [Fact]
     public async Task GetOrCreateEmbeddingsAsync_WithEmptyCapabilities_ReturnsEmpty()
     {
         var generator = new FakeEmbeddingGenerator([]);
-        var result = await _cache.GetOrCreateEmbeddingsAsync([], generator, TestContext.Current.CancellationToken);
 
+        var result = await _cache.GetOrCreateEmbeddingsAsync([], generator, TestContext.Current.CancellationToken);
         Assert.Empty(result);
     }
 
@@ -24,13 +23,13 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         var capabilities = new List<McpServerCapabilities>
         {
             CreateCapabilities("conn1", "Server A",
-                tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }],
-                prompts: [new McpServerCapability { Name = "prompt1", Description = "A prompt" }]),
+            tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }],
+            prompts: [new McpServerCapability { Name = "prompt1", Description = "A prompt" }]),
         };
 
         var generator = new FakeEmbeddingGenerator(new float[] { 0.1f, 0.2f, 0.3f });
-        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
 
+        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         Assert.Equal(2, result.Count);
         Assert.All(result, entry =>
         {
@@ -46,15 +45,13 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         var capabilities = new List<McpServerCapabilities>
         {
             CreateCapabilities("conn1", "Server A",
-                tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }]),
+            tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }]),
         };
 
         var callCount = 0;
         var generator = new FakeEmbeddingGenerator(new float[] { 1f, 2f }, () => callCount++);
-
         var result1 = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         var result2 = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
-
         Assert.Single(result1);
         Assert.Single(result2);
         Assert.Equal(1, callCount); // Only called once
@@ -66,16 +63,14 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         var capabilities = new List<McpServerCapabilities>
         {
             CreateCapabilities("conn1", "Server A",
-                tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }]),
+            tools: [new McpServerCapability { Name = "tool1", Description = "A tool" }]),
         };
 
         var callCount = 0;
         var generator = new FakeEmbeddingGenerator([1f], () => callCount++);
-
         await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         _cache.Invalidate("conn1");
         await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
-
         Assert.Equal(2, callCount); // Called twice due to invalidation
     }
 
@@ -85,17 +80,17 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         var capabilities = new List<McpServerCapabilities>
         {
             CreateCapabilities("conn1", "Server A",
-                tools:
-                [
-                    new McpServerCapability { Name = null, Description = "No name" },
-                    new McpServerCapability { Name = "  ", Description = "Whitespace name" },
-                    new McpServerCapability { Name = "valid_tool", Description = "Valid" },
+            tools:
+            [
+                new McpServerCapability { Name = null, Description = "No name" },
+                new McpServerCapability { Name = "  ", Description = "Whitespace name" },
+                new McpServerCapability { Name = "valid_tool", Description = "Valid" },
                 ]),
-        };
+                };
 
         var generator = new FakeEmbeddingGenerator(new float[] { 1f });
-        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
 
+        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         Assert.Single(result);
         Assert.Equal("valid_tool", result[0].CapabilityName);
     }
@@ -104,16 +99,16 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
     public async Task GetOrCreateEmbeddingsAsync_SetsCorrectCapabilityTypes()
     {
         var capabilities = new List<McpServerCapabilities>
-        {
-            CreateCapabilities("conn1", "Server A",
+                {
+                CreateCapabilities("conn1", "Server A",
                 tools: [new McpServerCapability { Name = "t1" }],
                 prompts: [new McpServerCapability { Name = "p1" }],
                 resources: [new McpServerCapability { Name = "r1" }]),
-        };
+                };
 
         var generator = new FakeEmbeddingGenerator(new float[] { 1f });
-        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
 
+        var result = await _cache.GetOrCreateEmbeddingsAsync(capabilities, generator, TestContext.Current.CancellationToken);
         Assert.Equal(3, result.Count);
         Assert.Contains(result, e => e.CapabilityType == McpCapabilityType.Tool && e.CapabilityName == "t1");
         Assert.Contains(result, e => e.CapabilityType == McpCapabilityType.Prompt && e.CapabilityName == "p1");
@@ -121,11 +116,11 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
     }
 
     private static McpServerCapabilities CreateCapabilities(
-        string connectionId,
-        string displayText,
-        IReadOnlyList<McpServerCapability> tools = null,
-        IReadOnlyList<McpServerCapability> prompts = null,
-        IReadOnlyList<McpServerCapability> resources = null)
+    string connectionId,
+    string displayText,
+    IReadOnlyList<McpServerCapability> tools = null,
+    IReadOnlyList<McpServerCapability> prompts = null,
+    IReadOnlyList<McpServerCapability> resources = null)
     {
         return new McpServerCapabilities
         {
@@ -146,7 +141,6 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
     {
         private readonly float[] _fixedVector;
         private readonly Action _onGenerate;
-
         public FakeEmbeddingGenerator(float[] fixedVector, Action onGenerate = null)
         {
             _fixedVector = fixedVector;
@@ -154,14 +148,12 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         }
 
         public EmbeddingGeneratorMetadata Metadata { get; } = new("fake");
-
         public Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
-            IEnumerable<string> values,
-            EmbeddingGenerationOptions options = null,
-            CancellationToken cancellationToken = default)
+        IEnumerable<string> values,
+        EmbeddingGenerationOptions options = null,
+        CancellationToken cancellationToken = default)
         {
             _onGenerate?.Invoke();
-
             var inputs = values.ToList();
             var embeddings = new GeneratedEmbeddings<Embedding<float>>();
 
@@ -174,7 +166,6 @@ public sealed class InMemoryMcpCapabilityEmbeddingCacheTests
         }
 
         public object GetService(Type serviceType, object serviceKey = null) => null;
-
         public void Dispose()
         {
         }

@@ -16,7 +16,6 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
-
     public OpenAIProviderConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<OpenAIProviderConnectionDisplayDriver> stringLocalizer)
@@ -35,7 +34,6 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
         return Initialize<OpenAIConnectionViewModel>("OpenAIConnection_Edit", model =>
         {
             var metadata = connection.As<OpenAIConnectionMetadata>();
-
             model.Endpoint = metadata.Endpoint?.ToString();
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
         }).Location("Content:5");
@@ -49,9 +47,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
         }
 
         var model = new OpenAIConnectionViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var metadata = connection.As<OpenAIConnectionMetadata>();
 
         if (string.IsNullOrEmpty(model.Endpoint))
@@ -77,7 +73,6 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
         if (hasNewKey)
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
 

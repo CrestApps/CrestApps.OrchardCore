@@ -1,4 +1,6 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 
 namespace CrestApps.AI.Handlers;
 
@@ -20,7 +22,6 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
     {
         // Build the AICompletionContext using the existing handler pipeline.
         var completionContext = await _completionContextBuilder.BuildAsync(context.Resource);
-
         context.Context.CompletionContext = completionContext;
 
         // Resolve the SourceName from the connection configured on the completion context.

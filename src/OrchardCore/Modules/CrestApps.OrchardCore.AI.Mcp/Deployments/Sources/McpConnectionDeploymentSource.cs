@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpConnectionDeploymentStep>
 {
     private readonly ISourceCatalog<McpConnection> _store;
-
     public McpConnectionDeploymentSource(ISourceCatalog<McpConnection> store)
     {
         _store = store;
@@ -20,12 +19,10 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
     protected override async Task ProcessAsync(McpConnectionDeploymentStep step, DeploymentPlanResult result)
     {
         var connections = await _store.GetAllAsync();
-
         var connectionsData = new JsonArray();
-
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -44,11 +41,8 @@ internal sealed class McpConnectionDeploymentSource : DeploymentSourceBase<McpCo
             };
 
             var properties = JsonSerializer.SerializeToNode(connection.Properties)?.AsObject() ?? new JsonObject();
-
             SanitizeSensitiveData(connection, properties);
-
             deploymentInfo["Properties"] = properties;
-
             connectionsData.Add(deploymentInfo);
         }
 

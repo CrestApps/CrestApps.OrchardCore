@@ -1,6 +1,8 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Profiles;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
@@ -18,12 +20,11 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationContextBuilderHandler
 {
     private readonly IAIProfileManager _profileManager;
-    private readonly IAITemplateService _templateService;
+    private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
-
     public AgentOrchestrationContextBuilderHandler(
         IAIProfileManager profileManager,
-        IAITemplateService templateService,
+        ITemplateService templateService,
         ILogger<AgentOrchestrationContextBuilderHandler> logger)
     {
         _profileManager = profileManager;
@@ -33,7 +34,6 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
         => Task.CompletedTask;
-
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
         var completionContext = context.OrchestrationContext.CompletionContext;
@@ -65,7 +65,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
 
             if (isAlwaysAvailable ||
                 (requestedAgentNames is { Length: > 0 } &&
-                 requestedAgentNames.Contains(agent.Name, StringComparer.OrdinalIgnoreCase)))
+                    requestedAgentNames.Contains(agent.Name, StringComparer.OrdinalIgnoreCase)))
             {
                 availableAgents.Add(new AgentInfo
                 {

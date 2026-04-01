@@ -13,7 +13,6 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private const string NewKey = nameof(DataSourceMetadata);
 
     private readonly ShellSettings _shellSettings;
-
     public DataSourceMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
@@ -41,7 +40,6 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
                 var legacyNode = interaction.Properties[LegacyKey];
                 interaction.Properties.Remove(LegacyKey);
                 interaction.Properties[NewKey] = legacyNode;
-
                 await interactionStore.UpdateAsync(interaction);
             }
         });

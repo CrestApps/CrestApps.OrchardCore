@@ -10,12 +10,12 @@ public class NamedDocumentCatalog<T, TIndex> : DocumentCatalog<T, TIndex>, IName
     where TIndex : CatalogItemIndex, INameAwareIndex
 {
     public NamedDocumentCatalog(ISession session)
-        : base(session)
+    : base(session)
     {
     }
 
     internal NamedDocumentCatalog(ISession session, string collectionName)
-        : base(session)
+    : base(session)
     {
         CollectionName = collectionName;
     }

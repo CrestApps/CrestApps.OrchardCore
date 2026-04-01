@@ -174,7 +174,7 @@ When the tool count exceeds `ScopingThreshold` but stays below `PlanningThreshol
 
 When tools exceed `PlanningThreshold` or MCP tools are present:
 
-1. The orchestrator renders a planning prompt via `IAITemplateService`
+1. The orchestrator renders a planning prompt via `ITemplateService`
 2. Sends the last `PlanningHistoryMessageCount` (default: 10) messages to a utility model
 3. The utility model returns a plan identifying needed tool categories
 4. Tools are scoped based on the plan

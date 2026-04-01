@@ -1,6 +1,9 @@
 using System.Text.Json;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -27,18 +30,18 @@ internal sealed class AgentProxyTool : AIFunction
 
     public override string Description => _description;
 
-    public override JsonElement JsonSchema { get; } = JsonDocument.Parse("""
-        {
-            "type": "object",
-            "properties": {
-                "prompt": {
-                    "type": "string",
-                    "description": "The prompt or message to send to the agent for processing."
-                }
-            },
-            "required": ["prompt"]
+    public override JsonElement JsonSchema { get; } = JsonElement.Parse("""
+    {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The prompt or message to send to the agent for processing."
         }
-        """).RootElement;
+      },
+      "required": ["prompt"]
+    }
+    """);
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
@@ -82,7 +85,7 @@ internal sealed class AgentProxyTool : AIFunction
             context.DisableTools = true;
 
             var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for agent profile '{_agentProfileName}'.");
+            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for agent profile '{_agentProfileName}'.");
 
             var messages = new List<ChatMessage>
             {

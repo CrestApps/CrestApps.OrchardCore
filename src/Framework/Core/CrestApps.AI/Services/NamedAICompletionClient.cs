@@ -1,10 +1,13 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Infrastructure;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
-
 namespace CrestApps.AI.Services;
 
 public abstract class NamedAICompletionClient : AICompletionServiceBase, IAICompletionClient
@@ -29,9 +32,9 @@ public abstract class NamedAICompletionClient : AICompletionServiceBase, IAIComp
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
-        : base(providerOptions, aiTemplateService, deploymentManager)
+    : base(providerOptions, aiTemplateService, deploymentManager)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name;

@@ -1,36 +1,37 @@
 using System.Text.Json;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
+using CrestApps.Infrastructure.Indexing;
+using CrestApps.Infrastructure.Indexing.DataSources;
 using CrestApps.Services;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-namespace CrestApps.AI.Tools;
-
+namespace CrestApps.AI.Tooling;
 /// <summary>
 /// Performs vector search against the configured data source knowledge base and returns relevant chunks with citations.
 /// </summary>
 public sealed class DataSourceSearchTool : AIFunction
 {
     public const string TheName = SystemToolNames.SearchDataSources;
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "description": "The search query to find relevant content in the data source."
-            }
-          },
-          "required": ["query"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query to find relevant content in the data source."
         }
-        """);
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -111,7 +112,7 @@ public sealed class DataSourceSearchTool : AIFunction
 #pragma warning disable CS0618
             if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
+                    string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: embedding configuration is missing for the knowledge base index.", Name);
                 return "Embedding configuration is missing for the knowledge base index.";
@@ -159,16 +160,16 @@ public sealed class DataSourceSearchTool : AIFunction
             var results = await contentManager.SearchAsync(
                 masterIndexProfile,
                 embeddings[0].Vector.ToArray(),
-                dataSourceId,
-                siteSettings.GetTopNDocuments(ragMetadata?.TopNDocuments),
-                providerFilter,
-                cancellationToken);
+            dataSourceId,
+            siteSettings.GetTopNDocuments(ragMetadata?.TopNDocuments),
+            providerFilter,
+            cancellationToken);
 
             if (results == null || !results.Any())
             {
                 return ragMetadata?.IsInScope == true
-                    ? "No relevant content was found in the data source for this query. The answer is not available in the configured data source."
-                    : "No relevant content was found in the data source for this query. Answer using your general knowledge instead.";
+                ? "No relevant content was found in the data source for this query. The answer is not available in the configured data source."
+                : "No relevant content was found in the data source for this query. Answer using your general knowledge instead.";
             }
 
             var strictness = siteSettings.GetStrictness(ragMetadata?.Strictness);
@@ -181,8 +182,8 @@ public sealed class DataSourceSearchTool : AIFunction
                 if (!results.Any())
                 {
                     return ragMetadata?.IsInScope == true
-                        ? "No results met the strictness threshold. The answer is not available in the configured data source."
-                        : "No results met the strictness threshold. Answer using your general knowledge instead.";
+                    ? "No results met the strictness threshold. The answer is not available in the configured data source."
+                    : "No results met the strictness threshold. Answer using your general knowledge instead.";
                 }
             }
 
@@ -204,8 +205,8 @@ public sealed class DataSourceSearchTool : AIFunction
                 }
 
                 var refLabel = !string.IsNullOrEmpty(result.ReferenceId) && seenReferences.TryGetValue(result.ReferenceId, out var entry)
-                    ? $"[doc:{entry.Index}]"
-                    : $"[doc:{invocationContext.NextReferenceIndex()}]";
+                ? $"[doc:{entry.Index}]"
+                : $"[doc:{invocationContext.NextReferenceIndex()}]";
 
                 builder.AppendLine("---");
 

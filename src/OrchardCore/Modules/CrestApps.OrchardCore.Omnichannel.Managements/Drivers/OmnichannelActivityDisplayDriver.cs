@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.AI;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -37,7 +37,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly IContentManager _contentManager;
 
     internal readonly IStringLocalizer S;
-
     public OmnichannelActivityDisplayDriver(
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignsCatalog,
@@ -69,20 +68,17 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     public override IDisplayResult Edit(OmnichannelActivity activity, BuildEditorContext context)
     {
         var isCompletingActivity = context.GroupId == OmnichannelConstants.CompleteActivityGroup;
-
         var fields = Initialize<EditOmnichannelActivity>("OmnichannelActivityFields_Edit", async model =>
         {
             model.CampaignId = activity.CampaignId;
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
-                ? (await _localClock.GetLocalNowAsync()).DateTime
-                : activity.ScheduledUtc;
+            ? (await _localClock.GetLocalNowAsync()).DateTime
+            : activity.ScheduledUtc;
             model.SubjectContentType = activity.SubjectContentType;
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
             model.UrgencyLevel = activity.UrgencyLevel;
-
             model.Campaigns = (await _campaignsCatalog.GetAllAsync()).Select(x => new SelectListItem(x.DisplayText, x.ItemId)).OrderBy(x => x.Text);
-
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
 
@@ -105,15 +101,12 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
 
             var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
-
             var usersListItems = new List<SelectListItem>();
 
             foreach (var user in users)
             {
                 var userId = user is User su ? su.UserId : _userManager.NormalizeName(user.UserName);
-
                 var displayName = await _displayNameProvider.GetAsync(user);
-
                 usersListItems.Add(new SelectListItem(displayName, userId));
             }
 
@@ -129,14 +122,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
-
         }).Location("Content:5")
         .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
-
         var completing = Initialize<OmnichannelActivityViewModel>("OmnichannelActivityComplete_Edit", async model =>
         {
             var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
-
             var campaignDispositionIds = campaign?.DispositionIds ?? [];
 
             if (!string.IsNullOrEmpty(activity.DispositionId) && !campaignDispositionIds.Contains(activity.DispositionId))
@@ -161,7 +151,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 model.CompletedLocal = (await _localClock.ConvertToLocalAsync(activity.CompletedUtc.Value)).DateTime;
                 model.CompletedByName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
             }
-
         }).Location("Content:5")
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);
 
@@ -181,7 +170,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             // The following fields are for processing a task.
             var processModel = new OmnichannelActivityViewModel();
-
             await context.Updater.TryUpdateModelAsync(processModel, Prefix);
 
             if (string.IsNullOrEmpty(processModel.DispositionId))
@@ -191,7 +179,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             else
             {
                 var campaign = await _campaignsCatalog.FindByIdAsync(activity.CampaignId);
-
                 var campaignDispositionIds = campaign?.DispositionIds ?? [];
 
                 if (!string.IsNullOrEmpty(activity.DispositionId))
@@ -200,7 +187,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 }
 
                 var dispositions = await _dispositionsCatalog.GetAsync(campaignDispositionIds);
-
                 var disposition = dispositions.FirstOrDefault(d => d.ItemId == processModel.DispositionId);
 
                 if (disposition == null)
@@ -215,7 +201,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             activity.DispositionId = processModel.DispositionId;
             activity.Notes = processModel.Notes;
-
             activity.Put(new DispositionMetadata
             {
                 ScheduledDate = processModel.ScheduleDate,
@@ -230,7 +215,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         if (activity.Status == ActivityStatus.NotStated && !isCompletingActivity)
         {
             var model = new EditOmnichannelActivity();
-
             await context.Updater.TryUpdateModelAsync(model, Prefix);
 
             if (string.IsNullOrEmpty(model.SubjectContentType))
@@ -291,7 +275,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (activity.AssignedToId != model.UserId ||
                 string.IsNullOrEmpty(activity.AssignedToId) ||
-                !activity.AssignedToUtc.HasValue)
+                    !activity.AssignedToUtc.HasValue)
             {
                 activity.AssignedToUtc = _clock.UtcNow;
                 activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;

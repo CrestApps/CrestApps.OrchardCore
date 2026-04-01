@@ -4,15 +4,18 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.AI.Services;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.Infrastructure;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
-
 namespace CrestApps.AI.OpenAI.Azure.Services;
 
 public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICompletionClient
@@ -31,9 +34,9 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         ILoggerFactory loggerFactory,
         IEnumerable<IAICompletionServiceHandler> completionServiceHandlers,
         DefaultAIOptions defaultOptions,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
-        : base(providerOptions.Value, aiTemplateService, deploymentManager)
+    : base(providerOptions.Value, aiTemplateService, deploymentManager)
     {
         _serviceProvider = serviceProvider;
         _loggerFactory = loggerFactory;
@@ -91,7 +94,6 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var azureMessages = new List<ChatMessage>();
 
         var currentPrompt = string.Empty;
-
         foreach (var message in messages)
         {
             if (string.IsNullOrWhiteSpace(message.Text))
@@ -153,8 +155,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             if (iterations >= _defaultOptions.MaximumIterationsPerRequest && data.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
                 choices.Add(new Microsoft.Extensions.AI.ChatMessage(Microsoft.Extensions.AI.ChatRole.Assistant,
-                    "\n\n⚠️ The operation reached the maximum number of tool-call iterations and may be incomplete. " +
-                    "Please try again or break the task into smaller steps."));
+                "\n\n⚠️ The operation reached the maximum number of tool-call iterations and may be incomplete. " +
+                "Please try again or break the task into smaller steps."));
             }
 
             var result = new Microsoft.Extensions.AI.ChatResponse(choices)
@@ -303,7 +305,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                             tc.ToolCallId,
                             tc.FunctionName,
                             BinaryData.FromBytes(tc.ArgumentBytes.ToArray())))
-                        .ToList();
+                                .ToList();
 
                     await ProcessToolCallsAsync(prompts, toolCalls, allFunctions);
 
@@ -325,8 +327,8 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                         CreatedAt = update.CreatedAt,
                         ModelId = update.Model,
                         Contents = update.ContentUpdate.Select(x => new Microsoft.Extensions.AI.TextContent(x.Text))
-                        .Cast<Microsoft.Extensions.AI.AIContent>()
-                        .ToList(),
+                            .Cast<Microsoft.Extensions.AI.AIContent>()
+                            .ToList(),
                     };
 
                     if (update.FinishReason is not null)
@@ -356,7 +358,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
             {
                 Contents = [new Microsoft.Extensions.AI.TextContent(
                     """
-                    The operation reached the maximum number of tool-call iterations and may be incomplete. 
+                    The operation reached the maximum number of tool-call iterations and may be incomplete.
                     Please try again or break the task into smaller steps.
                     """)],
             };
@@ -396,15 +398,15 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 // Detect truncation: "end of data" in the message indicates the model's output
                 // was cut off (hit the output token limit) rather than being structurally wrong.
                 var errorMessage = ex.Message.Contains("end of data", StringComparison.OrdinalIgnoreCase)
-                    ? """
-                      The function arguments were truncated because the response exceeded the output token limit.
-                      Please significantly reduce the size of the arguments. For content creation, use much shorter text, 
-                      omit optional fields, or split the operation into multiple smaller calls. 
-                    """
-                    : "Invalid JSON in function arguments. Please fix the JSON structure and try again.";
+                ? """
+The function arguments were truncated because the response exceeded the output token limit.
+Please significantly reduce the size of the arguments. For content creation, use much shorter text,
+omit optional fields, or split the operation into multiple smaller calls.
+"""
+                : "Invalid JSON in function arguments. Please fix the JSON structure and try again.";
 
                 prompts.Add(new ToolChatMessage(toolCall.Id,
-                    JsonSerializer.Serialize(new { error = errorMessage })));
+                JsonSerializer.Serialize(new { error = errorMessage })));
 
                 continue;
             }
@@ -435,7 +437,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 _logger.LogError(ex, "Error invoking function '{FunctionName}'.", toolCall.FunctionName);
 
                 prompts.Add(new ToolChatMessage(toolCall.Id,
-                    JsonSerializer.Serialize(new { error = "Error invoking function." })));
+                JsonSerializer.Serialize(new { error = "Error invoking function." })));
             }
         }
     }

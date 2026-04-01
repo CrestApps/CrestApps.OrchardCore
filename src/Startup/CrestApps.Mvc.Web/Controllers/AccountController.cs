@@ -8,7 +8,6 @@ namespace CrestApps.Mvc.Web.Controllers;
 public sealed class AccountController : Controller
 {
     private readonly IConfiguration _configuration;
-
     public AccountController(IConfiguration configuration)
     {
         _configuration = configuration;
@@ -39,7 +38,6 @@ public sealed class AccountController : Controller
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
-
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))

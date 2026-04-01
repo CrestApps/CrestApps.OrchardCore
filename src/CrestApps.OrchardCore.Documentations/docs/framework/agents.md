@@ -141,7 +141,7 @@ await profileManager.CreateAsync(translatorAgent);
 
 ### Optional Configuration
 
-- **System message** — Configure via AI templates or the profile's system message property
+- **System message** — Configure via templates or the profile's system message property
 - **AgentMetadata** — Set availability mode (`OnDemand` or `AlwaysAvailable`)
 
 Agents with an empty `Name` or `Description` are silently skipped during registration.

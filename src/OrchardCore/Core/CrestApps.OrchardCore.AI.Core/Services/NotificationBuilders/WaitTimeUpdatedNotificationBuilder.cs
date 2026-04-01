@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.Localization;
 
@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 internal sealed class WaitTimeUpdatedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
     public string NotificationType => ChatNotificationTypes.Transfer;
-
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Icon = "fa-solid fa-headset";
@@ -33,13 +32,12 @@ internal sealed class WaitTimeUpdatedNotificationBuilder : IExternalChatRelayNot
         [
             new ChatNotificationAction
             {
-                Name = ChatNotificationActionNames.CancelTransfer,
-                Label = T["Cancel Transfer"].Value,
-                CssClass = "btn-outline-danger",
-                Icon = "fa-solid fa-xmark",
+            Name = ChatNotificationActionNames.CancelTransfer,
+            Label = T["Cancel Transfer"].Value,
+            CssClass = "btn-outline-danger",
+            Icon = "fa-solid fa-xmark",
             },
         ];
-
         result.IsUpdate = true;
     }
 }

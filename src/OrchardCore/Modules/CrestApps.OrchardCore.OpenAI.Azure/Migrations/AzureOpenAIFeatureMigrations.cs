@@ -20,7 +20,6 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
     private const string OldStandardFeature = "CrestApps.OrchardCore.OpenAI.Azure.Standard";
 
     private readonly ShellSettings _shellSettings;
-
     public AzureOpenAIFeatureMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
@@ -37,12 +36,9 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
         {
             var shellFeaturesManager = scope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
             var extensionManager = scope.ServiceProvider.GetRequiredService<IExtensionManager>();
-
             var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
             var enabledFeatureIds = enabledFeatures.Select(f => f.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
             var featuresToEnable = new List<IFeatureInfo>();
-
             // Map old feature IDs to new feature IDs.
             var featureMapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -65,6 +61,7 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
             }
 
             // If the old Standard feature was enabled, ensure the main Area feature is enabled.
+
             if (enabledFeatureIds.Contains(OldStandardFeature) && !enabledFeatureIds.Contains(AzureOpenAIConstants.Feature.Area))
             {
                 var areaFeature = extensionManager.GetFeatures((IEnumerable<string>)[AzureOpenAIConstants.Feature.Area]).FirstOrDefault();

@@ -1,11 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1852</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="JsonSchema.Net" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -14,7 +13,6 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="../../src/OrchardCore/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
@@ -22,7 +20,7 @@
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
-    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.Chat.Copilot/CrestApps.AI.Chat.Copilot.csproj" />
+    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
     <ProjectReference Include="../../src/Startup/CrestApps.Mvc.Web/CrestApps.Mvc.Web.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
@@ -37,13 +35,10 @@
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
   </ItemGroup>
-
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
   <ItemGroup>
-    <EmbeddedResource Include="AITemplates\Prompts\*.md" />
+    <EmbeddedResource Include="Templates\Prompts\*.md" />
   </ItemGroup>
-
 </Project>

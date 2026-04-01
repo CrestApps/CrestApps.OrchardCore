@@ -9,7 +9,7 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
     where T : CatalogItem, INameAwareModel
 {
     public NamedCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 
@@ -18,7 +18,6 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
-
         var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name));
 
         return Clone(record);

@@ -11,28 +11,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Features;
 public sealed class GetFeatureTool : AIFunction
 {
     public const string TheName = "getSiteFeature";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "featureId": {
-              "type": "string",
-              "description": "A unique feature ID to get info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["featureId"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "featureId": {
+          "type": "string",
+          "description": "A unique feature ID to get info for."
         }
-        """);
-
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureId"
+      ]
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Enables feature site features";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Indexes;
@@ -15,7 +15,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AIChatAnalyticsFilter>
 {
     private readonly IAIProfileStore _profileStore;
-
     public AIChatAnalyticsProfileFilterDisplayDriver(
         IAIProfileStore profileStore)
     {
@@ -28,16 +27,14 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
         {
             model.ProfileId = filter.ProfileId;
             model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
-                .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
+            .Select(p => new SelectListItem(p.DisplayText, p.ItemId));
         }).Location("Content:2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIChatAnalyticsFilter filter, UpdateEditorContext context)
     {
         var model = new ChatAnalyticsProfileFilterViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         filter.ProfileId = model.ProfileId;
 
         if (!string.IsNullOrEmpty(filter.ProfileId))

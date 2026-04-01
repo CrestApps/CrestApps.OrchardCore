@@ -10,28 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class UnpublishContentTool : AIFunction
 {
     public const string TheName = "unpublishContentItem";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
         }
-        """);
-
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Changes the status of a published content item to draft, making it editable without being publicly visible.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

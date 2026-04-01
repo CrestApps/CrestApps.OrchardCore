@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -17,9 +17,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
-
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public DefaultAIDeploymentSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -41,22 +39,16 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
-
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
-
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-
             model.EmbeddingDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding));
-
             model.ImageDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Image));
-
             model.SpeechToTextDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText));
-
             model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
         }).Location("Content:4%Default Deployments;1")
@@ -72,9 +64,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
         }
 
         var model = new DefaultAIDeploymentSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.DefaultChatDeploymentName = model.DefaultChatDeploymentName;
         settings.DefaultUtilityDeploymentName = model.DefaultUtilityDeploymentName;
         settings.DefaultEmbeddingDeploymentName = model.DefaultEmbeddingDeploymentName;
@@ -96,20 +86,21 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             .Select(d =>
             {
                 SelectListGroup group = null;
-
                 var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
+
             });
     }
 

@@ -12,16 +12,12 @@ public class EditDeploymentViewModel
     public string ConnectionName { get; set; }
 
     public string[] SelectedTypes { get; set; }
-
     [BindNever]
     public bool IsNew { get; set; }
-
     [BindNever]
     public bool HasContainedConnection { get; set; }
-
     [BindNever]
     public IList<SelectListItem> Connections { get; set; }
-
     [BindNever]
     public IList<SelectListItem> Types { get; set; }
 }

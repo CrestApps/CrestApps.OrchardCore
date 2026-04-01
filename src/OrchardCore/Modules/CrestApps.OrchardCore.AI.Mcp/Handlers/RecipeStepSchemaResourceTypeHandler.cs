@@ -17,11 +17,10 @@ public sealed class RecipeStepSchemaResourceTypeHandler : McpResourceTypeHandler
 
     private readonly RecipeSchemaService _recipeSchemaService;
     private readonly ILogger _logger;
-
     public RecipeStepSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeStepSchemaResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _recipeSchemaService = recipeSchemaService;
         _logger = logger;
@@ -54,10 +53,11 @@ public sealed class RecipeStepSchemaResourceTypeHandler : McpResourceTypeHandler
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/schema+json",
-                    Text = JsonSerializer.Serialize(stepSchema),
+                Uri = resource.Resource.Uri,
+                MimeType = "application/schema+json",
+                Text = JsonSerializer.Serialize(stepSchema),
                 }
+
             ]
         };
     }

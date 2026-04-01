@@ -21,7 +21,6 @@ public sealed class PartSchemaDefinitionTests
     public void Name_ReturnsExpectedValue(Type definitionType, string expectedName)
     {
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
-
         Assert.Equal(expectedName, instance.Name);
     }
 
@@ -42,7 +41,6 @@ public sealed class PartSchemaDefinitionTests
     public void Type_AlwaysReturnsPart(Type definitionType)
     {
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
-
         Assert.Equal(ContentDefinitionSchemaType.Part, instance.Type);
     }
 
@@ -64,11 +62,8 @@ public sealed class PartSchemaDefinitionTests
     {
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
         var schema = await instance.GetSettingsSchemaAsync();
-
         Assert.NotNull(schema);
-
         var json = schema.Build().Root.Source.GetRawText();
-
         Assert.NotEmpty(json);
         Assert.StartsWith("{", json);
     }
@@ -92,7 +87,6 @@ public sealed class PartSchemaDefinitionTests
         var instance = (IContentDefinitionSchemaDefinition)Activator.CreateInstance(definitionType);
         var first = await instance.GetSettingsSchemaAsync();
         var second = await instance.GetSettingsSchemaAsync();
-
         Assert.Same(first, second);
     }
 
@@ -102,7 +96,6 @@ public sealed class PartSchemaDefinitionTests
         var def = new TitlePartSchema();
         var schema = await def.GetSettingsSchemaAsync();
         var json = schema.Build().Root.Source.GetRawText();
-
         Assert.Contains("TitlePartSettings", json);
         Assert.Contains("Editable", json);
         Assert.Contains("GeneratedDisabled", json);
@@ -116,7 +109,6 @@ public sealed class PartSchemaDefinitionTests
         var def = new AliasPartSchema();
         var schema = await def.GetSettingsSchemaAsync();
         var json = schema.Build().Root.Source.GetRawText();
-
         Assert.Contains("AliasPartSettings", json);
         Assert.Contains("Pattern", json);
         Assert.Contains("Options", json);
@@ -128,7 +120,6 @@ public sealed class PartSchemaDefinitionTests
         var def = new HtmlBodyPartSchema();
         var schema = await def.GetSettingsSchemaAsync();
         var json = schema.Build().Root.Source.GetRawText();
-
         Assert.Contains("SanitizeHtml", json);
         Assert.Contains("\"default\":true", json);
     }

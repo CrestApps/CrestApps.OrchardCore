@@ -19,8 +19,8 @@ internal sealed class AIDocumentIndexProvider : IndexProvider<AIDocument>
             .Map(document =>
             {
                 var extension = !string.IsNullOrEmpty(document.FileName)
-                    ? Path.GetExtension(document.FileName)
-                    : null;
+                ? Path.GetExtension(document.FileName)
+                : null;
 
                 return new AIDocumentIndex
                 {
@@ -29,6 +29,7 @@ internal sealed class AIDocumentIndexProvider : IndexProvider<AIDocument>
                     ReferenceType = document.ReferenceType,
                     Extension = extension,
                 };
+
             });
     }
 }

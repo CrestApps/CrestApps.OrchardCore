@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +19,6 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
-
     public AIProfilePostSessionDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -39,29 +38,27 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
             var settings = profile.GetSettings<AIProfilePostSessionSettings>();
-
             model.EnablePostSessionProcessing = settings.EnablePostSessionProcessing;
             model.Tasks = settings.PostSessionTasks
-                .Select(t => new PostSessionTaskViewModel
-                {
-                    Name = t.Name,
-                    Type = t.Type,
-                    Instructions = t.Instructions,
-                    AllowMultipleValues = t.AllowMultipleValues,
-                    Options = t.Options
-                        .Select(o => new PostSessionTaskOptionViewModel
-                        {
-                            Value = o.Value,
-                            Description = o.Description,
-                        })
-                        .ToList(),
-                })
-                .ToList();
+            .Select(t => new PostSessionTaskViewModel
+            {
+                Name = t.Name,
+                Type = t.Type,
+                Instructions = t.Instructions,
+                AllowMultipleValues = t.AllowMultipleValues,
+                Options = t.Options
+            .Select(o => new PostSessionTaskOptionViewModel
+            {
+                Value = o.Value,
+                Description = o.Description,
+            })
+        .ToList(),
+            })
+            .ToList();
 
             if (accessibleTools.Count > 0)
             {
                 var selectedToolNames = settings.ToolNames ?? [];
-
                 model.PostSessionTools = accessibleTools
                     .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
                     .OrderBy(group => group.Key)
@@ -79,9 +76,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new AIProfilePostSessionViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         // Remove entries with empty names (deleted rows).
         var tasks = model.Tasks?.Where(t => !string.IsNullOrWhiteSpace(t.Name)).ToList() ?? [];
 
@@ -157,12 +152,12 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
                 Instructions = t.Instructions,
                 AllowMultipleValues = t.AllowMultipleValues,
                 Options = t.Type == PostSessionTaskType.PredefinedOptions
-                    ? t.Options.Select(o => new PostSessionTaskOption
-                    {
-                        Value = o.Value,
-                        Description = o.Description,
-                    }).ToList()
-                    : [],
+            ? t.Options.Select(o => new PostSessionTaskOption
+            {
+                Value = o.Value,
+                Description = o.Description,
+            }).ToList()
+                : [],
             }).ToList();
         });
 

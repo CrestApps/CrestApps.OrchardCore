@@ -1,14 +1,14 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Speech;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
-
 /// <summary>
 /// Default implementation of <see cref="IMcpCapabilityResolver"/> that uses a hybrid
 /// approach combining embedding-based semantic similarity and keyword/token overlap
@@ -43,7 +43,6 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     private readonly ITextTokenizer _tokenizer;
     private readonly McpCapabilityResolverOptions _resolverOptions;
     private readonly ILogger _logger;
-
     public DefaultMcpCapabilityResolver(
         ISourceCatalog<McpConnection> store,
         IMcpServerMetadataCacheProvider metadataProvider,
@@ -63,7 +62,6 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         _resolverOptions = resolverOptions.Value;
         _logger = logger;
     }
-
     public async Task<McpCapabilityResolutionResult> ResolveAsync(
         string prompt,
         string providerName,
@@ -75,26 +73,21 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         {
             return McpCapabilityResolutionResult.Empty;
         }
-
         try
         {
             // Resolve configured MCP connections.
             var connections = await _store.GetAsync(mcpConnectionIds);
-
             if (connections.Count == 0)
             {
                 return McpCapabilityResolutionResult.Empty;
             }
-
             // Fetch capabilities from cache.
             var capabilitiesList = new List<McpServerCapabilities>();
-
             foreach (var connection in connections)
             {
                 try
                 {
                     var capabilities = await _metadataProvider.GetCapabilitiesAsync(connection);
-
                     if (capabilities is not null)
                     {
                         capabilitiesList.Add(capabilities);
@@ -108,20 +101,16 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                         connection.ItemId);
                 }
             }
-
             if (capabilitiesList.Count == 0)
             {
                 return McpCapabilityResolutionResult.Empty;
             }
-
             // Build a flat list of all capability entries for scoring.
             var entries = BuildCapabilityEntries(capabilitiesList);
-
             if (entries.Count == 0)
             {
                 return McpCapabilityResolutionResult.Empty;
             }
-
             // Strategy 1: If total capabilities are small, return all.
             if (entries.Count <= _resolverOptions.IncludeAllThreshold)
             {
@@ -131,19 +120,14 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                         "Capability count ({Count}) is within include-all threshold ({Threshold}). Returning all capabilities.",
                         entries.Count, _resolverOptions.IncludeAllThreshold);
                 }
-
                 return BuildResult(entries, score: 1.0f);
             }
-
             // Strategy 2: Hybrid matching — run both embedding-based and keyword-based
             // matching, then merge results keeping the best score per capability.
             var embeddingCandidates = await TryEmbeddingMatchAsync(
                 prompt, providerName, connectionName, capabilitiesList, entries, cancellationToken);
-
             var keywordCandidates = KeywordMatch(prompt, entries);
-
             var mergedCandidates = MergeCandidates(embeddingCandidates, keywordCandidates);
-
             if (mergedCandidates.Count > 0)
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
@@ -154,15 +138,12 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                         embeddingCandidates?.Count ?? 0,
                         keywordCandidates?.Count ?? 0);
                 }
-
                 return new McpCapabilityResolutionResult(mergedCandidates);
             }
-
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("No capabilities matched user prompt via embedding or keyword strategies.");
             }
-
             return McpCapabilityResolutionResult.Empty;
         }
         catch (OperationCanceledException)
@@ -172,11 +153,9 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "MCP capability resolution failed. Continuing without pre-resolved capabilities.");
-
             return McpCapabilityResolutionResult.Empty;
         }
     }
-
     /// <summary>
     /// Attempts embedding-based semantic matching using pre-normalized vectors.
     /// When vectors are pre-normalized (L2 norm = 1), cosine similarity reduces to
@@ -192,46 +171,35 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         CancellationToken cancellationToken)
     {
         var embeddingGenerator = await CreateEmbeddingGeneratorAsync(providerName, connectionName);
-
         if (embeddingGenerator is null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("No embedding generator available. Falling back to keyword matching.");
             }
-
             return null;
         }
-
         // Get or create capability embeddings (pre-normalized at cache time).
         var capabilityEmbeddings = await _embeddingCache.GetOrCreateEmbeddingsAsync(
             capabilitiesList, embeddingGenerator, cancellationToken);
-
         if (capabilityEmbeddings.Count == 0)
         {
             return null;
         }
-
         // Embed the user prompt and normalize.
         var promptEmbeddings = await embeddingGenerator.GenerateAsync([prompt], cancellationToken: cancellationToken);
-
         if (promptEmbeddings is null || promptEmbeddings.Count == 0 ||
             promptEmbeddings[0].Vector.Length == 0)
         {
             _logger.LogWarning("Failed to generate embedding for user prompt during capability resolution.");
-
             return null;
         }
-
         var promptVector = NormalizeL2(promptEmbeddings[0].Vector.ToArray());
-
         // Since both vectors are pre-normalized, cosine similarity = dot product.
         var candidates = new List<McpCapabilityCandidate>();
-
         foreach (var embedding in capabilityEmbeddings)
         {
             var similarity = DotProduct(promptVector, embedding.Embedding);
-
             if (similarity >= _resolverOptions.SimilarityThreshold)
             {
                 candidates.Add(new McpCapabilityCandidate
@@ -245,22 +213,18 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                 });
             }
         }
-
         if (candidates.Count == 0)
         {
             return null;
         }
-
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
                 "Embedding-based matching found {Count} candidate(s) above threshold {Threshold}.",
                 candidates.Count, _resolverOptions.SimilarityThreshold);
         }
-
         return candidates;
     }
-
     /// <summary>
     /// Keyword/token overlap matching. Tokenizes the prompt and each capability text
     /// using the Lucene.NET analyzer pipeline (WhitespaceTokenizer + WordDelimiterFilter +
@@ -270,26 +234,20 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     private List<McpCapabilityCandidate> KeywordMatch(string prompt, List<CapabilityEntry> entries)
     {
         var promptTokens = _tokenizer.Tokenize(prompt);
-
         if (promptTokens.Count == 0)
         {
             return null;
         }
-
         var candidates = new List<McpCapabilityCandidate>();
-
         foreach (var entry in entries)
         {
             var capabilityTokens = _tokenizer.Tokenize(entry.Text);
-
             if (capabilityTokens.Count == 0)
             {
                 continue;
             }
-
             // Count prompt tokens that appear in the capability text.
             var matchCount = 0;
-
             foreach (var token in promptTokens)
             {
                 if (capabilityTokens.Contains(token))
@@ -297,12 +255,10 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                     matchCount++;
                 }
             }
-
             if (matchCount == 0)
             {
                 continue;
             }
-
             // Use max of forward and reverse ratios. Forward measures how well the prompt
             // covers the capability; reverse measures how well the capability covers the prompt.
             // This ensures short capability names (e.g., "recipe-schema") score well against
@@ -310,7 +266,6 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             var forwardScore = (float)matchCount / promptTokens.Count;
             var reverseScore = (float)matchCount / capabilityTokens.Count;
             var score = Math.Max(forwardScore, reverseScore);
-
             if (score >= _resolverOptions.KeywordMatchThreshold)
             {
                 candidates.Add(new McpCapabilityCandidate
@@ -324,22 +279,18 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                 });
             }
         }
-
         if (candidates.Count == 0)
         {
             return null;
         }
-
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug(
                 "Keyword-based matching found {Count} candidate(s) above threshold {Threshold}.",
                 candidates.Count, _resolverOptions.KeywordMatchThreshold);
         }
-
         return candidates;
     }
-
     /// <summary>
     /// Merges candidates from multiple strategies, deduplicating by (ConnectionId, CapabilityName)
     /// and keeping the highest score per capability. Sorts by descending score and applies TopK.
@@ -349,25 +300,19 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         List<McpCapabilityCandidate> keywordCandidates)
     {
         var map = new Dictionary<string, McpCapabilityCandidate>(StringComparer.OrdinalIgnoreCase);
-
         AddToMap(map, embeddingCandidates);
         AddToMap(map, keywordCandidates);
-
         if (map.Count == 0)
         {
             return [];
         }
-
         var result = map.Values.ToList();
         result.Sort((a, b) => b.SimilarityScore.CompareTo(a.SimilarityScore));
-
         if (result.Count > _resolverOptions.TopK)
         {
             result.RemoveRange(_resolverOptions.TopK, result.Count - _resolverOptions.TopK);
         }
-
         return result;
-
         static void AddToMap(
             Dictionary<string, McpCapabilityCandidate> map,
             List<McpCapabilityCandidate> candidates)
@@ -376,11 +321,9 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             {
                 return;
             }
-
             foreach (var candidate in candidates)
             {
                 var key = $"{candidate.ConnectionId}\0{candidate.CapabilityName}";
-
                 if (!map.TryGetValue(key, out var existing) ||
                     candidate.SimilarityScore > existing.SimilarityScore)
                 {
@@ -389,7 +332,6 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             }
         }
     }
-
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(
         string providerName, string connectionName)
     {
@@ -397,30 +339,25 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         {
             return null;
         }
-
         var deployment = await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
             clientName: providerName,
             connectionName: connectionName);
-
         if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
         {
             return null;
         }
-
         return await _aiClientFactory.CreateEmbeddingGeneratorAsync(
             deployment.ClientName,
             deployment.ConnectionName,
             deployment.ModelName);
     }
-
     /// <summary>
     /// Builds a flat list of capability entries from all connections for scoring.
     /// </summary>
     private static List<CapabilityEntry> BuildCapabilityEntries(List<McpServerCapabilities> capabilitiesList)
     {
         var entries = new List<CapabilityEntry>();
-
         foreach (var server in capabilitiesList)
         {
             AddEntries(entries, server, server.Tools, McpCapabilityType.Tool);
@@ -428,9 +365,7 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             AddEntries(entries, server, server.Resources, McpCapabilityType.Resource);
             AddEntries(entries, server, server.ResourceTemplates, McpCapabilityType.ResourceTemplate);
         }
-
         return entries;
-
         static void AddEntries(
             List<CapabilityEntry> entries,
             McpServerCapabilities server,
@@ -441,28 +376,23 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             {
                 return;
             }
-
             foreach (var item in items)
             {
                 if (string.IsNullOrWhiteSpace(item.Name))
                 {
                     continue;
                 }
-
                 // Include the URI or URI template in the searchable text for better keyword matching.
                 var uriText = item.UriTemplate ?? item.Uri;
                 var parts = new List<string>(3) { item.Name };
-
                 if (!string.IsNullOrWhiteSpace(uriText))
                 {
                     parts.Add(uriText);
                 }
-
                 if (!string.IsNullOrWhiteSpace(item.Description))
                 {
                     parts.Add(item.Description);
                 }
-
                 entries.Add(new CapabilityEntry
                 {
                     ConnectionId = server.ConnectionId,
@@ -475,14 +405,12 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
             }
         }
     }
-
     /// <summary>
     /// Builds a result that includes all given entries with the specified score.
     /// </summary>
     private static McpCapabilityResolutionResult BuildResult(List<CapabilityEntry> entries, float score)
     {
         var candidates = new List<McpCapabilityCandidate>(entries.Count);
-
         foreach (var entry in entries)
         {
             candidates.Add(new McpCapabilityCandidate
@@ -495,10 +423,8 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
                 SimilarityScore = score,
             });
         }
-
         return new McpCapabilityResolutionResult(candidates);
     }
-
     /// <summary>
     /// Normalizes a vector to unit length (L2 norm = 1). When both vectors in a
     /// similarity comparison are pre-normalized, cosine similarity reduces to a
@@ -507,29 +433,22 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
     internal static float[] NormalizeL2(float[] vector)
     {
         var sumOfSquares = 0f;
-
         for (var i = 0; i < vector.Length; i++)
         {
             sumOfSquares += vector[i] * vector[i];
         }
-
         var magnitude = MathF.Sqrt(sumOfSquares);
-
         if (magnitude == 0f)
         {
             return vector;
         }
-
         var normalized = new float[vector.Length];
-
         for (var i = 0; i < vector.Length; i++)
         {
             normalized[i] = vector[i] / magnitude;
         }
-
         return normalized;
     }
-
     /// <summary>
     /// Computes the dot product of two vectors. When both vectors are pre-normalized
     /// (L2 norm = 1), this is equivalent to cosine similarity.
@@ -540,17 +459,13 @@ internal sealed class DefaultMcpCapabilityResolver : IMcpCapabilityResolver
         {
             return 0f;
         }
-
         var result = 0f;
-
         for (var i = 0; i < vectorA.Length; i++)
         {
             result += vectorA[i] * vectorB[i];
         }
-
         return result;
     }
-
     private struct CapabilityEntry
     {
         public string ConnectionId;

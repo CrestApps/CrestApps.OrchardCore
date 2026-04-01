@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -51,8 +51,8 @@ internal static class GetDeploymentsEndpoint
             x.Name,
             x.ModelName,
             DisplayText = string.Equals(x.Name, x.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? x.Name
-                : $"{x.Name} ({x.ModelName})",
+            ? x.Name
+            : $"{x.Name} ({x.ModelName})",
             x.CreatedUtc,
         }));
     }

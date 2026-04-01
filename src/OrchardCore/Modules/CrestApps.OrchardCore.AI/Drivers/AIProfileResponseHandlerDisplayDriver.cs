@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -17,7 +17,6 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
     private readonly IChatResponseHandlerResolver _handlerResolver;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileResponseHandlerDisplayDriver(
         IChatResponseHandlerResolver handlerResolver,
         IStringLocalizer<AIProfileResponseHandlerDisplayDriver> stringLocalizer)
@@ -29,8 +28,8 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
         var handlers = _handlerResolver.GetAll();
-
         // Only show the handler selector when there is at least one non-AI handler registered.
+
         if (!handlers.Any())
         {
             return null;
@@ -39,13 +38,11 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
         return Initialize<EditResponseHandlerProfileSettingsViewModel>("AIProfileResponseHandler_Edit", model =>
         {
             var settings = profile.GetSettings<ResponseHandlerProfileSettings>();
-
             model.InitialResponseHandlerName = settings.InitialResponseHandlerName;
-
             model.ResponseHandlers = handlers
-                .Select(h => new SelectListItem(h.Name, h.Name))
-                .OrderBy(x => x.Text)
-                .ToList();
+            .Select(h => new SelectListItem(h.Name, h.Name))
+            .OrderBy(x => x.Text)
+            .ToList();
         }).Location("Content:20%Interactions;3");
     }
 
@@ -60,7 +57,6 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
 
         var model = new EditResponseHandlerProfileSettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         profile.AlterSettings<ResponseHandlerProfileSettings>(settings =>
         {
             settings.InitialResponseHandlerName = model.InitialResponseHandlerName?.Trim();

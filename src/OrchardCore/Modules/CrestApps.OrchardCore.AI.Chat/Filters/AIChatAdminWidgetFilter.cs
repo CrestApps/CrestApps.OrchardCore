@@ -1,5 +1,6 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +24,6 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly AdminOptions _adminOptions;
-
     public AIChatAdminWidgetFilter(
         ILayoutAccessor layoutAccessor,
         IShapeFactory shapeFactory,
@@ -47,12 +47,14 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         if (!IsAdminPage(context))
         {
             await next();
+
             return;
         }
 
         if (context.HttpContext.User.Identity?.IsAuthenticated != true)
         {
             await next();
+
             return;
         }
 
@@ -61,19 +63,23 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         if (string.IsNullOrEmpty(settings?.ProfileId))
         {
             await next();
+
             return;
         }
 
         var profile = await _profileManager.FindByIdAsync(settings.ProfileId);
+
         if (profile == null)
         {
             await next();
+
             return;
         }
 
         if (!await _authorizationService.AuthorizeAsync(context.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             await next();
+
             return;
         }
 
@@ -91,12 +97,10 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         shape.Properties["Sessions"] = sessionResult?.Sessions ?? [];
         shape.Properties["MaxSessions"] = settings.MaxSessions;
         shape.Properties["PrimaryColor"] = string.IsNullOrWhiteSpace(settings.PrimaryColor)
-            ? AIChatAdminWidgetSettings.DefaultPrimaryColor
-            : settings.PrimaryColor;
-
+        ? AIChatAdminWidgetSettings.DefaultPrimaryColor
+        : settings.PrimaryColor;
         var layout = await _layoutAccessor.GetLayoutAsync();
         await layout.Zones["Footer"].AddAsync(shape, "999");
-
         await next();
     }
 

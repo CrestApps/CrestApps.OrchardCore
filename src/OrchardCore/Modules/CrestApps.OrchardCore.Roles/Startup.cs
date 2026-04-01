@@ -18,8 +18,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IContentTypePartDefinitionDisplayDriver, RolePickerPartSettingsDisplayDriver>()
             .AddContentPart<RolePickerPart>()
             .UseDisplayDriver<RolePickerPartDisplayDriver>();
-
         services.AddDataMigration<RolePickerMigrations>();
     }
 }
-

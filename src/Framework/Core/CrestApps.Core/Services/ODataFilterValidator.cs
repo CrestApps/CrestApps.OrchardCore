@@ -45,6 +45,7 @@ public sealed class ODataFilterValidator : IODataValidator
 
         // Check for balanced quotes.
         var singleQuotes = filter.Count(c => c == '\'');
+
         if (singleQuotes % 2 != 0)
         {
             return false;
@@ -66,6 +67,7 @@ public sealed class ODataFilterValidator : IODataValidator
             else if (ch == ')')
             {
                 balance--;
+
                 if (balance < 0)
                 {
                     // Closing parenthesis before opening.

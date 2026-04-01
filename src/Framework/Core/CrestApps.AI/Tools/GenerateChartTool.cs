@@ -1,12 +1,13 @@
 using System.Text.Json;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Orchestration;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-namespace CrestApps.AI.Tools;
-
+namespace CrestApps.AI.Tooling;
 /// <summary>
 /// System tool that generates Chart.js configuration JSON from a data description.
 /// Returns the chart config in the <c>[chart:json]</c> format recognized by the client.
@@ -16,19 +17,19 @@ public sealed class GenerateChartTool : AIFunction
     public const string TheName = SystemToolNames.GenerateChart;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "data_description": {
-              "type": "string",
-              "description": "A description of the data to visualize, including any specific chart type preferences."
-            }
-          },
-          "required": ["data_description"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "data_description": {
+          "type": "string",
+          "description": "A description of the data to visualize, including any specific chart type preferences."
         }
-        """);
+      },
+      "required": ["data_description"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -40,7 +41,6 @@ public sealed class GenerateChartTool : AIFunction
     {
         ["Strict"] = false,
     };
-
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
@@ -99,7 +99,8 @@ public sealed class GenerateChartTool : AIFunction
 
             var chatClient = await aIClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
 
-            var promptService = arguments.Services.GetService<IAITemplateService>();
+            var promptService = arguments.Services.GetService<ITemplateService>();
+
             var systemPrompt = promptService != null
                 ? await promptService.RenderAsync(AITemplateIds.ChartGeneration)
                 : string.Empty;

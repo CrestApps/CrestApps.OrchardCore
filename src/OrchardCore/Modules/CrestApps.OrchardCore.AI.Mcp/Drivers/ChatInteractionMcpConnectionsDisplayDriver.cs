@@ -13,7 +13,6 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
     private readonly ICatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
-
     public ChatInteractionMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<ChatInteractionMcpConnectionsDisplayDriver> stringLocalizer)
@@ -40,8 +39,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
                 DisplayText = entry.DisplayText,
                 IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Parameters:3#Capabilities;5");
     }
 
@@ -55,9 +53,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
         }
 
         var model = new ChatInteractionMcpConnectionsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         if (ids is null || ids.Length == 0)

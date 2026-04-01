@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot;
+using CrestApps.AI.Copilot;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Entities;
@@ -14,7 +14,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStore
 {
     private readonly UserManager<IUser> _userManager;
-
     public OrchardCoreCopilotCredentialStore(UserManager<IUser> userManager)
     {
         _userManager = userManager;

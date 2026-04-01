@@ -10,7 +10,7 @@ public sealed class DefaultAIDataSourceManager : CatalogManager<AIDataSource>
         ICatalog<AIDataSource> store,
         IEnumerable<ICatalogEntryHandler<AIDataSource>> handlers,
         ILogger<DefaultAIDataSourceManager> logger)
-        : base(store, handlers, logger)
+    : base(store, handlers, logger)
     {
     }
 }

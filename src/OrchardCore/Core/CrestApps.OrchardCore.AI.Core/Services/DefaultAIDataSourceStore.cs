@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>
 {
     public DefaultAIDataSourceStore(IDocumentManager<DictionaryDocument<AIDataSource>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 

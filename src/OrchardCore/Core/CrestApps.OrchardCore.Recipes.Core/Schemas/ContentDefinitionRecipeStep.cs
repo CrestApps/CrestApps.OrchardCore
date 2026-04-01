@@ -8,9 +8,8 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class ContentDefinitionRecipeStep(
     IEnumerable<IContentDefinitionSchemaDefinition> schemaDefinitions,
     IContentSchemaProvider contentSchemaProvider)
-    : ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
+: ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
 {
     public override string Name => "ContentDefinition";
-
     protected override IReadOnlyList<string> RequiredProperties => ["name", "ContentTypes"];
 }

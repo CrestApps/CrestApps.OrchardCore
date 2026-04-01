@@ -1,4 +1,6 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 
 namespace CrestApps.AI.Handlers;
 
@@ -8,7 +10,7 @@ internal sealed class DataSourceAICompletionContextBuilderHandler : IAICompletio
     {
         if (context.Resource is AIProfile profile &&
             profile.TryGet<DataSourceMetadata>(out var dataSourceMetadata) &&
-            !string.IsNullOrEmpty(dataSourceMetadata.DataSourceId))
+                !string.IsNullOrEmpty(dataSourceMetadata.DataSourceId))
         {
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;
 

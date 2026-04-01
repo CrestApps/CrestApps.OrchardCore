@@ -1,5 +1,6 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
@@ -8,9 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
-
     private readonly IAIClientFactory _aiClientFactory;
-
     protected DataSourceIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
@@ -20,11 +19,11 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
     protected async Task<int> GetEmbeddingDimensionsAsync(DataSourceIndexProfileMetadata metadata)
     {
         const int defaultDimensions = 1536;
-
 #pragma warning disable CS0618 // Type or member is obsolete
+
         if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
             string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
+                string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
         {
             return defaultDimensions;
         }

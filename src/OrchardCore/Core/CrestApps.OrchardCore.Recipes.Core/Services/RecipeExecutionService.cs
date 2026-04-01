@@ -11,7 +11,6 @@ public sealed class RecipeExecutionService
 {
     private readonly IEnumerable<IDeploymentTargetHandler> _deploymentTargetHandlers;
     private readonly DocumentJsonSerializerOptions _options;
-
     public RecipeExecutionService(
         IEnumerable<IDeploymentTargetHandler> deploymentTargetHandlers,
         IOptions<DocumentJsonSerializerOptions> options)
@@ -26,7 +25,6 @@ public sealed class RecipeExecutionService
 
         var tempArchiveName = PathExtensions.GetTempFileName() + ".json";
         var tempArchiveFolder = PathExtensions.GetTempFileName();
-
         try
         {
             using (var stream = new FileStream(tempArchiveName, FileMode.Create))
@@ -37,7 +35,6 @@ public sealed class RecipeExecutionService
 
             Directory.CreateDirectory(tempArchiveFolder);
             File.Move(tempArchiveName, Path.Combine(tempArchiveFolder, "Recipe.json"));
-
             var deploymentPackage = new PhysicalFileProvider(tempArchiveFolder);
 
             foreach (var deploymentTargetHandler in _deploymentTargetHandlers)

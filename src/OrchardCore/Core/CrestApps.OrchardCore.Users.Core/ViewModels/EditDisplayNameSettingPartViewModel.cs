@@ -17,10 +17,8 @@ public class EditDisplayNameSettingPartViewModel
     public DisplayNamePropertyType MiddleName { get; set; }
 
     public string Template { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Types { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> PropertyTypes { get; set; }
 }

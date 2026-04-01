@@ -22,12 +22,11 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly ISession _session;
     private readonly DocumentJsonSerializerOptions _jsonOptions;
     private readonly ILogger _logger;
-
     public ContentByTypeResourceTypeHandler(
         ISession session,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
         ILogger<ContentByTypeResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _session = session;
         _jsonOptions = jsonOptions.Value;
@@ -50,7 +49,6 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
 
         var query = _session.Query<ContentItem, ContentItemIndex>()
             .Where(x => x.ContentType == contentType && x.Published);
-
         var contentItems = await query.ListAsync(cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -66,10 +64,11 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
                 }
+
             ]
         };
     }

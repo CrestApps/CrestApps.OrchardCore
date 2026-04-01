@@ -1,6 +1,6 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat.Copilot.Models;
-using CrestApps.AI.Chat.Copilot.Services;
+using CrestApps.AI.Copilot.Models;
+using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 
@@ -15,6 +15,7 @@ public sealed class MvcAITemplateViewModelCopilotTests
         {
             Source = AITemplateSources.Profile,
         };
+
         template.Put(new CopilotSessionMetadata
         {
             CopilotModel = "gpt-4.1",
@@ -22,7 +23,6 @@ public sealed class MvcAITemplateViewModelCopilotTests
         });
 
         var model = AITemplateViewModel.FromTemplate(template);
-
         Assert.Equal("gpt-4.1", model.CopilotModel);
         Assert.True(model.CopilotIsAllowAll);
     }
@@ -38,10 +38,9 @@ public sealed class MvcAITemplateViewModelCopilotTests
             CopilotModel = "claude-3.7-sonnet",
             CopilotIsAllowAll = true,
         };
+
         var template = new AIProfileTemplate();
-
         model.ApplyTo(template);
-
         Assert.True(template.TryGet<CopilotSessionMetadata>(out var metadata));
         Assert.Equal("claude-3.7-sonnet", metadata.CopilotModel);
         Assert.True(metadata.IsAllowAll);
@@ -56,6 +55,7 @@ public sealed class MvcAITemplateViewModelCopilotTests
             Source = AITemplateSources.Profile,
             OrchestratorName = "default",
         };
+
         var template = new AIProfileTemplate();
         template.Put(new CopilotSessionMetadata
         {
@@ -64,7 +64,6 @@ public sealed class MvcAITemplateViewModelCopilotTests
         });
 
         model.ApplyTo(template);
-
         Assert.False(template.TryGet<CopilotSessionMetadata>(out _));
     }
 }

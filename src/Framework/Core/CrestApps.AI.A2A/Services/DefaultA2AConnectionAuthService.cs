@@ -100,11 +100,11 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
 
         var apiKey = Unprotect(protector, metadata.ApiKey);
         var headerName = string.IsNullOrWhiteSpace(metadata.ApiKeyHeaderName)
-            ? "Authorization"
-            : metadata.ApiKeyHeaderName;
+        ? "Authorization"
+        : metadata.ApiKeyHeaderName;
         var value = !string.IsNullOrWhiteSpace(metadata.ApiKeyPrefix)
-            ? $"{metadata.ApiKeyPrefix} {apiKey}"
-            : apiKey;
+        ? $"{metadata.ApiKeyPrefix} {apiKey}"
+        : apiKey;
 
         headers[headerName] = value;
     }
@@ -120,8 +120,8 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         }
 
         var password = !string.IsNullOrEmpty(metadata.BasicPassword)
-            ? Unprotect(protector, metadata.BasicPassword)
-            : string.Empty;
+        ? Unprotect(protector, metadata.BasicPassword)
+        : string.Empty;
         var credentials = Convert.ToBase64String(
             Encoding.UTF8.GetBytes($"{metadata.BasicUsername}:{password}"));
 
@@ -136,7 +136,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
     {
         if (string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) ||
             string.IsNullOrEmpty(metadata.OAuth2ClientId) ||
-            string.IsNullOrEmpty(metadata.OAuth2ClientSecret))
+                string.IsNullOrEmpty(metadata.OAuth2ClientSecret))
         {
             return;
         }
@@ -175,7 +175,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
     {
         if (string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) ||
             string.IsNullOrEmpty(metadata.OAuth2ClientId) ||
-            string.IsNullOrEmpty(metadata.OAuth2PrivateKey))
+                string.IsNullOrEmpty(metadata.OAuth2PrivateKey))
         {
             return;
         }
@@ -183,7 +183,6 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         var privateKey = Unprotect(protector, metadata.OAuth2PrivateKey);
         var assertion = CreateClientAssertion(
             metadata.OAuth2TokenEndpoint, metadata.OAuth2ClientId, privateKey, metadata.OAuth2KeyId);
-
         try
         {
             var token = await AcquireTokenAsync(
@@ -217,7 +216,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
     {
         if (string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) ||
             string.IsNullOrEmpty(metadata.OAuth2ClientId) ||
-            string.IsNullOrEmpty(metadata.OAuth2ClientCertificate))
+                string.IsNullOrEmpty(metadata.OAuth2ClientCertificate))
         {
             return;
         }
@@ -225,9 +224,8 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         var certBase64 = Unprotect(protector, metadata.OAuth2ClientCertificate);
         var certBytes = Convert.FromBase64String(certBase64);
         var certPassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword)
-            ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
-            : null;
-
+        ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
+        : null;
         try
         {
             var parameters = new Dictionary<string, string>
@@ -246,12 +244,13 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
             if (_cache.TryGetValue(cacheKey, out string cachedToken))
             {
                 headers["Authorization"] = $"Bearer {cachedToken}";
+
                 return;
             }
 
             var cert = string.IsNullOrEmpty(certPassword)
-                ? X509CertificateLoader.LoadPkcs12(certBytes, null)
-                : X509CertificateLoader.LoadPkcs12(certBytes, certPassword);
+            ? X509CertificateLoader.LoadPkcs12(certBytes, null)
+            : X509CertificateLoader.LoadPkcs12(certBytes, certPassword);
 
             using (cert)
             {
@@ -346,8 +345,8 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         }
 
         var expiration = tokenResponse.ExpiresIn > ExpirationBufferSeconds
-            ? TimeSpan.FromSeconds(tokenResponse.ExpiresIn - ExpirationBufferSeconds)
-            : TimeSpan.FromMinutes(5);
+        ? TimeSpan.FromSeconds(tokenResponse.ExpiresIn - ExpirationBufferSeconds)
+        : TimeSpan.FromMinutes(5);
 
         _cache.Set(cacheKey, tokenResponse.AccessToken, expiration);
 
@@ -398,9 +397,9 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
 
     private static string Base64UrlEncode(byte[] input)
         => Convert.ToBase64String(input)
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
+        .TrimEnd('=')
+        .Replace('+', '-')
+        .Replace('/', '_');
 
     private static string GetOAuth2CacheKey(string grantType, string tokenEndpoint, string clientId, string scopes)
         => $"a2a_oauth2_{grantType}_{tokenEndpoint}_{clientId}_{scopes}";
@@ -414,6 +413,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to unprotect a credential value for A2A connection.");
+
             return value;
         }
     }

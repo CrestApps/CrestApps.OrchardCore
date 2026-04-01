@@ -15,7 +15,6 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateDeploymentStepDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<AIProfileTemplateDeploymentStepDisplayDriver> stringLocalizer)
@@ -27,10 +26,10 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     public override Task<IDisplayResult> DisplayAsync(AIProfileTemplateDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIProfileTemplateDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIProfileTemplateDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIProfileTemplateDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIProfileTemplateDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIProfileTemplateDeploymentStep step, BuildEditorContext context)
@@ -46,10 +45,9 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplateDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIProfileTemplateDeploymentStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.TemplateNames);
+        p => p.IncludeAll,
+        p => p.TemplateNames);
 
         if (model.IncludeAll)
         {

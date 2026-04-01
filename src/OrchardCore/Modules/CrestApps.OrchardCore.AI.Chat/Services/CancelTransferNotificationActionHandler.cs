@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +28,7 @@ internal sealed class CancelTransferNotificationActionHandler : IChatNotificatio
             if (session is null)
             {
                 logger.LogWarning("Cancel transfer failed: session '{SessionId}' not found.", context.SessionId);
+
                 return;
             }
 
@@ -47,6 +48,7 @@ internal sealed class CancelTransferNotificationActionHandler : IChatNotificatio
             if (interaction is null)
             {
                 logger.LogWarning("Cancel transfer failed: interaction '{SessionId}' not found.", context.SessionId);
+
                 return;
             }
 

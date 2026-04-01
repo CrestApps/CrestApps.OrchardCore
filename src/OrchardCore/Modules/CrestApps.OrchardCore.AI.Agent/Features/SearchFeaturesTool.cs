@@ -11,28 +11,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Features;
 public sealed class FeaturesSearchTool : AIFunction
 {
     public const string TheName = "searchSiteFeature";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "A term used to search for relevant features."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A term used to search for relevant features."
         }
-        """);
-
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Search for a feature on the site";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -61,7 +58,6 @@ public sealed class FeaturesSearchTool : AIFunction
 
         var features = (await shellFeaturesManager.GetAvailableFeaturesAsync())
             .Where(feature => !feature.EnabledByDependencyOnly && !feature.IsTheme() && (feature.Name.Contains(name, StringComparison.OrdinalIgnoreCase) || feature.Id.Contains(name, StringComparison.OrdinalIgnoreCase)));
-
         var enabledFeatureIds = (await shellFeaturesManager.GetEnabledFeaturesAsync())
             .Select(x => x.Id)
             .ToHashSet();

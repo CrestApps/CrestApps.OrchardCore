@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AIProviderConnectionStore : NamedCatalog<AIProviderConnection>
 {
     public AIProviderConnectionStore(IDocumentManager<DictionaryDocument<AIProviderConnection>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 }

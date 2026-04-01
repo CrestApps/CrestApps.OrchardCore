@@ -1,6 +1,8 @@
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Services;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -16,14 +18,13 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 {
     private readonly IAICompletionService _completionService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly ITemplateService _aiTemplateService;
     private readonly RowLevelTabularBatchOptions _settings;
     private readonly ILogger<TabularBatchProcessor> _logger;
-
     public TabularBatchProcessor(
         IAICompletionService completionService,
         IAIDeploymentManager deploymentManager,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IOptions<RowLevelTabularBatchOptions> settings,
         ILogger<TabularBatchProcessor> logger)
     {
@@ -57,6 +58,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
         // Apply max rows limit
         var maxRows = _settings.MaxRowsPerDocument;
+
         if (maxRows > 0 && dataLines.Count > maxRows)
         {
             _logger.LogWarning(
@@ -71,16 +73,17 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         }
 
         var batchSize = _settings.RowBatchSize;
+
         if (batchSize <= 0)
         {
             batchSize = 25; // Default fallback
         }
 
         var batchIndex = 0;
+
         for (var i = 0; i < dataLines.Count; i += batchSize)
         {
             var batchRows = dataLines.Skip(i).Take(batchSize).ToList();
-
             batches.Add(new TabularBatch
             {
                 BatchIndex = batchIndex,
@@ -120,11 +123,9 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         var maxConcurrency = Math.Max(1, _settings.MaxConcurrentBatches);
         var continueOnFailure = _settings.ContinueOnBatchFailure;
         var delayBetweenBatches = _settings.DelayBetweenBatchesMs;
-
         using var semaphore = new SemaphoreSlim(maxConcurrency);
         var failureOccurred = false;
         var processedCount = 0;
-
         var tasks = batches.Select(async batch =>
         {
             // Check if we should stop due to a previous failure
@@ -136,11 +137,11 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     batch.RowEndIndex,
                     batch.RowCount,
                     "Processing stopped due to previous batch failure.");
+
                 return;
             }
 
             await semaphore.WaitAsync(cancellationToken);
-
             try
             {
                 // Check again after acquiring semaphore
@@ -152,6 +153,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                         batch.RowEndIndex,
                         batch.RowCount,
                         "Processing stopped due to previous batch failure.");
+
                     return;
                 }
 
@@ -244,6 +246,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         try
         {
             var sourceContext = context.CompletionContext;
+
             if (sourceContext is null)
             {
                 return TabularBatchResult.CreateFailure(
@@ -256,8 +259,8 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
             // Build the batch-specific prompt with instructions
             var batchPrompt = BuildBatchPrompt(batch, userPrompt);
-
-            // Create completion context for this batch
+            // Create
+            // completion context for this batch
             var completionContext = new AICompletionContext
             {
                 ConnectionName = sourceContext.ConnectionName,
@@ -330,8 +333,8 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "Error processing batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
-                batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
+            "Error processing batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
+            batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
 
             return TabularBatchResult.CreateFailure(
                 batch.BatchIndex,

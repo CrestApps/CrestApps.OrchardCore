@@ -17,7 +17,6 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
     private readonly ISourceCatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
-
     public McpConnectionDeploymentStepDisplayDriver(
         ISourceCatalog<McpConnection> store,
         IStringLocalizer<McpConnectionDeploymentStepDisplayDriver> stringLocalizer)
@@ -29,23 +28,23 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
     public override Task<IDisplayResult> DisplayAsync(McpConnectionDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                Initialize<DisplayMcpConnectionDeploymentStepViewModel>("McpConnectionDeploymentStep_Summary", async model =>
+        CombineAsync(
+            Initialize<DisplayMcpConnectionDeploymentStepViewModel>("McpConnectionDeploymentStep_Summary", async model =>
+            {
+                if (step.IncludeAll)
                 {
-                    if (step.IncludeAll)
-                    {
-                        model.IncludeAll = true;
-                        model.Names = [];
-                    }
-                    else
-                    {
-                        model.Names = (await _store.GetAllAsync())
+                    model.IncludeAll = true;
+                    model.Names = [];
+                }
+                else
+                {
+                    model.Names = (await _store.GetAllAsync())
                         .Where(x => step.ConnectionIds.Contains(x.ItemId))
                         .Select(x => x.DisplayText);
-                    }
-                }).Location("Summary", "Content"),
-                View("McpConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+                }
+            }).Location("Summary", "Content"),
+        View("McpConnectionDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(McpConnectionDeploymentStep step, BuildEditorContext context)
@@ -64,10 +63,9 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
     public override async Task<IDisplayResult> UpdateAsync(McpConnectionDeploymentStep step, UpdateEditorContext context)
     {
         var model = new McpConnectionStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.Connections);
+        p => p.IncludeAll,
+        p => p.Connections);
 
         if (model.IncludeAll)
         {

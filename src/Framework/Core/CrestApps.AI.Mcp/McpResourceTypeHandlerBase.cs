@@ -51,9 +51,9 @@ public abstract class McpResourceTypeHandlerBase : IMcpResourceTypeHandler
             [
                 new TextResourceContents
                 {
-                    Uri = uri,
-                    MimeType = "text/plain",
-                    Text = errorMessage,
+                Uri = uri,
+                MimeType = "text/plain",
+                Text = errorMessage,
                 }
             ]
         };
@@ -74,10 +74,10 @@ public abstract class McpResourceTypeHandlerBase : IMcpResourceTypeHandler
 
         return mimeType.EndsWith("/json", StringComparison.OrdinalIgnoreCase)
             || mimeType.EndsWith("+json", StringComparison.OrdinalIgnoreCase)
-            || mimeType.EndsWith("/xml", StringComparison.OrdinalIgnoreCase)
-            || mimeType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase)
-            || mimeType.Equals("application/javascript", StringComparison.OrdinalIgnoreCase)
-            || mimeType.Equals("application/ecmascript", StringComparison.OrdinalIgnoreCase)
-            || mimeType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase);
+                || mimeType.EndsWith("/xml", StringComparison.OrdinalIgnoreCase)
+                    || mimeType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase)
+                        || mimeType.Equals("application/javascript", StringComparison.OrdinalIgnoreCase)
+                            || mimeType.Equals("application/ecmascript", StringComparison.OrdinalIgnoreCase)
+                                || mimeType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase);
     }
 }

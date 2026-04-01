@@ -30,12 +30,12 @@ public sealed class AIProvider
 public sealed class AIProviderConnectionEntry : ReadOnlyDictionary<string, object>
 {
     public AIProviderConnectionEntry(AIProviderConnectionEntry connection)
-        : base(connection)
+    : base(connection)
     {
     }
 
     public AIProviderConnectionEntry(IDictionary<string, object> dictionary)
-        : base(dictionary)
+    : base(dictionary)
     {
     }
 }

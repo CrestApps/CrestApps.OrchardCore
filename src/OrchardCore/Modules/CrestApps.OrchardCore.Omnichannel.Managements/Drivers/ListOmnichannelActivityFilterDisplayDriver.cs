@@ -15,7 +15,6 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     internal readonly IStringLocalizer S;
-
     public ListOmnichannelActivityFilterDisplayDriver(
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
@@ -39,7 +38,6 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
             model.Channel = filter.Channel;
             model.ScheduledFrom = filter.ScheduledFrom?.ToShortDateString();
             model.ScheduledTo = filter.ScheduledTo?.ToShortDateString();
-
             model.UrgencyLevels =
             [
                 new(S["Any urgency level"], ""),
@@ -50,7 +48,6 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["High"], nameof(ActivityUrgencyLevel.High)),
                 new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
             ];
-
             model.Channels =
             [
                 new(S["Any channel"], ""),
@@ -58,7 +55,6 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
                 new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
-
             model.AttemptFilters =
             [
                 new(S["Any attempt"], ""),
@@ -78,10 +74,9 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["4- attempts"], "4-"),
                 new(S["5- attempts"], "5-"),
             ];
-
             var subjectContentTypes = new List<SelectListItem>()
             {
-                new(S["Any subject"], ""),
+            new(S["Any subject"], ""),
             };
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
@@ -99,9 +94,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     public override async Task<IDisplayResult> UpdateAsync(ListOmnichannelActivityFilter filter, UpdateEditorContext context)
     {
         var model = new ListOmnichannelActivityFilterViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         filter.SubjectContentType = model.SubjectContentType;
         filter.UrgencyLevel = model.UrgencyLevel;
         filter.Channel = model.Channel;
@@ -120,6 +113,7 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
         }
 
         // Populate route values so other modules can extend filtering and pagination preserves filter state.
+
         if (filter.UrgencyLevel.HasValue)
         {
             filter.RouteValues.TryAdd(Prefix + ".UrgencyLevel", filter.UrgencyLevel.Value.ToString());

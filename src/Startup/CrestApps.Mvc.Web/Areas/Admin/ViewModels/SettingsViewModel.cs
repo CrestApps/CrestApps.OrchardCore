@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -10,30 +10,19 @@ public sealed class SettingsViewModel
 {
     // General AI settings.
     public bool EnablePreemptiveMemoryRetrieval { get; set; } = true;
-
     // Chat interaction settings.
     public bool ChatInteractionEnableUserMemory { get; set; } = true;
-
     public int MaximumIterationsPerRequest { get; set; } = 10;
-
     public bool EnableDistributedCaching { get; set; } = true;
-
     public bool EnableOpenTelemetry { get; set; }
 
     public string DocumentIndexProfileName { get; set; }
-
     public int DocumentTopN { get; set; } = 3;
-
     public int DataSourceDefaultStrictness { get; set; } = AIDataSourceSettings.MinStrictness;
-
     public int DataSourceDefaultTopNDocuments { get; set; } = AIDataSourceSettings.MinTopNDocuments;
-
     public McpServerAuthenticationType McpServerAuthenticationType { get; set; } = McpServerAuthenticationType.OpenId;
-
     public string McpServerApiKey { get; set; }
-
     public bool McpServerRequireAccessPermission { get; set; } = true;
-
     // Default deployment settings.
     public string DefaultChatDeploymentName { get; set; }
 
@@ -48,7 +37,6 @@ public sealed class SettingsViewModel
     public string DefaultTextToSpeechDeploymentName { get; set; }
 
     public string DefaultTextToSpeechVoiceId { get; set; }
-
     // Copilot settings.
     public CopilotAuthenticationType CopilotAuthenticationType { get; set; }
 
@@ -65,38 +53,27 @@ public sealed class SettingsViewModel
     public string CopilotApiKey { get; set; }
 
     public bool CopilotHasApiKey { get; set; }
-
     public string CopilotWireApi { get; set; } = "completions";
-
     public string CopilotDefaultModel { get; set; }
 
     public string CopilotAzureApiVersion { get; set; }
-
     // Dropdown items — never bound from form data.
     [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
-
     // Pagination settings.
     public int AdminPageSize { get; set; } = 25;
-
     [BindNever]
     public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];
-
     [BindNever]
     public IEnumerable<SelectListItem> EmbeddingDeployments { get; set; } = [];
-
     [BindNever]
     public IEnumerable<SelectListItem> ImageDeployments { get; set; } = [];
-
     [BindNever]
     public IEnumerable<SelectListItem> SpeechToTextDeployments { get; set; } = [];
-
     [BindNever]
     public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; } = [];
-
     [BindNever]
     public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];
-
     [BindNever]
     public string CopilotCallbackUrl { get; set; }
 }

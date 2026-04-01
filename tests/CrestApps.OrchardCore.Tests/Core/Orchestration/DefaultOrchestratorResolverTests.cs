@@ -1,7 +1,12 @@
 using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Orchestration;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Speech;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,9 +21,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_NullName_ReturnsDefaultOrchestrator()
     {
         var resolver = CreateResolver();
-
         var orchestrator = resolver.Resolve(null);
-
         Assert.NotNull(orchestrator);
         Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
@@ -27,9 +30,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_EmptyName_ReturnsDefaultOrchestrator()
     {
         var resolver = CreateResolver();
-
         var orchestrator = resolver.Resolve("");
-
         Assert.NotNull(orchestrator);
         Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
@@ -38,9 +39,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_DefaultName_ReturnsDefaultOrchestrator()
     {
         var resolver = CreateResolver();
-
         var orchestrator = resolver.Resolve(DefaultOrchestrator.OrchestratorName);
-
         Assert.NotNull(orchestrator);
         Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
@@ -56,14 +55,11 @@ public sealed class DefaultOrchestratorResolverTests
         services.AddScoped<DefaultOrchestrator>();
         RegisterDependencies(services);
         var sp = services.BuildServiceProvider().CreateScope().ServiceProvider;
-
         var resolver = new DefaultOrchestratorResolver(
             sp,
             Options.Create(options),
-            NullLogger<DefaultOrchestratorResolver>.Instance);
-
+        NullLogger<DefaultOrchestratorResolver>.Instance);
         var orchestrator = resolver.Resolve("custom");
-
         Assert.NotNull(orchestrator);
         Assert.IsType<TestOrchestrator>(orchestrator);
     }
@@ -72,9 +68,7 @@ public sealed class DefaultOrchestratorResolverTests
     public void Resolve_UnknownName_FallsBackToDefault()
     {
         var resolver = CreateResolver();
-
         var orchestrator = resolver.Resolve("nonexistent");
-
         Assert.NotNull(orchestrator);
         Assert.IsType<DefaultOrchestrator>(orchestrator);
     }
@@ -89,14 +83,11 @@ public sealed class DefaultOrchestratorResolverTests
         services.AddScoped<DefaultOrchestrator>();
         RegisterDependencies(services);
         var sp = services.BuildServiceProvider().CreateScope().ServiceProvider;
-
         var resolver = new DefaultOrchestratorResolver(
             sp,
             Options.Create(options),
-            NullLogger<DefaultOrchestratorResolver>.Instance);
-
+        NullLogger<DefaultOrchestratorResolver>.Instance);
         var orchestrator = resolver.Resolve("DEFAULT");
-
         Assert.NotNull(orchestrator);
     }
 
@@ -113,33 +104,30 @@ public sealed class DefaultOrchestratorResolverTests
         return new DefaultOrchestratorResolver(
             sp,
             Options.Create(options),
-            NullLogger<DefaultOrchestratorResolver>.Instance);
+        NullLogger<DefaultOrchestratorResolver>.Instance);
     }
 
     private static void RegisterDependencies(IServiceCollection services)
     {
         services.AddSingleton<IAICompletionService, NullCompletionService>();
         services.AddSingleton<IAIClientFactory, NullAIClientFactory>();
-        services.AddSingleton<IAITemplateService, NullAITemplateService>();
+        services.AddSingleton<ITemplateService, NullAITemplateService>();
         services.AddSingleton(Mock.Of<IAIDeploymentManager>());
         services.AddSingleton<IToolRegistry, NullToolRegistry>();
         services.AddSingleton<ITextTokenizer, LuceneTextTokenizer>();
         services.AddLogging(builder => builder.ClearProviders());
     }
 
-    private sealed class NullAITemplateService : IAITemplateService
+    private sealed class NullAITemplateService : ITemplateService
     {
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
-            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+        public Task<IReadOnlyList<Template>> ListAsync()
+            => Task.FromResult<IReadOnlyList<Template>>([]);
 
-        public Task<AITemplate> GetAsync(string id)
-            => Task.FromResult<AITemplate>(null);
-
+        public Task<Template> GetAsync(string id)
+            => Task.FromResult<Template>(null);
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
             => Task.FromResult<string>(null);
-
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => Task.FromResult<string>(null);
     }
-
 }

@@ -14,7 +14,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.Handlers;
 internal sealed class DataSourceIndexingHandler : CatalogEntryHandlerBase<AIDataSource>
 {
     private readonly ILogger _logger;
-
     public DataSourceIndexingHandler(ILogger<DataSourceIndexingHandler> logger)
     {
         _logger = logger;
@@ -27,14 +26,13 @@ internal sealed class DataSourceIndexingHandler : CatalogEntryHandlerBase<AIData
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("process-datasource-sync", context.Model, async (scope, ds) =>
             {
                 var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
-
                 await indexingService.SyncDataSourceAsync(ds);
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error triggering initial indexing for data source '{DataSourceId}'.",
-                context.Model.ItemId);
+            context.Model.ItemId);
         }
     }
 
@@ -45,14 +43,13 @@ internal sealed class DataSourceIndexingHandler : CatalogEntryHandlerBase<AIData
             await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("process-datasource-delete", context.Model, async (scope, ds) =>
             {
                 var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
-
                 await indexingService.DeleteDataSourceDocumentsAsync(ds);
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cleaning up master index documents for deleted data source '{DataSourceId}'.",
-                context.Model.ItemId);
+            context.Model.ItemId);
         }
     }
 }

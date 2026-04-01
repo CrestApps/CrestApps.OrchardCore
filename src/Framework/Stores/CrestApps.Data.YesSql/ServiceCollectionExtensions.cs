@@ -46,7 +46,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<INamedCatalog<TModel>>(sp =>
-            (INamedCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
+        (INamedCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
 
         return services;
     }
@@ -63,7 +63,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<ISourceCatalog<TModel>>(sp =>
-            (ISourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
+        (ISourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
 
         return services;
     }
@@ -80,13 +80,13 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<INamedCatalog<TModel>>(sp =>
-            (INamedCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
+        (INamedCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
 
         services.AddScoped<ISourceCatalog<TModel>>(sp =>
-            (ISourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
+        (ISourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
 
         services.AddScoped<INamedSourceCatalog<TModel>>(sp =>
-            (INamedSourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
+        (INamedSourceCatalog<TModel>)sp.GetRequiredService<ICatalog<TModel>>());
 
         return services;
     }

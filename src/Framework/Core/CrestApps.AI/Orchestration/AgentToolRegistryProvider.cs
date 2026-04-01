@@ -1,4 +1,6 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI.Orchestration;
@@ -44,7 +46,6 @@ internal sealed class AgentToolRegistryProvider : IToolRegistryProvider
 
             var agentMetadata = agent.As<AgentMetadata>();
             var isAlwaysAvailable = agentMetadata?.Availability == AgentAvailability.AlwaysAvailable;
-
             // Always-available agents are automatically included in every request.
             // On-demand agents are only included if explicitly selected via AgentNames.
             if (!isAlwaysAvailable && requestedAgents is not { Length: > 0 })

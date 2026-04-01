@@ -10,7 +10,6 @@ public class AICompletionFromProfileTaskViewModel
     public string PromptTemplate { get; set; }
 
     public string ResultPropertyName { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
 }

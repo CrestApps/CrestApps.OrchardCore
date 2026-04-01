@@ -22,8 +22,8 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
 
     public async Task<IList<Resource>> ListAsync()
         => (await GetAllResourcesAsync())
-            .Where(resource => resource.Uri is null || !McpResourceUri.IsTemplate(resource.Uri))
-            .ToList();
+        .Where(resource => resource.Uri is null || !McpResourceUri.IsTemplate(resource.Uri))
+        .ToList();
 
     public async Task<IList<ResourceTemplate>> ListTemplatesAsync()
     {
@@ -49,6 +49,7 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
     public async Task<ReadResourceResult> ReadAsync(RequestContext<ReadResourceRequestParams> request, CancellationToken cancellationToken = default)
     {
         var sdkResource = _sdkResources.FirstOrDefault(resource => resource.IsMatch(request.Params.Uri));
+
         if (sdkResource is not null)
         {
             return await sdkResource.ReadAsync(request, cancellationToken);
@@ -56,6 +57,7 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
 
         var uri = request.Params.Uri;
         var schemeEnd = uri.IndexOf("://", StringComparison.Ordinal);
+
         if (schemeEnd < 0)
         {
             throw new McpException($"Invalid resource URI format: '{uri}'. Expected format: scheme://itemId/path");
@@ -74,6 +76,7 @@ public sealed class DefaultMcpServerResourceService : IMcpServerResourceService
         }
 
         var handler = request.Services.GetKeyedService<IMcpResourceTypeHandler>(entry.Source);
+
         if (handler is null)
         {
             throw new McpException($"No handler found for resource type '{entry.Source}'.");

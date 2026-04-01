@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIProfileTemplateManager _templateManager;
-
     public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
     {
         _templateManager = templateManager;
@@ -26,31 +26,30 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
         {
             var templates = await _templateManager.GetAsync(AITemplateSources.Profile);
-
             var groups = new Dictionary<string, SelectListGroup>();
-
             model.Templates = templates
-                .Where(t => t.IsListable)
-                .OrderBy(t => t.Category)
-                .ThenBy(t => t.DisplayText ?? t.Name)
-                .Select(t =>
+            .Where(t => t.IsListable)
+            .OrderBy(t => t.Category)
+            .ThenBy(t => t.DisplayText ?? t.Name)
+            .Select(t =>
+            {
+                var item = new SelectListItem(t.DisplayText ?? t.Name, t.ItemId);
+
+                if (!string.IsNullOrEmpty(t.Category))
                 {
-                    var item = new SelectListItem(t.DisplayText ?? t.Name, t.ItemId);
-
-                    if (!string.IsNullOrEmpty(t.Category))
+                    if (!groups.TryGetValue(t.Category, out var group))
                     {
-                        if (!groups.TryGetValue(t.Category, out var group))
-                        {
-                            group = new SelectListGroup { Name = t.Category };
-                            groups.Add(t.Category, group);
-                        }
+                        group = new SelectListGroup { Name = t.Category };
 
-                        item.Group = group;
+                        groups.Add(t.Category, group);
                     }
 
-                    return item;
-                })
-                .ToList();
+                    item.Group = group;
+                }
+
+                return item;
+            })
+            .ToList();
         }).Location("Content:0");
     }
 }

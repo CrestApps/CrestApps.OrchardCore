@@ -1,6 +1,7 @@
 using A2A;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.A2A;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,9 +21,7 @@ internal static class A2AWellKnownEndpointHandler
         var options = context.RequestServices.GetRequiredService<IOptions<A2AHostOptions>>().Value;
         var profileManager = context.RequestServices.GetRequiredService<IAIProfileManager>();
         var profiles = await profileManager.GetAsync(AIProfileType.Agent);
-
         var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
-
         context.Response.ContentType = "application/json";
 
         if (options.ExposeAgentsAsSkill)
@@ -74,25 +73,25 @@ internal static class A2AWellKnownEndpointHandler
                         keyLocation: "header",
                         description: "API key authentication. Send as 'Bearer {key}' or 'ApiKey {key}' in the Authorization header."),
                 };
+
                 card.Security =
                 [
                     new Dictionary<string, string[]> { ["apiKey"] = [] },
                 ];
                 break;
-
             case A2AHostAuthenticationType.OpenId:
                 card.SecuritySchemes = new Dictionary<string, SecurityScheme>
                 {
                     ["openId"] = new OpenIdConnectSecurityScheme(
                         openIdConnectUrl: new Uri($"{baseUrl}/.well-known/openid-configuration"),
-                        description: "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token."),
+                    description: "OpenID Connect authentication. Obtain an access token from the OpenID Connect provider and send it as a Bearer token."),
                 };
+
                 card.Security =
                 [
                     new Dictionary<string, string[]> { ["openId"] = [] },
                 ];
                 break;
-
                 // AuthenticationType.None — no security schemes needed.
         }
     }

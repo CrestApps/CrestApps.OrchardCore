@@ -12,7 +12,7 @@ public sealed class McpServerOptions
     public McpServerAuthenticationType AuthenticationType { get; set; } = McpServerAuthenticationType.OpenId;
 
     /// <summary>
-    /// Gets or sets the API key required for authentication when 
+    /// Gets or sets the API key required for authentication when
     /// <see cref="AuthenticationType"/> is set to <see cref="McpServerAuthenticationType.ApiKey"/>.
     /// </summary>
     public string ApiKey { get; set; }
@@ -23,7 +23,7 @@ public sealed class McpServerOptions
     /// Default is <c>true</c>.
     /// </summary>
     /// <remarks>
-    /// This setting only applies when <see cref="AuthenticationType"/> is 
+    /// This setting only applies when <see cref="AuthenticationType"/> is
     /// <see cref="McpServerAuthenticationType.OpenId"/>.
     /// </remarks>
     public bool RequireAccessPermission { get; set; } = true;

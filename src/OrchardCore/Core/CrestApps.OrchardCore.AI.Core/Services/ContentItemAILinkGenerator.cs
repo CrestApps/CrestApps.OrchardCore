@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Profiles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
@@ -8,7 +8,6 @@ public sealed class ContentItemAILinkGenerator : IAIReferenceLinkResolver
 {
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     public ContentItemAILinkGenerator(
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor)

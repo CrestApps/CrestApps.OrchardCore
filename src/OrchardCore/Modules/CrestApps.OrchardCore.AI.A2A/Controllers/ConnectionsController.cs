@@ -14,22 +14,18 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-
 namespace CrestApps.OrchardCore.AI.A2A.Controllers;
 
 public sealed class ConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
     private readonly ICatalogManager<A2AConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<A2AConnection> _displayDriver;
     private readonly INotifier _notifier;
-
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public ConnectionsController(
         ICatalogManager<A2AConnection> manager,
         IAuthorizationService authorizationService,
@@ -47,7 +43,6 @@ public sealed class ConnectionsController : Controller
         H = htmlLocalizer;
         S = stringLocalizer;
     }
-
     [Admin("ai/a2a/connections", "AIA2AConnectionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -59,29 +54,23 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Sorted = true,
             Name = options.Search,
         });
-
         var routeData = new RouteData();
-
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
-
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<A2AConnection>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
-
         foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<A2AConnection>
@@ -90,15 +79,12 @@ public sealed class ConnectionsController : Controller
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
-
         viewModel.Options.BulkActions =
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -109,13 +95,11 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
-
     [Admin("ai/a2a/connection/create", "AIA2AConnectionCreate")]
     public async Task<ActionResult> Create()
     {
@@ -123,18 +107,14 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.NewAsync();
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = S["A2A Host Connection"].Value,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/a2a/connection/create", "AIA2AConnectionCreate")]
@@ -144,26 +124,20 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.NewAsync();
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         if (ModelState.IsValid)
         {
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new connection has been created successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(viewModel);
     }
-
     [Admin("ai/a2a/connection/edit/{id}", "AIA2AConnectionEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -171,23 +145,18 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/a2a/connection/edit/{id}", "AIA2AConnectionEdit")]
@@ -197,32 +166,24 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         if (ModelState.IsValid)
         {
             await _manager.UpdateAsync(model);
-
             await _notifier.SuccessAsync(H["The connection has been updated successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(viewModel);
     }
-
     [HttpPost]
     [Admin("ai/a2a/connection/delete/{id}", "AIA2AConnectionDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -231,14 +192,11 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         if (await _manager.DeleteAsync(model))
         {
             await _notifier.SuccessAsync(H["The connection has been deleted successfully."]);
@@ -247,10 +205,8 @@ public sealed class ConnectionsController : Controller
         {
             await _notifier.ErrorAsync(H["Unable to remove the connection."]);
         }
-
         return RedirectToAction(nameof(Index));
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -261,7 +217,6 @@ public sealed class ConnectionsController : Controller
         {
             return Forbid();
         }
-
         if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
@@ -273,12 +228,10 @@ public sealed class ConnectionsController : Controller
                     foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
-
                         if (instance == null)
                         {
                             continue;
                         }
-
                         if (await _manager.DeleteAsync(instance))
                         {
                             counter++;
@@ -297,7 +250,6 @@ public sealed class ConnectionsController : Controller
                     return BadRequest();
             }
         }
-
         return RedirectToAction(nameof(Index));
     }
 }

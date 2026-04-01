@@ -8,14 +8,14 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
 {
     public DefaultAIDeploymentStore(IDocumentManager<DictionaryDocument<AIDeployment>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 
     protected override void Saving(AIDeployment deployment, DictionaryDocument<AIDeployment> document)
     {
         if (document.Records.Values.Any(x =>
-            x.ItemId != deployment.ItemId &&
+        x.ItemId != deployment.ItemId &&
             x.Name.Equals(deployment.Name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException("There is already another deployment with the same technical name.");
@@ -26,8 +26,8 @@ public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
             var previousDefaults = document.Records.Values
                 .Where(x => x.IsDefault &&
                     x.Type == deployment.Type &&
-                    string.Equals(x.ConnectionName ?? string.Empty, deployment.ConnectionName ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
-                    x.ItemId != deployment.ItemId);
+                        string.Equals(x.ConnectionName ?? string.Empty, deployment.ConnectionName ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
+                            x.ItemId != deployment.ItemId);
 
             foreach (var previous in previousDefaults)
             {

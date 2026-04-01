@@ -1,7 +1,7 @@
 namespace CrestApps.AI.Models;
 
 /// <summary>
-/// Metadata for AI templates with a "SystemPrompt" source.
+/// Metadata for templates with a "SystemPrompt" source.
 /// Stored in the template's <see cref="OrchardCore.Entities.Entity.Properties"/> via
 /// <c>Put&lt;SystemPromptTemplateMetadata&gt;</c> / <c>As&lt;SystemPromptTemplateMetadata&gt;</c>.
 /// </summary>

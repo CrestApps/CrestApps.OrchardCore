@@ -20,7 +20,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     }
 
     internal DocumentCatalog(ISession session, string collectionName)
-        : this(session)
+    : this(session)
     {
         CollectionName = collectionName;
     }
@@ -55,7 +55,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-            where TQuery : QueryContext
+        where TQuery : QueryContext
     {
         IQuery<T> query = Session.Query<T, TIndex>(collection: CollectionName);
 

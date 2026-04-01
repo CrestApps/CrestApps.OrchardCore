@@ -20,4 +20,3 @@ public sealed class TestCatalogEntry : CatalogItem
         return (ItemId?.GetHashCode() ?? 0) ^ GetType().GetHashCode();
     }
 }
-

@@ -1,5 +1,3 @@
-
-
 namespace CrestApps.AI.Models;
 
 /// <summary>
@@ -92,7 +90,6 @@ public sealed class AIChatSessionEvent : ExtensibleEntity
     /// Gets or sets the total number of thumbs-down ratings across all messages in this session.
     /// </summary>
     public int ThumbsDownCount { get; set; }
-
     /// <summary>
     /// Gets or sets the aggregate conversion score across all goals.
     /// Null if conversion metrics are not enabled.

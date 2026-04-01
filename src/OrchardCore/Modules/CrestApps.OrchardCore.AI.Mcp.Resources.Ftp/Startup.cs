@@ -12,7 +12,6 @@ namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

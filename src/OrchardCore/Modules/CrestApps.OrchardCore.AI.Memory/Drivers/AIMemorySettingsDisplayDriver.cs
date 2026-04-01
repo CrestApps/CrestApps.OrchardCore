@@ -21,9 +21,7 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
     private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
-
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public AIMemorySettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,
@@ -43,7 +41,7 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
             model.IndexProfileName = settings.IndexProfileName;
             model.TopN = settings.TopN;
             model.IndexProfiles = (await _indexProfileStore.GetByTypeAsync(MemoryConstants.IndexingTaskType))
-                .Select(x => new SelectListItem(x.Name, x.Name));
+            .Select(x => new SelectListItem(x.Name, x.Name));
         }).Location("Content:5.1%Memory;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -57,12 +55,10 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
         }
 
         var model = new AIMemorySettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
-            ? null
-            : model.IndexProfileName;
+        ? null
+        : model.IndexProfileName;
 
         if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {

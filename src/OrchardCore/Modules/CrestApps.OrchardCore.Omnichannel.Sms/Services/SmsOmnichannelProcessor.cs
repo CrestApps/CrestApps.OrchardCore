@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -26,7 +27,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
-
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
         IAIChatSessionPromptStore promptStore,
@@ -50,7 +50,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     }
 
     public string Channel { get; } = OmnichannelConstants.Channels.Sms;
-
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         AIChatSession chatSession = null;
@@ -61,7 +60,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         }
 
         var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId)
-            ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
+        ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
 
         if (chatSession is null)
         {
@@ -82,14 +81,13 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         }
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
         var initialPrompt = await _liquidTemplateManager.RenderStringAsync(campaign.InitialOutboundPromptPattern, NullEncoder.Default,
-                new Dictionary<string, FluidValue>()
-                {
-                    ["Contact"] = new ObjectValue(contact),
-                    ["Campaign"] = new ObjectValue(campaign),
-                    ["Session"] = new ObjectValue(chatSession),
-                });
+        new Dictionary<string, FluidValue>()
+        {
+            ["Contact"] = new ObjectValue(contact),
+            ["Campaign"] = new ObjectValue(campaign),
+            ["Session"] = new ObjectValue(chatSession),
+        });
 
         initialPrompt = initialPrompt?.Trim();
 
@@ -127,7 +125,6 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             });
 
             await _aIChatSessionManager.SaveAsync(chatSession);
-
             // Update the activity with the AI session details.
             activity.AISessionId = chatSession.SessionId;
             activity.Status = ActivityStatus.AwaitingCustomerAnswer;

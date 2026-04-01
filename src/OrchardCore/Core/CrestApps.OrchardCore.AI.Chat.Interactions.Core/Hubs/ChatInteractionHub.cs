@@ -5,13 +5,16 @@ using System.Threading.Channels;
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.Services;
 using CrestApps.Support;
 using Cysharp.Text;
@@ -25,7 +28,6 @@ using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
-using ITextToSpeechClient = CrestApps.AI.ITextToSpeechClient;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
@@ -37,7 +39,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
     public ChatInteractionHub(
         ILogger<ChatInteractionHub> logger,
         IStringLocalizer<ChatInteractionHub> stringLocalizer)
-        : base(logger, stringLocalizer)
+    : base(logger, stringLocalizer)
     {
         _logger = logger;
     }
@@ -673,7 +675,6 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 {
                     Context.Items.Remove(ConversationCtsKey);
                 }
-
             });
         }
         catch (Exception ex)
@@ -793,8 +794,8 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 if (isPartial)
                 {
                     var display = committedText.Length > 0
-                        ? committedText.ToString() + update.Text
-                        : update.Text;
+                    ? committedText.ToString() + update.Text
+                    : update.Text;
                     await Clients.Caller.ReceiveTranscript(itemId, display, false);
                 }
                 else
@@ -1018,12 +1019,10 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms SendAudioStream START. ItemId={ItemId}, Format={Format}",
-                traceId, sw.ElapsedMilliseconds, itemId, audioFormat);
+            traceId, sw.ElapsedMilliseconds, itemId, audioFormat);
         }
 
-        var cancellationToken = Context.ConnectionAborted;
-
-        try
+        var cancellationToken = Context.ConnectionAborted; try
         {
             await ShellScope.UsingChildScopeAsync(async scope =>
             {
@@ -1067,7 +1066,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Scope resolved, STT client created. Starting StreamTranscriptionAsync...",
-                        traceId, sw.ElapsedMilliseconds);
+                    traceId, sw.ElapsedMilliseconds);
                 }
 
                 await StreamTranscriptionAsync(traceId, sw, speechToTextClient, itemId, audioChunks, audioFormat, speechLanguage, cancellationToken);
@@ -1135,7 +1134,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     if (_logger.IsEnabled(LogLevel.Trace))
                     {
                         _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Pipe.Write chunk #{ChunkCount}: {Bytes} bytes (total={TotalBytes})",
-                            traceId, sw.ElapsedMilliseconds, chunkCount, bytes.Length, totalBytes);
+                        traceId, sw.ElapsedMilliseconds, chunkCount, bytes.Length, totalBytes);
                     }
                 }
                 catch (FormatException)
@@ -1152,7 +1151,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms All audio chunks received. Chunks={ChunkCount}, TotalBytes={TotalBytes}. Completing pipe...",
-                traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
+            traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
         }
 
         // Signal that all audio has been sent.
@@ -1197,7 +1196,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms TranscribeAudioInputAsync: calling GetStreamingTextAsync...",
-                    traceId, sw.ElapsedMilliseconds);
+                traceId, sw.ElapsedMilliseconds);
             }
 
             var updateCount = 0;
@@ -1215,14 +1214,14 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms Received update #{UpdateCount}: isPartial={IsPartial}, text='{Text}'",
-                        traceId, sw.ElapsedMilliseconds, updateCount, isPartial, update.Text);
+                    traceId, sw.ElapsedMilliseconds, updateCount, isPartial, update.Text);
                 }
 
                 if (isPartial)
                 {
                     var display = committedText.Length > 0
-                        ? committedText.ToString() + update.Text
-                        : update.Text;
+                    ? committedText.ToString() + update.Text
+                    : update.Text;
                     await Clients.Caller.ReceiveTranscript(itemId, display, false);
                 }
                 else
@@ -1242,7 +1241,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[HUB:{TraceId}] +{Elapsed}ms STT stream ended. Updates={UpdateCount}, FinalText='{FinalText}'",
-                    traceId, sw.ElapsedMilliseconds, updateCount, finalText);
+                traceId, sw.ElapsedMilliseconds, updateCount, finalText);
             }
 
             if (!string.IsNullOrEmpty(finalText))
@@ -1323,8 +1322,8 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                 using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(textToSpeechDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(voiceName)
-                    ? voiceName
-                    : deploymentSettings.DefaultTextToSpeechVoiceId;
+                ? voiceName
+                : deploymentSettings.DefaultTextToSpeechVoiceId;
 
                 await StreamSpeechAsync(textToSpeechClient, itemId, text, effectiveVoiceName, cancellationToken);
 

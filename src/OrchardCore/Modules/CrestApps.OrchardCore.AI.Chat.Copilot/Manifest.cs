@@ -1,14 +1,12 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "Artificial Intelligence",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
-
+    )]
 [assembly: Feature(
     Id = "CrestApps.OrchardCore.AI.Chat.Copilot",
     Name = "AI Copilot Orchestrator",
@@ -16,6 +14,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Area,
+    AIConstants.Feature.Area,
     ]
-)]
+    )]

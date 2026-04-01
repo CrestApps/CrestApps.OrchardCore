@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
-
     public AIProfileAnalyticsDisplayDriver(
         IStringLocalizer<AIProfileAnalyticsDisplayDriver> stringLocalizer)
     {
@@ -25,14 +24,14 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
             model.EnableSessionMetrics = metadata.EnableSessionMetrics;
             model.EnableConversionMetrics = metadata.EnableConversionMetrics;
             model.ConversionGoals = metadata.ConversionGoals
-                .Select(g => new ConversionGoalViewModel
-                {
-                    Name = g.Name,
-                    Description = g.Description,
-                    MinScore = g.MinScore,
-                    MaxScore = g.MaxScore,
-                })
-                .ToList();
+            .Select(g => new ConversionGoalViewModel
+            {
+                Name = g.Name,
+                Description = g.Description,
+                MinScore = g.MinScore,
+                MaxScore = g.MaxScore,
+            })
+        .ToList();
         }).Location("Content:15#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(profile.Type == AIProfileType.Chat));
     }
@@ -46,7 +45,6 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 
         var model = new EditAIProfileAnalyticsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var goals = model.ConversionGoals?.Where(g => !string.IsNullOrWhiteSpace(g.Name)).ToList() ?? [];
 
         if (model.EnableConversionMetrics)
@@ -101,7 +99,6 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
             MinScore = g.MinScore,
             MaxScore = g.MaxScore,
         }).ToList();
-
         profile.Put(metadata);
 
         return Edit(profile, context);

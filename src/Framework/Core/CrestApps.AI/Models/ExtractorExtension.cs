@@ -24,11 +24,11 @@ public sealed class ExtractorExtension : IEquatable<ExtractorExtension>, IEquata
 
     public bool Equals(ExtractorExtension other)
         => other is not null &&
-           string.Equals(Extension, other.Extension, StringComparison.Ordinal);
+            string.Equals(Extension, other.Extension, StringComparison.Ordinal);
 
     public bool Equals(string extension)
         => extension is not null &&
-           string.Equals(Extension, Normalize(extension), StringComparison.Ordinal);
+            string.Equals(Extension, Normalize(extension), StringComparison.Ordinal);
 
     public override bool Equals(object obj)
         => obj switch

@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.Models;
@@ -19,7 +20,6 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
 {
     private readonly IAIDocumentStore _documentStore;
     private readonly IAIDocumentChunkStore _chunkStore;
-
     public AIChatSessionDocumentCleanupHandler(
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore)
@@ -31,7 +31,6 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
     public override async Task DeletingAsync(DeletingContext<AIChatSession> context)
     {
         var session = context.Model;
-
         var documents = await _documentStore.GetDocumentsAsync(
             session.SessionId,
             AIConstants.DocumentReferenceTypes.ChatSession);
@@ -46,6 +45,7 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
         foreach (var doc in documents)
         {
             var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+
             foreach (var chunk in chunks)
             {
                 chunkIds.Add(chunk.ItemId);
@@ -65,7 +65,6 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
     {
         var services = scope.ServiceProvider;
         var indexStore = services.GetRequiredService<IIndexProfileStore>();
-
         var indexProfiles = await indexStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
         if (!indexProfiles.Any())

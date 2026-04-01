@@ -1,3 +1,4 @@
+using CrestApps.AI.Profiles;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.AI.Services;

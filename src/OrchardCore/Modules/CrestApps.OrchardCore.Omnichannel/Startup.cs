@@ -15,11 +15,9 @@ public sealed class Startup : StartupBase
         services
             .AddIndexProvider<OmnichannelMessageIndexProvider>()
             .AddDataMigration<OmnichannelMessageIndexMigrations>();
-
         services
             .AddIndexProvider<OmnichannelContactCommunicationPreferenceIndexProvider>()
             .AddDataMigration<OmnichannelContactCommunicationPreferenceIndexMigrations>();
-
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(OmnichannelConstants.CollectionName));
     }
 }

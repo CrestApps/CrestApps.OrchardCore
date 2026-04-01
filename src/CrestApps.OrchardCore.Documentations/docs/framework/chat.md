@@ -38,7 +38,7 @@ The chat system provides all of this with a pluggable handler architecture.
 | `ChatInteractionEntryHandler` | — | Scoped | Catalog lifecycle handler for `ChatInteraction` |
 
 :::info
-The chat system also registers embedded AI templates from the `CrestApps.AI.Chat` assembly for system prompts.
+The chat system also registers embedded templates from the `CrestApps.AI.Chat` assembly for system prompts.
 :::
 
 ## Core Concepts

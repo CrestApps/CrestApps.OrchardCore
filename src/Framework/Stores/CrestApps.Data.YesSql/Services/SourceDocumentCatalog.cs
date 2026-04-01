@@ -10,12 +10,12 @@ public class SourceDocumentCatalog<T, TIndex> : DocumentCatalog<T, TIndex>, ISou
     where TIndex : CatalogItemIndex, ISourceAwareIndex
 {
     public SourceDocumentCatalog(ISession session)
-        : base(session)
+    : base(session)
     {
     }
 
     internal SourceDocumentCatalog(ISession session, string collectionName)
-        : base(session)
+    : base(session)
     {
         CollectionName = collectionName;
     }

@@ -18,7 +18,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "<p>Hello <strong>world</strong></p>";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("<", result);
         Assert.DoesNotContain(">", result);
         Assert.Contains("Hello", result);
@@ -30,7 +29,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Line one<br>Line two<br/>Line three<br />Line four";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("<br", result);
         Assert.Contains("Line one", result);
         Assert.Contains("Line two", result);
@@ -43,7 +41,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "<h1>Title</h1><p>Paragraph one.</p><p>Paragraph two.</p>";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("<h1>", result);
         Assert.DoesNotContain("<p>", result);
         Assert.Contains("Title", result);
@@ -51,13 +48,11 @@ public sealed class RagTextNormalizerTests
         Assert.Contains("Paragraph two.", result);
     }
 
-
     [Fact]
     public async Task NormalizeContentAsync_StripsMarkdownFormatting()
     {
         var input = "# Heading\n\n**Bold text** and *italic text*\n\n- Item 1\n- Item 2";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("**", result);
         Assert.Contains("Heading", result);
         Assert.Contains("Bold text", result);
@@ -69,7 +64,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "# Title\n\n<p>Some <em>HTML</em> content.</p>\n\n**Markdown** text.";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("<", result);
         Assert.DoesNotContain(">", result);
         Assert.DoesNotContain("**", result);
@@ -83,7 +77,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "First paragraph.\n\n\n\n\nSecond paragraph.";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("\n\n\n", result);
         Assert.Contains("First paragraph.", result);
         Assert.Contains("Second paragraph.", result);
@@ -94,7 +87,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Orchard Core \u003Ch1\u003EOrchard Core\u003Ca class=\"headerlink\" href=\"https://docs.orchardcore.net/en/latest/#orchard-core\" title=\"Permanent link\"\u003E\u00B6\u003C/a\u003E\u003C/h1\u003E";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.DoesNotContain("<h1>", result);
         Assert.DoesNotContain("<a ", result);
         Assert.DoesNotContain("headerlink", result);
@@ -106,7 +98,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "This is plain text with no HTML or Markdown. It should remain unchanged.";
         var result = await RagTextNormalizer.NormalizeContentAsync(input, TestContext.Current.CancellationToken);
-
         Assert.Equal(input, result);
     }
 
@@ -124,7 +115,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Orchard Core <h1>Orchard Core<a class=\"headerlink\" href=\"https://docs.orchardcore.net/en/latest/#orchard-core\" title=\"Permanent link\">\u00B6</a></h1>";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.DoesNotContain("<", result);
         Assert.DoesNotContain(">", result);
         Assert.DoesNotContain("headerlink", result);
@@ -136,7 +126,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Tom &amp; Jerry &lt;3 &gt; everyone &#x00B6;";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.Contains("Tom & Jerry", result);
         Assert.DoesNotContain("\u00B6", result);
     }
@@ -146,7 +135,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Line One\n\nLine Two\n\nLine Three";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.DoesNotContain("\n", result);
         Assert.Contains("Line One", result);
         Assert.Contains("Line Two", result);
@@ -157,7 +145,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "   Some Title   ";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.Equal("Some Title", result);
     }
 
@@ -166,7 +153,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Simple Title";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.Equal(input, result);
     }
 
@@ -175,7 +161,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Orchard Core \u00B6";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.Equal("Orchard Core", result);
     }
 
@@ -184,7 +169,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "Orchard Core <h1>Orchard Core<a class=\"headerlink\" href=\"https://docs.orchardcore.net/en/latest/#orchard-core\" title=\"Permanent link\">\u00B6</a></h1>";
         var result = RagTextNormalizer.NormalizeTitle(input);
-
         Assert.DoesNotContain("\u00B6", result);
         Assert.DoesNotContain("<", result);
         Assert.Contains("Orchard Core", result);
@@ -195,7 +179,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "<div class=\"test\"><p>Text</p></div>";
         var result = RagTextNormalizer.StripHtml(input);
-
         Assert.DoesNotContain("<", result);
         Assert.DoesNotContain(">", result);
         Assert.Contains("Text", result);
@@ -208,7 +191,6 @@ public sealed class RagTextNormalizerTests
     public async Task NormalizeAndChunkAsync_WithNullOrWhitespace_ReturnsEmptyList(string input)
     {
         var result = await RagTextNormalizer.NormalizeAndChunkAsync(input, TestContext.Current.CancellationToken);
-
         Assert.Empty(result);
     }
 
@@ -217,7 +199,6 @@ public sealed class RagTextNormalizerTests
     {
         var input = "This is a short paragraph of text.";
         var result = await RagTextNormalizer.NormalizeAndChunkAsync(input, TestContext.Current.CancellationToken);
-
         Assert.Single(result);
         Assert.Contains("short paragraph", result[0]);
     }
@@ -227,9 +208,7 @@ public sealed class RagTextNormalizerTests
     {
         var input = string.Join("\n\n", Enumerable.Range(0, 100)
             .Select(i => $"Paragraph {i}: Orchard Core is a modular application framework built on ASP.NET Core providing rich content management features."));
-
         var result = await RagTextNormalizer.NormalizeAndChunkAsync(input, TestContext.Current.CancellationToken);
-
         Assert.True(result.Count > 1, $"Expected multiple chunks but got {result.Count}.");
         Assert.All(result, chunk => Assert.False(string.IsNullOrWhiteSpace(chunk)));
     }
@@ -239,9 +218,7 @@ public sealed class RagTextNormalizerTests
     {
         var input = string.Join("", Enumerable.Range(0, 100)
             .Select(i => $"<p>Paragraph {i}: This is <strong>formatted</strong> content that should be cleaned up before chunking and embedding.</p>"));
-
         var result = await RagTextNormalizer.NormalizeAndChunkAsync(input, TestContext.Current.CancellationToken);
-
         Assert.NotEmpty(result);
         Assert.All(result, chunk =>
         {

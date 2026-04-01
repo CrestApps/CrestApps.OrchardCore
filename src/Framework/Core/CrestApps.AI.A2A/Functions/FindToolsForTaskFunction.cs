@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,23 +20,23 @@ internal sealed class FindToolsForTaskFunction : AIFunction
     public const string TheName = "findToolsForTask";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "taskDescription": {
-              "type": "string",
-              "description": "A description of the task to find relevant tools for."
-            },
-            "maxResults": {
-              "type": "integer",
-              "description": "Maximum number of tools to return. Defaults to 10."
-            }
-          },
-          "required": ["taskDescription"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "taskDescription": {
+          "type": "string",
+          "description": "A description of the task to find relevant tools for."
+        },
+        "maxResults": {
+          "type": "integer",
+          "description": "Maximum number of tools to return. Defaults to 10."
         }
-        """);
+      },
+      "required": ["taskDescription"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 

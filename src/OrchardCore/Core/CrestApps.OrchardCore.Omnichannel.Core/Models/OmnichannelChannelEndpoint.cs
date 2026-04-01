@@ -18,7 +18,6 @@ public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareM
     public string Author { get; set; }
 
     public string OwnerId { get; set; }
-
     public OmnichannelChannelEndpoint Clone()
     {
         return new OmnichannelChannelEndpoint()

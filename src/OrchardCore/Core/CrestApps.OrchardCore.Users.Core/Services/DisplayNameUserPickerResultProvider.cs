@@ -15,7 +15,6 @@ public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvi
     private readonly UserManager<IUser> _userManager;
     private readonly ISession _session;
     private readonly IDisplayNameProvider _displayNameProvider;
-
     public DisplayNameUserPickerResultProvider(
         RoleManager<IRole> roleManager,
         UserManager<IUser> userManager,
@@ -29,7 +28,6 @@ public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvi
     }
 
     public string Name => "Default";
-
     public async Task<IEnumerable<UserPickerResult>> Search(UserPickerSearchContext searchContext)
     {
         var query = _session.Query<User>();
@@ -46,13 +44,11 @@ public sealed class DisplayNameUserPickerResultProvider : IUserPickerResultProvi
         }
 
         var users = await query.Take(50).ListAsync();
-
         var results = new List<UserPickerResult>();
 
         foreach (var user in users)
         {
             var displayName = await _displayNameProvider.GetAsync(user);
-
             results.Add(new UserPickerResult
             {
                 UserId = user.UserId,

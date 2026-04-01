@@ -10,28 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 public sealed class DisableTenantTool : AIFunction
 {
     public const string TheName = "disableTenant";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                }
-            },
-            "additionalProperties": false,
-            "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
         }
-        """);
-
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Disabled site or tenant.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

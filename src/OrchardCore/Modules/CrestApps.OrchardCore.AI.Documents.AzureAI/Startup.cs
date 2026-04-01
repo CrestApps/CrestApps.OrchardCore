@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
@@ -15,7 +15,6 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

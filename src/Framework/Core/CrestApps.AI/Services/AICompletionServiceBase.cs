@@ -1,17 +1,18 @@
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Infrastructure;
+using CrestApps.Templates.Services;
 
 namespace CrestApps.AI.Services;
 
 public abstract class AICompletionServiceBase
 {
     protected readonly AIProviderOptions ProviderOptions;
-    protected readonly IAITemplateService AITemplateService;
+    protected readonly ITemplateService AITemplateService;
     protected readonly IAIDeploymentManager DeploymentResolver;
-
     protected AICompletionServiceBase(
         AIProviderOptions providerOptions,
-        IAITemplateService aiTemplateService)
+        ITemplateService aiTemplateService)
     {
         ProviderOptions = providerOptions;
         AITemplateService = aiTemplateService;
@@ -19,9 +20,9 @@ public abstract class AICompletionServiceBase
 
     protected AICompletionServiceBase(
         AIProviderOptions providerOptions,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentResolver)
-        : this(providerOptions, aiTemplateService)
+    : this(providerOptions, aiTemplateService)
     {
         DeploymentResolver = deploymentResolver;
     }

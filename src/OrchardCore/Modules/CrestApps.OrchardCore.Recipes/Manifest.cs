@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "CrestApps Recipes",
     Author = CrestAppsManifestConstants.Author,
@@ -11,6 +10,7 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies = new[]
     {
-        "OrchardCore.Recipes.Core",
+    "OrchardCore.Recipes.Core",
     }
-)]
+
+    )]

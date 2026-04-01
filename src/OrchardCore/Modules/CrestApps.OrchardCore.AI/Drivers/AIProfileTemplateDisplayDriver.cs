@@ -10,7 +10,7 @@ using OrchardCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for the generic fields shared by all AI template sources:
+/// Display driver for the generic fields shared by all template sources:
 /// Title, Technical Name, Description, Category, and IsListable.
 /// </summary>
 internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -18,7 +18,6 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)
@@ -31,9 +30,9 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
     {
         return CombineAsync(
             View("AIProfileTemplate_Fields_SummaryAdmin", template).Location("Content:1"),
-            View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
-            View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
-            View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
+        View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
+        View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
+        View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
         );
     }
 

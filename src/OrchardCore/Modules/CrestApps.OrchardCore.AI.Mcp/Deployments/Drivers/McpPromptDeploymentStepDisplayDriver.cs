@@ -17,7 +17,6 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     private readonly INamedCatalog<McpPrompt> _store;
 
     internal readonly IStringLocalizer S;
-
     public McpPromptDeploymentStepDisplayDriver(
         INamedCatalog<McpPrompt> store,
         IStringLocalizer<McpPromptDeploymentStepDisplayDriver> stringLocalizer)
@@ -29,23 +28,23 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     public override Task<IDisplayResult> DisplayAsync(McpPromptDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                Initialize<DisplayMcpPromptDeploymentStepViewModel>("McpPromptDeploymentStep_Summary", async model =>
+        CombineAsync(
+            Initialize<DisplayMcpPromptDeploymentStepViewModel>("McpPromptDeploymentStep_Summary", async model =>
+            {
+                if (step.IncludeAll)
                 {
-                    if (step.IncludeAll)
-                    {
-                        model.IncludeAll = true;
-                        model.Names = [];
-                    }
-                    else
-                    {
-                        model.Names = (await _store.GetAllAsync())
+                    model.IncludeAll = true;
+                    model.Names = [];
+                }
+                else
+                {
+                    model.Names = (await _store.GetAllAsync())
                         .Where(x => step.PromptIds.Contains(x.ItemId))
                         .Select(x => x.Name);
-                    }
-                }).Location("Summary", "Content"),
-                View("McpPromptDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+                }
+            }).Location("Summary", "Content"),
+        View("McpPromptDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(McpPromptDeploymentStep step, BuildEditorContext context)
@@ -64,10 +63,9 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     public override async Task<IDisplayResult> UpdateAsync(McpPromptDeploymentStep step, UpdateEditorContext context)
     {
         var model = new McpPromptStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.Prompts);
+        p => p.IncludeAll,
+        p => p.Prompts);
 
         if (model.IncludeAll)
         {

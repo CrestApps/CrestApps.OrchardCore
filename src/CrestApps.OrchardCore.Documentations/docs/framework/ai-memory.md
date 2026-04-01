@@ -360,7 +360,7 @@ Memory integrates into the orchestration pipeline through two handlers.
 Implements `IOrchestrationContextBuilderHandler`. Runs during the `BuiltAsync` phase of context building:
 
 1. **Checks prerequisites** — verifies the user is authenticated and memory is enabled for the current resource (AI profile or chat interaction)
-2. **Injects memory availability** — renders the `memory-availability` AI template into the system message so the model knows memory tools are available
+2. **Injects memory availability** — renders the `memory-availability` template into the system message so the model knows memory tools are available
 3. **Registers memory tools** — adds all four tool definitions to `MustIncludeTools` in the completion context
 4. **Sets context flags** — sets `AICompletionContextKeys.HasMemory = true` and stores the user ID in `AIInvocationScope.Current.Items`
 
@@ -371,7 +371,7 @@ Implements `IPreemptiveRagHandler`. Proactively searches user memories before th
 1. **Checks prerequisites** — verifies the user is authenticated, memory is enabled, and preemptive retrieval is configured
 2. **Extracts queries** — derives search queries from the conversation content
 3. **Searches vector index** — calls `AIMemorySearchService` with the extracted queries
-4. **Injects results** — renders matching memories into the system message via the `memory-context-header` AI template
+4. **Injects results** — renders matching memories into the system message via the `memory-context-header` template
 
 This ensures the AI model has relevant user context even before it decides to call any memory tools explicitly.
 

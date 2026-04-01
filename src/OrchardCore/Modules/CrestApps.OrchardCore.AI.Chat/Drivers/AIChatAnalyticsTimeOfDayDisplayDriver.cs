@@ -12,7 +12,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatAnalyticsTimeOfDayDisplayDriver : DisplayDriver<AIChatAnalyticsReport>
 {
     internal readonly IStringLocalizer S;
-
     public AIChatAnalyticsTimeOfDayDisplayDriver(IStringLocalizer<AIChatAnalyticsTimeOfDayDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -23,8 +22,8 @@ public sealed class AIChatAnalyticsTimeOfDayDisplayDriver : DisplayDriver<AIChat
         return Initialize<ChatAnalyticsTimeOfDayViewModel>("ChatAnalyticsTimeOfDay", model =>
         {
             var hourlyGroups = context.Events
-                .GroupBy(e => e.SessionStartedUtc.Hour)
-                .OrderBy(g => g.Key);
+            .GroupBy(e => e.SessionStartedUtc.Hour)
+            .OrderBy(g => g.Key);
 
             for (var hour = 0; hour < 24; hour++)
             {

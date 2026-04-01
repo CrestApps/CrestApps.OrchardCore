@@ -7,10 +7,8 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 public sealed class DefaultUserCacheService : IUserCacheService
 {
     private readonly Dictionary<string, User> _users = [];
-
     private readonly ILookupNormalizer _lookupNormalizer;
     private readonly IUserStore<IUser> _userStore;
-
     public DefaultUserCacheService(
         ILookupNormalizer lookupNormalizer,
         IUserStore<IUser> userStore)
@@ -31,7 +29,6 @@ public sealed class DefaultUserCacheService : IUserCacheService
             if (appUser is User u)
             {
                 user = u;
-
                 SetInternal(u);
             }
         }

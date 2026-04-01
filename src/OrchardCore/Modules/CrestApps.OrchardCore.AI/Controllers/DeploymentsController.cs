@@ -17,24 +17,20 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-
 namespace CrestApps.OrchardCore.AI.Controllers;
 
 [Feature(AIConstants.Feature.Area)]
 public sealed class DeploymentsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
     private readonly INamedSourceCatalogManager<AIDeployment> _deploymentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly AIOptions _aiOptions;
     private readonly IDisplayManager<AIDeployment> _deploymentDisplayManager;
     private readonly INotifier _notifier;
-
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public DeploymentsController(
         INamedSourceCatalogManager<AIDeployment> deploymentManager,
         IAuthorizationService authorizationService,
@@ -54,7 +50,6 @@ public sealed class DeploymentsController : Controller
         H = htmlLocalizer;
         S = stringLocalizer;
     }
-
     [Admin("ai/deployments", "AIDeploymentsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -66,23 +61,18 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
         var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Sorted = true,
             Name = options.Search,
         });
-
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
-
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
-
         var viewModel = new ListSourceCatalogEntryViewModel<AIDeployment>
         {
             Models = [],
@@ -90,7 +80,6 @@ public sealed class DeploymentsController : Controller
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
-
         foreach (var record in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
@@ -99,15 +88,12 @@ public sealed class DeploymentsController : Controller
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
-
         viewModel.Options.BulkActions =
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -118,13 +104,11 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
-
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
@@ -132,32 +116,24 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var deployment = await _deploymentManager.NewAsync(providerName);
-
         if (deployment == null)
         {
             await _notifier.ErrorAsync(H["Invalid provider."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         return View(model);
     }
-
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/deployment/create/{providerName}", "AIDeploymentsCreate")]
@@ -167,41 +143,30 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.Deployments.TryGetValue(providerName, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var deployment = await _deploymentManager.NewAsync(providerName);
-
         if (deployment == null)
         {
             await _notifier.ErrorAsync(H["Invalid provider."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         if (ModelState.IsValid)
         {
             await _deploymentManager.CreateAsync(deployment);
-
             await _notifier.SuccessAsync(H["Deployment has been created successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(model);
     }
-
     [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -209,23 +174,18 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         var deployment = await _deploymentManager.FindByIdAsync(id);
-
         if (deployment == null)
         {
             return NotFound();
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.BuildEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         return View(model);
     }
-
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/deployment/edit/{id}", "AIDeploymentsEdit")]
@@ -235,32 +195,24 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         var deployment = await _deploymentManager.FindByIdAsync(id);
-
         if (deployment == null)
         {
             return NotFound();
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.Name,
             Editor = await _deploymentDisplayManager.UpdateEditorAsync(deployment, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         if (ModelState.IsValid)
         {
             await _deploymentManager.UpdateAsync(deployment);
-
             await _notifier.SuccessAsync(H["Deployment has been updated successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(model);
     }
-
     [HttpPost]
     [Admin("ai/deployment/delete/{id}", "AIDeploymentsDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -269,21 +221,15 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         var deployment = await _deploymentManager.FindByIdAsync(id);
-
         if (deployment == null)
         {
             return NotFound();
         }
-
         await _deploymentManager.DeleteAsync(deployment);
-
         await _notifier.SuccessAsync(H["Deployment has been deleted successfully."]);
-
         return RedirectToAction(nameof(Index));
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -294,7 +240,6 @@ public sealed class DeploymentsController : Controller
         {
             return Forbid();
         }
-
         if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
@@ -306,12 +251,10 @@ public sealed class DeploymentsController : Controller
                     foreach (var id in itemIds)
                     {
                         var deployment = await _deploymentManager.FindByIdAsync(id);
-
                         if (deployment == null)
                         {
                             continue;
                         }
-
                         if (await _deploymentManager.DeleteAsync(deployment))
                         {
                             counter++;
@@ -330,7 +273,6 @@ public sealed class DeploymentsController : Controller
                     return BadRequest();
             }
         }
-
         return RedirectToAction(nameof(Index));
     }
 }

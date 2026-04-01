@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-
-namespace CrestApps.AI.Tools;
-
+namespace CrestApps.AI.Tooling;
 /// <summary>
 /// A sample selectable AI tool that returns the current date and time.
 /// Demonstrates how to create a user-selectable (non-system) tool that
@@ -14,22 +12,22 @@ public sealed class CurrentDateTimeTool : AIFunction
     public const string TheName = "current_date_time";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "timezone": {
-              "type": "string",
-              "description": "An optional IANA timezone identifier (e.g., 'America/New_York', 'Europe/London'). Defaults to UTC if not specified."
-            },
-            "format": {
-              "type": "string",
-              "description": "An optional .NET date/time format string (e.g., 'yyyy-MM-dd', 'f', 'U'). Defaults to a full date/time representation."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "timezone": {
+          "type": "string",
+          "description": "An optional IANA timezone identifier (e.g., 'America/New_York', 'Europe/London'). Defaults to UTC if not specified."
+        },
+        "format": {
+          "type": "string",
+          "description": "An optional .NET date/time format string (e.g., 'yyyy-MM-dd', 'f', 'U'). Defaults to a full date/time representation."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 

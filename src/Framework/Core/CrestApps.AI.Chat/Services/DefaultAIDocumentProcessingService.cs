@@ -1,14 +1,15 @@
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
+using CrestApps.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
 namespace CrestApps.AI.Chat.Services;
-
 /// <summary>
 /// Default host-agnostic document processor used by MVC and Orchard Core hosts.
 /// </summary>
@@ -73,7 +74,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 #pragma warning disable CS0618 // Type or member is obsolete
         if (!string.IsNullOrEmpty(providerName) &&
             !string.IsNullOrEmpty(connectionName) &&
-            _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
+                _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
         {
             if (provider.Connections.TryGetValue(connectionName, out var connection))
             {

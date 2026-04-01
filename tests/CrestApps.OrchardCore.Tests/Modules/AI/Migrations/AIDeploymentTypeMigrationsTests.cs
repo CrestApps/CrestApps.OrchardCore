@@ -31,7 +31,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
-
         Assert.Equal("chat-default", result);
     }
 
@@ -63,7 +62,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
-
         Assert.Equal("chat-first", result);
     }
 
@@ -85,7 +83,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
-
         Assert.Equal("chat-utility-default", result);
     }
 
@@ -98,6 +95,7 @@ public sealed class AIDeploymentTypeMigrationsTests
             CreateConnection(itemId: "secondary-connection", name: "Secondary", legacyChatDeploymentName: "gpt-4.1"),
             CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4o-mini", legacyUtilityDeploymentName: "gpt-4o-mini"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -151,7 +149,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
-
         Assert.True(result);
         Assert.Equal("default-chat", settings.DefaultChatDeploymentName);
         Assert.Equal("default-utility", settings.DefaultUtilityDeploymentName);
@@ -167,6 +164,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         {
             CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -182,7 +180,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
-
         Assert.True(result);
         Assert.Equal("chat-utility-default", settings.DefaultChatDeploymentName);
         Assert.Equal("chat-utility-default", settings.DefaultUtilityDeploymentName);
@@ -196,10 +193,12 @@ public sealed class AIDeploymentTypeMigrationsTests
             DefaultChatDeploymentName = "existing-chat",
             DefaultEmbeddingDeploymentName = "existing-embedding",
         };
+
         var connections = new[]
         {
             CreateConnection(itemId: "legacy-connection", name: "Legacy", legacyChatDeploymentName: "gpt-4o-mini", legacyEmbeddingDeploymentName: "text-embedding-3-small"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -232,7 +231,6 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
-
         Assert.True(result);
         Assert.Equal("existing-chat", settings.DefaultChatDeploymentName);
         Assert.Equal("existing-embedding", settings.DefaultEmbeddingDeploymentName);
@@ -267,7 +265,6 @@ public sealed class AIDeploymentTypeMigrationsTests
             deploymentNameMap,
             settings.DefaultEmbeddingDeploymentName,
             value => settings.DefaultEmbeddingDeploymentName = value);
-
         Assert.True(chatUpdated);
         Assert.True(utilityUpdated);
         Assert.False(embeddingUpdated);
@@ -288,9 +285,9 @@ public sealed class AIDeploymentTypeMigrationsTests
     }
 
     private static bool InvokeTryPopulateDefaultDeploymentSettings(
-        DefaultAIDeploymentSettings settings,
-        IEnumerable<AIProviderConnection> connections,
-        IEnumerable<AIDeployment> deployments)
+    DefaultAIDeploymentSettings settings,
+    IEnumerable<AIProviderConnection> connections,
+    IEnumerable<AIDeployment> deployments)
     {
         var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
         var type = assembly.GetType(
@@ -328,10 +325,12 @@ public sealed class AIDeploymentTypeMigrationsTests
     private static AIProfile CreateProfile(string connectionName)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
+
         return new AIProfile
         {
             ConnectionName = connectionName,
         };
+
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
@@ -343,6 +342,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         string legacyEmbeddingDeploymentName = null)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
+
         return new AIProviderConnection
         {
             ItemId = itemId,
@@ -352,6 +352,7 @@ public sealed class AIDeploymentTypeMigrationsTests
             UtilityDeploymentName = legacyUtilityDeploymentName,
             EmbeddingDeploymentName = legacyEmbeddingDeploymentName,
         };
+
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 }

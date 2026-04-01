@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly ISiteService _siteService;
-
     public AIProfileSessionDocumentsDisplayDriver(ISiteService siteService)
     {
         _siteService = siteService;
@@ -21,7 +20,6 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
         {
             var metadata = profile.As<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
-
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
         }).Location("Content:5#Documents:10");
@@ -31,7 +29,6 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
     {
         var model = new EditAIProfileSessionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var metadata = profile.As<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
         profile.Put(metadata);

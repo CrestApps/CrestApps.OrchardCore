@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -14,7 +14,6 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalChatRelayNotificationHandler
 {
     private readonly IChatNotificationSender _sender;
-
     public DefaultExternalChatRelayNotificationHandler(IChatNotificationSender sender)
     {
         _sender = sender;
@@ -41,6 +40,7 @@ internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalCha
         if (result.IsUpdate)
         {
             await _sender.UpdateAsync(sessionId, chatType, result.Notification);
+
             return;
         }
 

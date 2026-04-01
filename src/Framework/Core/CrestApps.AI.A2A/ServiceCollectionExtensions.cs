@@ -1,6 +1,8 @@
 using CrestApps.AI.A2A.Functions;
 using CrestApps.AI.A2A.Handlers;
 using CrestApps.AI.A2A.Services;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Tooling;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

@@ -1,13 +1,12 @@
 using System.Text.Json;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
-
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 namespace CrestApps.AI.Chat.Tools;
-
 /// <summary>
 /// System tool that reads the full text content of a specific document.
 /// The LLM calls this to load document content on demand.
@@ -17,19 +16,19 @@ public sealed class ReadDocumentTool : AIFunction
     public const string TheName = SystemToolNames.ReadDocument;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "document_id": {
-              "type": "string",
-              "description": "The unique identifier of the document to read."
-            }
-          },
-          "required": ["document_id"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "description": "The unique identifier of the document to read."
         }
-        """);
+      },
+      "required": ["document_id"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -104,7 +103,7 @@ public sealed class ReadDocumentTool : AIFunction
 
             if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                 sessionObj is AIChatSession session &&
-                session.Documents is { Count: > 0 })
+                    session.Documents is { Count: > 0 })
             {
                 validReferenceIds.Add(session.SessionId);
             }

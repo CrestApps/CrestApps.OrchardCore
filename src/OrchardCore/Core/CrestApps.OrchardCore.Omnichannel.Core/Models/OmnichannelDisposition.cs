@@ -16,7 +16,6 @@ public sealed class OmnichannelDisposition : CatalogItem, IDisplayTextAwareModel
     public string Author { get; set; }
 
     public string OwnerId { get; set; }
-
     public OmnichannelDisposition Clone()
     {
         return new OmnichannelDisposition()

@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
 using static CrestApps.OrchardCore.AI.Core.AIConstants;
 
@@ -17,7 +17,6 @@ public sealed class CitationReferenceCollector
     private const string DocumentReferencesKey = "DocumentReferences";
 
     private readonly CompositeAIReferenceLinkResolver _linkResolver;
-
     public CitationReferenceCollector(CompositeAIReferenceLinkResolver linkResolver)
     {
         _linkResolver = linkResolver;
@@ -39,10 +38,8 @@ public sealed class CitationReferenceCollector
     {
         // Collect from preemptive RAG handlers (data sources).
         CollectFromProperties(orchestrationContext, DataSourceReferencesKey, references);
-
         // Collect from preemptive RAG handlers (documents).
         CollectFromProperties(orchestrationContext, DocumentReferencesKey, references);
-
         // Resolve links for the collected references.
         ResolveLinks(references, contentItemIds);
     }

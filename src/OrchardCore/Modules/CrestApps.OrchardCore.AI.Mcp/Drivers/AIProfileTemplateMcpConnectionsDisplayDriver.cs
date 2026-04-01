@@ -14,7 +14,6 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
     private readonly ICatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateMcpConnectionsDisplayDriver(
         ICatalog<McpConnection> store,
         IStringLocalizer<AIProfileTemplateMcpConnectionsDisplayDriver> stringLocalizer)
@@ -35,7 +34,6 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
         return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
             var mcpMetadata = template.As<AIProfileMcpMetadata>();
-
             model.Connections = connections
             .Select(entry => new ToolEntry
             {
@@ -43,8 +41,7 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
                 DisplayText = entry.DisplayText,
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
-
+        .ToArray();
         }).Location("Content:3#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -64,11 +61,8 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
         }
 
         var model = new EditProfileMcpConnectionsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
-
         var metadata = new AIProfileMcpMetadata();
 
         if (ids is null || ids.Length == 0)

@@ -12,7 +12,6 @@ internal sealed class ChatInteractionAuthorizationHandler : AuthorizationHandler
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
-
     public ChatInteractionAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -23,6 +22,7 @@ internal sealed class ChatInteractionAuthorizationHandler : AuthorizationHandler
         if (context.HasSucceeded)
         {
             // This handler is not revoking any pre-existing grants.
+
             return;
         }
 

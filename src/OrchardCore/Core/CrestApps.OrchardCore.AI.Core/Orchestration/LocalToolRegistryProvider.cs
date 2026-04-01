@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -16,7 +16,6 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     private readonly IOptions<AIToolDefinitionOptions> _toolDefinitions;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-
     public LocalToolRegistryProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -50,12 +49,14 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
             }
 
             // Skip system tools — they are provided by SystemToolRegistryProvider.
+
             if (definition.IsSystemTool)
             {
                 continue;
             }
 
             // Verify user has permission to access this tool.
+
             if (user is not null &&
                 !await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, toolName as object))
             {
@@ -63,7 +64,6 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
             }
 
             var name = toolName;
-
             entries.Add(new ToolRegistryEntry
             {
                 Id = name,

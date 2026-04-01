@@ -17,19 +17,14 @@ public class EditOmnichannelActivity
     public string UserId { get; set; }
 
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Users { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
 }

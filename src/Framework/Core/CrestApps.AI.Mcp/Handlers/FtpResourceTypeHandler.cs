@@ -10,13 +10,14 @@ namespace CrestApps.AI.Mcp.Handlers;
 public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
 {
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<FtpResourceTypeHandler> _logger;
 
     public FtpResourceTypeHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<FtpResourceTypeHandler> logger)
-        : base(FtpResourceConstants.Type)
+    : base(FtpResourceConstants.Type)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
@@ -90,17 +91,15 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
         }
 
         await client.Connect(cancellationToken);
-
         try
         {
             using var stream = new MemoryStream();
             await client.DownloadStream(stream, remotePath, token: cancellationToken);
             stream.Position = 0;
-
             using var reader = new StreamReader(stream);
             var content = await reader.ReadToEndAsync(cancellationToken);
-
             var mimeType = resource.Resource?.MimeType;
+
             if (string.IsNullOrEmpty(mimeType) && !_contentTypeProvider.TryGetContentType(remotePath, out mimeType))
             {
                 mimeType = "application/octet-stream";
@@ -112,9 +111,9 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                        Uri = resource.Resource.Uri,
-                        MimeType = mimeType,
-                        Text = content,
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Text = content,
                     }
                 ]
             };

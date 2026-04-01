@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Exceptions;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
@@ -33,7 +35,7 @@ public class DefaultAICompletionService : IAICompletionService
         var client = ResolveClient(deployment);
 
         var response = await client.CompleteAsync(messages, context, cancellationToken)
-            ?? throw new InvalidOperationException("Unable to generate a response. Ensure that the connection, and the deployment names are correct.");
+        ?? throw new InvalidOperationException("Unable to generate a response. Ensure that the connection, and the deployment names are correct.");
 
         var updateContext = new ReceivedMessageContext(response);
 
@@ -76,7 +78,7 @@ public class DefaultAICompletionService : IAICompletionService
     private IAICompletionClient ResolveClient(AIDeployment deployment)
     {
         var clientName = deployment.ClientName
-            ?? throw new InvalidOperationException($"The deployment '{deployment.Name}' does not have a client name assigned.");
+        ?? throw new InvalidOperationException($"The deployment '{deployment.Name}' does not have a client name assigned.");
 
         if (!_aiOptions.Clients.TryGetValue(clientName, out var clientType))
         {
@@ -84,6 +86,6 @@ public class DefaultAICompletionService : IAICompletionService
         }
 
         return _serviceProvider.GetService(clientType) as IAICompletionClient
-            ?? throw new InvalidOperationException($"No completion client registered for '{clientName}'.");
+        ?? throw new InvalidOperationException($"No completion client registered for '{clientName}'.");
     }
 }

@@ -11,7 +11,6 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
-
     public McpServerAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -29,19 +28,20 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
                 // Allow anonymous access.
                 context.Succeed(requirement);
                 break;
-
             case McpServerAuthenticationType.ApiKey:
                 // For API key auth, check if the user is authenticated via the McpApiKey scheme.
+
                 if (context.User.Identity?.IsAuthenticated == true &&
                     context.User.Identity.AuthenticationType == McpApiKeyAuthenticationDefaults.AuthenticationScheme)
                 {
                     context.Succeed(requirement);
                 }
-                break;
 
+                break;
             case McpServerAuthenticationType.OpenId:
             default:
                 // For OpenId auth, check if the user is authenticated.
+
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
                     if (!options.RequireAccessPermission)
@@ -60,6 +60,7 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
                         }
                     }
                 }
+
                 break;
         }
     }

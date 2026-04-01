@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly ISiteService _siteService;
-
     public AIProfileMemoryDisplayDriver(ISiteService siteService)
     {
         _siteService = siteService;
@@ -29,7 +28,6 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
     {
         var model = new EditAIProfileMemoryViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         profile.AlterSettings<AIProfileMemorySettings>(settings =>
         {
             settings.EnableUserMemory = model.EnableUserMemory;

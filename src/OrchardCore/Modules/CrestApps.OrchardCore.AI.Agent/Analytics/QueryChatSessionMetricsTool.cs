@@ -14,40 +14,35 @@ namespace CrestApps.OrchardCore.AI.Agent.Analytics;
 public sealed class QueryChatSessionMetricsTool : AIFunction
 {
     public const string TheName = "queryChatSessionMetrics";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "profileId": {
-              "type": "string",
-              "description": "Optional. Filter metrics to a specific AI profile by its ID."
-            },
-            "startDateUtc": {
-              "type": "string",
-              "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
-            },
-            "endDateUtc": {
-              "type": "string",
-              "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "Optional. Filter metrics to a specific AI profile by its ID."
+        },
+        "startDateUtc": {
+          "type": "string",
+          "description": "Optional. Start date in ISO 8601 format (e.g., 2024-01-01T00:00:00Z). Only include sessions that started on or after this date."
+        },
+        "endDateUtc": {
+          "type": "string",
+          "description": "Optional. End date in ISO 8601 format (e.g., 2024-12-31T23:59:59Z). Only include sessions that started on or before this date."
         }
-        """);
-
+      },
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description =>
         "Queries aggregated chat session metrics from the analytics index. " +
         "Returns statistics like total sessions, average messages per session, " +
         "resolution rate, average handle time, token usage, rating distribution, " +
         "and breakdowns by hour-of-day and day-of-week. " +
         "Useful for generating charts and reports about chat performance.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -59,13 +54,13 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<QueryChatSessionMetricsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var session = arguments.Services.GetRequiredService<ISession>();
-
         var query = session.QueryIndex<AIChatSessionMetricsIndex>(collection: AIConstants.AICollectionName);
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
@@ -101,19 +96,16 @@ public sealed class QueryChatSessionMetricsTool : AIFunction
         var ratingsPositive = metrics.Sum(m => m.ThumbsUpCount);
         var ratingsNegative = metrics.Sum(m => m.ThumbsDownCount);
         var ratingsTotal = ratingsPositive + ratingsNegative;
-
         var hourDistribution = metrics
             .GroupBy(m => m.HourOfDay)
             .OrderBy(g => g.Key)
             .Select(g => new { hour = g.Key, count = g.Count() })
             .ToList();
-
         var dayDistribution = metrics
             .GroupBy(m => m.DayOfWeek)
             .OrderBy(g => g.Key)
             .Select(g => new { dayOfWeek = g.Key, count = g.Count() })
             .ToList();
-
         var result = new
         {
             totalSessions,

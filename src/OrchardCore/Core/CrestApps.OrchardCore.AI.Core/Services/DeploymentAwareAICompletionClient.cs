@@ -1,7 +1,9 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
 using CrestApps.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +13,6 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
 {
     private readonly INamedCatalog<AIDeployment> _store;
     private readonly IAIDeploymentManager _deploymentManager;
-
     public DeploymentAwareAICompletionClient(
         string name,
         IAIClientFactory aIClientFactory,
@@ -22,19 +23,19 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
         INamedCatalog<AIDeployment> deploymentStore,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
-        : base(
-            name,
-            aIClientFactory,
-            distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions,
-            defaultOptions,
-            handlers,
-            aiTemplateService,
-            deploymentManager)
+    : base(
+        name,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions,
+        defaultOptions,
+        handlers,
+        aiTemplateService,
+        deploymentManager)
     {
         _store = deploymentStore;
         _deploymentManager = deploymentManager;

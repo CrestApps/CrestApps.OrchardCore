@@ -1,3 +1,4 @@
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.AI;
@@ -222,20 +223,4 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
         throw new ArgumentException($"Unable to find an implementation of '{nameof(IAIClientProvider)}' that can handle the provider '{deployment.ClientName}'.");
     }
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
-    private AIProviderConnectionEntry GetConnectionEntry(AIDeployment deployment)
-    {
-        if (!string.IsNullOrEmpty(deployment.ConnectionName))
-        {
-            if (_options.Providers.TryGetValue(deployment.ClientName, out var provider)
-                && provider.Connections.TryGetValue(deployment.ConnectionName, out var connection))
-            {
-                return connection;
-            }
-
-            throw new ArgumentException($"Connection '{deployment.ConnectionName}' not found within the provider '{deployment.ClientName}'.");
-        }
-
-        return AIDeploymentConnectionEntryFactory.Create(deployment, _dataProtectionProvider);
-    }
 }

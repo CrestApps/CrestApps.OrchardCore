@@ -4,7 +4,7 @@ using CrestApps.Services;
 namespace CrestApps.AI.Models;
 
 /// <summary>
-/// Represents a reusable AI template. The template holds only generic metadata;
+/// Represents a reusable template. The template holds only generic metadata;
 /// source-specific data is stored in <see cref="OrchardCore.Entities.Entity.Properties"/>
 /// via metadata classes such as <see cref="ProfileTemplateMetadata"/> or
 /// <see cref="SystemPromptTemplateMetadata"/>.

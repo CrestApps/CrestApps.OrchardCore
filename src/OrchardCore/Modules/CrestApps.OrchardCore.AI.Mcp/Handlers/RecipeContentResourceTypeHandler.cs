@@ -21,12 +21,11 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly ILogger _logger;
-
     public RecipeContentResourceTypeHandler(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager,
         ILogger<RecipeContentResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _recipeHarvesters = recipeHarvesters;
         _shellFeaturesManager = shellFeaturesManager;
@@ -68,10 +67,11 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
                 }
+
             ]
         };
     }
@@ -83,8 +83,8 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
         return recipeCollections
             .SelectMany(x => x)
             .Where(r => features.Any(f =>
-                r.BasePath != null &&
-                f.Extension?.SubPath != null &&
+        r.BasePath != null &&
+            f.Extension?.SubPath != null &&
                 r.BasePath.Contains(f.Extension.SubPath, StringComparison.OrdinalIgnoreCase)))
             .FirstOrDefault(r => string.Equals(r.Name, recipeName, StringComparison.OrdinalIgnoreCase));
     }

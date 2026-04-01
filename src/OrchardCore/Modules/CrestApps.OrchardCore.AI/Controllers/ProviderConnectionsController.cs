@@ -18,14 +18,12 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-
 namespace CrestApps.OrchardCore.AI.Controllers;
 
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ProviderConnectionsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
     private readonly INamedSourceCatalogManager<AIProviderConnection> _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -33,10 +31,8 @@ public sealed class ProviderConnectionsController : Controller
     private readonly IDisplayManager<AIProviderConnection> _displayDriver;
     private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
-
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public ProviderConnectionsController(
         INamedSourceCatalogManager<AIProviderConnection> manager,
         IAuthorizationService authorizationService,
@@ -58,7 +54,6 @@ public sealed class ProviderConnectionsController : Controller
         H = htmlLocalizer;
         S = stringLocalizer;
     }
-
     [Admin("ai/provider/connections", "AIProviderConnectionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -70,23 +65,18 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Sorted = true,
             Name = options.Search,
         });
-
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
-
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
-
         var viewModel = new ListSourceCatalogEntryViewModel<AIProviderConnection>
         {
             Models = [],
@@ -94,7 +84,6 @@ public sealed class ProviderConnectionsController : Controller
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _aiOptions.ConnectionSources.Keys.Order(),
         };
-
         foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIProviderConnection>
@@ -103,15 +92,12 @@ public sealed class ProviderConnectionsController : Controller
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
-
         viewModel.Options.BulkActions =
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -122,13 +108,11 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
-
     [Admin("ai/provider/connection/create/{providerName}", "AIProviderConnectionCreate")]
     public async Task<ActionResult> Create(string providerName)
     {
@@ -136,25 +120,19 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = await _manager.NewAsync(providerName);
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = connectionSource.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/provider/connection/create/{providerName}", "AIProviderConnectionCreate")]
@@ -164,35 +142,26 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.ConnectionSources.TryGetValue(providerName, out var connectionSource))
         {
             await _notifier.ErrorAsync(H["Unable to find a provider with the name '{0}'.", providerName]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = await _manager.NewAsync(providerName);
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         if (ModelState.IsValid)
         {
             _shellReleaseManager.RequestRelease();
-
             await _manager.CreateAsync(model);
             await _notifier.SuccessAsync(H["A new connection has been created successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(viewModel);
     }
-
     [Admin("ai/provider/connection/edit/{id}", "AIProviderConnectionEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -200,23 +169,18 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/provider/connection/edit/{id}", "AIProviderConnectionEdit")]
@@ -226,65 +190,49 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         if (ModelState.IsValid)
         {
             _shellReleaseManager.RequestRelease();
-
             await _manager.UpdateAsync(model);
-
             await _notifier.SuccessAsync(H["The connection has been updated successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(viewModel);
     }
-
     [HttpPost]
     [Admin("ai/provider/connection/delete/{id}", "AIProviderConnectionDelete")]
-
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageProviderConnections))
         {
             return Forbid();
         }
-
         var model = await _manager.FindByIdAsync(id);
-
         if (model == null)
         {
             return NotFound();
         }
-
         if (await _manager.DeleteAsync(model))
         {
             _shellReleaseManager.RequestRelease();
-
             await _notifier.SuccessAsync(H["The connection has been deleted successfully."]);
         }
         else
         {
             await _notifier.ErrorAsync(H["Unable to remove the connection."]);
         }
-
         return RedirectToAction(nameof(Index));
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -295,7 +243,6 @@ public sealed class ProviderConnectionsController : Controller
         {
             return Forbid();
         }
-
         if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
@@ -307,12 +254,10 @@ public sealed class ProviderConnectionsController : Controller
                     foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
-
                         if (instance == null)
                         {
                             continue;
                         }
-
                         if (await _manager.DeleteAsync(instance))
                         {
                             counter++;
@@ -325,7 +270,6 @@ public sealed class ProviderConnectionsController : Controller
                     else
                     {
                         _shellReleaseManager.RequestRelease();
-
                         await _notifier.SuccessAsync(H.Plural(counter, "1 connection has been removed successfully.", "{0} connections have been removed successfully."));
                     }
                     break;
@@ -333,7 +277,6 @@ public sealed class ProviderConnectionsController : Controller
                     return BadRequest();
             }
         }
-
         return RedirectToAction(nameof(Index));
     }
 }

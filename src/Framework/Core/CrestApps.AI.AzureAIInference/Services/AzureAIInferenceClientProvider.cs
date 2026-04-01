@@ -5,6 +5,7 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Azure.Core;
 using CrestApps.Azure.Core.Models;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI.AzureAIInference.Services;
@@ -12,7 +13,7 @@ namespace CrestApps.AI.AzureAIInference.Services;
 public sealed class AzureAIInferenceClientProvider : AIClientProviderBase
 {
     public AzureAIInferenceClientProvider(IServiceProvider serviceProvider)
-        : base(serviceProvider)
+    : base(serviceProvider)
     {
     }
 

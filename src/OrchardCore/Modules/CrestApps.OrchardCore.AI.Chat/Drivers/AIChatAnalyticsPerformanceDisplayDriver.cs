@@ -16,10 +16,8 @@ public sealed class AIChatAnalyticsPerformanceDisplayDriver : DisplayDriver<AICh
         return Initialize<ChatAnalyticsPerformanceViewModel>("ChatAnalyticsPerformance", model =>
         {
             var events = context.Events;
-
             var eventsWithLatency = events.Where(e => e.AverageResponseLatencyMs > 0).ToList();
             var eventsWithTokens = events.Where(e => e.TotalInputTokens > 0 || e.TotalOutputTokens > 0).ToList();
-
             model.SessionsWithLatencyData = eventsWithLatency.Count;
             model.SessionsWithTokenData = eventsWithTokens.Count;
             model.HasData = eventsWithLatency.Count > 0 || eventsWithTokens.Count > 0;

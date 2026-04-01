@@ -1,4 +1,6 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -32,10 +34,10 @@ internal sealed class SystemToolRegistryProvider : IToolRegistryProvider
         var hasDataSource = !string.IsNullOrEmpty(context?.DataSourceId);
         var hasDocuments = context?.AdditionalProperties is not null
             && context.AdditionalProperties.TryGetValue(AICompletionContextKeys.HasDocuments, out var val)
-            && val is true;
+                && val is true;
         var hasMemory = context?.AdditionalProperties is not null
             && context.AdditionalProperties.TryGetValue(AICompletionContextKeys.HasMemory, out var hasMemoryValue)
-            && hasMemoryValue is true;
+                && hasMemoryValue is true;
 
         var entries = new List<ToolRegistryEntry>();
 

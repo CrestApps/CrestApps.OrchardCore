@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using CrestApps.Services;
 using Cysharp.Text;
 using Microsoft.AspNetCore.SignalR;
@@ -96,6 +97,7 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         if (string.IsNullOrWhiteSpace(itemId))
         {
             await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(itemId)));
+
             return;
         }
 
@@ -292,15 +294,15 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
                 CreatedUtc = utcNow,
             };
 
-            var builder = ZString.CreateStringBuilder();
+            using var builder = ZString.CreateStringBuilder();
 
             var orchestratorContext = await OrchestrationContextBuilder.BuildAsync(interaction, ctx =>
             {
                 ctx.UserMessage = prompt;
                 ctx.ConversationHistory = existingPrompts
-                    .Where(x => !x.IsGeneratedPrompt)
-                    .Select(p => new ChatMessage(p.Role, p.Text))
-                    .ToList();
+                .Where(x => !x.IsGeneratedPrompt)
+                .Select(p => new ChatMessage(p.Role, p.Text))
+                .ToList();
             });
 
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
@@ -395,7 +397,7 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         interaction.OrchestratorName = JsonHelper.GetString(settings, "orchestratorName");
         interaction.ConnectionName = JsonHelper.GetString(settings, "connectionName");
         interaction.ChatDeploymentName = JsonHelper.GetString(settings, "deploymentName")
-            ?? JsonHelper.GetString(settings, "deploymentId");
+        ?? JsonHelper.GetString(settings, "deploymentId");
         interaction.SystemMessage = JsonHelper.GetString(settings, "systemMessage");
         interaction.Temperature = JsonHelper.GetFloat(settings, "temperature");
         interaction.TopP = JsonHelper.GetFloat(settings, "topP");

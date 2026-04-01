@@ -1,11 +1,11 @@
 using System.Text.Json;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-
 namespace CrestApps.AI.Services;
-
 /// <summary>
 /// Extracts focused search queries from the user's message using a lightweight utility LLM call.
 /// Results are cached per <see cref="OrchestrationContext"/> so that multiple preemptive RAG
@@ -18,7 +18,6 @@ public sealed class PreemptiveSearchQueryProvider
     /// <see cref="OrchestrationContext.Properties"/>.
     /// </summary>
     private const string CacheKey = "PreemptiveSearchQueries";
-
     /// <summary>
     /// The maximum number of recent conversation messages (user + assistant) to include
     /// when extracting search queries, so follow-up messages are resolved correctly.
@@ -27,13 +26,12 @@ public sealed class PreemptiveSearchQueryProvider
 
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly ITemplateService _aiTemplateService;
     private readonly ILogger _logger;
-
     public PreemptiveSearchQueryProvider(
         IAIClientFactory aiClientFactory,
         IAIDeploymentManager deploymentManager,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         ILogger<PreemptiveSearchQueryProvider> logger)
     {
         _aiClientFactory = aiClientFactory;
@@ -41,7 +39,6 @@ public sealed class PreemptiveSearchQueryProvider
         _aiTemplateService = aiTemplateService;
         _logger = logger;
     }
-
     /// <summary>
     /// Gets search queries for the given context. The queries are extracted from the user's
     /// message using a utility LLM call and cached in
@@ -61,7 +58,6 @@ public sealed class PreemptiveSearchQueryProvider
 
         return queries;
     }
-
     private async Task<IList<string>> ExtractSearchQueriesAsync(OrchestrationContext context)
     {
         var chatClient = await TryCreateUtilityChatClientAsync(context);

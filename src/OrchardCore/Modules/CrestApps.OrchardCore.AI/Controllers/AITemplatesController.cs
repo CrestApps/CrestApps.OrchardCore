@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -15,23 +16,19 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-
 namespace CrestApps.OrchardCore.AI.Controllers;
 
 public sealed class AITemplatesController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
     private readonly IAIProfileTemplateManager _manager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<AIProfileTemplate> _displayDriver;
     private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
-
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public AITemplatesController(
         IAIProfileTemplateManager manager,
         IAuthorizationService authorizationService,
@@ -51,7 +48,6 @@ public sealed class AITemplatesController : Controller
         H = htmlLocalizer;
         S = stringLocalizer;
     }
-
     [Admin("ai/templates", "AITemplatesIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -63,22 +59,17 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
         var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
         {
             Sorted = true,
             Name = options.Search,
         });
-
         var routeData = new RouteData();
-
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
-
         var viewModel = new ListSourceCatalogEntryViewModel<AIProfileTemplate>
         {
             Models = [],
@@ -86,7 +77,6 @@ public sealed class AITemplatesController : Controller
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _aiOptions.TemplateSources.Select(x => x.Key).Order(),
         };
-
         foreach (var model in result.Entries)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIProfileTemplate>
@@ -95,15 +85,12 @@ public sealed class AITemplatesController : Controller
                 Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
             });
         }
-
         viewModel.Options.BulkActions =
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -114,13 +101,11 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
-
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
     public async Task<ActionResult> Create(string source)
     {
@@ -128,32 +113,24 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.TemplateSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a template-source that can handle the source '{0}'.", source]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var template = await _manager.NewAsync(source);
-
         if (template == null)
         {
             await _notifier.ErrorAsync(H["Unable to create a new template."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         return View(model);
     }
-
     [HttpPost]
     [ActionName(nameof(Create))]
     [Admin("ai/template/create/{source}", "AITemplatesCreate")]
@@ -163,41 +140,30 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         if (!_aiOptions.TemplateSources.TryGetValue(source, out var provider))
         {
             await _notifier.ErrorAsync(H["Unable to find a template-source that can handle the source '{0}'.", source]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var template = await _manager.NewAsync(source);
-
         if (template == null)
         {
             await _notifier.ErrorAsync(H["Unable to create a new template."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = provider.DisplayName,
             Editor = await _displayDriver.UpdateEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: true),
         };
-
         if (ModelState.IsValid)
         {
             await _manager.CreateAsync(template);
-
             await _notifier.SuccessAsync(H["Template has been created successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(model);
     }
-
     [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
     public async Task<ActionResult> Edit(string id)
     {
@@ -205,23 +171,18 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         var template = await _manager.FindByIdAsync(id);
-
         if (template == null)
         {
             return NotFound();
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = template.DisplayText,
             Editor = await _displayDriver.BuildEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         return View(model);
     }
-
     [HttpPost]
     [ActionName(nameof(Edit))]
     [Admin("ai/template/edit/{id}", "AITemplatesEdit")]
@@ -231,32 +192,24 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         var template = await _manager.FindByIdAsync(id);
-
         if (template == null)
         {
             return NotFound();
         }
-
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = template.DisplayText,
             Editor = await _displayDriver.UpdateEditorAsync(template, _updateModelAccessor.ModelUpdater, isNew: false),
         };
-
         if (ModelState.IsValid)
         {
             await _manager.UpdateAsync(template);
-
             await _notifier.SuccessAsync(H["Template has been updated successfully."]);
-
             return RedirectToAction(nameof(Index));
         }
-
         return View(model);
     }
-
     [HttpPost]
     [Admin("ai/template/delete/{id}", "AITemplatesDelete")]
     public async Task<IActionResult> Delete(string id)
@@ -265,14 +218,11 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         var template = await _manager.FindByIdAsync(id);
-
         if (template == null)
         {
             return NotFound();
         }
-
         if (await _manager.DeleteAsync(template))
         {
             await _notifier.SuccessAsync(H["Template has been deleted successfully."]);
@@ -281,10 +231,8 @@ public sealed class AITemplatesController : Controller
         {
             await _notifier.ErrorAsync(H["Unable to remove the template."]);
         }
-
         return RedirectToAction(nameof(Index));
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -295,7 +243,6 @@ public sealed class AITemplatesController : Controller
         {
             return Forbid();
         }
-
         if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
@@ -307,12 +254,10 @@ public sealed class AITemplatesController : Controller
                     foreach (var id in itemIds)
                     {
                         var instance = await _manager.FindByIdAsync(id);
-
                         if (instance == null)
                         {
                             continue;
                         }
-
                         if (await _manager.DeleteAsync(instance))
                         {
                             counter++;
@@ -331,7 +276,6 @@ public sealed class AITemplatesController : Controller
                     return BadRequest();
             }
         }
-
         return RedirectToAction(nameof(Index));
     }
 }

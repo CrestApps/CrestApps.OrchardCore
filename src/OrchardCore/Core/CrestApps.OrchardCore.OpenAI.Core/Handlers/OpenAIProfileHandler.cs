@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 public sealed class OpenAIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 {
     internal readonly IStringLocalizer S;
-
     public OpenAIProfileHandler(
         IStringLocalizer<OpenAIProfileHandler> stringLocalizer)
     {
@@ -18,14 +17,11 @@ public sealed class OpenAIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
     public override Task InitializingAsync(InitializingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data);
-
     private static Task PopulateAsync(AIProfile profile, JsonNode data)
     {
         var metadata = profile.As<AIProfileMetadata>();
-
         var settings = profile.GetSettings<AIProfileSettings>();
 
         if (!settings.LockSystemMessage)
@@ -35,7 +31,6 @@ public sealed class OpenAIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             if (!string.IsNullOrEmpty(systemMessage))
             {
                 metadata.SystemMessage = systemMessage;
-
                 profile.Put(metadata);
             }
         }

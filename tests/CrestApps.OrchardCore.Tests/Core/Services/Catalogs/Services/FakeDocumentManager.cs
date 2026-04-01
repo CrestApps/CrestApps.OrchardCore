@@ -11,7 +11,6 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
     private readonly DictionaryDocument<T> _doc;
 
     public bool UpdateCalled { get; private set; }
-
     public FakeDocumentManager(IEnumerable<T> records)
     {
         _doc = new DictionaryDocument<T>
@@ -22,25 +21,23 @@ internal sealed class FakeDocumentManager<T> : IDocumentManager<DictionaryDocume
 
     public Task<DictionaryDocument<T>> GetOrCreateMutableAsync()
         => Task.FromResult(_doc);
-
     public Task<DictionaryDocument<T>> GetOrCreateImmutableAsync()
         => Task.FromResult(_doc);
-
     public Task<DictionaryDocument<T>> GetOrCreateMutableAsync(Func<Task<DictionaryDocument<T>>> factory)
         => Task.FromResult(_doc);
-
     public Task<DictionaryDocument<T>> GetOrCreateImmutableAsync(Func<Task<DictionaryDocument<T>>> factory)
         => Task.FromResult(_doc);
-
     public Task UpdateAsync(DictionaryDocument<T> document)
     {
         UpdateCalled = true;
+
         return Task.CompletedTask;
     }
 
     public Task UpdateAsync(DictionaryDocument<T> document, Func<DictionaryDocument<T>, Task> afterUpdate)
     {
         UpdateCalled = true;
+
         return afterUpdate != null ? afterUpdate(document) : Task.CompletedTask;
     }
 }

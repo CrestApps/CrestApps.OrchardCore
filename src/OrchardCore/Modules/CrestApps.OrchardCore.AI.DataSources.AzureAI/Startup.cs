@@ -1,6 +1,5 @@
-using CrestApps.AI;
-using CrestApps.AI.AzureAI;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,7 +15,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.AzureAI;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -26,8 +24,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
-        CrestApps.AI.AzureAI.ServiceCollectionExtensions.AddAzureAISearchServices(services);
-
+        CrestApps.Azure.AISearch.ServiceCollectionExtensions.AddAzureAISearchServices(services);
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {
             o.DisplayName = S["AI Knowledge Base Index (Azure AI Search)"];
@@ -49,6 +46,7 @@ public sealed class Startup : StartupBase
                 mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
                 mapping.DefaultContentField = AIConstants.ColumnNames.Content;
             });
+
         });
     }
 }

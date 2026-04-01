@@ -15,7 +15,6 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
     private readonly INamedCatalog<AIDeployment> _deploymentsCatalog;
 
     internal readonly IStringLocalizer S;
-
     public DeleteAIDeploymentDeploymentStepDisplayDriver(
         INamedCatalog<AIDeployment> deploymentsCatalog,
         IStringLocalizer<DeleteAIDeploymentDeploymentStepDisplayDriver> stringLocalizer)
@@ -28,7 +27,7 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
     {
         return CombineAsync(
             View("DeleteAIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
-            View("DeleteAIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        View("DeleteAIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
         );
     }
 
@@ -45,10 +44,9 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
     public override async Task<IDisplayResult> UpdateAsync(DeleteAIDeploymentDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIDeploymentStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DeploymentNames);
+        p => p.IncludeAll,
+        p => p.DeploymentNames);
 
         if (model.IncludeAll)
         {

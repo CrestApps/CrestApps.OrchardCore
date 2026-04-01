@@ -6,11 +6,9 @@ namespace CrestApps.OrchardCore.SignalR.Services;
 internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
     private static readonly ResourceManifest _manifest;
-
     static ResourceManagementOptionsConfiguration()
     {
         _manifest = new ResourceManifest();
-
         _manifest.DefineScript("signalr")
             .SetUrl("~/CrestApps.OrchardCore.SignalR/scripts/signalr.min.js", "~/CrestApps.OrchardCore.SignalR/scripts/signalr.js")
             .SetCdn("https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js", "https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.js")

@@ -5,7 +5,6 @@ namespace CrestApps.OrchardCore.Tests.Core.Services;
 public sealed class ODataFilterValidatorTests
 {
     private readonly ODataFilterValidator _validator;
-
     public ODataFilterValidatorTests()
     {
         _validator = new ODataFilterValidator();
@@ -16,7 +15,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(null);
-
         // Assert
         Assert.True(result);
     }
@@ -26,7 +24,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter("");
-
         // Assert
         Assert.True(result);
     }
@@ -36,7 +33,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter("   ");
-
         // Assert
         Assert.True(result);
     }
@@ -52,7 +48,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
     }
@@ -66,7 +61,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
     }
@@ -79,7 +73,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
     }
@@ -92,7 +85,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid");
     }
@@ -105,7 +97,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid due to unbalanced quotes");
     }
@@ -120,7 +111,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.False(result, $"Filter '{filter}' should be invalid due to unbalanced parentheses");
     }
@@ -133,7 +123,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid");
     }
@@ -146,7 +135,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, $"Filter '{filter}' should be valid (case insensitive)");
     }
@@ -156,10 +144,8 @@ public sealed class ODataFilterValidatorTests
     {
         // Arrange
         var filter = "(category eq 'docs' or category eq 'guides') and status ne 'archived' and priority gt 3";
-
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.True(result, "Complex filter should be valid");
     }
@@ -169,10 +155,8 @@ public sealed class ODataFilterValidatorTests
     {
         // Arrange
         var filter = "()";
-
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.False(result, "Filter with only parentheses should be invalid");
     }
@@ -185,7 +169,6 @@ public sealed class ODataFilterValidatorTests
     {
         // Act
         var result = _validator.IsValidFilter(filter);
-
         // Assert
         Assert.False(result, $"Filter with only operator '{filter}' should be invalid");
     }

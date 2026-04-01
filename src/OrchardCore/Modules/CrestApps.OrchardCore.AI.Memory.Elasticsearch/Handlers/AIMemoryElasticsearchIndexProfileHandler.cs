@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
     public AIMemoryElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, aiClientFactory)
     {
     }
 
@@ -26,10 +26,8 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
 
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
-
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -38,14 +36,11 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
         }
 
         var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
-
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
-
         var profileMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
-
         metadata.IndexMappings.KeyFieldName = MemoryConstants.ColumnNames.MemoryId;
         metadata.IndexMappings.Mapping.Properties[MemoryConstants.ColumnNames.MemoryId] = new KeywordProperty();
         metadata.IndexMappings.Mapping.Properties[MemoryConstants.ColumnNames.UserId] = new KeywordProperty();
@@ -80,7 +75,6 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
                 MemoryConstants.ColumnNames.Description,
                 MemoryConstants.ColumnNames.Content,
             ];
-
             indexProfile.Put(metadata);
         }
     }

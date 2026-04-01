@@ -32,23 +32,23 @@ internal sealed class A2AAgentProxyTool : AIFunction
 
     public override string Description => _description;
 
-    public override JsonElement JsonSchema { get; } = JsonDocument.Parse("""
+    public override JsonElement JsonSchema { get; } = JsonElement.Parse(
+        """
         {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "description": "The message or task to send to the remote agent for processing."
-                },
-                "contextId": {
-                    "type": "string",
-                    "description": "An optional context identifier to maintain conversation continuity with the remote agent."
-                }
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string",
+              "description": "The message or task to send to the remote agent for processing."
             },
-            "required": ["message"]
+            "contextId": {
+              "type": "string",
+              "description": "An optional context identifier to maintain conversation continuity with the remote agent."
+            }
+          },
+          "required": ["message"]
         }
-        """).RootElement;
-
+        """);
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

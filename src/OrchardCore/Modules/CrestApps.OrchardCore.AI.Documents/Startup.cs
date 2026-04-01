@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Endpoints;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -34,28 +35,22 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-
         // Register unified document store, index provider, and migration.
         services
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AIDocsCollectionName))
             .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
-
         services.AddScoped<IInteractionDocumentSettingsProvider, OrchardCoreInteractionDocumentSettingsProvider>();
         services.AddScoped<IAIChatDocumentAuthorizationService, OrchardAIChatDocumentAuthorizationService>();
         services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
-
         services.AddIndexProvider<AIDocumentIndexProvider>();
         services.AddIndexProvider<AIDocumentChunkIndexProvider>();
         services.AddDataMigration<AIDocumentIndexMigrations>();
         services.AddDataMigration<AIDocumentChunkIndexMigrations>();
-
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();
-
         // Register the document Preemptive RAG handler.
         services.AddScoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>();
-
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
     }
@@ -68,7 +63,6 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     {
         services
             .AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
-
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
             .AddScoped<AIDocumentsIndexingService>()

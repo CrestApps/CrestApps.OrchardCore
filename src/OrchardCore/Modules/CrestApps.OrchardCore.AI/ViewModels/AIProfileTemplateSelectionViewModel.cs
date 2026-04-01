@@ -7,6 +7,5 @@ public class AIProfileTemplateSelectionViewModel
     public string TemplateId { get; set; }
 
     public string Source { get; set; }
-
     public IList<SelectListItem> Templates { get; set; } = [];
 }

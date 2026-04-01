@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -31,7 +32,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     /// Minimum delay between post-close processing retry attempts.
     /// </summary>
     private static readonly TimeSpan _retryDelay = TimeSpan.FromMinutes(5);
-
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var clock = serviceProvider.GetRequiredService<IClock>();
@@ -39,9 +39,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var logger = serviceProvider.GetRequiredService<ILogger<AIChatSessionCloseBackgroundTask>>();
-
         var utcNow = clock.UtcNow;
-
         // Get all chat profiles that have data extraction enabled.
         var profiles = await profileManager.GetAsync(AIProfileType.Chat);
 
@@ -54,7 +52,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             // Phase 1: Close inactive sessions.
             await CloseInactiveSessionsAsync(serviceProvider, session, profile, promptStore, utcNow, logger, cancellationToken);
-
             // Phase 2: Retry pending post-close processing for already-closed sessions.
             await RetryPendingProcessingAsync(serviceProvider, session, profile, promptStore, utcNow, logger, cancellationToken);
         }
@@ -78,12 +75,11 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
         var timeout = TimeSpan.FromMinutes(settings.SessionInactivityTimeoutInMinutes);
         var cutoffUtc = utcNow - timeout;
-
         // Query active sessions that are past the inactivity timeout.
         var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
-                i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
-                collection: AIConstants.AICollectionName)
-            .ListAsync(cancellationToken);
+            i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
+            collection: AIConstants.AICollectionName)
+                .ListAsync(cancellationToken);
 
         foreach (var chatSession in inactiveSessions)
         {
@@ -103,14 +99,10 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             chatSession.Status = ChatSessionStatus.Closed;
             chatSession.ClosedAtUtc = utcNow;
-
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
-
             // Run all post-close processing (tasks + analytics + conversion goals) as a unified resilient pipeline.
             await RunPostCloseProcessingAsync(serviceProvider, profile, chatSession, prompts, utcNow, logger, cancellationToken);
-
             await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
-
             await TriggerSessionClosedWorkflowAsync(serviceProvider, profile, chatSession, utcNow, logger);
         }
     }
@@ -126,11 +118,11 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     {
         // Find closed sessions with pending post-close processing that are due for retry.
         var pendingSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
-                i => i.ProfileId == profile.ItemId
-                    && i.Status == ChatSessionStatus.Closed
+            i => i.ProfileId == profile.ItemId
+                && i.Status == ChatSessionStatus.Closed
                     && i.PostSessionProcessingStatus == PostSessionProcessingStatus.Pending,
-                collection: AIConstants.AICollectionName)
-            .ListAsync(cancellationToken);
+            collection: AIConstants.AICollectionName)
+                .ListAsync(cancellationToken);
 
         foreach (var chatSession in pendingSessions)
         {
@@ -140,11 +132,11 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             // Skip if maximum attempts have been reached.
+
             if (chatSession.PostSessionProcessingAttempts >= MaxPostCloseAttempts)
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
                 await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
-
                 logger.LogWarning(
                     "Post-close processing for session '{SessionId}' has exceeded maximum attempts ({MaxAttempts}). Marking as failed. "
                     + "Tasks processed: {TasksProcessed}, Analytics recorded: {AnalyticsRecorded}, Conversion goals evaluated: {ConversionGoalsEvaluated}.",
@@ -153,11 +145,11 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                     chatSession.IsPostSessionTasksProcessed,
                     chatSession.IsAnalyticsRecorded,
                     chatSession.IsConversionGoalsEvaluated);
-
                 continue;
             }
 
             // Apply retry delay: skip if last attempt was too recent.
+
             if (chatSession.PostSessionProcessingLastAttemptUtc.HasValue
                 && utcNow - chatSession.PostSessionProcessingLastAttemptUtc.Value < _retryDelay)
             {
@@ -186,9 +178,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
-
             await RunPostCloseProcessingAsync(serviceProvider, profile, chatSession, prompts, utcNow, logger, cancellationToken);
-
             await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
         }
     }
@@ -209,17 +199,14 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     {
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
-
         var needsPostSessionTasks = !chatSession.IsPostSessionTasksProcessed
             && postSessionSettings.EnablePostSessionProcessing
-            && postSessionSettings.PostSessionTasks.Count > 0;
-
+                && postSessionSettings.PostSessionTasks.Count > 0;
         var needsAnalytics = !chatSession.IsAnalyticsRecorded
             && (analyticsMetadata.EnableSessionMetrics || analyticsMetadata.EnableAIResolutionDetection);
-
         var needsConversionGoals = !chatSession.IsConversionGoalsEvaluated
             && analyticsMetadata.EnableConversionMetrics
-            && analyticsMetadata.ConversionGoals.Count > 0;
+                && analyticsMetadata.ConversionGoals.Count > 0;
 
         if (!needsPostSessionTasks && !needsAnalytics && !needsConversionGoals)
         {
@@ -251,18 +238,21 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         }
 
         // Step 1: Post-session tasks (custom AI analysis, emails, etc.)
+
         if (needsPostSessionTasks)
         {
             await RunPostSessionTasksAsync(serviceProvider, profile, chatSession, prompts, logger, cancellationToken);
         }
 
         // Step 2: Analytics recording (session-end metrics + resolution detection).
+
         if (needsAnalytics)
         {
             await RecordSessionAnalyticsAsync(serviceProvider, profile, chatSession, prompts, analyticsMetadata, logger);
         }
 
         // Step 3: Conversion goals evaluation.
+
         if (needsConversionGoals)
         {
             await EvaluateConversionGoalsAsync(serviceProvider, profile, chatSession, prompts, analyticsMetadata, logger);
@@ -271,14 +261,12 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         // Determine overall status: Completed only when all applicable steps are done.
         var tasksComplete = chatSession.IsPostSessionTasksProcessed
             || !postSessionSettings.EnablePostSessionProcessing
-            || postSessionSettings.PostSessionTasks.Count == 0;
-
+                || postSessionSettings.PostSessionTasks.Count == 0;
         var analyticsComplete = chatSession.IsAnalyticsRecorded
             || (!analyticsMetadata.EnableSessionMetrics && !analyticsMetadata.EnableAIResolutionDetection);
-
         var conversionComplete = chatSession.IsConversionGoalsEvaluated
             || !analyticsMetadata.EnableConversionMetrics
-            || analyticsMetadata.ConversionGoals.Count == 0;
+                || analyticsMetadata.ConversionGoals.Count == 0;
 
         if (tasksComplete && analyticsComplete && conversionComplete)
         {
@@ -316,7 +304,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
         var taskNames = postSessionSettings.PostSessionTasks.Select(t => t.Name).ToList();
         var clock = serviceProvider.GetRequiredService<IClock>();
-
         try
         {
             if (logger.IsEnabled(LogLevel.Debug))
@@ -328,6 +315,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             // Initialize any tasks not yet tracked as Pending.
+
             foreach (var taskName in taskNames)
             {
                 if (!chatSession.PostSessionResults.ContainsKey(taskName))
@@ -341,6 +329,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             // Increment attempts for non-succeeded tasks before processing.
+
             foreach (var taskName in taskNames)
             {
                 if (chatSession.PostSessionResults.TryGetValue(taskName, out var existing)
@@ -358,17 +347,19 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 {
                     logger.LogDebug("PostSessionProcessingService is not available. Skipping post-session tasks for session '{SessionId}'.", chatSession.SessionId);
                 }
+
                 return;
             }
 
             var results = await postSessionService.ProcessAsync(profile, chatSession, prompts, cancellationToken);
-
             // Merge new results into the session's PostSessionResults.
+
             if (results is not null && results.Count > 0)
             {
                 foreach (var (taskName, result) in results)
                 {
                     // Preserve the attempt count from existing tracking.
+
                     if (chatSession.PostSessionResults.TryGetValue(taskName, out var existing))
                     {
                         result.Attempts = existing.Attempts;
@@ -395,7 +386,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             {
                 if (chatSession.PostSessionResults.TryGetValue(taskName, out var result)
                     && result.Status != PostSessionTaskResultStatus.Succeeded
-                    && result.Attempts >= MaxPostCloseAttempts)
+                        && result.Attempts >= MaxPostCloseAttempts)
                 {
                     result.Status = PostSessionTaskResultStatus.Failed;
                     result.ProcessedAtUtc = utcNow;
@@ -414,10 +405,9 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             // Tasks are fully processed when all are either Succeeded or permanently Failed.
             var allProcessed = taskNames.All(name =>
-                chatSession.PostSessionResults.TryGetValue(name, out var r)
+            chatSession.PostSessionResults.TryGetValue(name, out var r)
                 && (r.Status == PostSessionTaskResultStatus.Succeeded
                     || (r.Status == PostSessionTaskResultStatus.Failed && r.Attempts >= MaxPostCloseAttempts)));
-
             chatSession.IsPostSessionTasksProcessed = allProcessed;
 
             if (logger.IsEnabled(LogLevel.Information))
@@ -425,7 +415,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 var succeededCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Succeeded);
                 var failedCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Failed);
                 var pendingCount = chatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Pending);
-
                 logger.LogInformation(
                     "Post-session tasks for session '{SessionId}': {Succeeded} succeeded, {Failed} failed, {Pending} pending out of {Total} total.",
                     chatSession.SessionId,
@@ -450,8 +439,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
                 await workflowManager.TriggerEventAsync(
                     nameof(AIChatSessionPostProcessedEvent),
-                    input,
-                    correlationId: chatSession.SessionId);
+                input,
+                correlationId: chatSession.SessionId);
             }
         }
         catch (Exception ex)
@@ -462,7 +451,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 chatSession.SessionId,
                 chatSession.PostSessionProcessingAttempts,
                 string.Join(", ", taskNames));
-
             // Record error on all non-succeeded tasks; permanently fail those that have exhausted attempts.
             var utcNow = clock.UtcNow;
 
@@ -511,8 +499,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             var isResolved = false;
-
             // Use AI resolution detection when enabled instead of assuming abandoned.
+
             if (analyticsMetadata.EnableAIResolutionDetection)
             {
                 var postSessionService = serviceProvider.GetService<PostSessionProcessingService>();
@@ -537,7 +525,6 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
             }
 
             await eventService.RecordSessionEndedAsync(chatSession, prompts.Count, isResolved);
-
             chatSession.IsAnalyticsRecorded = true;
 
             if (logger.IsEnabled(LogLevel.Information))
@@ -608,7 +595,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                         chatSession.SessionId,
                         goalResults.Count,
                         goalResults.Sum(r => r.Score),
-                        goalResults.Sum(r => r.MaxScore));
+                    goalResults.Sum(r => r.MaxScore));
                 }
             }
             else
@@ -660,8 +647,8 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
 
             await workflowManager.TriggerEventAsync(
                 nameof(AIChatSessionClosedEvent),
-                input,
-                correlationId: chatSession.SessionId);
+            input,
+            correlationId: chatSession.SessionId);
         }
         catch (Exception ex)
         {

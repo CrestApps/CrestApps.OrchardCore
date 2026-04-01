@@ -9,7 +9,7 @@ public sealed class OmnichannelChannelEndpointStore : Catalog<OmnichannelChannel
 {
     public OmnichannelChannelEndpointStore(
         IDocumentManager<DictionaryDocument<OmnichannelChannelEndpoint>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 

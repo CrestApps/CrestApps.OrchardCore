@@ -17,7 +17,6 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
-
     public AzureAIInferenceConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureAIInferenceConnectionDisplayDriver> stringLocalizer)
@@ -36,7 +35,6 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         return Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model =>
         {
             var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
-
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
@@ -44,7 +42,6 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
                 new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
                 new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
             ];
-
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
             model.IdentityId = metadata.IdentityId;
@@ -59,9 +56,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         }
 
         var model = new AzureAIInferenceConnectionViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
@@ -83,15 +78,12 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         if (hasNewKey)
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
-
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
 
         metadata.AuthenticationType = model.AuthenticationType;
-
         var trimmedIdentityId = model.IdentityId?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
-
         connection.Put(metadata);
 
         return Edit(connection, context);

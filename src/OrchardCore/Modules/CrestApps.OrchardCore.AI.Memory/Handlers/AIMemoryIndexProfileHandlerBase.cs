@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
@@ -8,9 +8,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Handlers;
 public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
-
     private readonly IAIClientFactory _aiClientFactory;
-
     protected AIMemoryIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
@@ -23,7 +21,7 @@ public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
 
         if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
             string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
+                string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
         {
             return defaultDimensions;
         }

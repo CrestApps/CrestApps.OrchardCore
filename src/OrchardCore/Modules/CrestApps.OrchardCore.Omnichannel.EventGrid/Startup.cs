@@ -18,4 +18,3 @@ public sealed class Startup : StartupBase
         routes.AddAzureEventGridEndpoint();
     }
 }
-

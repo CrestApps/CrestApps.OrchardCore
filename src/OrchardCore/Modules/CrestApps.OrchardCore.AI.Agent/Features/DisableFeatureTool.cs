@@ -11,32 +11,29 @@ namespace CrestApps.OrchardCore.AI.Agent.Features;
 internal sealed class DisableFeatureTool : AIFunction
 {
     public const string TheName = "disableSiteFeature";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "featureIds": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1,
-              "description": "A list of unique feature IDs to disable."
-            }
+    """
+    {
+      "type": "object",
+      "properties": {
+        "featureIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
           },
-          "additionalProperties": false,
-          "required": ["featureIds"]
+          "minItems": 1,
+          "description": "A list of unique feature IDs to disable."
         }
-        """);
-
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureIds"
+      ]
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Disable features site features";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

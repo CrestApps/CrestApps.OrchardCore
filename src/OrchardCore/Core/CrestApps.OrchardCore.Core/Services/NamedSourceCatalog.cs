@@ -9,7 +9,7 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
     where T : CatalogItem, INameAwareModel, ISourceAwareModel
 {
     public NamedSourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 
@@ -18,7 +18,6 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
-
         var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name));
 
         return Clone(record);
@@ -30,7 +29,6 @@ public class NamedSourceCatalog<T> : SourceCatalog<T>, INamedSourceCatalog<T>, I
         ArgumentException.ThrowIfNullOrEmpty(source);
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
-
         var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name) && OrdinalIgnoreCaseEquals(x.Source, source));
 
         return Clone(record);

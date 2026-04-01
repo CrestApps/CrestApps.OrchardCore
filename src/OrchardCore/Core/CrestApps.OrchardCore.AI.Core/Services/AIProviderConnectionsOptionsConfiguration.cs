@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,9 +12,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
 {
     private readonly IDocumentManager<DictionaryDocument<AIProviderConnection>> _documentManager;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
-
     private readonly ILogger _logger;
-
     public AIProviderConnectionsOptionsConfiguration(
         IDocumentManager<DictionaryDocument<AIProviderConnection>> documentManager,
         IEnumerable<IAIProviderConnectionHandler> handlers,
@@ -28,7 +26,6 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
     public void Configure(AIProviderOptions options)
     {
         DictionaryDocument<AIProviderConnection> document;
-
         try
         {
             document = _documentManager.GetOrCreateMutableAsync()
@@ -84,19 +81,18 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
                     mappingContext.Values["SpeechToTextDeploymentName"] = connection.SpeechToTextDeploymentName;
 #pragma warning restore CS0618
                     mappingContext.Values["ConnectionNameAlias"] = connection.Name;
-
                     _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
-
                     provider.Connections[connection.ItemId] = new AIProviderConnectionEntry(mappingContext.Values);
                 }
 
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
+
                 if (string.IsNullOrEmpty(provider.DefaultChatDeploymentName) && provider.Connections.Count > 0)
                 {
                     provider.DefaultChatDeploymentName = provider.Connections.First().Value?.GetChatDeploymentOrDefaultName(false);
                 }
-#pragma warning restore CS0618
 
+#pragma warning restore CS0618
                 options.Providers[group.ProviderName] = provider;
             }
             catch (Exception ex)

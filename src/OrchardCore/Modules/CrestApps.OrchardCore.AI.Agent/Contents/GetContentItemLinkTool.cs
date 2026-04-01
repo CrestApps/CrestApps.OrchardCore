@@ -12,34 +12,34 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class GetContentItemLinkTool : AIFunction
 {
     public const string TheName = "getLinkForContentItem";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
-            },
-            "type": {
-              "type": "string",
-              "description": "Specifies the type of link to generate.",
-              "enum": ["display", "edit"],
-              "default": "display"
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier of the content item, represented as a string (ContentItemId)."
+        },
+        "type": {
+          "type": "string",
+          "description": "Specifies the type of link to generate.",
+          "enum": [
+            "display",
+            "edit"
+          ],
+          "default": "display"
         }
-        """);
-
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Get a URL for the given content item based on the type.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -80,9 +80,7 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
-
         var type = arguments.GetFirstValueOrDefault("type", "display");
-
         var contentItem = await contentManager.GetAsync(contentItemId);
 
         if (contentItem is not null)

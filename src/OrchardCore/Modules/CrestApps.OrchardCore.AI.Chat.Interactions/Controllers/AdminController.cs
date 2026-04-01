@@ -19,23 +19,19 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 
 [Admin("ai/chat/interactions/{action}/{itemId?}", "ChatInteractions{action}")]
 public sealed class AdminController : Controller
 {
     private const string _optionsSearch = "Options.Search";
-
     private readonly ICatalogManager<ChatInteraction> _interactionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<ChatInteraction> _interactionDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
-
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public AdminController(
         ICatalogManager<ChatInteraction> interactionManager,
         IAuthorizationService authorizationService,
@@ -53,7 +49,6 @@ public sealed class AdminController : Controller
         H = htmlLocalizer;
         S = stringLocalizer;
     }
-
     [Admin("ai/chat-interactions", "AIInteractionsIndex")]
     public async Task<IActionResult> Index(
         CatalogEntryOptions options,
@@ -65,54 +60,43 @@ public sealed class AdminController : Controller
         {
             return Forbid();
         }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
         var queryContext = new ChatInteractionQueryContext
         {
             Name = options.Search,
             Sorted = true,
         };
-
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ListChatInteractionsForOthers))
         {
             // User cannot view all interactions.
             queryContext.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
-
         var result = await _interactionManager.PageAsync(pager.Page, pager.PageSize, queryContext);
-
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
-
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
-
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
-
         // Build display shapes for each interaction
         viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
-            new CatalogEntryViewModel<ChatInteraction>
-            {
-                Model = model,
-                Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            }))).ToList();
-
+        new CatalogEntryViewModel<ChatInteraction>
+        {
+            Model = model,
+            Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+        }))).ToList();
         viewModel.Options.BulkActions =
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
-
         return View(viewModel);
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -123,13 +107,11 @@ public sealed class AdminController : Controller
         {
             return Forbid();
         }
-
         return RedirectToAction(nameof(Index), new RouteValueDictionary
         {
             { _optionsSearch, model.Options?.Search },
         });
     }
-
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.BulkAction")]
@@ -140,7 +122,6 @@ public sealed class AdminController : Controller
         {
             return Forbid();
         }
-
         if (itemIds?.Count() > 0)
         {
             switch (options.BulkAction)
@@ -152,17 +133,14 @@ public sealed class AdminController : Controller
                     foreach (var id in itemIds)
                     {
                         var interaction = await _interactionManager.FindByIdAsync(id);
-
                         if (interaction == null)
                         {
                             continue;
                         }
-
                         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction, interaction))
                         {
                             continue;
                         }
-
                         if (await _interactionManager.DeleteAsync(interaction))
                         {
                             counter++;
@@ -181,10 +159,8 @@ public sealed class AdminController : Controller
                     return BadRequest();
             }
         }
-
         return RedirectToAction(nameof(Index));
     }
-
     [Admin("ai/chat/interaction/chat/{itemId?}", "ChatInteractionsChat")]
     public async Task<ActionResult> Chat(string itemId)
     {
@@ -192,72 +168,57 @@ public sealed class AdminController : Controller
         {
             return Forbid();
         }
-
         ChatInteraction interaction;
         bool isNew;
-
         if (!string.IsNullOrEmpty(itemId))
         {
             // Editing existing interaction.
             interaction = await _interactionManager.FindByIdAsync(itemId);
-
             if (interaction == null)
             {
                 return NotFound();
             }
-
             if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
             {
                 return Forbid();
             }
-
             isNew = false;
         }
         else
         {
             // Creating new interaction.
             interaction = await _interactionManager.NewAsync();
-
             if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
             {
                 return Forbid();
             }
-
             // Save the interaction immediately so it can be used by the SignalR hub.
             await _interactionManager.CreateAsync(interaction);
-
             isNew = true;
         }
-
         var model = new EditChatInteractionEntryViewModel
         {
             ItemId = interaction.ItemId,
             DisplayName = isNew ? "New Chat" : (interaction.Title ?? "Untitled"),
             Editor = await _interactionDisplayManager.BuildEditorAsync(interaction, _updateModelAccessor.ModelUpdater, isNew: isNew),
         };
-
         return View(model);
     }
-
     [Admin("ai/chat/interaction/new-chat", "NewInteractionsChat")]
     public async Task<ActionResult> New()
         => RedirectToAction(nameof(Chat));
-
     [Admin("ai/chat/interaction/clone-chat/{itemId}", "CloneInteractionsChat")]
     public async Task<ActionResult> Clone(string itemId)
     {
         var interaction = await _interactionManager.FindByIdAsync(itemId);
-
         if (interaction is null)
         {
             return NotFound();
         }
-
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, interaction))
         {
             return Forbid();
         }
-
         var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
         clonedInteraction.Title = GetNextTitle(interaction.Title);
         clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
@@ -274,36 +235,29 @@ public sealed class AdminController : Controller
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();
         clonedInteraction.DocumentIndex = interaction.Documents.Count; // Set the document index based on the cloned documents.
-
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, clonedInteraction))
         {
             return Forbid();
         }
-
         // Save the interaction immediately so it can be used by the SignalR hub.
         await _interactionManager.CreateAsync(clonedInteraction);
-
         return RedirectToAction(nameof(Chat), new
         {
             itemId = clonedInteraction.ItemId,
         });
     }
-
     [HttpPost]
     public async Task<IActionResult> Delete(string itemId)
     {
         var interaction = await _interactionManager.FindByIdAsync(itemId);
-
         if (interaction is null)
         {
             return NotFound();
         }
-
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatInteraction, interaction))
         {
             return Forbid();
         }
-
         if (await _interactionManager.DeleteAsync(interaction))
         {
             await _notifier.SuccessAsync(H["Chat interaction has been deleted successfully."]);
@@ -312,30 +266,23 @@ public sealed class AdminController : Controller
         {
             await _notifier.ErrorAsync(H["Unable to delete the chat interaction."]);
         }
-
         return RedirectToAction(nameof(Index));
     }
-
     private static readonly Regex PostfixRegex = new Regex(@"\s*\((\d+)\)$", RegexOptions.Compiled);
-
     private static string GetNextTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
             return "Untitled (1)";
         }
-
         var match = PostfixRegex.Match(title);
-
         if (match.Success)
         {
             // Extract number and increment
             var number = int.Parse(match.Groups[1].Value);
             var baseTitle = title.Substring(0, match.Index).TrimEnd();
-
             return $"{baseTitle} ({number + 1})";
         }
-
         // No postfix found → start at (1)
         return $"{title} (1)";
     }

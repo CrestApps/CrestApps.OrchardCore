@@ -1,23 +1,25 @@
 using System.Diagnostics;
 using System.Threading.Channels;
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Rendering;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Services;
 using CrestApps.Extensions;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Templates.Rendering;
+using CrestApps.Templates.Services;
 using Cysharp.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using TextToSpeechOptions = CrestApps.AI.Models.TextToSpeechOptions;
-
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 namespace CrestApps.AI.Chat.Hubs;
-
 /// <summary>
 /// Core SignalR hub for AI chat sessions. Provides streaming message delivery,
 /// session management, message rating, handler transfer, conversation mode support,
@@ -192,15 +194,15 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
     private static string Truncate(string value, int maxLength)
         => string.IsNullOrEmpty(value) || value.Length <= maxLength
-            ? value
-            : value[..maxLength];
+    ? value
+    : value[..maxLength];
 
     private static async Task<string> GetAIGeneratedTitleAsync(
         IServiceProvider services,
         AIProfile profile,
         string userPrompt)
     {
-        var aiTemplateService = services.GetService<IAITemplateService>();
+        var aiTemplateService = services.GetService<ITemplateService>();
         var completionContextBuilder = services.GetService<IAICompletionContextBuilder>();
         var completionService = services.GetService<IAICompletionService>();
 
@@ -261,8 +263,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         }
 
         return string.IsNullOrWhiteSpace(trimmedUserPrompt)
-            ? initialPrompt
-            : $"{initialPrompt}\n\n{trimmedUserPrompt}";
+        ? initialPrompt
+        : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 
     // ────────────── Session group management ──────────────
@@ -295,16 +297,16 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// fly when <paramref name="sessionId"/> is empty.
     /// </summary>
     public virtual ChannelReader<CompletionPartialMessage> SendMessage(
-        string profileId,
-        string prompt,
-        string sessionId,
-        string sessionProfileId,
-        CancellationToken cancellationToken)
+    string profileId,
+    string prompt,
+    string sessionId,
+    string sessionProfileId,
+    CancellationToken cancellationToken)
     {
         var channel = Channel.CreateUnbounded<CompletionPartialMessage>();
 
         _ = ExecuteInScopeAsync(services =>
-            HandleSendMessageAsync(channel.Writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken));
+        HandleSendMessageAsync(channel.Writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken));
 
         return channel.Reader;
     }
@@ -467,9 +469,9 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// Called after a message has been rated. Override to record analytics.
     /// </summary>
     protected virtual Task OnMessageRatedAsync(
-        IServiceProvider services,
-        AIChatSession chatSession,
-        IAIChatSessionPromptStore promptStore)
+    IServiceProvider services,
+    AIChatSession chatSession,
+    IAIChatSessionPromptStore promptStore)
         => Task.CompletedTask;
 
     /// <summary>
@@ -542,11 +544,11 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// AI responses as both text tokens and synthesized audio.
     /// </summary>
     public virtual async Task StartConversation(
-        string profileId,
-        string sessionId,
-        IAsyncEnumerable<string> audioChunks,
-        string audioFormat = null,
-        string language = null)
+    string profileId,
+    string sessionId,
+    IAsyncEnumerable<string> audioChunks,
+    string audioFormat = null,
+    string language = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
@@ -615,12 +617,12 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                     return;
                 }
 
-                using var sttClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
-                using var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(sttDeployment);
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(ttsDeployment);
 
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
-                    ? chatModeSettings.VoiceName
-                    : deploymentSettings.DefaultTextToSpeechVoiceId;
+                ? chatModeSettings.VoiceName
+                : deploymentSettings.DefaultTextToSpeechVoiceId;
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
@@ -630,8 +632,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 try
                 {
                     await RunConversationLoopAsync(
-                        profile, sessionId, audioChunks, audioFormat, speechLanguage,
-                        sttClient, ttsClient, effectiveVoiceName, services, conversationCts.Token);
+                    profile, sessionId, audioChunks, audioFormat, speechLanguage,
+                    speechToTextClient, textToSpeechClient, effectiveVoiceName, services, conversationCts.Token);
                 }
                 finally
                 {
@@ -665,11 +667,11 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// and final transcripts to the caller as they are produced.
     /// </summary>
     public virtual async Task SendAudioStream(
-        string profileId,
-        string sessionId,
-        IAsyncEnumerable<string> audioChunks,
-        string audioFormat = null,
-        string language = null)
+    string profileId,
+    string sessionId,
+    IAsyncEnumerable<string> audioChunks,
+    string audioFormat = null,
+    string language = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
@@ -751,10 +753,10 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// Synthesizes the given text as speech and streams audio chunks to the caller.
     /// </summary>
     public virtual async Task SynthesizeSpeech(
-        string profileId,
-        string sessionId,
-        string text,
-        string voiceName = null)
+    string profileId,
+    string sessionId,
+    string text,
+    string voiceName = null)
     {
         if (string.IsNullOrWhiteSpace(profileId))
         {
@@ -815,18 +817,14 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                     return;
                 }
 
-                var ttsClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
-
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
                 var effectiveVoiceName = !string.IsNullOrWhiteSpace(voiceName)
-                    ? voiceName
-                    : !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
-                        ? chatModeSettings.VoiceName
-                        : deploymentSettings.DefaultTextToSpeechVoiceId;
+                ? voiceName
+                : !string.IsNullOrWhiteSpace(chatModeSettings.VoiceName)
+                ? chatModeSettings.VoiceName
+                : deploymentSettings.DefaultTextToSpeechVoiceId;
 
-                using (ttsClient)
-                {
-                    await StreamSpeechAsync(ttsClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
-                }
+                await StreamSpeechAsync(textToSpeechClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
             });
         }
         catch (Exception ex)
@@ -859,13 +857,13 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// the profile, and dispatches to the appropriate processor.
     /// </summary>
     protected virtual async Task HandleSendMessageAsync(
-        ChannelWriter<CompletionPartialMessage> writer,
-        IServiceProvider services,
-        string profileId,
-        string prompt,
-        string sessionId,
-        string sessionProfileId,
-        CancellationToken cancellationToken)
+    ChannelWriter<CompletionPartialMessage> writer,
+    IServiceProvider services,
+    string profileId,
+    string prompt,
+    string sessionId,
+    string sessionProfileId,
+    CancellationToken cancellationToken)
     {
         try
         {
@@ -901,6 +899,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 }
 
                 await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
+
                 return;
             }
 
@@ -911,6 +910,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             if (ex is OperationCanceledException || (ex is TaskCanceledException && cancellationToken.IsCancellationRequested))
             {
                 Logger.LogDebug("Chat prompt processing was cancelled.");
+
                 return;
             }
 
@@ -943,12 +943,12 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// handler, streams the response, and persists results.
     /// </summary>
     protected virtual async Task ProcessChatPromptAsync(
-        ChannelWriter<CompletionPartialMessage> writer,
-        IServiceProvider services,
-        AIProfile profile,
-        string sessionId,
-        string prompt,
-        CancellationToken cancellationToken)
+    ChannelWriter<CompletionPartialMessage> writer,
+    IServiceProvider services,
+    AIProfile profile,
+    string sessionId,
+    string prompt,
+    CancellationToken cancellationToken)
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
@@ -971,8 +971,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
         // Generate a title when the session was created without one (e.g., via document upload).
         if (!isNew &&
-            !string.IsNullOrWhiteSpace(prompt) &&
-            (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == DefaultBlankSessionTitle))
+        !string.IsNullOrWhiteSpace(prompt) &&
+        (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == DefaultBlankSessionTitle))
         {
             chatSession.Title = await GenerateSessionTitleAsync(services, profile, prompt);
         }
@@ -996,8 +996,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
         // Resolve the chat response handler for this session.
         var chatMode = profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings)
-            ? chatModeSettings.ChatMode
-            : ChatMode.TextInput;
+        ? chatModeSettings.ChatMode
+        : ChatMode.TextInput;
         var handler = handlerResolver.Resolve(chatSession.ResponseHandlerName, chatMode);
 
         var handlerContext = new ChatResponseHandlerContext
@@ -1092,37 +1092,34 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         };
 
         await sessionHandlers.InvokeAsync((h, ctx) => h.MessageCompletedAsync(ctx), context, Logger);
-
         await OnMessageCompletedAsync(services, context);
-
         await sessionManager.SaveAsync(chatSession);
     }
-
     /// <summary>
     /// Processes a generated prompt for a profile that uses a prompt template.
     /// </summary>
     protected virtual async Task ProcessGeneratedPromptAsync(
-        ChannelWriter<CompletionPartialMessage> writer,
-        IServiceProvider services,
-        AIProfile profile,
-        string sessionId,
-        AIProfile parentProfile,
-        CancellationToken cancellationToken)
+    ChannelWriter<CompletionPartialMessage> writer,
+    IServiceProvider services,
+    AIProfile profile,
+    string sessionId,
+    AIProfile parentProfile,
+    CancellationToken cancellationToken)
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
         var promptStore = services.GetRequiredService<IAIChatSessionPromptStore>();
-        var aiTemplateEngine = services.GetRequiredService<IAITemplateEngine>();
+        var aiTemplateEngine = services.GetRequiredService<ITemplateEngine>();
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
 
         (var chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
 
         var generatedPrompt = await aiTemplateEngine.RenderAsync(profile.PromptTemplate,
-            new Dictionary<string, object>()
-            {
-                ["Profile"] = profile,
-                ["Session"] = chatSession,
-            });
+        new Dictionary<string, object>()
+        {
+            ["Profile"] = profile,
+            ["Session"] = chatSession,
+        });
 
         var assistantMessage = new AIChatSessionPrompt
         {
@@ -1133,9 +1130,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             Title = profile.PromptSubject,
         };
 
-        var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
-        {
-        });
+        var completionContext = await completionContextBuilder.BuildAsync(profile);
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
@@ -1179,11 +1174,11 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// Processes a utility (one-shot) profile — no session or history needed.
     /// </summary>
     protected virtual async Task ProcessUtilityAsync(
-        ChannelWriter<CompletionPartialMessage> writer,
-        IServiceProvider services,
-        AIProfile profile,
-        string prompt,
-        CancellationToken cancellationToken)
+    ChannelWriter<CompletionPartialMessage> writer,
+    IServiceProvider services,
+    AIProfile profile,
+    string prompt,
+    CancellationToken cancellationToken)
     {
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
@@ -1191,9 +1186,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
         var messageId = GenerateId();
 
-        var completionContext = await completionContextBuilder.BuildAsync(profile, c =>
-        {
-        });
+        var completionContext = await completionContextBuilder.BuildAsync(profile);
 
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
@@ -1224,10 +1217,10 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// Finds an existing session by ID or creates a new one for the given profile.
     /// </summary>
     protected virtual async Task<(AIChatSession ChatSession, bool IsNewSession)> GetOrCreateSessionAsync(
-        IServiceProvider services,
-        string sessionId,
-        AIProfile profile,
-        string userPrompt)
+    IServiceProvider services,
+    string sessionId,
+    AIProfile profile,
+    string userPrompt)
     {
         var sessionManager = services.GetRequiredService<IAIChatSessionManager>();
 
@@ -1255,9 +1248,9 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     // ───────────────── Session payload ─────────────────
 
     protected virtual object CreateSessionPayload(
-        AIChatSession chatSession,
-        AIProfile profile,
-        IReadOnlyList<AIChatSessionPrompt> prompts)
+    AIChatSession chatSession,
+    AIProfile profile,
+    IReadOnlyList<AIChatSessionPrompt> prompts)
         => new
         {
             chatSession.SessionId,
@@ -1283,16 +1276,16 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     // ═══════════════════════════════════════════════════════════════════
     //  PROTECTED TTS / STT HELPERS — shared by conversation methods
     // ═══════════════════════════════════════════════════════════════════
-
     /// <summary>
     /// Synthesizes the given text as speech and streams audio chunks to the caller.
     /// </summary>
+#pragma warning disable MEAI001
     protected async Task StreamSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        string identifier,
-        string text,
-        string voiceName,
-        CancellationToken cancellationToken)
+    ITextToSpeechClient ttsClient,
+    string identifier,
+    string text,
+    string voiceName,
+    CancellationToken cancellationToken)
     {
         var options = new TextToSpeechOptions();
 
@@ -1328,11 +1321,11 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// Reads sentences from a channel and synthesizes each as speech.
     /// </summary>
     protected async Task StreamSentencesAsSpeechAsync(
-        ITextToSpeechClient ttsClient,
-        Func<string> getIdentifier,
-        ChannelReader<string> sentenceReader,
-        string voiceName,
-        CancellationToken cancellationToken)
+    ITextToSpeechClient textToSpeechClient,
+    Func<string> getIdentifier,
+    ChannelReader<string> sentenceReader,
+    string voiceName,
+    CancellationToken cancellationToken)
     {
         var options = new TextToSpeechOptions();
 
@@ -1356,7 +1349,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 Logger.LogDebug("StreamSentencesAsSpeechAsync: Synthesizing sentence ({Length} chars).", speechText.Length);
             }
 
-            await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
             {
                 var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
                 if (audioContent?.Data is not { Length: > 0 } audioData)
@@ -1372,30 +1365,31 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         }
     }
 
+#pragma warning restore MEAI001
     // ═══════════════════════════════════════════════════════════════════
     //  CONVERSATION LOOP — STT transcription + AI response + TTS
     // ═══════════════════════════════════════════════════════════════════
 
 #pragma warning disable MEAI001
     private async Task RunConversationLoopAsync(
-        AIProfile profile,
-        string sessionId,
-        IAsyncEnumerable<string> audioChunks,
-        string audioFormat,
-        string speechLanguage,
-        ISpeechToTextClient sttClient,
-        ITextToSpeechClient ttsClient,
-        string voiceName,
-        IServiceProvider services,
-        CancellationToken cancellationToken)
+    AIProfile profile,
+    string sessionId,
+    IAsyncEnumerable<string> audioChunks,
+    string audioFormat,
+    string speechLanguage,
+    ISpeechToTextClient sttClient,
+    ITextToSpeechClient ttsClient,
+    string voiceName,
+    IServiceProvider services,
+    CancellationToken cancellationToken)
     {
         var pipe = new System.IO.Pipelines.Pipe();
 
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         var transcriptionTask = TranscribeConversationAsync(
-            pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
-            sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
+        pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
+        sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
 
         try
         {
@@ -1422,17 +1416,17 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     }
 
     private async Task TranscribeConversationAsync(
-        System.IO.Pipelines.PipeReader pipeReader,
-        AIProfile profile,
-        string sessionId,
-        string audioFormat,
-        string speechLanguage,
-        ISpeechToTextClient sttClient,
-        ITextToSpeechClient ttsClient,
-        string voiceName,
-        IServiceProvider services,
-        CancellationTokenSource errorCts,
-        CancellationToken cancellationToken)
+    System.IO.Pipelines.PipeReader pipeReader,
+    AIProfile profile,
+    string sessionId,
+    string audioFormat,
+    string speechLanguage,
+    ISpeechToTextClient sttClient,
+    ITextToSpeechClient ttsClient,
+    string voiceName,
+    IServiceProvider services,
+    CancellationTokenSource errorCts,
+    CancellationToken cancellationToken)
     {
         CancellationTokenSource currentResponseCts = null;
         Task<string> currentResponseTask = null;
@@ -1472,8 +1466,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 if (isPartial)
                 {
                     var display = committedText.Length > 0
-                        ? committedText.ToString() + update.Text
-                        : update.Text;
+                    ? committedText.ToString() + update.Text
+                    : update.Text;
                     await Clients.Caller.ReceiveTranscript(effectiveSessionId, display, false);
                 }
                 else
@@ -1520,8 +1514,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
                     currentResponseCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     currentResponseTask = ProcessConversationPromptAsync(
-                        profile, effectiveSessionId, fullText,
-                        ttsClient, voiceName, services, currentResponseCts.Token);
+                    profile, effectiveSessionId, fullText,
+                    ttsClient, voiceName, services, currentResponseCts.Token);
                 }
             }
 
@@ -1552,8 +1546,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 try
                 {
                     await ProcessConversationPromptAsync(
-                        profile, effectiveSessionId, remainingText,
-                        ttsClient, voiceName, services, cancellationToken);
+                    profile, effectiveSessionId, remainingText,
+                    ttsClient, voiceName, services, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -1569,13 +1563,13 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     }
 
     private async Task<string> ProcessConversationPromptAsync(
-        AIProfile profile,
-        string sessionId,
-        string prompt,
-        ITextToSpeechClient ttsClient,
-        string voiceName,
-        IServiceProvider services,
-        CancellationToken cancellationToken)
+    AIProfile profile,
+    string sessionId,
+    string prompt,
+    ITextToSpeechClient ttsClient,
+    string voiceName,
+    IServiceProvider services,
+    CancellationToken cancellationToken)
     {
         if (Logger.IsEnabled(LogLevel.Debug))
         {
@@ -1610,7 +1604,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 if (!string.IsNullOrEmpty(chunk.Content))
                 {
                     await Clients.Caller.ReceiveConversationAssistantToken(
-                        effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
+                    effectiveSessionId, messageId ?? string.Empty, chunk.Content, responseId ?? string.Empty);
 
                     sentenceBuffer.Append(chunk.Content);
 
@@ -1683,19 +1677,17 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
 #pragma warning disable MEAI001
     private async Task StreamTranscriptionAsync(
-        ISpeechToTextClient sttClient,
-        string sessionId,
-        IAsyncEnumerable<string> audioChunks,
-        string audioFormat,
-        string speechLanguage,
-        CancellationToken cancellationToken)
+    ISpeechToTextClient speechToTextClient,
+    string sessionId,
+    IAsyncEnumerable<string> audioChunks,
+    string audioFormat,
+    string speechLanguage,
+    CancellationToken cancellationToken)
     {
         var pipe = new System.IO.Pipelines.Pipe();
 
         using var errorCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-        var transcriptionTask = TranscribeAudioInputAsync(sessionId, pipe, audioFormat, speechLanguage, sttClient, errorCts, cancellationToken);
-
+        var transcriptionTask = TranscribeAudioInputAsync(sessionId, pipe, audioFormat, speechLanguage, speechToTextClient, errorCts, cancellationToken);
         try
         {
             await foreach (var base64Chunk in audioChunks.WithCancellation(errorCts.Token))
@@ -1721,13 +1713,13 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     }
 
     private async Task TranscribeAudioInputAsync(
-        string sessionId,
-        System.IO.Pipelines.Pipe pipe,
-        string audioFormat,
-        string speechLanguage,
-        ISpeechToTextClient sttClient,
-        CancellationTokenSource errorCts,
-        CancellationToken cancellationToken)
+    string sessionId,
+    System.IO.Pipelines.Pipe pipe,
+    string audioFormat,
+    string speechLanguage,
+    ISpeechToTextClient sttClient,
+    CancellationTokenSource errorCts,
+    CancellationToken cancellationToken)
     {
         try
         {
@@ -1757,8 +1749,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 if (isPartial)
                 {
                     var display = committedText.Length > 0
-                        ? committedText.ToString() + update.Text
-                        : update.Text;
+                    ? committedText.ToString() + update.Text
+                    : update.Text;
                     await Clients.Caller.ReceiveTranscript(sessionId, display, false);
                 }
                 else

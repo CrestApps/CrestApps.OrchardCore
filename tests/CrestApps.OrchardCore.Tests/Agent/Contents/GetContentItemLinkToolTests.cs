@@ -18,9 +18,7 @@ public sealed class GetContentItemLinkToolTests
         // Arrange: simulate a background task where HttpContext is null.
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
-
         var services = CreateServiceProvider(httpContextAccessor.Object);
-
         var tool = new GetContentItemLinkTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -32,7 +30,6 @@ public sealed class GetContentItemLinkToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
-
         // Assert: should return a descriptive fallback message, not throw NullReferenceException.
         Assert.NotNull(result);
         var text = result.ToString();
@@ -46,9 +43,7 @@ public sealed class GetContentItemLinkToolTests
         // Arrange
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
-
         var services = CreateServiceProvider(httpContextAccessor.Object);
-
         var tool = new GetContentItemLinkTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>())
         {
@@ -57,7 +52,6 @@ public sealed class GetContentItemLinkToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
-
         // Assert
         Assert.NotNull(result);
         Assert.Contains("contentItemId", result.ToString());
@@ -70,16 +64,12 @@ public sealed class GetContentItemLinkToolTests
         var httpContext = new DefaultHttpContext();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
-
         var contentManager = new Mock<IContentManager>();
         contentManager
             .Setup(x => x.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
             .ReturnsAsync((ContentItem)null);
-
         var linkGenerator = new Mock<LinkGenerator>();
-
         var services = CreateServiceProvider(httpContextAccessor.Object, contentManager.Object, linkGenerator.Object);
-
         var tool = new GetContentItemLinkTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -91,7 +81,6 @@ public sealed class GetContentItemLinkToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
-
         // Assert: no NullReferenceException was thrown.
         Assert.NotNull(result);
     }

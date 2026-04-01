@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.Logging;
 
@@ -50,6 +51,7 @@ public sealed class ExternalChatRelayConnectionManager : IExternalChatRelayManag
         if (!_relays.TryAdd(sessionId, relay))
         {
             await relay.DisposeAsync();
+
             return _relays[sessionId];
         }
 

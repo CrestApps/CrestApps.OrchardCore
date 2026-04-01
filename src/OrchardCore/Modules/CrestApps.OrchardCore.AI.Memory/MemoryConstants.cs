@@ -4,7 +4,6 @@ public static class MemoryConstants
 {
     public const string CollectionName = "AIMemory";
     public const string IndexingTaskType = "AIMemory";
-
     public static class Feature
     {
         public const string Memory = "CrestApps.OrchardCore.AI.Memory";

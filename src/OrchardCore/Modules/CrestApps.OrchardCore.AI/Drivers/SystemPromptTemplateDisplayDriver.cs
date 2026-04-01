@@ -7,7 +7,7 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for SystemPrompt-source AI templates.
+/// Display driver for SystemPrompt-source templates.
 /// Captures the system message stored in <see cref="SystemPromptTemplateMetadata"/>.
 /// </summary>
 internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -31,7 +31,6 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
 
         var model = new SystemPromptTemplateViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var metadata = template.As<SystemPromptTemplateMetadata>();
         metadata.SystemMessage = model.SystemMessage;
         template.Put(metadata);

@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +15,6 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
-
     public AIToolAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -26,16 +25,19 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
         if (context.HasSucceeded)
         {
             // This handler is not revoking any pre-existing grants.
+
             return;
         }
 
         // Resource must be provided (AI tool name or instance ID)
+
         if (context.Resource is null)
         {
             return;
         }
 
         // Only handle AccessAITool permission (Permission #2)
+
         if (requirement.Permission != AIPermissions.AccessAITool)
         {
             return;
@@ -49,7 +51,6 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
         }
 
         _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
-
         // Check the specific tool permission (Permission #3)
         // Note: AccessAnyAITool is implied by the permission hierarchy and will be automatically checked
         var toolPermission = AIPermissions.CreateAIToolPermission(toolIdentifier);
@@ -63,6 +64,7 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
     private static string GetToolIdentifier(object resource)
     {
         // Resource can be a string (tool name or instance ID)
+
         if (resource is string toolIdentifier)
         {
             return toolIdentifier;
@@ -74,6 +76,7 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
         }
 
         // Resource can also be an AITool instance
+
         if (resource is AITool aiTool)
         {
             return aiTool.Name;

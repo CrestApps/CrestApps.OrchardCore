@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
@@ -27,7 +27,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
-
     public CopilotSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -45,7 +44,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     }
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
-
     public override IDisplayResult Edit(ISite site, CopilotSettings settings, BuildEditorContext context)
     {
         return Initialize<CopilotSettingsViewModel>("CopilotSettings_Edit", async model =>
@@ -54,7 +52,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             model.ClientId = settings.ClientId;
             model.HasSecret = !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret);
             model.ComputedCallbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
-
             // BYOK fields
             model.ProviderType = settings.ProviderType;
             model.BaseUrl = settings.BaseUrl;
@@ -62,21 +59,18 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             model.WireApi = settings.WireApi ?? "completions";
             model.DefaultModel = settings.DefaultModel;
             model.AzureApiVersion = settings.AzureApiVersion;
-
             // Select list options
             model.AuthenticationTypes =
             [
                 new SelectListItem(S["GitHub signed-in user"], nameof(CopilotAuthenticationType.GitHubOAuth)),
                 new SelectListItem(S["API key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
             ];
-
             model.ProviderTypes =
             [
                 new SelectListItem(S["OpenAI / OpenAI-compatible (Ollama, vLLM, etc.)"], "openai"),
                 new SelectListItem(S["Azure OpenAI"], "azure"),
                 new SelectListItem(S["Anthropic"], "anthropic"),
             ];
-
             model.WireApiOptions =
             [
                 new SelectListItem(S["Chat completions (default)"], "completions"),
@@ -91,9 +85,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
     public override async Task<IDisplayResult> UpdateAsync(ISite site, CopilotSettings settings, UpdateEditorContext context)
     {
         var model = new CopilotSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         settings.AuthenticationType = model.AuthenticationType;
 
         if (settings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
@@ -154,7 +146,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(model.ApiKey)
-                && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+                    && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
                 context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }

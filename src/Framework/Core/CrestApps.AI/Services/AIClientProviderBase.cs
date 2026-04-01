@@ -1,4 +1,6 @@
+using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.AI.Services;
@@ -51,7 +53,6 @@ public abstract class AIClientProviderBase : IAIClientProvider
         }
 
         var client = GetEmbeddingGenerator(connection, deploymentName);
-
         var builder = new EmbeddingGeneratorBuilder<string, Embedding<float>>(client);
 
         return ValueTask.FromResult(builder.Build(_serviceProvider));

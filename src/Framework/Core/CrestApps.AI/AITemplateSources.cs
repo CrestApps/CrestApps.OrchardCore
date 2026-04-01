@@ -1,7 +1,7 @@
 namespace CrestApps.AI;
 
 /// <summary>
-/// Well-known AI template source identifiers.
+/// Well-known template source identifiers.
 /// </summary>
 public static class AITemplateSources
 {

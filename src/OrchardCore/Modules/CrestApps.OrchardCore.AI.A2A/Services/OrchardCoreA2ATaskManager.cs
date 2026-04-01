@@ -1,6 +1,9 @@
 using A2A;
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -21,9 +24,7 @@ internal static class A2ATaskManagerFactory
     public static ITaskManager Create(IServiceProvider serviceProvider)
     {
         var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-
         var taskManager = new TaskManager();
-
         taskManager.OnAgentCardQuery = async (agentUrl, cancellationToken) =>
         {
             var services = httpContextAccessor.HttpContext.RequestServices;
@@ -53,10 +54,9 @@ internal static class A2ATaskManagerFactory
         // artifact/status events through the TaskUpdateEventEnumerator.
         // When non-streaming, OnTaskCreated runs synchronously before the task is returned.
         taskManager.OnTaskCreated = (agentTask, cancellationToken) =>
-            ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
-
+        ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
         taskManager.OnTaskUpdated = (agentTask, cancellationToken) =>
-            ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
+        ProcessAgentTaskAsync(taskManager, httpContextAccessor, agentTask, cancellationToken);
 
         return taskManager;
     }
@@ -75,15 +75,14 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "Request services are not available."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
 
         var logger = services.GetRequiredService<ILogger<TaskManager>>();
         var options = services.GetRequiredService<IOptions<A2AHostOptions>>().Value;
-
         // Extract the user's prompt from the last message in the task history.
         var lastMessage = agentTask.History?.LastOrDefault();
         var prompt = lastMessage?.Parts?.OfType<TextPart>().FirstOrDefault()?.Text;
@@ -94,8 +93,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "No text message was provided."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
@@ -109,8 +108,8 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, "No agents are available to process this request."),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
 
             return;
         }
@@ -121,24 +120,19 @@ internal static class A2ATaskManagerFactory
                 agentTask.Id,
                 TaskState.Working,
                 cancellationToken: cancellationToken);
-
             var completionService = services.GetRequiredService<IAICompletionService>();
             var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
             var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
-
             var context = await contextBuilder.BuildAsync(targetProfile);
             context.DisableTools = true;
-
             var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
-
+            ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
             var messages = new List<ChatMessage>
             {
                 new(ChatRole.User, prompt),
             };
 
             var responseText = new System.Text.StringBuilder();
-
             await foreach (var update in completionService.CompleteStreamingAsync(
                 deployment,
                 messages,
@@ -150,7 +144,6 @@ internal static class A2ATaskManagerFactory
                 if (!string.IsNullOrEmpty(chunk))
                 {
                     responseText.Append(chunk);
-
                     // Push each chunk as an artifact update so streaming clients receive it in real-time.
                     await taskManager.ReturnArtifactAsync(
                         agentTask.Id,
@@ -163,15 +156,14 @@ internal static class A2ATaskManagerFactory
             }
 
             var finalText = responseText.Length > 0
-                ? responseText.ToString()
-                : "The agent did not produce a response.";
-
+            ? responseText.ToString()
+            : "The agent did not produce a response.";
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Completed,
                 CreateAgentMessage(agentTask.ContextId, finalText),
-                final: true,
-                cancellationToken);
+            final: true,
+            cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -184,13 +176,12 @@ internal static class A2ATaskManagerFactory
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to execute agent '{AgentName}'.", targetProfile.Name);
-
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, $"An error occurred while executing agent '{targetProfile.Name}'."),
-                final: true,
-                cancellationToken: CancellationToken.None);
+            final: true,
+            cancellationToken: CancellationToken.None);
         }
     }
 
@@ -202,10 +193,9 @@ internal static class A2ATaskManagerFactory
     {
         var profileManager = services.GetRequiredService<IAIProfileManager>();
         var profiles = await profileManager.GetAsync(AIProfileType.Agent);
-
         AIProfile targetProfile = null;
-
         // In multi-agent mode, check query parameter first.
+
         if (!options.ExposeAgentsAsSkill)
         {
             var agentName = httpContextAccessor.HttpContext?.Request.Query["agent"].FirstOrDefault();
@@ -213,11 +203,12 @@ internal static class A2ATaskManagerFactory
             if (!string.IsNullOrEmpty(agentName))
             {
                 targetProfile = profiles?.FirstOrDefault(p =>
-                    string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // Fall back to message metadata-based routing.
+
         if (targetProfile is null &&
             lastMessage?.Metadata?.TryGetValue("agentName", out var agentNameElement) == true)
         {
@@ -226,11 +217,12 @@ internal static class A2ATaskManagerFactory
             if (!string.IsNullOrEmpty(metaAgentName))
             {
                 targetProfile = profiles?.FirstOrDefault(p =>
-                    string.Equals(p.Name, metaAgentName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, metaAgentName, StringComparison.OrdinalIgnoreCase));
             }
         }
 
         // Fall back to the first available agent.
+
         return targetProfile ?? profiles?.FirstOrDefault();
     }
 
@@ -293,7 +285,7 @@ internal static class A2ATaskManagerFactory
         }
 
         return profiles.FirstOrDefault(p =>
-            string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
+        string.Equals(p.Name, agentName, StringComparison.OrdinalIgnoreCase));
     }
 
     private static AgentMessage CreateAgentMessage(string contextId, string text)

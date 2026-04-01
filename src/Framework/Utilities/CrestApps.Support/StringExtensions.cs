@@ -10,12 +10,11 @@ public static class StringExtensions
     /// </summary>
     public static string SanitizeLogValue(this string value)
         => value?.Replace("\r", "").Replace("\n", "") ?? string.Empty;
-
     public static bool Like(this string toSearch, string toFind)
     {
         var match = new Regex(@"\.|\$|\^|\{|\[|\(|\||\)|\*|\+|\?|\\").Replace(toFind, ch => @"\" + ch)
-                                                                     .Replace('_', '.')
-                                                                     .Replace("%", ".*");
+            .Replace('_', '.')
+            .Replace("%", ".*");
 
         return new Regex(@"\A" + match + @"\z", RegexOptions.Singleline).IsMatch(toSearch);
     }
@@ -24,7 +23,7 @@ public static class StringExtensions
     {
         if (comparison == StringComparison.CurrentCultureIgnoreCase
             || comparison == StringComparison.OrdinalIgnoreCase
-            || comparison == StringComparison.InvariantCultureIgnoreCase)
+                || comparison == StringComparison.InvariantCultureIgnoreCase)
         {
             return Like(toSearch.ToLower(), toFind.ToLower());
         }

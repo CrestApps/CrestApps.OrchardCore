@@ -14,7 +14,6 @@ internal sealed class RolePickerPartContentAccessControlSettingsDisplayDriver : 
         return Initialize<RolePickerPartContentAccessControlSettingsViewModel>("RolePickerPartContentAccessControlSettings_Edit", model =>
         {
             var settings = contentTypePartDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
-
             model.IsContentRestricted = settings.IsContentRestricted;
         }).Location("Content:6");
     }
@@ -22,9 +21,7 @@ internal sealed class RolePickerPartContentAccessControlSettingsDisplayDriver : 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {
         var model = new RolePickerPartContentAccessControlSettingsViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         context.Builder.WithSettings(
             new RolePickerPartContentAccessControlSettings
             {

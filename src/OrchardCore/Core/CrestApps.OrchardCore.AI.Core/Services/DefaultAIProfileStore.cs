@@ -1,5 +1,5 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Data.YesSql.Services;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using YesSql;
@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIProfileIndex>, IAIProfileStore
 {
     public DefaultAIProfileStore(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
     }
@@ -17,11 +17,10 @@ public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIPr
     public async ValueTask<IReadOnlyCollection<AIProfile>> GetByTypeAsync(AIProfileType type)
     {
         var typeValue = type.ToString();
-
         var items = await Session.Query<AIProfile, AIProfileIndex>(
             x => x.Type == typeValue,
             collection: CollectionName)
-            .ListAsync();
+                .ListAsync();
 
         return items.ToArray();
     }

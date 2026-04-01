@@ -78,7 +78,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms GetTextAsync START. Language={Language}, AuthType={AuthType}",
-                traceId, sw.ElapsedMilliseconds, language, _authType);
+            traceId, sw.ElapsedMilliseconds, language, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(language, cancellationToken);
@@ -97,7 +97,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Recognizer created. Format={Format}. Pushing audio...",
-                traceId, sw.ElapsedMilliseconds, containerFormat);
+            traceId, sw.ElapsedMilliseconds, containerFormat);
         }
 
         var buffer = new byte[1024];
@@ -115,7 +115,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Audio push complete. TotalBytes={TotalBytes}. Starting RecognizeOnceAsync...",
-                traceId, sw.ElapsedMilliseconds, totalBytes);
+            traceId, sw.ElapsedMilliseconds, totalBytes);
         }
 
         var result = await recognizer.RecognizeOnceAsync();
@@ -123,7 +123,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms RecognizeOnceAsync returned. Reason={Reason}",
-                traceId, sw.ElapsedMilliseconds, result.Reason);
+            traceId, sw.ElapsedMilliseconds, result.Reason);
         }
 
         if (result.Reason == ResultReason.RecognizedSpeech)
@@ -131,7 +131,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SUCCESS. Text='{Text}'",
-                    traceId, sw.ElapsedMilliseconds, result.Text);
+                traceId, sw.ElapsedMilliseconds, result.Text);
             }
 
             return new SpeechToTextResponse(result.Text);
@@ -142,7 +142,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug("[STT:{TraceId}] +{Elapsed}ms NoMatch from {TotalBytes} bytes.",
-                    traceId, sw.ElapsedMilliseconds, totalBytes);
+                traceId, sw.ElapsedMilliseconds, totalBytes);
             }
         }
         else if (result.Reason == ResultReason.Canceled)
@@ -170,7 +170,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms GetStreamingTextAsync START. Language={Language}, AuthType={AuthType}",
-                traceId, sw.ElapsedMilliseconds, language, _authType);
+            traceId, sw.ElapsedMilliseconds, language, _authType);
         }
 
         var speechConfig = await CreateSpeechConfigAsync(language, cancellationToken);
@@ -198,7 +198,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms Recognizer created. Format={Format}. Wiring events...",
-                traceId, sw.ElapsedMilliseconds, containerFormat);
+            traceId, sw.ElapsedMilliseconds, containerFormat);
         }
 
         recognizer.Recognizing += (_, e) =>
@@ -208,7 +208,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PARTIAL: '{Text}'",
-                        traceId, sw.ElapsedMilliseconds, e.Result.Text);
+                    traceId, sw.ElapsedMilliseconds, e.Result.Text);
                 }
 
                 channel.Writer.TryWrite(new SpeechToTextResponseUpdate(e.Result.Text)
@@ -228,7 +228,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms FINAL: '{Text}'",
-                        traceId, sw.ElapsedMilliseconds, e.Result.Text);
+                    traceId, sw.ElapsedMilliseconds, e.Result.Text);
                 }
 
                 channel.Writer.TryWrite(new SpeechToTextResponseUpdate(e.Result.Text));
@@ -247,7 +247,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SessionStarted. SdkSessionId={SessionId}",
-                    traceId, sw.ElapsedMilliseconds, e.SessionId);
+                traceId, sw.ElapsedMilliseconds, e.SessionId);
             }
         };
 
@@ -256,7 +256,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms SessionStopped. SdkSessionId={SessionId}",
-                    traceId, sw.ElapsedMilliseconds, e.SessionId);
+                traceId, sw.ElapsedMilliseconds, e.SessionId);
             }
 
             channel.Writer.TryComplete();
@@ -279,7 +279,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms CANCELED (non-error). Reason={Reason}",
-                        traceId, sw.ElapsedMilliseconds, e.Reason);
+                    traceId, sw.ElapsedMilliseconds, e.Reason);
                 }
 
                 channel.Writer.TryComplete();
@@ -370,14 +370,14 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
                 if (_logger.IsEnabled(LogLevel.Trace))
                 {
                     _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushChunk #{ChunkCount}: {BytesRead} bytes (total={TotalBytes})",
-                        traceId, sw.ElapsedMilliseconds, chunkCount, bytesRead, totalBytes);
+                    traceId, sw.ElapsedMilliseconds, chunkCount, bytesRead, totalBytes);
                 }
             }
 
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushAudioToStream DONE. Chunks={ChunkCount}, TotalBytes={TotalBytes}",
-                    traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
+                traceId, sw.ElapsedMilliseconds, chunkCount, totalBytes);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -385,13 +385,13 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             if (_logger.IsEnabled(LogLevel.Trace))
             {
                 _logger.LogTrace("[STT:{TraceId}] +{Elapsed}ms PushAudioToStream CANCELED after {TotalBytes} bytes.",
-                    traceId, sw.ElapsedMilliseconds, totalBytes);
+                traceId, sw.ElapsedMilliseconds, totalBytes);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "[STT:{TraceId}] +{Elapsed}ms PushAudioToStream ERROR after {TotalBytes} bytes.",
-                traceId, sw.ElapsedMilliseconds, totalBytes);
+            traceId, sw.ElapsedMilliseconds, totalBytes);
         }
         finally
         {
@@ -461,8 +461,8 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             var maskedKey = !string.IsNullOrEmpty(_apiKey)
-                ? "[Redacted]"
-                : "(not set)";
+            ? "[Redacted]"
+            : "(not set)";
 
             _logger.LogDebug(
                 "Creating region-based SpeechConfig. Region: {Region}, AuthType: {AuthType}, ApiKey: {MaskedKey}, IdentityId: {IdentityId}",
@@ -521,14 +521,14 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             TokenCredential credential = _authType switch
             {
                 AzureAuthenticationType.ManagedIdentity => string.IsNullOrEmpty(_identityId)
-                    ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
-                    : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
+                ? new ManagedIdentityCredential(ManagedIdentityId.SystemAssigned)
+                : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(_identityId)),
                 _ => new DefaultAzureCredential(),
             };
 
             var tokenResult = await credential.GetTokenAsync(
                 new TokenRequestContext([CognitiveServicesScope]),
-                cancellationToken);
+            cancellationToken);
 
             _cachedToken = tokenResult.Token;
             _tokenExpires = tokenResult.ExpiresOn;
@@ -588,8 +588,8 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     {
         if (options?.AdditionalProperties is not null &&
             options.AdditionalProperties.TryGetValue("audioFormat", out var formatValue) &&
-            formatValue is string formatString &&
-            !string.IsNullOrWhiteSpace(formatString))
+                formatValue is string formatString &&
+                    !string.IsNullOrWhiteSpace(formatString))
         {
             var resolved = MapToContainerFormat(formatString);
 
@@ -669,5 +669,5 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     /// </summary>
     private static bool IsGStreamerError(ApplicationException ex)
         => ex.Message.Contains("0x29", StringComparison.OrdinalIgnoreCase)
-        || ex.Message.Contains("GSTREAMER", StringComparison.OrdinalIgnoreCase);
+            || ex.Message.Contains("GSTREAMER", StringComparison.OrdinalIgnoreCase);
 }

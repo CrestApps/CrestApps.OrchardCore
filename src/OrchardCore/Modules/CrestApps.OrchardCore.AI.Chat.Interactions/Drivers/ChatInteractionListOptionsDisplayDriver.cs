@@ -17,9 +17,7 @@ public sealed class ChatInteractionListOptionsDisplayDriver : DisplayDriver<Chat
     public override async Task<IDisplayResult> UpdateAsync(ChatInteractionListOptions options, UpdateEditorContext context)
     {
         var model = new ChatInteractionListOptions();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         options.SearchText = model.SearchText;
 
         return Edit(options, context);

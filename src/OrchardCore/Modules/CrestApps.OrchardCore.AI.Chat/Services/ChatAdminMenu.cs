@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -15,7 +16,6 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
-
     public ChatAdminMenu(
         IAIProfileStore profileStore,
         IOptions<AIOptions> aiOptions,
@@ -29,34 +29,33 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
         var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
-
         builder
-           .Add(S["Artificial Intelligence"], artificialIntelligence =>
-           {
-               var i = 1;
-               foreach (var profile in profiles.OrderBy(p => p.DisplayText))
-               {
-                   var settings = profile.GetSettings<AIChatProfileSettings>();
+            .Add(S["Artificial Intelligence"], artificialIntelligence =>
+            {
+                var i = 1;
 
-                   if (!settings.IsOnAdminMenu)
-                   {
-                       continue;
-                   }
+                foreach (var profile in profiles.OrderBy(p => p.DisplayText))
+                {
+                    var settings = profile.GetSettings<AIChatProfileSettings>();
 
-                   var name = profile.DisplayText ?? profile.Name;
-                   artificialIntelligence
-                       .Add(new LocalizedString(name, name), $"chat{i++}", chat => chat
-                       .AddClass(profile.Name.HtmlClassify())
-                       .Action("Index", "Admin", AIConstants.Feature.Chat, new RouteValueDictionary
-                       {
-                           { "profileId", profile.ItemId },
-                       })
-                       .Permission(AIPermissions.QueryAnyAIProfile)
-                       .Resource(profile)
-                       .LocalNav()
-                   );
-               }
-           });
+                    if (!settings.IsOnAdminMenu)
+                    {
+                        continue;
+                    }
+
+                    var name = profile.DisplayText ?? profile.Name;
+                    artificialIntelligence
+                        .Add(new LocalizedString(name, name), $"chat{i++}", chat => chat
+                        .AddClass(profile.Name.HtmlClassify())
+                        .Action("Index", "Admin", AIConstants.Feature.Chat, new RouteValueDictionary
+                    {
+                    { "profileId", profile.ItemId },
+                    })
+                    .Permission(AIPermissions.QueryAnyAIProfile)
+                    .Resource(profile)
+                    .LocalNav()
+                    );
+                }
+            });
     }
 }
-

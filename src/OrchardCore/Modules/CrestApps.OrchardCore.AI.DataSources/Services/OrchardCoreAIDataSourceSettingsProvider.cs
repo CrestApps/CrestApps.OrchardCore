@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.Services;
 public sealed class OrchardCoreAIDataSourceSettingsProvider : IAIDataSourceSettingsProvider
 {
     private readonly ISiteService _siteService;
-
     public OrchardCoreAIDataSourceSettingsProvider(ISiteService siteService)
     {
         _siteService = siteService;

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.AI;
+using CrestApps.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class OrchardCoreAIToolAccessEvaluator : IAIToolAccessEvaluator
 {
     private readonly IAuthorizationService _authorizationService;
-
     public OrchardCoreAIToolAccessEvaluator(IAuthorizationService authorizationService)
     {
         _authorizationService = authorizationService;

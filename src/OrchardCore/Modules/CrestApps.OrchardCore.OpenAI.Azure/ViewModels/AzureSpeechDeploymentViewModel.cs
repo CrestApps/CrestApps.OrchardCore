@@ -13,10 +13,8 @@ public class AzureSpeechDeploymentViewModel
     public string ApiKey { get; set; }
 
     public string IdentityId { get; set; }
-
     [BindNever]
     public bool HasApiKey { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
 }

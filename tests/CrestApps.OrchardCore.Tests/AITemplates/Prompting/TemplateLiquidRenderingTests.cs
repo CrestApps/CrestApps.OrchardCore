@@ -1,6 +1,6 @@
-using CrestApps.AI;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Rendering;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -8,38 +8,36 @@ namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 
 /// <summary>
 /// Verifies that Liquid templates can access typed .NET object properties
-/// through the <see cref="FluidAITemplateEngine"/>'s UnsafeMemberAccessStrategy.
+/// through the <see cref="FluidTemplateEngine"/>'s UnsafeMemberAccessStrategy.
 /// Each test renders a real template pattern with sample objects.
 /// </summary>
 public sealed class TemplateLiquidRenderingTests
 {
-    private readonly FluidAITemplateEngine _engine;
-
+    private readonly FluidTemplateEngine _engine;
     public TemplateLiquidRenderingTests()
     {
         var services = new ServiceCollection().BuildServiceProvider();
-        _engine = new FluidAITemplateEngine(
+        _engine = new FluidTemplateEngine(
             services,
-            NullLogger<FluidAITemplateEngine>.Instance);
+            NullLogger<FluidTemplateEngine>.Instance);
     }
 
     [Fact]
     public async Task DocumentAvailability_WithToolsAndDocuments_RendersCorrectly()
     {
         var template = """
-            {% if tools.size > 0 %}
-            Available document tools:
-            {% for tool in tools %}
-            - {{ tool.Name }}: {{ tool.Description }}
-            {% endfor %}
-            {% endif %}
-            {% if availableDocuments.size > 0 %}
-            {% for doc in availableDocuments %}
-            - {{ doc.DocumentId }}: "{{ doc.FileName }}" ({{ doc.ContentType | default: "unknown" }}, {{ doc.FileSize }} bytes)
-            {% endfor %}
-            {% endif %}
-            """;
-
+{% if tools.size > 0 %}
+Available document tools:
+{% for tool in tools %}
+- {{ tool.Name }}: {{ tool.Description }}
+{% endfor %}
+{% endif %}
+{% if availableDocuments.size > 0 %}
+{% for doc in availableDocuments %}
+- {{ doc.DocumentId }}: "{{ doc.FileName }}" ({{ doc.ContentType | default: "unknown" }}, {{ doc.FileSize }} bytes)
+{% endfor %}
+{% endif %}
+""";
         var tools = new[]
         {
             new AIToolDefinitionEntry(typeof(object))
@@ -75,7 +73,6 @@ public sealed class TemplateLiquidRenderingTests
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("read_document", result);
         Assert.Contains("Reads document content", result);
         Assert.Contains("doc1", result);
@@ -90,23 +87,21 @@ public sealed class TemplateLiquidRenderingTests
     public async Task DocumentAvailability_NoTools_ShowsFallbackMessage()
     {
         var template = """
-            {% if tools.size > 0 %}
-            Available document tools:
-            {% for tool in tools %}
-            - {{ tool.Name }}
-            {% endfor %}
-            {% else %}
-            The user has uploaded documents as supplementary context.
-            {% endif %}
-            """;
-
+{% if tools.size > 0 %}
+Available document tools:
+{% for tool in tools %}
+- {{ tool.Name }}
+{% endfor %}
+{% else %}
+The user has uploaded documents as supplementary context.
+{% endif %}
+""";
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = Array.Empty<AIToolDefinitionEntry>(),
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("supplementary context", result);
         Assert.DoesNotContain("Available document tools", result);
     }
@@ -115,22 +110,21 @@ public sealed class TemplateLiquidRenderingTests
     public async Task TaskPlanning_WithToolRegistryEntries_RendersCorrectly()
     {
         var template = """
-            {% assign hasUserTools = false %}{% assign hasSystemTools = false %}
-            {% for tool in tools %}{% if tool.Source == "Local" %}{% assign hasUserTools = true %}{% endif %}{% if tool.Source == "System" %}{% assign hasSystemTools = true %}{% endif %}{% endfor %}
-            {% if hasUserTools %}
-            User tools:
-            {% for tool in tools %}{% if tool.Source == "Local" %}
-            - {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
-            {% endif %}{% endfor %}
-            {% endif %}
-            {% if hasSystemTools %}
-            System tools:
-            {% for tool in tools %}{% if tool.Source == "System" %}
-            - {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
-            {% endif %}{% endfor %}
-            {% endif %}
-            """;
-
+{% assign hasUserTools = false %}{% assign hasSystemTools = false %}
+{% for tool in tools %}{% if tool.Source == "Local" %}{% assign hasUserTools = true %}{% endif %}{% if tool.Source == "System" %}{% assign hasSystemTools = true %}{% endif %}{% endfor %}
+{% if hasUserTools %}
+User tools:
+{% for tool in tools %}{% if tool.Source == "Local" %}
+- {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
+{% endif %}{% endfor %}
+{% endif %}
+{% if hasSystemTools %}
+System tools:
+{% for tool in tools %}{% if tool.Source == "System" %}
+- {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
+{% endif %}{% endfor %}
+{% endif %}
+""";
         // Fluid renders enums as integers, so Source must be projected to string.
         var tools = new object[]
         {
@@ -144,7 +138,6 @@ public sealed class TemplateLiquidRenderingTests
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("search_web", result);
         Assert.Contains("Searches the web for information", result);
         Assert.Contains("read_document", result);
@@ -157,24 +150,22 @@ public sealed class TemplateLiquidRenderingTests
     public async Task TaskPlanning_EmptyToolLists_RendersMinimalOutput()
     {
         var template = """
-            {% assign hasUserTools = false %}{% assign hasSystemTools = false %}
-            {% for tool in tools %}{% if tool.Source == "Local" %}{% assign hasUserTools = true %}{% endif %}{% if tool.Source == "System" %}{% assign hasSystemTools = true %}{% endif %}{% endfor %}
-            {% if hasUserTools %}
-            User tools available.
-            {% endif %}
-            {% if hasSystemTools %}
-            System tools available.
-            {% endif %}
-            No tools needed.
-            """;
-
+{% assign hasUserTools = false %}{% assign hasSystemTools = false %}
+{% for tool in tools %}{% if tool.Source == "Local" %}{% assign hasUserTools = true %}{% endif %}{% if tool.Source == "System" %}{% assign hasSystemTools = true %}{% endif %}{% endfor %}
+{% if hasUserTools %}
+User tools available.
+{% endif %}
+{% if hasSystemTools %}
+System tools available.
+{% endif %}
+No tools needed.
+""";
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = Array.Empty<object>(),
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.DoesNotContain("User tools available", result);
         Assert.DoesNotContain("System tools available", result);
         Assert.Contains("No tools needed", result);
@@ -184,14 +175,12 @@ public sealed class TemplateLiquidRenderingTests
     public async Task DataSourceContextHeader_WithSearchToolName_RendersCorrectly()
     {
         var template = "Use the {{ searchToolName }} tool to search for relevant data sources.";
-
         var arguments = new Dictionary<string, object>
         {
             ["searchToolName"] = "search_data_source",
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Equal("Use the search_data_source tool to search for relevant data sources.", result);
     }
 
@@ -199,18 +188,15 @@ public sealed class TemplateLiquidRenderingTests
     public async Task TabularBatchProcessing_WithBaseSystemMessage_RendersCorrectly()
     {
         var template = """
-            {{ baseSystemMessage }}
-
-            Process the data in tabular format.
-            """;
-
+{{ baseSystemMessage }}
+Process the data in tabular format.
+""";
         var arguments = new Dictionary<string, object>
         {
             ["baseSystemMessage"] = "You are a helpful data analyst.",
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("You are a helpful data analyst.", result);
         Assert.Contains("Process the data in tabular format.", result);
     }
@@ -219,11 +205,10 @@ public sealed class TemplateLiquidRenderingTests
     public async Task ToolRegistryEntry_DescriptionConditional_HandlesNullDescription()
     {
         var template = """
-            {% for tool in tools %}
-            - {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
-            {% endfor %}
-            """;
-
+{% for tool in tools %}
+- {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
+{% endfor %}
+""";
         var tools = new[]
         {
             new ToolRegistryEntry
@@ -248,7 +233,6 @@ public sealed class TemplateLiquidRenderingTests
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("tool_with_desc: Has a description", result);
         Assert.Contains("tool_no_desc", result);
         Assert.DoesNotContain("tool_no_desc:", result);
@@ -258,11 +242,10 @@ public sealed class TemplateLiquidRenderingTests
     public async Task ChatDocumentInfo_DefaultFilter_HandlesNullContentType()
     {
         var template = """
-            {% for doc in docs %}
-            - {{ doc.FileName }} ({{ doc.ContentType | default: "unknown" }})
-            {% endfor %}
-            """;
-
+{% for doc in docs %}
+- {{ doc.FileName }} ({{ doc.ContentType | default: "unknown" }})
+{% endfor %}
+""";
         var docs = new[]
         {
             new ChatDocumentInfo
@@ -280,7 +263,6 @@ public sealed class TemplateLiquidRenderingTests
         };
 
         var result = await _engine.RenderAsync(template, arguments);
-
         Assert.Contains("file.txt", result);
         Assert.Contains("unknown", result);
     }

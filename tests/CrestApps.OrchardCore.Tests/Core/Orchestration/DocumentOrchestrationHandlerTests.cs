@@ -1,8 +1,9 @@
-using CrestApps.AI;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -16,8 +17,8 @@ public sealed class DocumentOrchestrationHandlerTests
 
         return new DocumentOrchestrationHandler(
             Options.Create(toolOptions),
-            new FakeAITemplateService(),
-            NullLogger<DocumentOrchestrationHandler>.Instance);
+        new FakeAITemplateService(),
+        NullLogger<DocumentOrchestrationHandler>.Instance);
     }
 
     private static AIToolDefinitionOptions CreateToolOptionsWithDocTools()
@@ -38,7 +39,6 @@ public sealed class DocumentOrchestrationHandlerTests
     {
         var handler = CreateHandler();
         var context = new OrchestrationContext();
-
         var interaction = new ChatInteraction
         {
             ItemId = "interaction1",
@@ -46,16 +46,15 @@ public sealed class DocumentOrchestrationHandlerTests
             [
                 new ChatDocumentInfo
                 {
-                    DocumentId = "doc1",
-                    FileName = "report.pdf",
-                    ContentType = "application/pdf",
-                    FileSize = 1024,
+                DocumentId = "doc1",
+                FileName = "report.pdf",
+                ContentType = "application/pdf",
+                FileSize = 1024,
                 },
             ],
         };
 
         await handler.BuildingAsync(new OrchestrationContextBuildingContext(interaction, context));
-
         Assert.Single(context.Documents);
         Assert.Equal("doc1", context.Documents[0].DocumentId);
         Assert.Equal("report.pdf", context.Documents[0].FileName);
@@ -66,11 +65,9 @@ public sealed class DocumentOrchestrationHandlerTests
     {
         var handler = CreateHandler();
         var context = new OrchestrationContext();
-
         var interaction = new ChatInteraction { Documents = [] };
 
         await handler.BuildingAsync(new OrchestrationContextBuildingContext(interaction, context));
-
         Assert.Empty(context.Documents);
     }
 
@@ -79,11 +76,9 @@ public sealed class DocumentOrchestrationHandlerTests
     {
         var handler = CreateHandler();
         var context = new OrchestrationContext();
-
         var interaction = new ChatInteraction { Documents = null };
 
         await handler.BuildingAsync(new OrchestrationContextBuildingContext(interaction, context));
-
         Assert.Empty(context.Documents);
     }
 
@@ -92,11 +87,9 @@ public sealed class DocumentOrchestrationHandlerTests
     {
         var handler = CreateHandler();
         var context = new OrchestrationContext();
-
         var profile = new AIProfile { DisplayText = "Test Profile" };
 
         await handler.BuildingAsync(new OrchestrationContextBuildingContext(profile, context));
-
         Assert.Empty(context.Documents);
     }
 
@@ -105,7 +98,6 @@ public sealed class DocumentOrchestrationHandlerTests
     {
         var handler = CreateHandler();
         var context = new OrchestrationContext();
-
         var interaction = new ChatInteraction
         {
             Documents =
@@ -117,7 +109,6 @@ public sealed class DocumentOrchestrationHandlerTests
         };
 
         await handler.BuildingAsync(new OrchestrationContextBuildingContext(interaction, context));
-
         Assert.Equal(3, context.Documents.Count);
     }
 
@@ -132,16 +123,15 @@ public sealed class DocumentOrchestrationHandlerTests
             [
                 new ChatDocumentInfo
                 {
-                    DocumentId = "doc1",
-                    FileName = "report.pdf",
-                    ContentType = "application/pdf",
-                    FileSize = 2048,
+                DocumentId = "doc1",
+                FileName = "report.pdf",
+                ContentType = "application/pdf",
+                FileSize = 2048,
                 },
             ],
         };
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new ChatInteraction(), context));
-
         var systemMessage = context.SystemMessageBuilder.ToString();
         Assert.Contains("report.pdf", systemMessage);
         Assert.Contains("read_document", systemMessage);
@@ -159,7 +149,6 @@ public sealed class DocumentOrchestrationHandlerTests
         };
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         Assert.Null(context.CompletionContext.SystemMessage);
     }
 
@@ -177,16 +166,15 @@ public sealed class DocumentOrchestrationHandlerTests
             [
                 new ChatDocumentInfo
                 {
-                    DocumentId = "doc1",
-                    FileName = "data.csv",
-                    ContentType = "text/csv",
-                    FileSize = 512,
+                DocumentId = "doc1",
+                FileName = "data.csv",
+                ContentType = "text/csv",
+                FileSize = 512,
                 },
             ],
         };
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new ChatInteraction(), context));
-
         // Document tools are system tools — the orchestrator always includes them.
         // The handler should NOT inject tool names.
         Assert.Single(context.CompletionContext.ToolNames);
@@ -204,16 +192,15 @@ public sealed class DocumentOrchestrationHandlerTests
             [
                 new ChatDocumentInfo
                 {
-                    DocumentId = "doc1",
-                    FileName = "report.pdf",
-                    ContentType = "application/pdf",
-                    FileSize = 1024,
+                DocumentId = "doc1",
+                FileName = "report.pdf",
+                ContentType = "application/pdf",
+                FileSize = 1024,
                 },
             ],
         };
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new ChatInteraction(), context));
-
         Assert.True(context.CompletionContext.AdditionalProperties.ContainsKey(AICompletionContextKeys.HasDocuments));
         Assert.Equal(true, context.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments]);
     }
@@ -228,18 +215,16 @@ public sealed class DocumentOrchestrationHandlerTests
         };
 
         await handler.BuiltAsync(new OrchestrationContextBuiltContext(new AIProfile(), context));
-
         Assert.False(context.CompletionContext.AdditionalProperties.ContainsKey(AICompletionContextKeys.HasDocuments));
     }
 
-    private sealed class FakeAITemplateService : IAITemplateService
+    private sealed class FakeAITemplateService : ITemplateService
     {
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
-            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+        public Task<IReadOnlyList<Template>> ListAsync()
+            => Task.FromResult<IReadOnlyList<Template>>([]);
 
-        public Task<AITemplate> GetAsync(string id)
-            => Task.FromResult<AITemplate>(null);
-
+        public Task<Template> GetAsync(string id)
+            => Task.FromResult<Template>(null);
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
         {
             if (arguments != null && arguments.TryGetValue("tools", out var toolsObj) && toolsObj is IEnumerable<object> tools)

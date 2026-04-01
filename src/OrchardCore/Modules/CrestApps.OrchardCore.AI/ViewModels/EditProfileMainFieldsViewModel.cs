@@ -7,7 +7,6 @@ public class EditProfileMainFieldsViewModel
     public string Name { get; set; }
 
     public string DisplayText { get; set; }
-
     [BindNever]
     public bool IsNew { get; set; }
 }

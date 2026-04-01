@@ -10,38 +10,36 @@ internal sealed class AIProfileIndexMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<AIProfileIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(26))
-                .Column<string>("Name", column => column.WithLength(255))
-                .Column<string>("Description", column => column.Nullable().WithLength(500))
-                .Column<string>("Source", column => column.WithLength(255))
-                .Column<string>("Type", column => column.WithLength(50))
-                .Column<string>("ConnectionName", column => column.WithLength(255))
-                .Column<string>("DeploymentId", column => column.Nullable().WithLength(255))
-                .Column<string>("DeploymentName", column => column.Nullable().WithLength(255))
-                .Column<string>("OrchestratorName", column => column.WithLength(255))
-                .Column<string>("OwnerId", column => column.WithLength(26))
-                .Column<string>("Author", column => column.WithLength(255))
-                .Column<bool>("IsListable"),
-            collection: AIConstants.AICollectionName
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("Description", column => column.Nullable().WithLength(500))
+            .Column<string>("Source", column => column.WithLength(255))
+            .Column<string>("Type", column => column.WithLength(50))
+            .Column<string>("ConnectionName", column => column.WithLength(255))
+            .Column<string>("DeploymentId", column => column.Nullable().WithLength(255))
+            .Column<string>("DeploymentName", column => column.Nullable().WithLength(255))
+            .Column<string>("OrchestratorName", column => column.WithLength(255))
+            .Column<string>("OwnerId", column => column.WithLength(26))
+            .Column<string>("Author", column => column.WithLength(255))
+            .Column<bool>("IsListable"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<AIProfileIndex>(table => table
             .CreateIndex("IDX_AIProfileIndex_DocumentId",
-                "DocumentId",
-                "ItemId",
-                "Name",
-                "Source",
-                "Type"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "ItemId",
+        "Name",
+        "Source",
+        "Type"),
+        collection: AIConstants.AICollectionName
         );
-
         await SchemaBuilder.AlterIndexTableAsync<AIProfileIndex>(table => table
             .CreateIndex("IDX_AIProfileIndex_Type",
-                "DocumentId",
-                "Type",
-                "IsListable",
-                "Name"),
-            collection: AIConstants.AICollectionName
+        "DocumentId",
+        "Type",
+        "IsListable",
+        "Name"),
+        collection: AIConstants.AICollectionName
         );
 
         return 3;
@@ -51,7 +49,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<AIProfileIndex>(table => table
             .AddColumn<string>("Description", column => column.Nullable().WithLength(500)),
-            collection: AIConstants.AICollectionName
+        collection: AIConstants.AICollectionName
         );
 
         return 2;
@@ -61,7 +59,7 @@ internal sealed class AIProfileIndexMigrations : DataMigration
     {
         await SchemaBuilder.AlterIndexTableAsync<AIProfileIndex>(table => table
             .AddColumn<string>("DeploymentName", column => column.Nullable().WithLength(255)),
-            collection: AIConstants.AICollectionName
+        collection: AIConstants.AICollectionName
         );
 
         return 3;

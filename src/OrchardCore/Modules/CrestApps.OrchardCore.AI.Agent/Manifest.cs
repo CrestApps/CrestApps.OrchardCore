@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Id = AIConstants.Feature.OrchardCoreAIAgent,
     Name = "Orchard Core AI Agent",
@@ -12,7 +11,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Area,
-        "CrestApps.OrchardCore.Recipes",
+    AIConstants.Feature.Area,
+    "CrestApps.OrchardCore.Recipes",
     ]
-)]
+    )]

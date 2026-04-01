@@ -12,6 +12,7 @@ public sealed class NamedCatalogManagerTests
         records ??= [];
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedCatalogManager<TestNamedCatalogEntry>>>();
+
         return new NamedCatalogManager<TestNamedCatalogEntry>(catalog, [], logger);
     }
 
@@ -19,7 +20,9 @@ public sealed class NamedCatalogManagerTests
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
+
         var manager = CreateManager(new List<TestNamedCatalogEntry> { entry });
+
         var result = await manager.FindByNameAsync("Test");
         Assert.Equal(entry, result);
     }
@@ -30,6 +33,7 @@ public sealed class NamedCatalogManagerTests
         var records = new List<TestNamedCatalogEntry>();
         var manager = CreateManager(records);
         var entry = new TestNamedCatalogEntry { ItemId = "new", Name = "Test" };
+
         await manager.CreateAsync(entry);
         var result = await manager.FindByNameAsync("Test");
         Assert.NotNull(result);
@@ -40,12 +44,13 @@ public sealed class NamedCatalogManagerTests
     public async Task FindByNameAsync_InvokesLoadedHandler()
     {
         var entry = new TestNamedCatalogEntry { ItemId = "1", Name = "Test" };
+
         var records = new List<TestNamedCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedCatalogManager<TestNamedCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
-
         var handler = new TestCatalogEntryHandler<TestNamedCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -57,7 +62,6 @@ public sealed class NamedCatalogManagerTests
 
         var manager = new NamedCatalogManager<TestNamedCatalogEntry>(catalog, [handler], logger);
         await manager.FindByNameAsync("Test");
-
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);

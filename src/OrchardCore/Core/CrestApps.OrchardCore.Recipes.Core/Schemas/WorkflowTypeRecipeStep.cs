@@ -10,12 +10,10 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class WorkflowTypeRecipeStep : IRecipeStep
 {
     private readonly IActivityLibrary _library;
+
     private JsonSchema _cached;
-
     public WorkflowTypeRecipeStep(IActivityLibrary library) => _library = library;
-
     public string Name => "WorkflowType";
-
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -26,12 +24,11 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         var all = _library.ListActivities();
         var eventNames = all.Where(a => a is IEvent).Select(a => a.Name);
         var taskNames = all.Where(a => a is ITask).Select(a => a.Name);
-
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("WorkflowType")),
-                ("data", WorkflowDataArray(eventNames, taskNames)))
+        ("data", WorkflowDataArray(eventNames, taskNames)))
             .Required("name", "data")
             .AdditionalProperties(true)
             .Build();
@@ -46,19 +43,19 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Array)
             .Items(new JsonSchemaBuilder()
-                .Type(SchemaValueType.Object)
-                .Properties(
-                    ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                    ("Activities", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Array)
-                        .Items(ActivitySchema(eventNames, taskNames))),
-                    ("Transitions", new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Array)
-                        .Items(new JsonSchemaBuilder()
-                            .Type(SchemaValueType.Object)
-                            .AdditionalProperties(true))))
-                .Required("Name", "Activities", "Transitions")
-                .AdditionalProperties(true));
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Activities", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(ActivitySchema(eventNames, taskNames))),
+        ("Transitions", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(true))))
+            .Required("Name", "Activities", "Transitions")
+            .AdditionalProperties(true));
     }
 
     private static JsonSchemaBuilder ActivitySchema(
@@ -69,24 +66,24 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
-                ("X", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Number)
-                    .Description("Horizontal pixel position of the activity node in the designer.")),
-                ("Y", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Number)
-                    .Description("Vertical pixel position of the activity node in the designer.")),
-                ("Properties", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Object)
-                    .AdditionalProperties(true)))
+        ("IsStart", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)),
+        ("X", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Number)
+            .Description("Horizontal pixel position of the activity node in the designer.")),
+        ("Y", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Number)
+            .Description("Vertical pixel position of the activity node in the designer.")),
+        ("Properties", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(true)))
             .Required("Name", "Properties")
             .AdditionalProperties(true)
             .If(new JsonSchemaBuilder()
-                .Properties(("IsStart", new JsonSchemaBuilder().Const(true)))
-                .Required("IsStart"))
+            .Properties(("IsStart", new JsonSchemaBuilder().Const(true)))
+            .Required("IsStart"))
             .Then(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(eventNames))))
+            .Properties(("Name", new JsonSchemaBuilder().Enum(eventNames))))
             .Else(new JsonSchemaBuilder()
-                .Properties(("Name", new JsonSchemaBuilder().Enum(taskNames))));
+            .Properties(("Name", new JsonSchemaBuilder().Enum(taskNames))));
     }
 }

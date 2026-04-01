@@ -11,7 +11,6 @@ public class PostSessionTaskViewModel
     public string Instructions { get; set; }
 
     public bool AllowMultipleValues { get; set; }
-
     public List<PostSessionTaskOptionViewModel> Options { get; set; } = [];
 }
 

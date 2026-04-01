@@ -1,6 +1,5 @@
-using CrestApps.AI;
-using CrestApps.AI.Elasticsearch;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +14,6 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
-
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -25,8 +23,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
-        CrestApps.AI.Elasticsearch.ServiceCollectionExtensions.AddElasticsearchServices(services);
-
+        CrestApps.Elasticsearch.ServiceCollectionExtensions.AddElasticsearchServices(services);
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {
             o.DisplayName = S["AI Knowledge Base Index (Elasticsearch)"];
@@ -48,6 +45,7 @@ public sealed class Startup : StartupBase
                 mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
                 mapping.DefaultContentField = AIConstants.ColumnNames.Content;
             });
+
         });
     }
 }

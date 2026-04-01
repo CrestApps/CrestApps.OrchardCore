@@ -32,11 +32,13 @@ public static class ServiceCollectionExtensions
                 entry.DisplayName = new LocalizedString("Server-Sent Events", "Server-Sent Events");
                 entry.Description = new LocalizedString("Server-Sent Events Description", "Uses a remote MCP server over HTTP.");
             });
+
             options.AddTransportType(McpConstants.TransportTypes.StdIo, entry =>
             {
                 entry.DisplayName = new LocalizedString("Standard Input/Output", "Standard Input/Output");
                 entry.Description = new LocalizedString("Standard Input/Output Description", "Uses a local MCP process over standard input/output.");
             });
+
         });
 
         return services;

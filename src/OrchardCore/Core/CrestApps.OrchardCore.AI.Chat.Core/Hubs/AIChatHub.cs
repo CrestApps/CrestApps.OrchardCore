@@ -1,8 +1,14 @@
 using System.Threading.Channels;
 using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Hubs;
 using CrestApps.AI.Chat.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Cysharp.Text;
@@ -35,7 +41,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         IServiceProvider services,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
-        : base(services, logger)
+    : base(services, logger)
     {
         S = stringLocalizer;
     }
@@ -234,6 +240,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                 }
 
                 await ProcessUtilityAsync(writer, services, profile, prompt.Trim(), cancellationToken);
+
                 return;
             }
 
@@ -254,6 +261,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                 }
 
                 await ProcessGeneratedPromptAsync(writer, services, profile, sessionId, parentProfile, cancellationToken);
+
                 return;
             }
 
@@ -313,11 +321,11 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var (chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
 
         var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
-            new Dictionary<string, FluidValue>
-            {
-                ["Profile"] = new ObjectValue(profile),
-                ["Session"] = new ObjectValue(chatSession),
-            });
+        new Dictionary<string, FluidValue>
+        {
+            ["Profile"] = new ObjectValue(profile),
+            ["Session"] = new ObjectValue(chatSession),
+        });
 
         var assistantMessage = new AIChatSessionPrompt
         {
@@ -334,7 +342,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var builder = ZString.CreateStringBuilder();
         var references = new Dictionary<string, AICompletionReference>();

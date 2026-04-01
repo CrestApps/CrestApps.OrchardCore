@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDocumentChunkStore : DocumentCatalog<AIDocumentChunk, AIDocumentChunkIndex>, IAIDocumentChunkStore
 {
     public DefaultAIDocumentChunkStore(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AIDocsCollectionName;
     }

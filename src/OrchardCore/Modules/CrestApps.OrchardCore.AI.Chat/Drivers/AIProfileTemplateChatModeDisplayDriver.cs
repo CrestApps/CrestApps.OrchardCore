@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -15,7 +16,6 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
-
     public AIProfileTemplateChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
@@ -60,14 +60,12 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         }
 
         var model = new AIProfileChatModeViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var settings = template.As<ChatModeProfileSettings>();
         settings.ChatMode = model.ChatMode;
         settings.VoiceName = model.ChatMode == ChatMode.Conversation
-            ? model.VoiceName?.Trim()
-            : null;
+        ? model.VoiceName?.Trim()
+        : null;
         template.Put(settings);
 
         return Edit(template, context);

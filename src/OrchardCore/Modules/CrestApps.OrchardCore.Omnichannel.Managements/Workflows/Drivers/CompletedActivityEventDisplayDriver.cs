@@ -16,7 +16,6 @@ internal sealed class CompletedActivityEventDisplayDriver : ActivityDisplayDrive
     private readonly ICatalog<OmnichannelCampaign> _catalog;
 
     internal readonly IStringLocalizer S;
-
     public CompletedActivityEventDisplayDriver(
         ICatalog<OmnichannelCampaign> catalog,
         IStringLocalizer<CompletedActivityEventDisplayDriver> stringLocalizer)
@@ -28,7 +27,6 @@ internal sealed class CompletedActivityEventDisplayDriver : ActivityDisplayDrive
     protected override async ValueTask EditActivityAsync(CompletedActivityEvent activity, CompletedActivityEventViewModel model)
     {
         model.CampaignId = activity.CampaignId;
-
         model.Campaigns = (await _catalog.GetAllAsync())
             .Select(x => new SelectListItem(x.DisplayText, x.ItemId))
             .OrderBy(x => x.Text);
@@ -37,7 +35,6 @@ internal sealed class CompletedActivityEventDisplayDriver : ActivityDisplayDrive
     public override async Task<IDisplayResult> UpdateAsync(CompletedActivityEvent activity, UpdateEditorContext context)
     {
         var model = new CompletedActivityEventViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.CampaignId))

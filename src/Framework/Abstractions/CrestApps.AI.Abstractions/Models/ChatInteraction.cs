@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.Models;
 
 namespace CrestApps.AI.Models;

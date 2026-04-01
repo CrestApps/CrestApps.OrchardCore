@@ -10,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
-
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
 internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
@@ -19,9 +18,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     private readonly IClock _clock;
     private readonly IPhoneFormatValidator _phoneFormatValidator;
     private readonly IEmailAddressValidator _emailAddressValidator;
-
     internal readonly IStringLocalizer S;
-
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -35,27 +32,21 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
         _emailAddressValidator = emailAddressValidator;
         S = stringLocalizer;
     }
-
     public override Task InitializingAsync(InitializingContext<OmnichannelChannelEndpoint> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task ValidatingAsync(ValidatingContext<OmnichannelChannelEndpoint> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(OmnichannelChannelEndpoint.DisplayText)]));
         }
-
         var hasValue = !string.IsNullOrWhiteSpace(context.Model.Value);
-
         if (!hasValue)
         {
             context.Result.Fail(new ValidationResult(S["Endpoint Value is required."], [nameof(OmnichannelChannelEndpoint.Value)]));
         }
-
         if (string.IsNullOrWhiteSpace(context.Model.Channel))
         {
             context.Result.Fail(new ValidationResult(S["Channel is required."], [nameof(OmnichannelChannelEndpoint.Channel)]));
@@ -77,57 +68,42 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
                 }
             }
         }
-
         return Task.CompletedTask;
     }
-
     public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
-
         var user = _httpContextAccessor.HttpContext?.User;
-
         if (user != null)
         {
             context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             context.Model.Author = user.Identity.Name;
         }
-
         return Task.CompletedTask;
     }
-
     private static Task PopulateAsync(OmnichannelChannelEndpoint enabpoint, JsonNode data)
     {
         var displayText = data[nameof(OmnichannelCampaign.DisplayText)]?.GetValue<string>()?.Trim();
-
         if (!string.IsNullOrEmpty(displayText))
         {
             enabpoint.DisplayText = displayText;
         }
-
         var descriptionText = data[nameof(OmnichannelChannelEndpoint.Description)]?.GetValue<string>()?.Trim();
-
         if (!string.IsNullOrEmpty(descriptionText))
         {
             enabpoint.Description = descriptionText;
         }
-
         var channelText = data[nameof(OmnichannelChannelEndpoint.Channel)]?.GetValue<string>()?.Trim();
-
         if (!string.IsNullOrEmpty(channelText))
         {
             enabpoint.Channel = channelText;
         }
-
         var valueText = data[nameof(OmnichannelChannelEndpoint.Value)]?.GetValue<string>()?.Trim();
-
         if (!string.IsNullOrEmpty(valueText))
         {
             enabpoint.Value = valueText;
         }
-
         var properties = data[nameof(OmnichannelCampaign.Properties)]?.AsObject();
-
         if (properties != null)
         {
             enabpoint.Properties ??= new Dictionary<string, object>();
@@ -136,7 +112,6 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
                 enabpoint.Properties[key] = value;
             }
         }
-
         return Task.CompletedTask;
     }
 }

@@ -1,4 +1,3 @@
-
 namespace CrestApps.AI.Mcp.Models;
 
 public sealed class StdioMcpConnectionMetadata

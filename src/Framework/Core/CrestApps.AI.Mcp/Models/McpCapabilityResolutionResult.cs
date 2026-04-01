@@ -27,7 +27,7 @@ public sealed class McpCapabilityResolutionResult
         Candidates = candidates ?? [];
         RelevantConnectionIds = new HashSet<string>(
             Candidates.Select(c => c.ConnectionId),
-            StringComparer.OrdinalIgnoreCase);
+        StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>

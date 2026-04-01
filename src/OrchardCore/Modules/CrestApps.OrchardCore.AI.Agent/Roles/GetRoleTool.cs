@@ -11,32 +11,27 @@ namespace CrestApps.OrchardCore.AI.Agent.Roles;
 internal sealed class GetRoleTool : AIFunction
 {
     public const string TheName = "getRoleInfo";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "roleId": {
-              "type": "string",
-              "description": "The roleId to get role info for."
-            },
-            "roleName": {
-              "type": "string",
-              "description": "The roleName to get role info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": []
+    """
+    {
+      "type": "object",
+      "properties": {
+        "roleId": {
+          "type": "string",
+          "description": "The roleId to get role info for."
+        },
+        "roleName": {
+          "type": "string",
+          "description": "The roleName to get role info for."
         }
-        """);
-
+      },
+      "additionalProperties": false,
+      "required": []
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Gets role information.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -48,16 +43,15 @@ internal sealed class GetRoleTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetRoleTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var roleManager = arguments.Services.GetRequiredService<RoleManager<IRole>>();
-
         var roleId = arguments.GetFirstValueOrDefault<string>("roleId");
         var roleName = arguments.GetFirstValueOrDefault<string>("roleName");
-
         var hasRoleId = !string.IsNullOrEmpty(roleId);
         var hasRoleName = !string.IsNullOrEmpty(roleName);
 

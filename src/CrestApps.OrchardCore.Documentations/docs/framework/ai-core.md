@@ -44,9 +44,9 @@ A **provider connection** stores credentials and endpoint information for a spec
 | `IAIClientFactory` | `DefaultAIClientFactory` | Scoped | Creates typed AI clients |
 | `IAICompletionService` | `DefaultAICompletionService` | Scoped | Deployment-aware completion |
 | `IAICompletionContextBuilder` | `DefaultAICompletionContextBuilder` | Scoped | Builds context with handler pipeline |
-| `IAITemplateService` | *(from AddAIPrompting)* | Scoped | Template rendering |
+| `ITemplateService` | *(from AddAITemplating)* | Scoped | Template rendering |
 
-It also chains `AddAIPrompting()` and `AddCrestAppsCoreServices()` automatically.
+It also chains `AddAITemplating()` and `AddCrestAppsCoreServices()` automatically.
 
 ## Key Interfaces
 

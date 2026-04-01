@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.ResponseHandling;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.AI.Services;

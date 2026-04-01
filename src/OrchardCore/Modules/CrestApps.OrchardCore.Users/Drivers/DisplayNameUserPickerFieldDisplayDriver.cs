@@ -20,7 +20,6 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
     private readonly IDisplayNameProvider _displayNameProvider;
 
     internal readonly IStringLocalizer S;
-
     public DisplayNameUserPickerFieldDisplayDriver(
         ISession session,
         IDisplayNameProvider displayNameProvider,
@@ -47,7 +46,6 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
         return Initialize<EditUserPickerFieldViewModel>(GetEditorShapeType(context), async model =>
         {
             model.UserIds = string.Join(',', field.UserIds);
-
             model.Field = field;
             model.Part = context.ContentPart;
             model.PartFieldDefinition = context.PartFieldDefinition;
@@ -56,12 +54,11 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
             if (field.UserIds.Length > 0)
             {
                 var users = (await _session.Query<User, UserIndex>().Where(x => x.UserId.IsIn(field.UserIds)).ListAsync())
-                    .OrderBy(o => Array.FindIndex(field.UserIds, x => string.Equals(o.UserId, x, StringComparison.OrdinalIgnoreCase)));
+                .OrderBy(o => Array.FindIndex(field.UserIds, x => string.Equals(o.UserId, x, StringComparison.OrdinalIgnoreCase)));
 
                 foreach (var user in users)
                 {
                     var displayName = await _displayNameProvider.GetAsync(user);
-
                     model.SelectedUsers.Add(new VueMultiselectUserViewModel
                     {
                         Id = user.UserId,
@@ -76,13 +73,10 @@ public sealed class DisplayNameUserPickerFieldDisplayDriver : ContentFieldDispla
     public override async Task<IDisplayResult> UpdateAsync(UserPickerField field, UpdateFieldEditorContext context)
     {
         var viewModel = new EditUserPickerFieldViewModel();
-
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix, f => f.UserIds);
-
         field.UserIds = viewModel.UserIds == null
-            ? []
-            : viewModel.UserIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
+        ? []
+        : viewModel.UserIds.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var settings = context.PartFieldDefinition.GetSettings<UserPickerFieldSettings>();
 
         if (settings.Required && field.UserIds.Length == 0)

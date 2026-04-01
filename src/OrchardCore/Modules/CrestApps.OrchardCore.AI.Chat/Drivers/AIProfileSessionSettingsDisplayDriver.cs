@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
-
     public AIProfileSessionSettingsDisplayDriver(
         IStringLocalizer<AIProfileSessionSettingsDisplayDriver> stringLocalizer)
     {
@@ -23,7 +22,6 @@ public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProf
         {
             var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
             var analyticsMetadata = profile.As<AnalyticsMetadata>();
-
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
         }).Location("Content:1#Data Processing & Metrics;10");

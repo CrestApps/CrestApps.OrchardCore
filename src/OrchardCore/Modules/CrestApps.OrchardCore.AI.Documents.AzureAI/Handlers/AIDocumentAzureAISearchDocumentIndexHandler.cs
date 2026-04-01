@@ -17,7 +17,7 @@ public sealed class AIDocumentAzureAISearchDocumentIndexHandler : IDocumentIndex
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            indexProfile.ProviderName != AzureAISearchConstants.ProviderName)
+                indexProfile.ProviderName != AzureAISearchConstants.ProviderName)
         {
             return Task.CompletedTask;
         }

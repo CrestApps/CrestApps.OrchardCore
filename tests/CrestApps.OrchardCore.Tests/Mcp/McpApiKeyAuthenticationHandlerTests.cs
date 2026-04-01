@@ -11,11 +11,9 @@ namespace CrestApps.OrchardCore.Tests.Mcp;
 public sealed class McpApiKeyAuthenticationHandlerTests
 {
     private const string ValidApiKey = "test-api-key-12345";
-
     // ───────────────────────────────────────────────────────────────
     // Non-ApiKey authentication type — handler should not participate
     // ───────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData(McpServerAuthenticationType.None)]
     [InlineData(McpServerAuthenticationType.OpenId)]
@@ -24,7 +22,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = authType, ApiKey = ValidApiKey },
             $"Bearer {ValidApiKey}");
-
         Assert.False(result.Succeeded);
         Assert.True(result.None);
     }
@@ -32,7 +29,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — server API key not configured
     // ───────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -41,7 +37,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = serverApiKey },
             $"Bearer some-key");
-
         Assert.False(result.Succeeded);
         Assert.False(result.None);
         Assert.Contains("not configured", result.Failure.Message);
@@ -50,14 +45,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — no Authorization header
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_NoAuthorizationHeader_ReturnsNoResult()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             authorizationHeader: null);
-
         Assert.False(result.Succeeded);
         Assert.True(result.None);
     }
@@ -65,14 +58,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — empty Authorization header
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_EmptyAuthorizationHeader_ReturnsNoResult()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             authorizationHeader: "");
-
         Assert.False(result.Succeeded);
         Assert.True(result.None);
     }
@@ -80,14 +71,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — successful authentication with various prefixes
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_BearerPrefix_CorrectKey_Succeeds()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"Bearer {ValidApiKey}");
-
         Assert.True(result.Succeeded);
         AssertValidTicket(result);
     }
@@ -98,7 +87,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"ApiKey {ValidApiKey}");
-
         Assert.True(result.Succeeded);
         AssertValidTicket(result);
     }
@@ -109,7 +97,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             ValidApiKey);
-
         Assert.True(result.Succeeded);
         AssertValidTicket(result);
     }
@@ -120,7 +107,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"bearer {ValidApiKey}");
-
         Assert.True(result.Succeeded);
         AssertValidTicket(result);
     }
@@ -131,7 +117,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"apikey {ValidApiKey}");
-
         Assert.True(result.Succeeded);
         AssertValidTicket(result);
     }
@@ -139,14 +124,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — wrong key
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_WrongKey_ReturnsFail()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             "Bearer wrong-key");
-
         Assert.False(result.Succeeded);
         Assert.False(result.None);
         Assert.Contains("Invalid", result.Failure.Message);
@@ -158,7 +141,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"Bearer {ValidApiKey}x");
-
         Assert.False(result.Succeeded);
         Assert.False(result.None);
     }
@@ -166,7 +148,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — empty key after prefix
     // ───────────────────────────────────────────────────────────────
-
     [Theory]
     [InlineData("Bearer ")]
     [InlineData("ApiKey ")]
@@ -176,7 +157,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             header);
-
         Assert.False(result.Succeeded);
         Assert.True(result.None);
     }
@@ -184,14 +164,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ApiKey mode — key comparison is case-sensitive
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_KeyIsCaseSensitive_ReturnsFail()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = "AbCdEf" },
             "Bearer abcdef");
-
         Assert.False(result.Succeeded);
         Assert.False(result.None);
     }
@@ -199,14 +177,12 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // Successful ticket claims validation
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task ApiKeyMode_SuccessfulAuth_HasCorrectAuthenticationScheme()
     {
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"Bearer {ValidApiKey}");
-
         Assert.True(result.Succeeded);
         Assert.Equal(McpApiKeyAuthenticationDefaults.AuthenticationScheme, result.Ticket.AuthenticationScheme);
         Assert.Equal(McpApiKeyAuthenticationDefaults.AuthenticationScheme, result.Principal.Identity.AuthenticationType);
@@ -218,9 +194,7 @@ public sealed class McpApiKeyAuthenticationHandlerTests
         var result = await AuthenticateAsync(
             new McpServerOptions { AuthenticationType = McpServerAuthenticationType.ApiKey, ApiKey = ValidApiKey },
             $"Bearer {ValidApiKey}");
-
         Assert.True(result.Succeeded);
-
         var nameIdClaim = result.Principal.FindFirst(ClaimTypes.NameIdentifier);
         Assert.NotNull(nameIdClaim);
         Assert.NotEmpty(nameIdClaim.Value);
@@ -229,7 +203,6 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     // ───────────────────────────────────────────────────────────────
     // Helpers
     // ───────────────────────────────────────────────────────────────
-
     private static void AssertValidTicket(AuthenticateResult result)
     {
         Assert.NotNull(result.Ticket);
@@ -253,16 +226,13 @@ public sealed class McpApiKeyAuthenticationHandlerTests
             McpApiKeyAuthenticationDefaults.AuthenticationScheme,
             displayName: null,
             handlerType: typeof(McpApiKeyAuthenticationHandler));
-
         var authOptionsMonitor = CreateOptionsMonitor(new McpApiKeyAuthenticationOptions());
         var serverOptionsMonitor = CreateOptionsMonitor(serverOptions);
-
         var handler = new McpApiKeyAuthenticationHandler(
             authOptionsMonitor,
             serverOptionsMonitor,
             NullLoggerFactory.Instance,
             System.Text.Encodings.Web.UrlEncoder.Default);
-
         await handler.InitializeAsync(scheme, httpContext);
 
         return await handler.AuthenticateAsync();
@@ -277,11 +247,8 @@ public sealed class McpApiKeyAuthenticationHandlerTests
     private sealed class TestOptionsMonitor<T> : IOptionsMonitor<T>
     {
         public TestOptionsMonitor(T value) => CurrentValue = value;
-
         public T CurrentValue { get; }
-
         public T Get(string name) => CurrentValue;
-
         public IDisposable OnChange(Action<T, string> listener) => null;
     }
 }

@@ -20,7 +20,6 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
-
     public UserFullNamePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -40,7 +39,6 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
             vm.FirstName = section?.FirstName;
             vm.MiddleName = section?.MiddleName;
             vm.LastName = section?.LastName;
-
             vm.User = user;
             vm.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("SummaryAdmin", "Header:1.5");
@@ -54,7 +52,6 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
             model.MiddleName = part?.MiddleName;
             model.LastName = part?.LastName;
             model.DisplayName = part?.DisplayName;
-
             model.User = user;
             model.Settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
         }).Location("Content:1.5")
@@ -66,13 +63,12 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, UsersPermissions.EditUsers, user))
         {
             // When the user is only editing their profile never update this part of the user.
+
             return null;
         }
 
         var model = new UserFullNamePartViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
         var settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
 
         if (settings.DisplayName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.DisplayName))

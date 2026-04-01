@@ -11,7 +11,6 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ListActivities,
         OmnichannelConstants.Permissions.ListContactActivities,
     ];
-
     private readonly IEnumerable<Permission> _allPermissions =
     [
         OmnichannelConstants.Permissions.ListActivities,
@@ -22,22 +21,20 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.ManageChannelEndpoints,
         OmnichannelConstants.Permissions.ManageActivityBatches,
     ];
-
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
         =>
-        [
-            new PermissionStereotype
-            {
-                Name = OrchardCoreConstants.Roles.Administrator,
-                Permissions = _allPermissions,
-            },
-            new PermissionStereotype
-            {
-                Name = OmnichannelConstants.AgentRole,
-                Permissions = _agentPermissions,
-            },
-        ];
-
+    [
+        new PermissionStereotype
+        {
+        Name = OrchardCoreConstants.Roles.Administrator,
+        Permissions = _allPermissions,
+        },
+        new PermissionStereotype
+        {
+        Name = OmnichannelConstants.AgentRole,
+        Permissions = _agentPermissions,
+        },
+    ];
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
-         => Task.FromResult(_allPermissions);
+        => Task.FromResult(_allPermissions);
 }

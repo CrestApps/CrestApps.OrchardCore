@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.AI.Services;
@@ -47,7 +48,6 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
         }
 
         configure?.Invoke(context);
-
         var built = new OrchestrationContextBuiltContext(resource, context);
 
         foreach (var handler in _handlers)
@@ -75,7 +75,7 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
             if (!string.IsNullOrEmpty(systemMessage))
             {
                 _logger.LogDebug("Composed system message ({Length} chars) for resource type '{ResourceType}': {SystemMessage}",
-                    systemMessage.Length, resource.GetType().Name, systemMessage);
+                systemMessage.Length, resource.GetType().Name, systemMessage);
             }
             else
             {

@@ -12,7 +12,7 @@ description: Liquid-based prompt template engine for managing, rendering, and co
 ## Quick Start
 
 ```csharp
-builder.Services.AddAIPrompting();
+builder.Services.AddAITemplating();
 ```
 
 :::info
@@ -28,27 +28,29 @@ Hard-coding system prompts in C# makes them difficult to maintain, localize, and
 - Discovers templates from **multiple sources** (embedded resources, file system, code)
 - Supports **merging** multiple templates into a single prompt
 
-## Services Registered by `AddAIPrompting()`
+## Services Registered by `AddAITemplating()`
+
+`AddAITemplating()` builds on the lower-level `AddTemplating()` registration and also adds the built-in AI template source metadata for `SystemPrompt` and `Profile` templates.
 
 | Service | Implementation | Lifetime | Purpose |
 |---------|---------------|----------|---------|
-| `IAITemplateParser` | `DefaultMarkdownAITemplateParser` | Singleton | Parses markdown front-matter templates |
-| `IAITemplateEngine` | `FluidAITemplateEngine` | Singleton | Renders Liquid templates |
-| `IAITemplateService` | `DefaultAITemplateService` | Scoped | Unified template discovery and rendering |
-| `OptionsAITemplateProvider` | — | Singleton | Templates registered via code |
-| `FileSystemAITemplateProvider` | — | Singleton | Templates discovered from disk |
+| `ITemplateParser` | `DefaultMarkdownTemplateParser` | Singleton | Parses markdown front-matter templates |
+| `ITemplateEngine` | `FluidTemplateEngine` | Singleton | Renders Liquid templates |
+| `ITemplateService` | `DefaultTemplateService` | Scoped | Unified template discovery and rendering |
+| `OptionsTemplateProvider` | — | Singleton | Templates registered via code |
+| `FileSystemTemplateProvider` | — | Singleton | Templates discovered from disk |
 
 ## Key Interfaces
 
-### `IAITemplateService`
+### `ITemplateService`
 
 The main service for working with templates.
 
 ```csharp
-public interface IAITemplateService
+public interface ITemplateService
 {
-    Task<IReadOnlyList<AITemplate>> ListAsync();
-    Task<AITemplate> GetAsync(string id);
+    Task<IReadOnlyList<Template>> ListAsync();
+    Task<Template> GetAsync(string id);
     Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null);
     Task<string> MergeAsync(
         IEnumerable<string> ids,
@@ -57,32 +59,32 @@ public interface IAITemplateService
 }
 ```
 
-### `IAITemplateEngine`
+### `ITemplateEngine`
 
 Renders Liquid templates. You can replace this with a custom engine.
 
 ```csharp
-public interface IAITemplateEngine
+public interface ITemplateEngine
 {
     Task<string> RenderAsync(string template, IDictionary<string, object> arguments);
     bool TryValidate(string template, out IReadOnlyList<string> errors);
 }
 ```
 
-### `IAITemplateProvider`
+### `ITemplateProvider`
 
 Implement to supply templates from a custom source (database, API, etc.).
 
 ```csharp
-public interface IAITemplateProvider
+public interface ITemplateProvider
 {
-    Task<IReadOnlyList<AITemplate>> GetTemplatesAsync();
+    Task<IReadOnlyList<Template>> GetTemplatesAsync();
 }
 ```
 
 ## Template File Format
 
-Templates are markdown files with YAML front matter, stored in `AITemplates/Prompts/`:
+Templates are markdown files with YAML front matter, stored in `Templates/Prompts/`:
 
 ```markdown
 ---
@@ -111,16 +113,16 @@ You are assisting {{ user_name }}.
 
 ### From Embedded Resources
 
-Store `.md` files as embedded resources under `AITemplates/Prompts/` in your assembly:
+Store `.md` files as embedded resources under `Templates/Prompts/` in your assembly:
 
 ```csharp
-builder.Services.AddAITemplatesFromAssembly(typeof(MyClass).Assembly, source: "MyApp");
+builder.Services.AddTemplatesFromAssembly(typeof(MyClass).Assembly, source: "MyApp");
 ```
 
 ### From Code
 
 ```csharp
-builder.Services.AddAIPrompting(options =>
+builder.Services.AddTemplating(options =>
 {
     options.AddTemplate("my-template", "You are {{ role }}.", metadata =>
     {
@@ -132,7 +134,7 @@ builder.Services.AddAIPrompting(options =>
 ### From File System
 
 ```csharp
-builder.Services.AddAIPrompting(options =>
+builder.Services.AddTemplating(options =>
 {
     options.AddDiscoveryPath("/app/templates");
 });
@@ -140,13 +142,13 @@ builder.Services.AddAIPrompting(options =>
 
 ## Configuration
 
-### `AITemplateOptions`
+### `TemplateOptions`
 
 ```csharp
-services.Configure<AITemplateOptions>(options =>
+services.Configure<TemplateOptions>(options =>
 {
     options.AddDiscoveryPath("/path/to/templates");
-    options.AddTemplate(new AITemplate { /* ... */ });
+    options.AddTemplate(new Template { /* ... */ });
 });
 ```
 
@@ -154,7 +156,7 @@ services.Configure<AITemplateOptions>(options =>
 
 ### Example 1: Customer Support Assistant
 
-```markdown title="AITemplates/Prompts/customer-support.md"
+```markdown title="Templates/Prompts/customer-support.md"
 ---
 Title: Customer Support Assistant
 Description: Prompt for a customer-facing support chatbot
@@ -186,7 +188,7 @@ these hours, let them know when support will be available.
 
 ### Example 2: Content Writer with Tone Control
 
-```markdown title="AITemplates/Prompts/content-writer.md"
+```markdown title="Templates/Prompts/content-writer.md"
 ---
 Title: Content Writer
 Description: Generates content with configurable tone and style
@@ -211,7 +213,7 @@ Write with precision. Use domain-specific terminology and cite sources where pos
 
 ### Example 3: RAG-Augmented Assistant
 
-```markdown title="AITemplates/Prompts/rag-assistant.md"
+```markdown title="Templates/Prompts/rag-assistant.md"
 ---
 Title: RAG Assistant
 Description: Assistant that uses retrieved documents for grounded answers
@@ -236,7 +238,7 @@ You are a knowledgeable assistant. Answer questions using ONLY the provided cont
 
 ## Liquid Reference
 
-The template engine uses the [Fluid](https://github.com/sebastienros/fluid) Liquid implementation. Here are the most commonly used filters and tags in AI templates:
+The template engine uses the [Fluid](https://github.com/sebastienros/fluid) Liquid implementation. Here are the most commonly used filters and tags in templates:
 
 ### Filters
 
@@ -299,10 +301,10 @@ Keep each template focused on a single concern. Compose them at runtime rather t
 
 ### Validate Liquid Syntax
 
-Use `IAITemplateEngine.TryValidate()` to check for syntax errors before saving a template:
+Use `ITemplateEngine.TryValidate()` to check for syntax errors before saving a template:
 
 ```csharp
-var engine = serviceProvider.GetRequiredService<IAITemplateEngine>();
+var engine = serviceProvider.GetRequiredService<ITemplateEngine>();
 
 var template = "Hello {{ user_name }}, today is {{ 'now' | date: '%A' }}.";
 
@@ -321,7 +323,7 @@ else
 
 ### Render with Test Arguments
 
-Use `IAITemplateService.RenderAsync()` to preview the final output:
+Use `ITemplateService.RenderAsync()` to preview the final output:
 
 ```csharp
 var result = await templateService.RenderAsync("customer-support", new Dictionary<string, object>
@@ -344,7 +346,7 @@ public sealed class TemplateRenderingTests
     public async Task CustomerSupportTemplate_ShouldIncludeCompanyName()
     {
         // Arrange
-        var engine = new FluidAITemplateEngine();
+        var engine = new FluidTemplateEngine();
         var template = "You are a support agent for {{ company_name }}.";
         var arguments = new Dictionary<string, object>
         {
@@ -361,7 +363,7 @@ public sealed class TemplateRenderingTests
     [Fact]
     public void InvalidTemplate_ShouldReturnErrors()
     {
-        var engine = new FluidAITemplateEngine();
+        var engine = new FluidTemplateEngine();
         var invalid = "Hello {{ user_name | nonexistent_filter }}";
 
         var isValid = engine.TryValidate(invalid, out var errors);
@@ -374,24 +376,24 @@ public sealed class TemplateRenderingTests
 
 ## Custom Template Provider
 
-Implement `IAITemplateProvider` to load templates from a custom source (e.g., a database or remote API):
+Implement `ITemplateProvider` to load templates from a custom source (e.g., a database or remote API):
 
 ```csharp
 public sealed class DatabaseAITemplateProvider(
     ISession session,
-    IAITemplateParser parser) : IAITemplateProvider
+    ITemplateParser parser) : ITemplateProvider
 {
-    public async Task<IReadOnlyList<AITemplate>> GetTemplatesAsync()
+    public async Task<IReadOnlyList<Template>> GetTemplatesAsync()
     {
         var records = await session
             .Query<PromptTemplateRecord, PromptTemplateIndex>()
             .ListAsync();
 
-        var templates = new List<AITemplate>();
+        var templates = new List<Template>();
 
         foreach (var record in records)
         {
-            // Parse the markdown content (with YAML front-matter) into an AITemplate
+            // Parse the markdown content (with YAML front-matter) into an Template
             if (parser.TryParse(record.Content, out var template))
             {
                 template.Id = record.TemplateId;
@@ -408,11 +410,11 @@ public sealed class DatabaseAITemplateProvider(
 Register the provider:
 
 ```csharp
-builder.Services.AddSingleton<IAITemplateProvider, DatabaseAITemplateProvider>();
+builder.Services.AddSingleton<ITemplateProvider, DatabaseAITemplateProvider>();
 ```
 
 :::info
-All registered `IAITemplateProvider` instances are queried by `IAITemplateService`. Templates from multiple providers are merged into a single collection. If two providers return templates with the same `Id`, the last-registered provider wins.
+All registered `ITemplateProvider` instances are queried by `ITemplateService`. Templates from multiple providers are merged into a single collection. If two providers return templates with the same `Id`, the last-registered provider wins.
 :::
 
 ## Orchard Core Integration

@@ -15,7 +15,6 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
     private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
 
     internal readonly IStringLocalizer S;
-
     public AIDeploymentDeploymentStepDisplayDriver(
         INamedCatalog<AIDeployment> deploymentCatalog,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
@@ -27,10 +26,10 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
     public override Task<IDisplayResult> DisplayAsync(AIDeploymentDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIDeploymentDeploymentStep step, BuildEditorContext context)
@@ -46,10 +45,9 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
     public override async Task<IDisplayResult> UpdateAsync(AIDeploymentDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIDeploymentStepViewModel();
-
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DeploymentNames);
+        p => p.IncludeAll,
+        p => p.DeploymentNames);
 
         if (model.IncludeAll)
         {

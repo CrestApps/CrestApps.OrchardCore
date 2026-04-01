@@ -6,7 +6,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
 public class CompletedActivityEventViewModel
 {
     public string CampaignId { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; }
 }

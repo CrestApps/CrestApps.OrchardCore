@@ -1,7 +1,12 @@
 using System.Runtime.CompilerServices;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Speech;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates.Services;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -26,17 +31,16 @@ public sealed class DefaultOrchestrator : IOrchestrator
 
     private readonly IAICompletionService _completionService;
     private readonly IAIClientFactory _aiClientFactory;
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly ITemplateService _aiTemplateService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IToolRegistry _toolRegistry;
     private readonly ITextTokenizer _tokenizer;
     private readonly DefaultOrchestratorOptions _options;
     private readonly ILogger _logger;
-
     public DefaultOrchestrator(
         IAICompletionService completionService,
         IAIClientFactory aiClientFactory,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager,
         IToolRegistry toolRegistry,
         ITextTokenizer tokenizer,
@@ -202,8 +206,8 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 var response = await _completionService.CompleteAsync(
                     planningDeployment,
                     GetPlanningMessages(context),
-                    planningContext,
-                    cancellationToken);
+                planningContext,
+                cancellationToken);
 
                 plan = response?.Messages?.FirstOrDefault(m => m.Role == ChatRole.Assistant)?.Text;
             }
@@ -264,15 +268,15 @@ public sealed class DefaultOrchestrator : IOrchestrator
         // Determine the text to score against: plan text if available,
         // otherwise fall back to user message + recent conversation context.
         var scoringText = !string.IsNullOrWhiteSpace(plan)
-            ? plan
-            : BuildScoringContext(context);
+        ? plan
+        : BuildScoringContext(context);
 
         if (string.IsNullOrWhiteSpace(scoringText))
         {
             // No scoring text available; return capped tools by original order.
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
                 scopedCandidates
-                    .Take(Math.Max(budget, _options.MaxToolCount))
+                .Take(Math.Max(budget, _options.MaxToolCount))
                     .Concat(mustIncludeEntries)
                     .ToList());
         }
@@ -283,7 +287,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
         {
             return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>(
                 scopedCandidates
-                    .Take(budget)
+                .Take(budget)
                     .Concat(mustIncludeEntries)
                     .ToList());
         }
@@ -383,7 +387,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 .Where(m => m.Role == ChatRole.User || m.Role == ChatRole.Assistant)
                 .Where(m => !string.IsNullOrEmpty(m.Text))
                 .TakeLast(_options.PlanningHistoryMessageCount);
-
             messages.AddRange(recentMessages);
         }
 
@@ -451,6 +454,6 @@ public sealed class DefaultOrchestrator : IOrchestrator
         return await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Chat,
             deploymentName: context.CompletionContext?.ChatDeploymentName)
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the orchestration context.");
+        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the orchestration context.");
     }
 }

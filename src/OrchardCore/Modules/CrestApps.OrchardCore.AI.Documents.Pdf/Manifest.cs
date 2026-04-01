@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "AI Documents (PDF)",
     Author = CrestAppsManifestConstants.Author,
@@ -10,7 +9,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        // Don't add dependencies to the base Documents module to allow optional installation
-        // and force the user to explicitly enable one of the Documents indexing module first.
+    // Don't add dependencies to the base Documents module to allow optional installation
+    // and force the user to explicitly enable one of the Documents indexing module first.
     ]
-)]
+    )]

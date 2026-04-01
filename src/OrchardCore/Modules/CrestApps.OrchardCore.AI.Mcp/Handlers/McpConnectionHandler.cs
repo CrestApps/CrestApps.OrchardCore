@@ -16,7 +16,6 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
-
     public McpConnectionHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -29,10 +28,8 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
 
     public override Task InitializingAsync(InitializingContext<McpConnection> context)
         => PopulateAsync(context.Model, context.Data, true);
-
     public override Task UpdatingAsync(UpdatingContext<McpConnection> context)
         => PopulateAsync(context.Model, context.Data, false);
-
     public override Task ValidatingAsync(ValidatingContext<McpConnection> context)
     {
         if (string.IsNullOrEmpty(context.Model.DisplayText))
@@ -48,7 +45,6 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
         if (isNew)
         {
             connection.CreatedUtc = _clock.UtcNow;
-
             var user = _httpContextAccessor.HttpContext?.User;
 
             if (user is not null)
@@ -70,6 +66,7 @@ internal sealed class McpConnectionHandler : CatalogEntryHandlerBase<McpConnecti
         if (properties is not null)
         {
             connection.Properties ??= new Dictionary<string, object>();
+
             foreach (var (key, value) in properties) { connection.Properties[key] = value; }
         }
 

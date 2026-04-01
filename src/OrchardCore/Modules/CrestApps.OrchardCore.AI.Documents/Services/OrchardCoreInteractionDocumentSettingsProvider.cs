@@ -10,11 +10,11 @@ namespace CrestApps.OrchardCore.AI.Documents.Services;
 public sealed class OrchardCoreInteractionDocumentSettingsProvider : IInteractionDocumentSettingsProvider
 {
     private readonly ISiteService _siteService;
-
     public OrchardCoreInteractionDocumentSettingsProvider(ISiteService siteService)
     {
         _siteService = siteService;
     }
 
-    public Task<InteractionDocumentSettings> GetAsync() => _siteService.GetSettingsAsync<InteractionDocumentSettings>();
+    public Task<InteractionDocumentSettings> GetAsync()
+        => _siteService.GetSettingsAsync<InteractionDocumentSettings>();
 }

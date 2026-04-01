@@ -1,7 +1,13 @@
 using System.Text.Json;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
+using CrestApps.AI.Tooling;
+using CrestApps.Infrastructure.Indexing;
+using CrestApps.Infrastructure.Indexing.Models;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,23 +23,23 @@ public sealed class SearchDocumentsTool : AIFunction
     public const string TheName = SystemToolNames.SearchDocuments;
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "query": {
-              "type": "string",
-              "description": "The search query to find relevant content in available document knowledge."
-            },
-            "top_n": {
-              "type": "integer",
-              "description": "Number of top matching chunks to return. Defaults to 3."
-            }
-          },
-          "required": ["query"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query to find relevant content in available document knowledge."
+        },
+        "top_n": {
+          "type": "integer",
+          "description": "Number of top matching chunks to return. Defaults to 3."
         }
-        """);
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -73,7 +79,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
                 if (invocationContext?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                     sessionObj is AIChatSession session &&
-                    session.Documents is { Count: > 0 })
+                        session.Documents is { Count: > 0 })
                 {
                     searchScopes.Add((session.SessionId, AIReferenceTypes.Document.ChatSession));
                 }
@@ -87,7 +93,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
             var showUserDocumentAwareness =
                 executionContext?.Resource is not AIProfile ||
-                searchScopes.Any(scope => scope.ReferenceType == AIReferenceTypes.Document.ChatSession);
+                    searchScopes.Any(scope => scope.ReferenceType == AIReferenceTypes.Document.ChatSession);
 
             var settings = await arguments.Services.GetRequiredService<IInteractionDocumentSettingsProvider>().GetAsync();
 
@@ -171,10 +177,10 @@ public sealed class SearchDocumentsTool : AIFunction
                 var results = await searchService.SearchAsync(
                     indexProfile,
                     embeddings[0].Vector.ToArray(),
-                    scopeResourceId,
-                    scopeReferenceType,
-                    topN,
-                    cancellationToken);
+                scopeResourceId,
+                scopeReferenceType,
+                topN,
+                cancellationToken);
 
                 if (results == null)
                 {
@@ -204,14 +210,14 @@ public sealed class SearchDocumentsTool : AIFunction
             if (finalResults.Count == 0)
             {
                 return showUserDocumentAwareness
-                    ? "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead."
-                    : "No relevant background knowledge content was found for this query. Answer using your general knowledge instead.";
+                ? "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead."
+                : "No relevant background knowledge content was found for this query. Answer using your general knowledge instead.";
             }
 
             var builder = ZString.CreateStringBuilder();
             builder.AppendLine(showUserDocumentAwareness
-                ? "Relevant content from uploaded documents:"
-                : "Relevant background knowledge content:");
+            ? "Relevant content from uploaded documents:"
+            : "Relevant background knowledge content:");
 
             if (showUserDocumentAwareness)
             {
@@ -238,8 +244,8 @@ public sealed class SearchDocumentsTool : AIFunction
                     }
 
                     var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)
-                        ? entry.Index
-                        : invocationContext.NextReferenceIndex();
+                    ? entry.Index
+                    : invocationContext.NextReferenceIndex();
 
                     builder.AppendLine("---");
                     builder.Append("[doc:");

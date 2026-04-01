@@ -14,7 +14,6 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
     private readonly IEnumerable<IAIProviderConnectionHandler> _handlers;
     private readonly ILogger _logger;
-
     public AIProviderConnectionDeploymentSource(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IEnumerable<IAIProviderConnectionHandler> handlers,
@@ -28,12 +27,10 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
     protected override async Task ProcessAsync(AIProviderConnectionDeploymentStep step, DeploymentPlanResult result)
     {
         var connections = await _connectionsCatalog.GetAllAsync();
-
         var connectionObjects = new JsonArray();
-
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -61,9 +58,7 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
             };
 
             var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
-
             _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
-
             connectionObjects.Add(connectionObject);
         }
 
@@ -74,4 +69,3 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         });
     }
 }
-

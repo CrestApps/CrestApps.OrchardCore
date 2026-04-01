@@ -1,20 +1,51 @@
+using CrestApps.AI.Chat;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
-using CrestApps.AI.Prompting.Extensions;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Services;
-using CrestApps.AI.Tools;
+using CrestApps.AI.Speech;
+using CrestApps.AI.Tooling;
+using CrestApps.Templates;
+using CrestApps.Templates.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds the reusable templating services plus the built-in AI template source definitions.
+    /// </summary>
+    public static IServiceCollection AddAITemplating(
+        this IServiceCollection services,
+        Action<TemplateOptions> configure = null)
+    {
+        services
+            .AddTemplating(configure)
+            .AddAITemplateSource(AITemplateSources.Profile, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
+                entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
+            })
+            .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
+            {
+                entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
+                entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
+            });
+
+        return services;
+    }
+
     /// <summary>
     /// Registers an AI tool with the builder pattern for fluent configuration.
     /// By default, tools are registered as system tools (hidden from UI).
@@ -70,6 +101,7 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
     /// <summary>
     /// Adds core CrestApps AI services to the service collection.
     /// This is the main entry point for any ASP.NET Core application to use CrestApps AI.
@@ -80,8 +112,8 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services
-            .AddAIPrompting()
-.AddCrestAppsCoreServices()
+            .AddAITemplating()
+            .AddCrestAppsCoreServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>();
 
         services.TryAddScoped<IAICompletionService, DefaultAICompletionService>();
@@ -91,7 +123,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
 
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
         where TClient : class, IAICompletionClient
@@ -182,10 +213,9 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddOrchestrationServices(this IServiceCollection services)
     {
-        // Register embedded AI templates from this assembly so they are available
+        // Register embedded templates from this assembly so they are available
         // regardless of the host (OrchardCore, MVC, or any ASP.NET Core app).
-        services.AddAITemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
-
+        services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
         services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<OrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorOptions>();
@@ -238,7 +268,6 @@ public static class ServiceCollectionExtensions
             .WithTitle("Default Orchestrator");
 
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
-
 
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)

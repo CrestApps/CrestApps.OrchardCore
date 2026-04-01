@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI;
-using CrestApps.AI.Models;
+using CrestApps.Infrastructure.Indexing;
+using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
@@ -15,7 +15,6 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchVectorSearchService> _logger;
-
     public ElasticsearchVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchVectorSearchService> logger)
@@ -48,25 +47,25 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
                 .Knn(k => k
-                    .Field(AIConstants.ColumnNames.Embedding)
-                    .QueryVector(embedding)
-                    .K(topN)
-                    .NumCandidates(topN * 10)
-                    .Filter(f => f
-                        .Bool(b => b
-                            .Must(
-                                m => m.Term(t => t
-                                    .Field(AIConstants.ColumnNames.ReferenceId)
-                                    .Value(referenceId)
-                                ),
-                                m => m.Term(t => t
-                                    .Field(AIConstants.ColumnNames.ReferenceType)
-                                    .Value(referenceType)
-                                )
-                            )
-                        )
-                    )
-                )
+                .Field(AIConstants.ColumnNames.Embedding)
+                .QueryVector(embedding)
+                .K(topN)
+                .NumCandidates(topN * 10)
+                .Filter(f => f
+                .Bool(b => b
+                .Must(
+                    m => m.Term(t => t
+                    .Field(AIConstants.ColumnNames.ReferenceId)
+                        .Value(referenceId)
+            ),
+            m => m.Term(t => t
+                .Field(AIConstants.ColumnNames.ReferenceType)
+                .Value(referenceType)
+            )
+            )
+            )
+            )
+            )
                 .Size(topN)
             , cancellationToken);
 
@@ -78,10 +77,8 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             }
 
             var results = new List<DocumentChunkSearchResult>();
-
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
-
             while (documents.MoveNext() && hits.MoveNext())
             {
                 var hit = hits.Current;
@@ -93,10 +90,10 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 }
 
                 var chunkText = document.TryGetPropertyValue(AIConstants.ColumnNames.Content, out var textNode)
-                    ? textNode?.GetValue<string>()
-                    : null;
-
+                ? textNode?.GetValue<string>()
+                : null;
                 var chunkIndex = 0;
+
                 if (document.TryGetPropertyValue(AIConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
                 {
                     chunkIndex = indexNode.GetValue<int>();
@@ -105,13 +102,11 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 if (!string.IsNullOrEmpty(chunkText))
                 {
                     var documentKey = document.TryGetPropertyValue(AIConstants.ColumnNames.DocumentId, out var docIdNode)
-                        ? docIdNode?.GetValue<string>()
-                        : null;
-
+                    ? docIdNode?.GetValue<string>()
+                    : null;
                     var fileName = document.TryGetPropertyValue(AIConstants.ColumnNames.FileName, out var fileNameNode)
-                        ? fileNameNode?.GetValue<string>()
-                        : null;
-
+                    ? fileNameNode?.GetValue<string>()
+                    : null;
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk

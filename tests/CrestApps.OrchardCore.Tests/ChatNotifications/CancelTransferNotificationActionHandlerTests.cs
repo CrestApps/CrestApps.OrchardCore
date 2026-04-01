@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.Services;
@@ -14,7 +14,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
     // ───────────────────────────────────────────────────────────────
     // AIChatSession path — session found
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleAsync_AIChatSession_ResetsResponseHandlerAndRemovesTransferNotification()
     {
@@ -32,22 +31,17 @@ public sealed class CancelTransferNotificationActionHandlerTests
             .Setup(m => m.SaveAsync(session))
             .Returns(Task.CompletedTask)
             .Verifiable();
-
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
             .Setup(s => s.RemoveAsync("session-1", ChatContextType.AIChatSession, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask)
             .Verifiable();
-
         var services = BuildServiceProvider(
             sessionManager: sessionManagerMock.Object,
             notificationSender: senderMock.Object);
-
         var context = CreateContext("session-1", ChatContextType.AIChatSession, services);
-
         var handler = new CancelTransferNotificationActionHandler();
         await handler.HandleAsync(context, CancellationToken.None);
-
         Assert.Null(session.ResponseHandlerName);
         sessionManagerMock.Verify();
         senderMock.Verify();
@@ -56,7 +50,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
     // ───────────────────────────────────────────────────────────────
     // AIChatSession path — session not found
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleAsync_AIChatSession_SessionNotFound_DoesNotThrow()
     {
@@ -64,23 +57,17 @@ public sealed class CancelTransferNotificationActionHandlerTests
         sessionManagerMock
             .Setup(m => m.FindByIdAsync("missing"))
             .ReturnsAsync((AIChatSession)null);
-
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
             .Setup(s => s.RemoveAsync("missing", ChatContextType.AIChatSession, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask);
-
         var services = BuildServiceProvider(
             sessionManager: sessionManagerMock.Object,
             notificationSender: senderMock.Object);
-
         var context = CreateContext("missing", ChatContextType.AIChatSession, services);
-
         var handler = new CancelTransferNotificationActionHandler();
-
         // Should not throw.
         await handler.HandleAsync(context, CancellationToken.None);
-
         // SaveAsync should never be called.
         sessionManagerMock.Verify(m => m.SaveAsync(It.IsAny<AIChatSession>()), Times.Never);
     }
@@ -88,7 +75,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ChatInteraction path — interaction found
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleAsync_ChatInteraction_ResetsResponseHandlerAndRemovesTransferNotification()
     {
@@ -105,22 +91,17 @@ public sealed class CancelTransferNotificationActionHandlerTests
             .Setup(m => m.UpdateAsync(interaction, null))
             .Returns(ValueTask.CompletedTask)
             .Verifiable();
-
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
             .Setup(s => s.RemoveAsync("interaction-1", ChatContextType.ChatInteraction, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask)
             .Verifiable();
-
         var services = BuildServiceProvider(
             interactionManager: interactionManagerMock.Object,
             notificationSender: senderMock.Object);
-
         var context = CreateContext("interaction-1", ChatContextType.ChatInteraction, services);
-
         var handler = new CancelTransferNotificationActionHandler();
         await handler.HandleAsync(context, CancellationToken.None);
-
         Assert.Null(interaction.ResponseHandlerName);
         interactionManagerMock.Verify();
         senderMock.Verify();
@@ -129,7 +110,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
     // ───────────────────────────────────────────────────────────────
     // ChatInteraction path — interaction not found
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleAsync_ChatInteraction_InteractionNotFound_DoesNotThrow()
     {
@@ -137,23 +117,17 @@ public sealed class CancelTransferNotificationActionHandlerTests
         interactionManagerMock
             .Setup(m => m.FindByIdAsync("missing"))
             .ReturnsAsync((ChatInteraction)null);
-
         var senderMock = new Mock<IChatNotificationSender>();
         senderMock
             .Setup(s => s.RemoveAsync("missing", ChatContextType.ChatInteraction, ChatNotificationTypes.Transfer))
             .Returns(Task.CompletedTask);
-
         var services = BuildServiceProvider(
             interactionManager: interactionManagerMock.Object,
             notificationSender: senderMock.Object);
-
         var context = CreateContext("missing", ChatContextType.ChatInteraction, services);
-
         var handler = new CancelTransferNotificationActionHandler();
-
         // Should not throw.
         await handler.HandleAsync(context, CancellationToken.None);
-
         // UpdateAsync should never be called.
         interactionManagerMock.Verify(m => m.UpdateAsync(It.IsAny<ChatInteraction>(), null), Times.Never);
     }
@@ -161,7 +135,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
     // ───────────────────────────────────────────────────────────────
     // Transfer notification is always removed regardless of path
     // ───────────────────────────────────────────────────────────────
-
     [Fact]
     public async Task HandleAsync_AIChatSession_SessionNotFound_DoesNotRemoveTransferNotification()
     {
@@ -169,29 +142,23 @@ public sealed class CancelTransferNotificationActionHandlerTests
         sessionManagerMock
             .Setup(m => m.FindByIdAsync("s1"))
             .ReturnsAsync((AIChatSession)null);
-
         var senderMock = new Mock<IChatNotificationSender>();
-
         var services = BuildServiceProvider(
             sessionManager: sessionManagerMock.Object,
             notificationSender: senderMock.Object);
-
         var context = CreateContext("s1", ChatContextType.AIChatSession, services);
-
         var handler = new CancelTransferNotificationActionHandler();
         await handler.HandleAsync(context, CancellationToken.None);
-
         // The handler returns early when the session is not found, so
         // RemoveAsync should NOT be called.
         senderMock.Verify(
             s => s.RemoveAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<string>()),
-            Times.Never);
+        Times.Never);
     }
 
     // ───────────────────────────────────────────────────────────────
     // Helpers
     // ───────────────────────────────────────────────────────────────
-
     private static ChatNotificationActionContext CreateContext(
         string sessionId,
         ChatContextType chatType,
@@ -214,7 +181,6 @@ public sealed class CancelTransferNotificationActionHandlerTests
         IChatNotificationSender notificationSender = null)
     {
         var services = new ServiceCollection();
-
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 

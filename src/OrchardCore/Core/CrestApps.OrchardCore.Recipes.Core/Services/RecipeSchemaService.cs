@@ -14,7 +14,6 @@ public sealed class RecipeSchemaService
     private const string _stepNamesCacheKey = "RecipeStepNames";
 
     private string[] _names = null;
-
     public RecipeSchemaService(
         IEnumerable<IRecipeStepHandler> handlers,
         IEnumerable<IRecipeStep> recipeSteps,
@@ -24,8 +23,8 @@ public sealed class RecipeSchemaService
         _recipeSteps = recipeSteps;
         _memoryCache = memoryCache;
         _names = _memoryCache.TryGetValue(_stepNamesCacheKey, out string[] cachedNames)
-            ? cachedNames
-            : null;
+        ? cachedNames
+        : null;
     }
 
     public ValueTask<JsonSchema> GetStepSchemaAsync(string stepName)
@@ -50,37 +49,37 @@ public sealed class RecipeSchemaService
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(GetStepNames())))
-            .Required("name")
-            .AdditionalProperties(true);
+                    .Required("name")
+                    .AdditionalProperties(true);
 
         return new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A unique name for the recipe.")),
-                ("displayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A display name for the recipe.")),
-                ("description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A description for the recipe.")),
-                ("author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The author of the recipe.")),
-                ("website", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The website URL associated with the recipe.")),
-                ("version", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The version of the recipe.")),
-                ("isSetupRecipe", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this recipe is a setup recipe.")),
-                ("exportUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The UTC date/time when the recipe was exported.")),
-                ("categories", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                    .Description("Categories for the recipe.")),
-                ("tags", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                    .Description("Tags for the recipe.")),
-                ("requireNewScope", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Boolean)
-                    .Default(true)
-                    .Description("Whether the recipe requires a new scope.")),
-                ("steps", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(stepsBuilder)
-                    .MinItems(1)
-                    .Description("The collection of recipe steps.")))
+        ("displayName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A display name for the recipe.")),
+        ("description", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("A description for the recipe.")),
+        ("author", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The author of the recipe.")),
+        ("website", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The website URL associated with the recipe.")),
+        ("version", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The version of the recipe.")),
+        ("isSetupRecipe", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether this recipe is a setup recipe.")),
+        ("exportUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The UTC date/time when the recipe was exported.")),
+        ("categories", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description("Categories for the recipe.")),
+        ("tags", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Description("Tags for the recipe.")),
+        ("requireNewScope", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Boolean)
+            .Default(true)
+            .Description("Whether the recipe requires a new scope.")),
+        ("steps", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(stepsBuilder)
+            .MinItems(1)
+            .Description("The collection of recipe steps.")))
             .Required("steps")
             .Build();
     }
@@ -88,19 +87,18 @@ public sealed class RecipeSchemaService
     public IEnumerable<string> GetStepNames()
     {
         _names ??= _handlers
-             .Where(h =>
-                 h.GetType() == typeof(NamedRecipeStepHandler) ||
-                 h.GetType().IsSubclassOf(typeof(NamedRecipeStepHandler)))
-             .Select(h =>
-                 (string)h.GetType()
-                     .GetField("StepName", BindingFlags.Instance | BindingFlags.NonPublic)
-                     ?.GetValue(h))
-             .Where(name => name != null)
-             .Union(_recipeSteps.Select(s => s.Name).Where(name => !string.IsNullOrEmpty(name)))
-             .Distinct()
-             .Order()
-             .ToArray() ?? [];
-
+            .Where(h =>
+        h.GetType() == typeof(NamedRecipeStepHandler) ||
+            h.GetType().IsSubclassOf(typeof(NamedRecipeStepHandler)))
+            .Select(h =>
+        (string)h.GetType()
+            .GetField("StepName", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?.GetValue(h))
+            .Where(name => name != null)
+            .Union(_recipeSteps.Select(s => s.Name).Where(name => !string.IsNullOrEmpty(name)))
+            .Distinct()
+            .Order()
+            .ToArray() ?? [];
         _memoryCache.Set(_stepNamesCacheKey, _names, TimeSpan.FromHours(1));
 
         return _names;

@@ -10,28 +10,25 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class CloneContentTool : AIFunction
 {
     public const string TheName = "cloneContentItem";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItemId": {
-              "type": "string",
-              "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
-            }
-          },
-          "required": ["contentItemId"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItemId": {
+          "type": "string",
+          "description": "The unique identifier (ContentItemId) of the content item, represented as a string."
         }
-        """);
-
+      },
+      "required": [
+        "contentItemId"
+      ],
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Clones the data from one content item into another existing content item.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

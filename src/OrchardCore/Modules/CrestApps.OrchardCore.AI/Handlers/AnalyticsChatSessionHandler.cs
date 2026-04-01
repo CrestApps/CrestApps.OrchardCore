@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -17,7 +17,6 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
     private readonly AIChatSessionEventService _eventService;
     private readonly PostSessionProcessingService _postSessionProcessingService;
     private readonly ILogger _logger;
-
     public AnalyticsChatSessionHandler(
         AIChatSessionEventService eventService,
         PostSessionProcessingService postSessionProcessingService,
@@ -48,6 +47,7 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
             }
 
             // Accumulate token usage and latency metrics for this completion.
+
             if (context.InputTokenCount > 0 || context.OutputTokenCount > 0 || context.ResponseLatencyMs > 0)
             {
                 await _eventService.RecordCompletionMetricsAsync(
@@ -58,11 +58,12 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
             }
 
             // Record session end when session transitions to Closed.
+
             if (context.ChatSession.Status == ChatSessionStatus.Closed)
             {
                 var isResolved = true;
-
                 // Use AI to determine resolution when enabled.
+
                 if (analyticsMetadata.EnableAIResolutionDetection)
                 {
                     isResolved = await _postSessionProcessingService.EvaluateResolutionAsync(
@@ -71,8 +72,8 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
                 }
 
                 await _eventService.RecordSessionEndedAsync(context.ChatSession, context.Prompts.Count, isResolved);
-
                 // Evaluate conversion goals when enabled.
+
                 if (analyticsMetadata.EnableConversionMetrics && analyticsMetadata.ConversionGoals.Count > 0)
                 {
                     var goalResults = await _postSessionProcessingService.EvaluateConversionGoalsAsync(

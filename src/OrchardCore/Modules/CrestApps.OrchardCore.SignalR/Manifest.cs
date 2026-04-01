@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.SignalR.Core;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "SignalR",
     Id = SignalRConstants.Feature.Area,
@@ -10,4 +9,4 @@ using OrchardCore.Modules.Manifest;
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides all services needed to use SignalR functionality.",
     Category = "Communication"
-)]
+    )]

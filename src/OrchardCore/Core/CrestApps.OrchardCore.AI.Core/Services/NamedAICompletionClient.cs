@@ -1,6 +1,8 @@
-using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
@@ -17,19 +19,19 @@ public abstract class NamedAICompletionClient : CrestApps.AI.Services.NamedAICom
         AIProviderOptions providerOptions,
         DefaultAIOptions defaultOptions,
         IEnumerable<IAICompletionServiceHandler> handlers,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
         IAIDeploymentManager deploymentManager)
-        : base(
-            name,
-            aIClientFactory,
-            distributedCache,
-            loggerFactory,
-            serviceProvider,
-            providerOptions,
-            defaultOptions,
-            handlers,
-            aiTemplateService,
-            deploymentManager)
+    : base(
+        name,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions,
+        defaultOptions,
+        handlers,
+        aiTemplateService,
+        deploymentManager)
     {
     }
 }

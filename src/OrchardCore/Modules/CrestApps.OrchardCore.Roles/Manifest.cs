@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
-
 [assembly: Module(
     Name = "Enhanced Roles",
     Author = CrestAppsManifestConstants.Author,
@@ -10,6 +9,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Roles Core Services",
     Dependencies =
     [
-        "OrchardCore.Roles",
+    "OrchardCore.Roles",
     ]
-)]
+    )]

@@ -1,9 +1,8 @@
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Rendering;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Rendering;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-
 namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 
 public sealed class RenderAITemplateTagTests
@@ -12,20 +11,16 @@ public sealed class RenderAITemplateTagTests
     public async Task RenderAITemplateTag_RendersSubTemplateInline()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "greeting", Content = "Hello World" });
-
+            new Template { Id = "greeting", Content = "Hello World" });
         var result = await engine.RenderAsync(
             """Before {% render_ai_template "greeting" %} After""");
-
         Assert.Equal("Before Hello World After", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_InheritsParentScopeVariables()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "sub", Content = "{{ name }} is {{ age }}" });
-
+            new Template { Id = "sub", Content = "{{ name }} is {{ age }}" });
         var result = await engine.RenderAsync(
             """{% render_ai_template "sub" %}""",
             new Dictionary<string, object>
@@ -33,69 +28,54 @@ public sealed class RenderAITemplateTagTests
                 ["name"] = "Alice",
                 ["age"] = 30,
             });
-
         Assert.Equal("Alice is 30", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_AssignedVariableAvailableInSubTemplate()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "sub", Content = "{{ greeting }} World" });
-
+            new Template { Id = "sub", Content = "{{ greeting }} World" });
         var result = await engine.RenderAsync(
             """{% assign greeting = "Hello" %}{% render_ai_template "sub" %}""");
-
         Assert.Contains("Hello World", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_SubTemplateDoesNotLeakVariables()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "sub", Content = "{% assign leaked = \"secret\" %}Sub" });
-
+            new Template { Id = "sub", Content = "{% assign leaked = \"secret\" %}Sub" });
         var result = await engine.RenderAsync(
             """{% render_ai_template "sub" %}|{{ leaked }}""");
-
         Assert.Contains("Sub", result);
         Assert.DoesNotContain("secret", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_NonExistentTemplate_RendersNothing()
     {
         var engine = CreateEngine();
-
         var result = await engine.RenderAsync(
             """Before{% render_ai_template "missing" %}After""");
-
         Assert.Equal("BeforeAfter", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_NestedRenderCalls_Work()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "outer", Content = """Inner: {% render_ai_template "inner" %}""" },
-            new AITemplate { Id = "inner", Content = "Deep" });
-
+            new Template { Id = "outer", Content = """Inner: {% render_ai_template "inner" %}""" },
+            new Template { Id = "inner", Content = "Deep" });
         var result = await engine.RenderAsync(
             """{% render_ai_template "outer" %}""");
-
         Assert.Contains("Inner: Deep", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_WithWhereFilter_InheritsFilteredList()
     {
         var engine = CreateEngine(
-            new AITemplate
+            new Template
             {
                 Id = "agents",
                 Content = "{% for agent in agents %}- {{ agent.Name }}\n{% endfor %}",
             });
-
         var tools = new[]
         {
             new TestTool("Tool1", "A tool", "Local"),
@@ -103,81 +83,63 @@ public sealed class RenderAITemplateTagTests
             new TestTool("Tool2", "Another", "System"),
             new TestTool("PlannerAgent", "Planning", "Agent"),
         };
-
         var result = await engine.RenderAsync(
             """{% assign agents = tools | where: "Source", "Agent" %}{% render_ai_template "agents" %}""",
             new Dictionary<string, object>
             {
                 ["tools"] = tools,
             });
-
         Assert.Contains("ResearchAgent", result);
         Assert.Contains("PlannerAgent", result);
         Assert.DoesNotContain("Tool1", result);
         Assert.DoesNotContain("Tool2", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_DynamicTemplateId()
     {
         var engine = CreateEngine(
-            new AITemplate { Id = "dynamic", Content = "Dynamic Content" });
-
+            new Template { Id = "dynamic", Content = "Dynamic Content" });
         var result = await engine.RenderAsync(
             """{% assign tmpl = "dynamic" %}{% render_ai_template tmpl %}""");
-
         Assert.Contains("Dynamic Content", result);
     }
-
     [Fact]
     public async Task RenderAITemplateTag_EmptyTemplateId_RendersNothing()
     {
         var engine = CreateEngine();
-
         var result = await engine.RenderAsync(
             """Before{% render_ai_template "" %}After""");
-
         Assert.Equal("BeforeAfter", result);
     }
-
-    private static FluidAITemplateEngine CreateEngine(params AITemplate[] subTemplates)
+    private static FluidTemplateEngine CreateEngine(params Template[] subTemplates)
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IAITemplateService>(new InMemoryTemplateService(subTemplates));
-
+        services.AddSingleton<ITemplateService>(new InMemoryTemplateService(subTemplates));
         var sp = services.BuildServiceProvider();
-
-        return new FluidAITemplateEngine(
+        return new FluidTemplateEngine(
             sp,
-            NullLogger<FluidAITemplateEngine>.Instance);
+            NullLogger<FluidTemplateEngine>.Instance);
     }
-
-    private sealed class InMemoryTemplateService : IAITemplateService
+    private sealed class InMemoryTemplateService : ITemplateService
     {
-        private readonly IReadOnlyList<AITemplate> _templates;
-
-        public InMemoryTemplateService(AITemplate[] templates)
+        private readonly IReadOnlyList<Template> _templates;
+        public InMemoryTemplateService(Template[] templates)
         {
             _templates = templates;
         }
-
-        public Task<AITemplate> GetAsync(string id)
+        public Task<Template> GetAsync(string id)
         {
             return Task.FromResult(
                 _templates.FirstOrDefault(t =>
-                    string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase)));
+                string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase)));
         }
-
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
+        public Task<IReadOnlyList<Template>> ListAsync()
             => Task.FromResult(_templates);
-
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
             => throw new NotImplementedException();
-
         public Task<string> MergeAsync(IEnumerable<string> ids, IDictionary<string, object> arguments = null, string separator = "\n\n")
             => throw new NotImplementedException();
     }
-
     public sealed class TestTool
     {
         public TestTool(string name, string description, string source)
@@ -186,11 +148,8 @@ public sealed class RenderAITemplateTagTests
             Description = description;
             Source = source;
         }
-
         public string Name { get; }
-
         public string Description { get; }
-
         public string Source { get; }
     }
 }

@@ -18,19 +18,14 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
     private readonly HashSet<string> _removedContentItemIds = [];
 
     private bool _taskAdded;
-
     public override Task PublishedAsync(PublishContentContext context)
         => TrackUpdatedAsync(context.ContentItem);
-
     public override Task CreatedAsync(CreateContentContext context)
         => TrackUpdatedAsync(context.ContentItem);
-
     public override Task UpdatedAsync(UpdateContentContext context)
         => TrackUpdatedAsync(context.ContentItem);
-
     public override Task UnpublishedAsync(PublishContentContext context)
         => TrackUpdatedAsync(context.ContentItem);
-
     public override Task RemovedAsync(RemoveContentContext context)
     {
         if (context.ContentItem.Id == 0)
@@ -39,7 +34,6 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
         }
 
         AddDeferredTask();
-
         _removedContentItemIds.Add(context.ContentItem.ContentItemId);
 
         return Task.CompletedTask;
@@ -53,7 +47,6 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
         }
 
         AddDeferredTask();
-
         _updatedContentItems[contentItem.ContentItemId] = contentItem;
 
         return Task.CompletedTask;
@@ -67,10 +60,8 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
         }
 
         _taskAdded = true;
-
         var updatedItems = _updatedContentItems;
         var removedIds = _removedContentItemIds;
-
         ShellScope.AddDeferredTask(scope => ProcessChangesAsync(scope, updatedItems, removedIds));
     }
 
@@ -85,20 +76,19 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
         }
 
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DataSourceContentHandler>>();
-
         try
         {
             var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
-
             // Re-index updated content items.
+
             if (updatedItems.Count > 0)
             {
                 var contentItemIds = updatedItems.Keys.ToList();
-
                 await indexingService.IndexDocumentsAsync(contentItemIds);
             }
 
             // Remove deleted content items from the KB index.
+
             if (removedIds.Count > 0)
             {
                 await indexingService.RemoveDocumentsAsync(removedIds);

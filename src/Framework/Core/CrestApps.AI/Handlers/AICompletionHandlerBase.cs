@@ -1,3 +1,4 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 
 namespace CrestApps.AI.Handlers;

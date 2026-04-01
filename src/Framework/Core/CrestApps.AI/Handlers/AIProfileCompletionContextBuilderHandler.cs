@@ -1,5 +1,6 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Services;
 
 namespace CrestApps.AI.Handlers;
 
@@ -9,9 +10,9 @@ namespace CrestApps.AI.Handlers;
 /// </summary>
 internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-    private readonly IAITemplateService _aiTemplateService;
+    private readonly ITemplateService _aiTemplateService;
 
-    public AIProfileCompletionContextBuilderHandler(IAITemplateService aiTemplateService)
+    public AIProfileCompletionContextBuilderHandler(ITemplateService aiTemplateService)
     {
         _aiTemplateService = aiTemplateService;
     }

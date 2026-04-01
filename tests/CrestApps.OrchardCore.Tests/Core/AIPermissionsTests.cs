@@ -32,10 +32,8 @@ public sealed class AIPermissionsTests
     {
         // Arrange
         var toolName = "TestTool";
-
         // Act
         var permission = AIPermissions.CreateAIToolPermission(toolName);
-
         // Assert
         Assert.Equal("AccessAITool_TestTool", permission.Name);
         Assert.Equal("Access AI tool - TestTool", permission.Description);
@@ -46,10 +44,8 @@ public sealed class AIPermissionsTests
     {
         // Arrange
         var toolName = "TestTool";
-
         // Act
         var permission = AIPermissions.CreateAIToolPermission(toolName);
-
         // Assert
         Assert.NotNull(permission.ImpliedBy);
         Assert.Contains(AIPermissions.AccessAnyAITool, permission.ImpliedBy);
@@ -75,10 +71,8 @@ public sealed class AIPermissionsTests
     {
         // Arrange
         var profileName = "TestProfile";
-
         // Act
         var permission = AIPermissions.CreateProfilePermission(profileName);
-
         // Assert
         Assert.Equal("QueryAIProfile_TestProfile", permission.Name);
         Assert.Equal("Query AI profile - TestProfile", permission.Description);
@@ -89,10 +83,8 @@ public sealed class AIPermissionsTests
     {
         // Arrange
         var profileName = "TestProfile";
-
         // Act
         var permission = AIPermissions.CreateProfilePermission(profileName);
-
         // Assert
         Assert.NotNull(permission.ImpliedBy);
         Assert.Contains(AIPermissions.QueryAnyAIProfile, permission.ImpliedBy);

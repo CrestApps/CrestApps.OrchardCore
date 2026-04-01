@@ -10,16 +10,13 @@ namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 public sealed partial class ResourceTemplatesModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
-
     public ResourceTemplatesModel(McpClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
     public IList<McpClientResourceTemplate> Templates { get; private set; } = [];
-
     public string ErrorMessage { get; private set; }
-
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadTemplatesAsync(cancellationToken);
@@ -43,7 +40,6 @@ public sealed partial class ResourceTemplatesModel : PageModel
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
             var result = await client.ReadResourceAsync(new Uri(resourceUri), options: null, cancellationToken);
-
             var contents = new List<object>();
 
             if (result.Contents?.Count > 0)

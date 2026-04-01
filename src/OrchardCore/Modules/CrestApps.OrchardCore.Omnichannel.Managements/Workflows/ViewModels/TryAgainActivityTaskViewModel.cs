@@ -13,10 +13,8 @@ public class TryAgainActivityTaskViewModel
     public int? MaxAttempt { get; set; }
 
     public int? DefaultScheduleHours { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
-
     [BindNever]
     public IEnumerable<SelectListItem> Users { get; set; }
 }

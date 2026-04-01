@@ -23,13 +23,10 @@ public class EditProfileViewModel
     public AgentAvailability AgentAvailability { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }
-
     [BindNever]
     public IList<SelectListItem> TitleTypes { get; set; }
-
     [BindNever]
     public IList<SelectListItem> ProfileTypes { get; set; }
-
     [BindNever]
     public IList<SelectListItem> AvailabilityTypes { get; set; }
 }

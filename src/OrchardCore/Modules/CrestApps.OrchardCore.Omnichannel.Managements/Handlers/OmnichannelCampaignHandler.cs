@@ -16,7 +16,6 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
-
     public OmnichannelCampaignHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -29,10 +28,8 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
 
     public override Task InitializingAsync(InitializingContext<OmnichannelCampaign> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task UpdatingAsync(UpdatingContext<OmnichannelCampaign> context)
         => PopulateAsync(context.Model, context.Data);
-
     public override Task ValidatingAsync(ValidatingContext<OmnichannelCampaign> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
@@ -46,7 +43,6 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
     public override Task InitializedAsync(InitializedContext<OmnichannelCampaign> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
-
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
@@ -79,6 +75,7 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
         if (properties != null)
         {
             campaign.Properties ??= new Dictionary<string, object>();
+
             foreach (var (key, value) in properties)
             {
                 campaign.Properties[key] = value;
@@ -88,4 +85,3 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
         return Task.CompletedTask;
     }
 }
-

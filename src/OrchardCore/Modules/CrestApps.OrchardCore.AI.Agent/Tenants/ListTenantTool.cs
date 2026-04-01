@@ -9,22 +9,17 @@ namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 public sealed class ListTenantTool : AIFunction
 {
     public const string TheName = "listTenant";
-
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
-
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
     public override string Name => TheName;
-
     public override string Description => "Lists all sites or tenants.";
-
     public override JsonElement JsonSchema => _jsonSchema;
-
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -43,7 +38,6 @@ public sealed class ListTenantTool : AIFunction
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
-
         var shells = shellHost.GetAllSettings();
 
         if (logger.IsEnabled(LogLevel.Debug))

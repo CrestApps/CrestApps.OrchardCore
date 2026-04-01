@@ -3,6 +3,8 @@ using CrestApps.AI.A2A.Models;
 using CrestApps.AI.A2A.Services;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.Speech;
 using CrestApps.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,23 +22,23 @@ internal sealed class FindAgentForTaskFunction : AIFunction
     public const string TheName = "findAgentForTask";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "taskDescription": {
-              "type": "string",
-              "description": "A description of the task to find an agent for."
-            },
-            "maxResults": {
-              "type": "integer",
-              "description": "Maximum number of agents to return. Defaults to 5."
-            }
-          },
-          "required": ["taskDescription"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "taskDescription": {
+          "type": "string",
+          "description": "A description of the task to find an agent for."
+        },
+        "maxResults": {
+          "type": "integer",
+          "description": "Maximum number of agents to return. Defaults to 5."
         }
-        """);
+      },
+      "required": ["taskDescription"],
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -186,8 +188,8 @@ internal sealed class FindAgentForTaskFunction : AIFunction
             .ToList();
 
         return results.Count > 0
-            ? JsonSerializer.Serialize(results)
-            : "No agents were found matching the given task description.";
+        ? JsonSerializer.Serialize(results)
+        : "No agents were found matching the given task description.";
     }
 
     private static double ScoreRelevance(HashSet<string> queryTokens, HashSet<string> targetTokens)

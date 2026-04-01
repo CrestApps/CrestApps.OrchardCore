@@ -16,13 +16,13 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
     public const string TypeName = "media";
 
     private static readonly FileExtensionContentTypeProvider _contentTypeProvider = new();
+
     private readonly IMediaFileStore _mediaFileStore;
     private readonly ILogger _logger;
-
     public MediaResourceTypeHandler(
         IMediaFileStore mediaFileStore,
         ILogger<MediaResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _mediaFileStore = mediaFileStore;
         _logger = logger;
@@ -51,6 +51,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
 
         // Determine MIME type.
         var mimeType = resource.Resource?.MimeType;
+
         if (string.IsNullOrEmpty(mimeType))
         {
             if (!_contentTypeProvider.TryGetContentType(mediaPath, out mimeType))
@@ -73,10 +74,11 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                        Uri = resource.Resource.Uri,
-                        MimeType = mimeType,
-                        Text = content,
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Text = content,
                     }
+
                 ]
             };
         }
@@ -90,10 +92,11 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new BlobResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Blob = bytes,
+                Uri = resource.Resource.Uri,
+                MimeType = mimeType,
+                Blob = bytes,
                 }
+
             ]
         };
     }
