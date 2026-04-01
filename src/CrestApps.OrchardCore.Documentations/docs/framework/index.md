@@ -110,8 +110,8 @@ Most applications should use `IOrchestrator` or `IOrchestrationContextBuilder`. 
 | `CrestApps.AI.Mcp` | MCP client & server |
 | `CrestApps.AI.A2A` | A2A client |
 | `CrestApps.AI.Chat.Copilot` | GitHub Copilot orchestrator |
-| `CrestApps.AI.DataSources.Elasticsearch` | Elasticsearch vector search |
-| `CrestApps.AI.DataSources.AzureAI` | Azure AI Search vector search |
+| `CrestApps.AI.Elasticsearch` | Elasticsearch vector search and indexing services |
+| `CrestApps.AI.AzureAI` | Azure AI Search vector search and indexing services |
 | `CrestApps.SignalR` | SignalR hub management |
 | `CrestApps.Data.YesSql` | YesSql persistence catalogs |
 

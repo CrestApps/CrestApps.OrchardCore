@@ -13,16 +13,13 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class ArticleController : Controller
 {
     private readonly ICatalogManager<Article> _manager;
-    private readonly ICatalog<Article> _catalog;
-    private readonly JsonFilePaginationSettingsService _paginationSettingsService;
+    private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
 
     public ArticleController(
         ICatalogManager<Article> manager,
-        ICatalog<Article> catalog,
-        JsonFilePaginationSettingsService paginationSettingsService)
+        AppDataSettingsService<PaginationSettings> paginationSettingsService)
     {
         _manager = manager;
-        _catalog = catalog;
         _paginationSettingsService = paginationSettingsService;
     }
 
@@ -48,7 +45,6 @@ public sealed class ArticleController : Controller
                 {
                     ItemId = a.ItemId,
                     Title = a.Title,
-                    Author = a.Author,
                     CreatedUtc = a.CreatedUtc,
                 })
                 .ToList(),
@@ -76,7 +72,6 @@ public sealed class ArticleController : Controller
         var article = await _manager.NewAsync();
         article.Title = model.Title?.Trim();
         article.Description = model.Description?.Trim();
-        article.Author = model.Author?.Trim();
         article.CreatedUtc = DateTime.UtcNow;
 
         await _manager.CreateAsync(article);
@@ -100,7 +95,6 @@ public sealed class ArticleController : Controller
             ItemId = article.ItemId,
             Title = article.Title,
             Description = article.Description,
-            Author = article.Author,
         };
 
         return View(model);
@@ -126,7 +120,6 @@ public sealed class ArticleController : Controller
 
         article.Title = model.Title?.Trim();
         article.Description = model.Description?.Trim();
-        article.Author = model.Author?.Trim();
 
         await _manager.UpdateAsync(article);
 

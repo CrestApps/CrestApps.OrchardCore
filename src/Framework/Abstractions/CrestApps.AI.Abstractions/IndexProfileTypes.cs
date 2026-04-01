@@ -19,4 +19,9 @@ public static class IndexProfileTypes
     /// Index type for AI memory entries.
     /// </summary>
     public const string AIMemory = "AIMemory";
+
+    /// <summary>
+    /// Index type for custom article records.
+    /// </summary>
+    public const string Articles = "Articles";
 }

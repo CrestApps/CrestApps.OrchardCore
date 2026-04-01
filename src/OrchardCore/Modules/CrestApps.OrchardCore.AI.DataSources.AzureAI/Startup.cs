@@ -1,5 +1,5 @@
 using CrestApps.AI;
-using CrestApps.AI.DataSources.AzureAI;
+using CrestApps.AI.AzureAI;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
@@ -26,7 +26,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
-        services.AddAzureAISearchDataSourceServices();
+        CrestApps.AI.AzureAI.ServiceCollectionExtensions.AddAzureAISearchServices(services);
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

@@ -114,8 +114,8 @@ The **Framework Layer** contains all abstractions, core services, and provider i
 | `CrestApps.AI.Ollama.Core` | Ollama provider for locally hosted LLMs |
 | `CrestApps.AI.AzureAIInference.Core` | Azure AI Inference / GitHub Models provider |
 | `CrestApps.AI.Chat.Copilot` | GitHub Copilot chat orchestration, OAuth flow, credential management |
-| `CrestApps.AI.DataSources.AzureAI` | Azure AI Search data source content management and OData filters |
-| `CrestApps.AI.DataSources.Elasticsearch` | Elasticsearch data source content management and query building |
+| `CrestApps.AI.AzureAI` | Azure AI Search provider integration for indexing, document management, vector search, and OData filters |
+| `CrestApps.AI.Elasticsearch` | Elasticsearch provider integration for indexing, document management, vector search, and query/filter translation |
 | `CrestApps.AI.Mcp.Core` | Model Context Protocol (MCP) client and server |
 | `CrestApps.Azure.Core` | Azure-specific utilities (data protection, connection settings) |
 | `CrestApps.SignalR.Core` | SignalR hub abstractions for real-time AI chat |

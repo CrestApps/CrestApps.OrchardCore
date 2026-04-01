@@ -98,8 +98,8 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
             try
             {
                 // The actual sync logic requires indexing handlers, which are
-                // registered at the framework level via AddElasticsearchDataSourceServices
-                // or AddAzureAISearchDataSourceServices. If available, the service
+                // registered at the framework level via AddElasticsearchServices
+                // or AddAzureAISearchServices. If available, the service
                 // resolves them automatically when data sources are processed.
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {

@@ -1,5 +1,5 @@
 using CrestApps.AI;
-using CrestApps.AI.DataSources.Elasticsearch;
+using CrestApps.AI.Elasticsearch;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
@@ -25,7 +25,7 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
-        services.AddElasticsearchDataSourceServices();
+        CrestApps.AI.Elasticsearch.ServiceCollectionExtensions.AddElasticsearchServices(services);
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

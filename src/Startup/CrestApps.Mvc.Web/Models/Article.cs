@@ -9,6 +9,4 @@ public sealed class Article : CatalogItem
     public string Description { get; set; }
 
     public DateTime CreatedUtc { get; set; }
-
-    public string Author { get; set; }
 }

@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.DataSources.Elasticsearch/CrestApps.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Elasticsearch/CrestApps.AI.Elasticsearch.csproj" />
   </ItemGroup>
 
 </Project>

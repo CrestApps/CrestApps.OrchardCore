@@ -1,25 +1,25 @@
 ---
 sidebar_label: Azure AI Search
 sidebar_position: 3
-title: Azure AI Search Data Source
+title: Azure AI Search Provider
 description: Configure Azure AI Search as a vector search backend for RAG-powered AI experiences.
 ---
 
-# Azure AI Search Data Source
+# Azure AI Search Provider
 
 > Use Azure AI Search as a vector search backend for retrieval-augmented generation.
 
 ## Quick Start
 
 ```csharp
-builder.Services.AddAzureAISearchDataSourceServices(
-    builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
+builder.Services.AddAzureAISearchServices(
+    builder.Configuration.GetSection("CrestApps:AzureAISearch"));
 ```
 
 Or without configuration binding:
 
 ```csharp
-builder.Services.AddAzureAISearchDataSourceServices();
+builder.Services.AddAzureAISearchServices();
 ```
 
 ## Configuration

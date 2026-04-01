@@ -1,4 +1,5 @@
 using CrestApps.AI.Chat.Copilot.Models;
+using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
@@ -7,12 +8,12 @@ namespace CrestApps.Mvc.Web.Services;
 internal sealed class MvcCopilotOptionsConfiguration : IConfigureOptions<CopilotOptions>
 {
     private const string ProtectorPurpose = "CrestApps.Mvc.Web.CopilotSettings";
-    private readonly JsonFileCopilotSettingsService _settingsService;
+    private readonly AppDataSettingsService<CopilotSettings> _settingsService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<MvcCopilotOptionsConfiguration> _logger;
 
     public MvcCopilotOptionsConfiguration(
-        JsonFileCopilotSettingsService settingsService,
+        AppDataSettingsService<CopilotSettings> settingsService,
         IDataProtectionProvider dataProtectionProvider,
         ILogger<MvcCopilotOptionsConfiguration> logger)
     {

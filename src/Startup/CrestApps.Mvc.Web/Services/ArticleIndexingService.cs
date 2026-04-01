@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Models;
+using CrestApps.Services;
 
 namespace CrestApps.Mvc.Web.Services;
 
@@ -9,17 +10,18 @@ namespace CrestApps.Mvc.Web.Services;
 /// </summary>
 public sealed class ArticleIndexingService
 {
-    public const string ArticlesIndexType = "Articles";
-
+    private readonly ICatalog<Article> _articleCatalog;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ArticleIndexingService> _logger;
 
     public ArticleIndexingService(
+        ICatalog<Article> articleCatalog,
         ISearchIndexProfileStore indexProfileStore,
         IServiceProvider serviceProvider,
         ILogger<ArticleIndexingService> logger)
     {
+        _articleCatalog = articleCatalog;
         _indexProfileStore = indexProfileStore;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -29,18 +31,29 @@ public sealed class ArticleIndexingService
     {
         ArgumentNullException.ThrowIfNull(article);
 
-        var indexProfile = await GetConfiguredIndexProfileAsync(cancellationToken);
-        if (indexProfile == null)
+        var indexProfiles = await GetConfiguredIndexProfilesAsync(cancellationToken);
+        if (indexProfiles.Count == 0)
         {
             return;
         }
 
-        var indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(indexProfile.ProviderName);
-        var documentManager = _serviceProvider.GetKeyedService<ISearchDocumentManager>(indexProfile.ProviderName);
-
-        if (indexManager == null || documentManager == null)
+        foreach (var indexProfile in indexProfiles)
         {
-            _logger.LogWarning("Skipping article indexing because provider '{ProviderName}' is not configured for search indexing.", indexProfile.ProviderName);
+            await IndexIntoProfileAsync(indexProfile, article, cancellationToken);
+        }
+    }
+
+    public async Task SyncByIndexProfileAsync(SearchIndexProfile indexProfile, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(indexProfile);
+
+        if (!string.Equals(indexProfile.Type, IndexProfileTypes.Articles, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!TryResolveSearchServices(indexProfile.ProviderName, out var indexManager, out var documentManager))
+        {
             return;
         }
 
@@ -49,8 +62,65 @@ public sealed class ArticleIndexingService
             await indexManager.CreateAsync(indexProfile, BuildFields(), cancellationToken);
         }
 
-        var documents = new[]
+        var articles = await _articleCatalog.GetAllAsync();
+        foreach (var article in articles)
         {
+            await IndexIntoProfileAsync(indexProfile, article, cancellationToken);
+        }
+    }
+
+    public async Task DeleteAsync(string articleId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(articleId);
+
+        var indexProfiles = await GetConfiguredIndexProfilesAsync(cancellationToken);
+        if (indexProfiles.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var indexProfile in indexProfiles)
+        {
+            if (!TryResolveSearchServices(indexProfile.ProviderName, out _, out var documentManager))
+            {
+                continue;
+            }
+
+            await documentManager.DeleteAsync(indexProfile, [articleId], cancellationToken);
+        }
+    }
+
+    private async Task<IReadOnlyCollection<SearchIndexProfile>> GetConfiguredIndexProfilesAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var indexProfiles = await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.Articles);
+
+        if (indexProfiles.Count == 0)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Article indexing is disabled because no '{Type}' index profile is configured.", IndexProfileTypes.Articles);
+            }
+        }
+
+        return indexProfiles;
+    }
+
+    private async Task IndexIntoProfileAsync(SearchIndexProfile indexProfile, Article article, CancellationToken cancellationToken)
+    {
+        if (!TryResolveSearchServices(indexProfile.ProviderName, out var indexManager, out var documentManager))
+        {
+            return;
+        }
+
+        if (!await indexManager.ExistsAsync(indexProfile.IndexFullName, cancellationToken))
+        {
+            await indexManager.CreateAsync(indexProfile, BuildFields(), cancellationToken);
+        }
+
+        var indexed = await documentManager.AddOrUpdateAsync(indexProfile,
+        [
             new IndexDocument
             {
                 Id = article.ItemId,
@@ -59,13 +129,10 @@ public sealed class ArticleIndexingService
                     [ColumnNames.ArticleId] = article.ItemId,
                     [ColumnNames.Title] = article.Title ?? string.Empty,
                     [ColumnNames.Description] = article.Description ?? string.Empty,
-                    [ColumnNames.Author] = article.Author ?? string.Empty,
                     [ColumnNames.CreatedUtc] = article.CreatedUtc,
                 },
             },
-        };
-
-        var indexed = await documentManager.AddOrUpdateAsync(indexProfile, documents, cancellationToken);
+        ], cancellationToken);
 
         if (!indexed)
         {
@@ -73,44 +140,32 @@ public sealed class ArticleIndexingService
         }
     }
 
-    public async Task DeleteAsync(string articleId, CancellationToken cancellationToken = default)
+    private bool TryResolveSearchServices(
+        string providerName,
+        out ISearchIndexManager indexManager,
+        out ISearchDocumentManager documentManager)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(articleId);
-
-        var indexProfile = await GetConfiguredIndexProfileAsync(cancellationToken);
-        if (indexProfile == null)
+        try
         {
-            return;
+            indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(providerName);
+            documentManager = _serviceProvider.GetKeyedService<ISearchDocumentManager>(providerName);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Skipping article indexing because provider '{ProviderName}' is not fully configured for search indexing.", providerName);
+            indexManager = null;
+            documentManager = null;
+
+            return false;
         }
 
-        var documentManager = _serviceProvider.GetKeyedService<ISearchDocumentManager>(indexProfile.ProviderName);
-        if (documentManager == null)
+        if (indexManager == null || documentManager == null)
         {
-            _logger.LogWarning("Skipping article index cleanup because provider '{ProviderName}' is not configured.", indexProfile.ProviderName);
-            return;
+            _logger.LogWarning("Skipping article indexing because provider '{ProviderName}' is not configured for search indexing.", providerName);
+            return false;
         }
 
-        await documentManager.DeleteAsync(indexProfile, [articleId], cancellationToken);
-    }
-
-    private async Task<SearchIndexProfile> GetConfiguredIndexProfileAsync(CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        var indexProfiles = await _indexProfileStore.GetAllAsync();
-
-        var indexProfile = indexProfiles.FirstOrDefault(p =>
-            string.Equals(p.Type, ArticlesIndexType, StringComparison.OrdinalIgnoreCase));
-
-        if (indexProfile == null)
-        {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Article indexing is disabled because no '{Type}' index profile is configured.", ArticlesIndexType);
-            }
-        }
-
-        return indexProfile;
+        return true;
     }
 
     private static IReadOnlyCollection<SearchIndexField> BuildFields()
@@ -139,12 +194,6 @@ public sealed class ArticleIndexingService
             },
             new SearchIndexField
             {
-                Name = ColumnNames.Author,
-                FieldType = SearchFieldType.Keyword,
-                IsFilterable = true,
-            },
-            new SearchIndexField
-            {
                 Name = ColumnNames.CreatedUtc,
                 FieldType = SearchFieldType.DateTime,
                 IsFilterable = true,
@@ -157,7 +206,6 @@ public sealed class ArticleIndexingService
         public const string ArticleId = "article_id";
         public const string Title = "title";
         public const string Description = "description";
-        public const string Author = "author";
         public const string CreatedUtc = "created_utc";
     }
 }

@@ -2,11 +2,11 @@ using CrestApps;
 using CrestApps.AI;
 using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
+using CrestApps.AI.AzureAI;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Copilot;
-using CrestApps.AI.DataSources.AzureAI;
-using CrestApps.AI.DataSources.Elasticsearch;
+using CrestApps.AI.Elasticsearch;
 using CrestApps.AI.Endpoints;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
@@ -48,7 +48,7 @@ using YesSql.Sql;
 //
 // Sections:
 //   1. Logging
-//   2. Application Configuration (JSON-file-backed settings)
+//   2. Application Configuration (App_Data appsettings override)
 //   3. Authentication & Authorization
 //   4. CrestApps AI Framework (core + orchestration + chat + documents + SignalR)
 //   5. AI Providers (OpenAI, Azure OpenAI, Ollama, Azure AI Inference)
@@ -79,42 +79,60 @@ Directory.CreateDirectory(appDataPath);
 // =============================================================================
 // 2. APPLICATION CONFIGURATION
 // =============================================================================
-// Settings are persisted in dedicated JSON files so that IOptionsMonitor<T>
-// reflects admin changes automatically via the configuration reload-on-change
-// mechanism. This is an application-level concern — replace these services with
-// your own persistence strategy (database, Azure App Configuration, etc.).
+// Three-layer configuration: base → environment override → App_Data override.
+// The App_Data/appsettings.json file always wins so local secrets and
+// machine-specific changes stay out of source control while still flowing
+// through IConfiguration reload-on-change.
 // =============================================================================
-var deploymentDefaultsService = new JsonFileDeploymentDefaultsService(appDataPath);
-var interactionDocumentSettingsService = new JsonFileInteractionDocumentSettingsService(appDataPath);
-var aiDataSourceSettingsService = new JsonFileAIDataSourceSettingsService(appDataPath);
-var mcpServerSettingsService = new JsonFileMcpServerSettingsService(appDataPath);
-var chatInteractionSettingsService = new JsonFileChatInteractionSettingsService(appDataPath);
-var copilotSettingsService = new JsonFileCopilotSettingsService(appDataPath);
 
-builder.Configuration.AddJsonFile(
-    deploymentDefaultsService.FilePath, optional: true, reloadOnChange: true);
-builder.Configuration.AddJsonFile(
-    interactionDocumentSettingsService.FilePath, optional: true, reloadOnChange: true);
-builder.Configuration.AddJsonFile(
-    aiDataSourceSettingsService.FilePath, optional: true, reloadOnChange: true);
-builder.Configuration.AddJsonFile(
-    chatInteractionSettingsService.FilePath, optional: true, reloadOnChange: true);
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("App_Data/appsettings.json", optional: true, reloadOnChange: true);
 
-builder.Services.Configure<DefaultAIDeploymentSettings>(
-    builder.Configuration.GetSection(JsonFileDeploymentDefaultsService.SectionKey));
-builder.Services.Configure<InteractionDocumentSettings>(
-    builder.Configuration.GetSection(JsonFileInteractionDocumentSettingsService.SectionKey));
-builder.Services.Configure<AIDataSourceSettings>(
-    builder.Configuration.GetSection(JsonFileAIDataSourceSettingsService.SectionKey));
-builder.Services.Configure<ChatInteractionSettings>(
-    builder.Configuration.GetSection(JsonFileChatInteractionSettingsService.SectionKey));
-
-builder.Services.AddSingleton(deploymentDefaultsService);
-builder.Services.AddSingleton(interactionDocumentSettingsService);
-builder.Services.AddSingleton(aiDataSourceSettingsService);
-builder.Services.AddSingleton(mcpServerSettingsService);
-builder.Services.AddSingleton(chatInteractionSettingsService);
-builder.Services.AddSingleton(copilotSettingsService);
+builder.Services.AddSingleton(new AppDataConfigurationFileService(appDataPath));
+builder.Services.AddMvcAppDataSettings(builder.Configuration);
+builder.Services
+    .AddElasticsearchDataSource(IndexProfileTypes.AIDocuments, o =>
+    {
+        o.DisplayName = "AI Documents";
+        o.Description = "Create an Elasticsearch index for uploaded and embedded AI document chunks.";
+    })
+    .AddAzureAISearchDataSource(IndexProfileTypes.AIDocuments, o =>
+    {
+        o.DisplayName = "AI Documents";
+        o.Description = "Create an Azure AI Search index for uploaded and embedded AI document chunks.";
+    })
+    .AddElasticsearchDataSource(IndexProfileTypes.DataSource, o =>
+    {
+        o.DisplayName = "Data Source";
+        o.Description = "Create an Elasticsearch index for AI knowledge base data source documents.";
+    })
+    .AddAzureAISearchDataSource(IndexProfileTypes.DataSource, o =>
+    {
+        o.DisplayName = "Data Source";
+        o.Description = "Create an Azure AI Search index for AI knowledge base data source documents.";
+    })
+    .AddElasticsearchDataSource(IndexProfileTypes.AIMemory, o =>
+    {
+        o.DisplayName = "AI Memory";
+        o.Description = "Create an Elasticsearch index for user and system memory records.";
+    })
+    .AddAzureAISearchDataSource(IndexProfileTypes.AIMemory, o =>
+    {
+        o.DisplayName = "AI Memory";
+        o.Description = "Create an Azure AI Search index for user and system memory records.";
+    })
+    .AddElasticsearchDataSource(IndexProfileTypes.Articles, o =>
+    {
+        o.DisplayName = "Articles";
+        o.Description = "Create an Elasticsearch index for sample article records managed in the MVC app.";
+    })
+    .AddAzureAISearchDataSource(IndexProfileTypes.Articles, o =>
+    {
+        o.DisplayName = "Articles";
+        o.Description = "Create an Azure AI Search index for sample article records managed in the MVC app.";
+    });
 
 // =============================================================================
 // 3. AUTHENTICATION & AUTHORIZATION
@@ -196,14 +214,14 @@ builder.Services.AddTransient<IConfigureOptions<AIProviderOptions>, MvcAIProvide
 // Data sources enable retrieval-augmented generation (RAG) by connecting to
 // search backends. Each provider registers keyed services for index management,
 // document reading, and vector search. Connection settings are read from
-// appsettings.json under "CrestApps:Search".
+// appsettings.json under "CrestApps:Elasticsearch" and "CrestApps:AzureAISearch".
 //
-//   AddElasticsearchDataSourceServices()   — Elasticsearch vector search
-//   AddAzureAISearchDataSourceServices()   — Azure AI Search vector search
+//   AddElasticsearchServices()   — Elasticsearch vector search
+//   AddAzureAISearchServices()   — Azure AI Search vector search
 // =============================================================================
 builder.Services
-    .AddElasticsearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
-    .AddAzureAISearchDataSourceServices(builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
+    .AddElasticsearchServices(builder.Configuration.GetSection("CrestApps:Elasticsearch"))
+    .AddAzureAISearchServices(builder.Configuration.GetSection("CrestApps:AzureAISearch"));
 
 // =============================================================================
 // 7. MCP — MODEL CONTEXT PROTOCOL
@@ -425,17 +443,12 @@ builder.Services
     .AddDocumentCatalog<Article, ArticleIndex>()
     .AddScoped<ICatalogManager<Article>, CatalogManager<Article>>()
     .AddScoped<ICatalogEntryHandler<Article>, ArticleIndexingHandler>()
-    .AddScoped<ArticleIndexingService>();
+    .AddScoped<ArticleIndexingService>()
+    .AddIndexProfileHandler<ArticleIndexProfileHandler>();
 
 // Local file store for uploaded documents.
 builder.Services.AddSingleton(new FileSystemFileStore(
     Path.Combine(appDataPath, "Documents")));
-
-// Settings service for managing AI settings.
-builder.Services.AddSingleton(new JsonFileSettingsService(appDataPath));
-
-// Pagination settings service.
-builder.Services.AddSingleton(new JsonFilePaginationSettingsService(appDataPath));
 
 // Copilot orchestrator: credential store and options configuration.
 builder.Services.AddScoped<ICopilotCredentialStore, JsonFileCopilotCredentialStore>();
@@ -503,7 +516,7 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 {
     branch.Use(async (context, next) =>
     {
-        var settings = await context.RequestServices.GetRequiredService<JsonFileMcpServerSettingsService>().GetAsync();
+        var settings = await context.RequestServices.GetRequiredService<AppDataSettingsService<CrestApps.AI.Mcp.Models.McpServerOptions>>().GetAsync();
 
         if (settings.AuthenticationType == McpServerAuthenticationType.None)
         {
@@ -725,7 +738,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "What Are Large Language Models?",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # What Are Large Language Models?
@@ -752,7 +764,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "Understanding Embeddings and Vector Search",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # Understanding Embeddings and Vector Search
@@ -782,7 +793,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "Retrieval-Augmented Generation (RAG) Explained",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # Retrieval-Augmented Generation (RAG) Explained
@@ -813,7 +823,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "Search Indexing with Elasticsearch",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # Search Indexing with Elasticsearch
@@ -854,7 +863,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "Azure AI Search for Knowledge Bases",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # Azure AI Search for Knowledge Bases
@@ -884,7 +892,6 @@ async Task SeedArticlesAsync(IServiceProvider services)
         {
             ItemId = UniqueId.GenerateId(),
             Title = "Building Custom Data Sources for AI",
-            Author = "AI Team",
             CreatedUtc = DateTime.UtcNow,
             Description = """
                 # Building Custom Data Sources for AI

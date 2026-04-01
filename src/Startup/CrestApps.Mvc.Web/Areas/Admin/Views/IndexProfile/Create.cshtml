@@ -40,7 +40,7 @@
                     <option value="">— Select Type —</option>
                 </select>
                 <span asp-validation-for="Type" class="text-danger"></span>
-                <div class="form-text">Determines how this index is used (documents, data source, or memory).</div>
+                <div class="form-text" id="typeDescription">Determines how this index is used.</div>
             </div>
 
             <div class="mb-3">
@@ -60,3 +60,44 @@
         </div>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sources));
+        const providerSelect = document.getElementById('@Html.IdFor(m => m.ProviderName)');
+        const typeSelect = document.getElementById('@Html.IdFor(m => m.Type)');
+        const typeDescription = document.getElementById('typeDescription');
+
+        function syncTypes() {
+            const selectedProvider = providerSelect.value;
+            const currentType = typeSelect.value;
+            const matches = sources.filter(source => !selectedProvider || source.ProviderName === selectedProvider);
+            const unique = [...new Map(matches.map(source => [source.Type, source])).values()];
+
+            typeSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '— Select Type —';
+            typeSelect.appendChild(placeholder);
+
+            unique.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.Type;
+                option.textContent = source.DisplayName;
+                typeSelect.appendChild(option);
+            });
+
+            if (unique.some(source => source.Type === currentType))
+            {
+                typeSelect.value = currentType;
+            }
+
+            const selected = matches.find(source => source.Type === typeSelect.value);
+            typeDescription.textContent = selected?.Description ?? 'Determines how this index is used.';
+        }
+
+        providerSelect.addEventListener('change', syncTypes);
+        typeSelect.addEventListener('change', syncTypes);
+        syncTypes();
+    });
+</script>

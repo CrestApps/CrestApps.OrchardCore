@@ -37,15 +37,12 @@ Configures NLog with daily log file rotation in `App_Data/logs/`. Replaceable wi
 
 ### Section 2 — Application Configuration
 
-Loads settings from JSON files in `App_Data/` with automatic reload-on-change:
+Loads settings from the normal appsettings chain plus `App_Data/appsettings.json` as the highest-priority local override file with automatic reload-on-change:
 
 | Service | Purpose |
 |---------|---------|
-| `JsonFileDeploymentDefaultsService` | Default AI deployment settings |
-| `JsonFileInteractionDocumentSettingsService` | Chat document settings |
-| `JsonFileAIDataSourceSettingsService` | Vector search configuration |
-| `JsonFileMcpServerSettingsService` | MCP server authentication |
-| `JsonFileCopilotSettingsService` | Copilot authentication and BYOK settings |
+| `App_Data/appsettings.json` | Local machine overrides for admin-managed AI, MCP, Copilot, and pagination settings |
+| `AppDataSettingsService<T>` | Reads merged `IConfiguration` and persists nested sections back into `App_Data/appsettings.json` |
 
 ### Section 3 — Authentication & Authorization
 
@@ -90,10 +87,10 @@ Registers vector search backends with configuration binding:
 
 ```csharp
 builder.Services
-    .AddElasticsearchDataSourceServices(
-        builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
-    .AddAzureAISearchDataSourceServices(
-        builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
+    .AddElasticsearchServices(
+        builder.Configuration.GetSection("CrestApps:Elasticsearch"))
+    .AddAzureAISearchServices(
+        builder.Configuration.GetSection("CrestApps:AzureAISearch"));
 ```
 
 ### Section 7 — Model Context Protocol (MCP)
@@ -164,7 +161,7 @@ The middleware pipeline includes:
 1. **Each framework feature is a single extension method call** — compose only what you need
 2. **Providers are independent** — register only the ones you use
 3. **Storage is pluggable** — the YesSql section can be replaced entirely
-4. **Configuration is file-based** — JSON files in `App_Data/` with reload-on-change
+4. **Configuration supports local overrides** — `App_Data/appsettings.json` sits on top of `appsettings.json` and `appsettings.{Environment}.json`
 5. **MCP and A2A are optional** — add them only if you need protocol interop
 6. **Background tasks handle maintenance** — no manual cleanup needed
 

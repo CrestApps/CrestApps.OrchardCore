@@ -17,10 +17,10 @@ builder.Services
     .AddOrchestrationServices()
 
     // Add one or both backends:
-    .AddElasticsearchDataSourceServices(
-        builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"))
-    .AddAzureAISearchDataSourceServices(
-        builder.Configuration.GetSection("CrestApps:Search:AzureAISearch"));
+    .AddElasticsearchServices(
+        builder.Configuration.GetSection("CrestApps:Elasticsearch"))
+    .AddAzureAISearchServices(
+        builder.Configuration.GetSection("CrestApps:AzureAISearch"));
 ```
 
 ## What is Vector Search?
@@ -118,8 +118,8 @@ Each data source backend registers these services, keyed by its provider name:
 
 | Backend | Extension | Provider Name | Documentation |
 |---------|-----------|--------------|---------------|
-| Elasticsearch | `AddElasticsearchDataSourceServices()` | `"Elasticsearch"` | [Elasticsearch](./elasticsearch.md) |
-| Azure AI Search | `AddAzureAISearchDataSourceServices()` | `"AzureAISearch"` | [Azure AI Search](./azure-ai.md) |
+| Elasticsearch | `AddElasticsearchServices()` | `"Elasticsearch"` | [Elasticsearch](./elasticsearch.md) |
+| Azure AI Search | `AddAzureAISearchServices()` | `"AzureAISearch"` | [Azure AI Search](./azure-ai.md) |
 
 ## Key Interfaces Deep Dive
 
@@ -323,20 +323,16 @@ Data source backends are configured in `appsettings.json` under the `CrestApps:S
 }
 ```
 
-The configuration section is passed to the `Add*DataSourceServices()` extension method:
+The configuration section is passed to the provider registration extension method:
 
 ```csharp
 // Bind from configuration
-builder.Services.AddElasticsearchDataSourceServices(
-    builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"));
+builder.Services.AddElasticsearchServices(
+    builder.Configuration.GetSection("CrestApps:Elasticsearch"));
 
-// Or configure programmatically
-builder.Services.AddElasticsearchDataSourceServices(options =>
-{
-    options.Url = "https://localhost:9200";
-    options.Username = "elastic";
-    options.Password = "changeme";
-});
+// Or bind Azure AI Search
+builder.Services.AddAzureAISearchServices(
+    builder.Configuration.GetSection("CrestApps:AzureAISearch"));
 ```
 
 See the individual backend pages for detailed configuration options: [Elasticsearch](./elasticsearch.md) | [Azure AI Search](./azure-ai.md)

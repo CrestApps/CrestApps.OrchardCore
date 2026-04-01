@@ -1,4 +1,6 @@
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -24,6 +26,9 @@ public sealed class IndexProfileViewModel
     public List<SelectListItem> Types { get; set; } = [];
 
     public List<SelectListItem> EmbeddingDeployments { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<IndexProfileSourceDescriptor> Sources { get; set; } = [];
 
     public static IndexProfileViewModel FromProfile(SearchIndexProfile profile)
     {

@@ -17,27 +17,27 @@ public sealed class SettingsController : Controller
 {
     private const string CopilotProtectorPurpose = "CrestApps.Mvc.Web.CopilotSettings";
 
-    private readonly JsonFileSettingsService _settingsService;
-    private readonly JsonFileDeploymentDefaultsService _deploymentDefaultsService;
-    private readonly JsonFileInteractionDocumentSettingsService _interactionDocumentSettingsService;
-    private readonly JsonFileAIDataSourceSettingsService _aiDataSourceSettingsService;
-    private readonly JsonFileMcpServerSettingsService _mcpServerSettingsService;
-    private readonly JsonFileChatInteractionSettingsService _chatInteractionSettingsService;
-    private readonly JsonFileCopilotSettingsService _copilotSettingsService;
-    private readonly JsonFilePaginationSettingsService _paginationSettingsService;
+    private readonly AppDataSettingsService<GeneralAISettings> _settingsService;
+    private readonly AppDataSettingsService<DefaultAIDeploymentSettings> _deploymentDefaultsService;
+    private readonly AppDataSettingsService<InteractionDocumentSettings> _interactionDocumentSettingsService;
+    private readonly AppDataSettingsService<AIDataSourceSettings> _aiDataSourceSettingsService;
+    private readonly AppDataSettingsService<McpServerOptions> _mcpServerSettingsService;
+    private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
+    private readonly AppDataSettingsService<CopilotSettings> _copilotSettingsService;
+    private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public SettingsController(
-        JsonFileSettingsService settingsService,
-        JsonFileDeploymentDefaultsService deploymentDefaultsService,
-        JsonFileInteractionDocumentSettingsService interactionDocumentSettingsService,
-        JsonFileAIDataSourceSettingsService aiDataSourceSettingsService,
-        JsonFileMcpServerSettingsService mcpServerSettingsService,
-        JsonFileChatInteractionSettingsService chatInteractionSettingsService,
-        JsonFileCopilotSettingsService copilotSettingsService,
-        JsonFilePaginationSettingsService paginationSettingsService,
+        AppDataSettingsService<GeneralAISettings> settingsService,
+        AppDataSettingsService<DefaultAIDeploymentSettings> deploymentDefaultsService,
+        AppDataSettingsService<InteractionDocumentSettings> interactionDocumentSettingsService,
+        AppDataSettingsService<AIDataSourceSettings> aiDataSourceSettingsService,
+        AppDataSettingsService<McpServerOptions> mcpServerSettingsService,
+        AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
+        AppDataSettingsService<CopilotSettings> copilotSettingsService,
+        AppDataSettingsService<PaginationSettings> paginationSettingsService,
         IAIDeploymentManager deploymentManager,
         ISearchIndexProfileStore indexProfileStore,
         IDataProtectionProvider dataProtectionProvider)

@@ -20,8 +20,8 @@
     <ProjectReference Include="../../Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
-    <ProjectReference Include="../../Framework/Core/CrestApps.AI.DataSources.Elasticsearch/CrestApps.AI.DataSources.Elasticsearch.csproj" />
-    <ProjectReference Include="../../Framework/Core/CrestApps.AI.DataSources.AzureAI/CrestApps.AI.DataSources.AzureAI.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.Elasticsearch/CrestApps.AI.Elasticsearch.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.AzureAI/CrestApps.AI.AzureAI.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />

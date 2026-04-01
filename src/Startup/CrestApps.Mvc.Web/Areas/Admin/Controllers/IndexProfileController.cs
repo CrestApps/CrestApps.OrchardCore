@@ -1,10 +1,13 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Models;
+using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 
@@ -14,26 +17,22 @@ public sealed class IndexProfileController : Controller
 {
     private readonly ISearchIndexProfileStore _store;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
-
-    private static readonly List<SelectListItem> _providers =
-    [
-        new("Elasticsearch", "Elasticsearch"),
-        new("Azure AI Search", "AzureAISearch"),
-    ];
-
-    private static readonly List<SelectListItem> _types =
-    [
-        new("AI Documents", IndexProfileTypes.AIDocuments),
-        new("Data Source", IndexProfileTypes.DataSource),
-        new("AI Memory", IndexProfileTypes.AIMemory),
-    ];
+    private readonly IEnumerable<IIndexProfileHandler> _handlers;
+    private readonly IReadOnlyList<IndexProfileSourceDescriptor> _sources;
 
     public IndexProfileController(
         ISearchIndexProfileStore store,
-        ICatalog<AIDeployment> deploymentCatalog)
+        ICatalog<AIDeployment> deploymentCatalog,
+        IEnumerable<IIndexProfileHandler> handlers,
+        IOptions<IndexProfileSourceOptions> sourceOptions)
     {
         _store = store;
         _deploymentCatalog = deploymentCatalog;
+        _handlers = handlers;
+        _sources = sourceOptions.Value.Sources
+            .OrderBy(source => source.ProviderDisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(source => source.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     public async Task<IActionResult> Index()
@@ -74,6 +73,7 @@ public sealed class IndexProfileController : Controller
 
         await _store.CreateAsync(profile);
         await _store.SaveChangesAsync();
+        await NotifySynchronizedAsync(profile);
 
         return RedirectToAction(nameof(Index));
     }
@@ -116,6 +116,7 @@ public sealed class IndexProfileController : Controller
 
         await _store.UpdateAsync(profile);
         await _store.SaveChangesAsync();
+        await NotifySynchronizedAsync(profile);
 
         return RedirectToAction(nameof(Index));
     }
@@ -165,12 +166,27 @@ public sealed class IndexProfileController : Controller
         {
             ModelState.AddModelError(nameof(model.Type), "Type is required.");
         }
+        else if (!_sources.Any(source =>
+            string.Equals(source.ProviderName, model.ProviderName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(source.Type, model.Type, StringComparison.OrdinalIgnoreCase)))
+        {
+            ModelState.AddModelError(nameof(model.Type), "The selected provider does not support this index type.");
+        }
     }
 
     private async Task PopulateDropdownsAsync(IndexProfileViewModel model)
     {
-        model.Providers = _providers;
-        model.Types = _types;
+        model.Sources = _sources;
+        model.Providers = _sources
+            .GroupBy(source => source.ProviderName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Select(source => new SelectListItem(source.ProviderDisplayName, source.ProviderName))
+            .ToList();
+        model.Types = _sources
+            .GroupBy(source => source.Type, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .Select(source => new SelectListItem(source.DisplayName, source.Type))
+            .ToList();
 
         var deployments = await _deploymentCatalog.GetAllAsync();
 
@@ -179,5 +195,13 @@ public sealed class IndexProfileController : Controller
             deployments
                 .Where(d => d.Type == AIDeploymentType.Embedding)
                 .Select(d => new SelectListItem(d.Name, d.ItemId)));
+    }
+
+    private async Task NotifySynchronizedAsync(SearchIndexProfile profile)
+    {
+        foreach (var handler in _handlers)
+        {
+            await handler.SynchronizedAsync(profile);
+        }
     }
 }

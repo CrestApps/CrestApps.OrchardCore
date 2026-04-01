@@ -19,7 +19,5 @@ public sealed class ArticleListEntry
 
     public string Title { get; set; }
 
-    public string Author { get; set; }
-
     public DateTime CreatedUtc { get; set; }
 }

@@ -2,6 +2,14 @@
     ViewData["Title"] = "Dashboard";
 }
 
+@if (!User.Identity?.IsAuthenticated ?? true)
+{
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Getting Started:</strong> <a asp-controller="Account" asp-action="Login">Sign in</a> to access the admin features and start using AI chat.
+    </div>
+}
+
 <div class="card mb-4 border-primary">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0"><i class="bi bi-rocket-takeoff"></i> Getting Started</h5>
@@ -203,16 +211,11 @@
     </div>
 </section>
 
-<div class="mt-5">
-    <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">
-        <i class="bi bi-gear"></i> Open Settings
-    </a>
-</div>
-
-@if (!User.Identity.IsAuthenticated)
+@if (User.Identity?.IsAuthenticated ?? false)
 {
-    <div class="alert alert-warning mt-4">
-        <i class="bi bi-exclamation-triangle"></i>
-        <strong>Getting Started:</strong> <a asp-controller="Account" asp-action="Login">Sign in</a> to access the admin features and start using AI chat.
+    <div class="mt-5">
+        <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-gear"></i> Open Settings
+        </a>
     </div>
 }

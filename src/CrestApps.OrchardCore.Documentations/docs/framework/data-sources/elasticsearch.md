@@ -1,25 +1,25 @@
 ---
 sidebar_label: Elasticsearch
 sidebar_position: 2
-title: Elasticsearch Data Source
+title: Elasticsearch Provider
 description: Configure Elasticsearch as a vector search backend for RAG-powered AI experiences.
 ---
 
-# Elasticsearch Data Source
+# Elasticsearch Provider
 
 > Use Elasticsearch as a vector search backend for retrieval-augmented generation.
 
 ## Quick Start
 
 ```csharp
-builder.Services.AddElasticsearchDataSourceServices(
-    builder.Configuration.GetSection("CrestApps:Search:Elasticsearch"));
+builder.Services.AddElasticsearchServices(
+    builder.Configuration.GetSection("CrestApps:Elasticsearch"));
 ```
 
 Or without configuration binding:
 
 ```csharp
-builder.Services.AddElasticsearchDataSourceServices();
+builder.Services.AddElasticsearchServices();
 ```
 
 ## Configuration

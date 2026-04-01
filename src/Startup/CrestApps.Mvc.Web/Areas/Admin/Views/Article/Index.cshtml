@@ -32,7 +32,6 @@ else
             <thead class="table-dark">
                 <tr>
                     <th>Title</th>
-                    <th>Author</th>
                     <th>Created</th>
                     <th style="width: 180px;">Actions</th>
                 </tr>
@@ -42,7 +41,6 @@ else
                 {
                     <tr>
                         <td><strong>@(article.Title ?? "Untitled")</strong></td>
-                        <td>@(article.Author ?? "—")</td>
                         <td>
                             <small class="text-muted">@article.CreatedUtc.ToString("g")</small>
                         </td>
