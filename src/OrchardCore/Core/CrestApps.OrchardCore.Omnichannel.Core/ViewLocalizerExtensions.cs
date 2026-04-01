@@ -15,6 +15,7 @@ public static class ViewLocalizerExtensions
 
         var lastTwoDigits = number % 100;
         var lastDigit = number % 10;
+
         var suffix = lastTwoDigits is 11 or 12 or 13
         ? "th"
         : lastDigit switch

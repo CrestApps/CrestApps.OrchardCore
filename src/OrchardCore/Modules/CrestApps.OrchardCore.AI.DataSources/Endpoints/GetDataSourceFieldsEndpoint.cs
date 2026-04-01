@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Contents.Indexing;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
+
 namespace CrestApps.OrchardCore.AI.DataSources.Endpoints;
 
 internal static class GetDataSourceFieldsEndpoint
@@ -18,8 +19,10 @@ internal static class GetDataSourceFieldsEndpoint
         builder.MapGet("ai/data-sources/fields/{indexProfileName}", HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery();
+
         return builder;
     }
+
     private static async Task<IResult> HandleAsync(
         [FromRoute] string indexProfileName,
         [FromServices] IAuthorizationService authorizationService,
@@ -31,26 +34,33 @@ internal static class GetDataSourceFieldsEndpoint
         {
             return TypedResults.Forbid();
         }
+
         if (string.IsNullOrEmpty(indexProfileName))
         {
             return TypedResults.BadRequest("Index profile name is required.");
         }
+
         var profile = await indexProfileStore.FindByNameAsync(indexProfileName);
+
         if (profile == null)
         {
             return TypedResults.NotFound();
         }
+
         var fields = GetFieldNamesFromProfile(profile);
+
         // Determine suggested defaults based on profile type.
         string suggestedTitleField = null;
         string suggestedContentField = null;
         string suggestedKeyField = null;
+
         if (dataSourceOptions.Value.GetFieldMapping(profile.ProviderName, profile.Type) is DataSourceFieldMapping fieldMapping)
         {
             suggestedTitleField = fieldMapping.DefaultTitleField;
             suggestedContentField = fieldMapping.DefaultContentField;
             suggestedKeyField = fieldMapping.DefaultKeyField;
         }
+
         return TypedResults.Ok(new
         {
             fields = fields.Select(f => f.Name).OrderBy(n => n),
@@ -59,13 +69,16 @@ internal static class GetDataSourceFieldsEndpoint
             suggestedKeyField,
         });
     }
+
     private static List<FieldInfo> GetFieldNamesFromProfile(IndexProfile profile)
     {
         var fields = new List<FieldInfo>();
+
         if (profile.Properties == null)
         {
             return fields;
         }
+
         // Try to extract fields from Elasticsearch mapping.
         if (profile.Properties.TryGetPropertyValue("ElasticsearchIndexMetadata", out var esNode) && esNode != null)
         {
@@ -78,12 +91,15 @@ internal static class GetDataSourceFieldsEndpoint
                     {
                         fields.Add(new FieldInfo(ContentIndexingConstants.DisplayTextKey + ContentIndexingConstants.KeywordKey));
                         fields.Add(new FieldInfo(ContentIndexingConstants.DisplayTextNormalizedKey));
+
                         continue;
                     }
+
                     fields.Add(new FieldInfo(prop.Key));
                 }
             }
         }
+
         // Try to extract fields from Azure AI Search mapping.
         if (profile.Properties.TryGetPropertyValue("AzureAISearchIndexMetadata", out var azNode) && azNode != null)
         {
@@ -100,7 +116,9 @@ internal static class GetDataSourceFieldsEndpoint
                 }
             }
         }
+
         return fields;
     }
+
     private sealed record FieldInfo(string Name);
 }

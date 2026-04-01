@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 public sealed class ListContentTypesDefinitionsTool : AIFunction
 {
     public const string TheName = "listContentTypesDefinitions";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -17,9 +18,13 @@ public sealed class ListContentTypesDefinitionsTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Retrieves the available content types definitions which can be used to create content types.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -38,6 +43,7 @@ public sealed class ListContentTypesDefinitionsTool : AIFunction
         }
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
+
         var result = JsonSerializer.Serialize(await contentDefinitionManager.ListTypeDefinitionsAsync(), JsonHelpers.ContentDefinitionSerializerOptions);
 
         if (logger.IsEnabled(LogLevel.Debug))

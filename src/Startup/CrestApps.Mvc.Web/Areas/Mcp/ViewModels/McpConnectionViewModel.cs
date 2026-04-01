@@ -6,10 +6,13 @@ namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 public sealed class McpConnectionViewModel
 {
     public string ItemId { get; set; }
+
     [Required]
     public string DisplayText { get; set; }
+
     [Required]
     public string Source { get; set; } = "sse";
+
     public string Endpoint { get; set; }
 
     public McpClientAuthenticationType AuthenticationType { get; set; }
@@ -55,7 +58,10 @@ public sealed class McpConnectionViewModel
     public string AdditionalHeaders { get; set; }
 
     public string Command { get; set; }
+
     public string Arguments { get; set; } = "[]";
+
     public string WorkingDirectory { get; set; }
+
     public string EnvironmentVariables { get; set; } = "{}";
 }

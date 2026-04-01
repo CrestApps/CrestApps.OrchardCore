@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 internal sealed class AdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public AdminMenu(IStringLocalizer<AdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -53,6 +54,7 @@ internal sealed class AdminMenu : AdminNavigationProvider
             .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
             .LocalNav()
         )
+
         , priority: 1);
 
         return ValueTask.CompletedTask;

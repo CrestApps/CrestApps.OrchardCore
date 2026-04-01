@@ -14,6 +14,7 @@ public class EditChatInteractionDataSourceViewModel
     public bool IsInScope { get; set; }
 
     public string Filter { get; set; }
+
     [BindNever]
     public IEnumerable<AIDataSource> DataSources { get; set; }
 }

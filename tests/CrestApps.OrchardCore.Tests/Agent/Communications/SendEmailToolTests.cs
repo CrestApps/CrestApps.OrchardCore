@@ -22,9 +22,12 @@ public sealed class SendEmailToolTests
         emailService
             .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
             .ReturnsAsync(Result.Success());
+
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -38,6 +41,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert: email should be sent successfully without throwing NullReferenceException.
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
         m.To == "test@example.com"
@@ -57,16 +61,20 @@ public sealed class SendEmailToolTests
         emailService
             .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
             .ReturnsAsync(Result.Success());
+
         var mockUser = new Mock<IUser>();
         var userManager = MockUserManager();
         userManager.Setup(x => x.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
             .ReturnsAsync(mockUser.Object);
         userManager.Setup(x => x.GetEmailAsync(mockUser.Object))
             .ReturnsAsync("sender@example.com");
+
         var httpContext = new DefaultHttpContext();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object, userManager.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -80,6 +88,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert: email should include sender from the authenticated user.
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
         m.Sender == "sender@example.com"
@@ -95,7 +104,9 @@ public sealed class SendEmailToolTests
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -108,6 +119,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert: no email should be sent.
         emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
     }
@@ -119,7 +131,9 @@ public sealed class SendEmailToolTests
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -132,6 +146,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert
         emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
     }
@@ -143,7 +158,9 @@ public sealed class SendEmailToolTests
         var emailService = new Mock<IEmailService>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -156,6 +173,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert
         emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
     }
@@ -168,9 +186,12 @@ public sealed class SendEmailToolTests
         emailService
             .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
             .ReturnsAsync(Result.Success());
+
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
+
         var services = CreateServiceProvider(emailService.Object, httpContextAccessor.Object);
+
         var tool = new SendEmailTool();
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -186,6 +207,7 @@ public sealed class SendEmailToolTests
 
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
         // Assert
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
         m.Cc == "cc@example.com"

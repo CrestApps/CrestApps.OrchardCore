@@ -13,8 +13,10 @@ public class UserFullNamePartViewModel
     public string LastName { get; set; }
 
     public string DisplayName { get; set; }
+
     [BindNever]
     public User User { get; set; }
+
     [BindNever]
     public DisplayNameSettings Settings { get; set; }
 }

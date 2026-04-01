@@ -15,6 +15,7 @@ public sealed class BuiltInRecipeStepTests
 {
     private static readonly string[] _testFeatureIds = ["OrchardCore.Contents", "OrchardCore.Media", "OrchardCore.Workflows"];
     private static readonly string[] _testThemeIds = ["TheAdmin", "TheTheme", "SafeMode"];
+
     private static IShellFeaturesManager CreateShellFeaturesManager()
     {
         var features = _testFeatureIds
@@ -26,6 +27,7 @@ public sealed class BuiltInRecipeStepTests
                 return featureInfo.Object;
             })
             .ToArray();
+
         var manager = new Mock<IShellFeaturesManager>();
         manager.Setup(m => m.GetAvailableFeaturesAsync())
             .ReturnsAsync(features);
@@ -37,6 +39,7 @@ public sealed class BuiltInRecipeStepTests
     {
         public Task<IEnumerable<string>> GetFeatureIdsAsync()
             => Task.FromResult<IEnumerable<string>>(_testFeatureIds);
+
         public Task<IEnumerable<string>> GetThemeIdsAsync()
             => Task.FromResult<IEnumerable<string>>(_testThemeIds);
     }
@@ -100,7 +103,6 @@ public sealed class BuiltInRecipeStepTests
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
     }
-
     /// <summary>
     /// Verifies that every built-in recipe step returns the expected Name.
     /// </summary>
@@ -159,7 +161,6 @@ public sealed class BuiltInRecipeStepTests
         var step = CreateStep(stepType);
         Assert.Equal(expectedName, step.Name);
     }
-
     /// <summary>
     /// Verifies that every built-in recipe step produces a non-empty, serializable schema
     /// that contains the step's const name constraint.
@@ -219,12 +220,12 @@ public sealed class BuiltInRecipeStepTests
         var step = CreateStep(stepType);
         var schema = await step.GetSchemaAsync();
         Assert.NotNull(schema);
+
         var json = JsonSerializer.Serialize(schema);
         Assert.NotEmpty(json);
         Assert.StartsWith("{", json);
         Assert.Contains("\"const\"", json);
     }
-
     /// <summary>
     /// Verifies that every built-in recipe step caches the schema instance.
     /// </summary>
@@ -362,6 +363,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new ReplaceContentDefinitionRecipeStep(CreateContentDefinitionSchemaDefinitions(), CreateContentSchemaProvider());
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"ContentTypePartDefinitionRecords\"", json);
         Assert.Contains("\"ContentPartFieldDefinitionRecords\"", json);
         Assert.Contains("\"ContentTypeSettings\"", json);
@@ -374,6 +376,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new CustomUserSettingsRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"userId\"", json);
         Assert.Contains("\"user-custom-user-settings\"", json);
         Assert.Contains("\"ContentType\"", json);
@@ -384,6 +387,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new OpenIdClientSettingsRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"ResponseType\"", json);
         Assert.Contains("\"code id_token token\"", json);
         Assert.Contains("\"ResponseMode\"", json);
@@ -395,6 +399,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new OpenIdApplicationRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"ConsentType\"", json);
         Assert.Contains("\"explicit\"", json);
         Assert.Contains("\"Type\"", json);
@@ -406,6 +411,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new UsersRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"Users\"", json);
         Assert.Contains("\"UserName\"", json);
         Assert.Contains("\"RoleNames\"", json);
@@ -416,6 +422,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new TranslationsRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"translations\"", json);
         Assert.Contains("\"culture\"", json);
         Assert.Contains("\"key\"", json);
@@ -426,6 +433,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var step = new DynamicDataTranslationsRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"Translations\"", json);
         Assert.Contains("\"Translation\"", json);
         Assert.Contains("\"Context\"", json);
@@ -435,6 +443,7 @@ public sealed class BuiltInRecipeStepTests
     {
         var manager = new Mock<IContentDefinitionManager>();
         var definitions = Array.Empty<ContentTypeDefinition>();
+
         manager.Setup(m => m.ListTypeDefinitionsAsync()).ReturnsAsync(definitions);
 
         return manager.Object;
@@ -448,6 +457,7 @@ public sealed class BuiltInRecipeStepTests
         .OrderBy(type => type.Name, StringComparer.Ordinal)
         .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type))
         .ToArray();
+
     private static StubContentSchemaProvider CreateContentSchemaProvider()
         => new StubContentSchemaProvider(
             CreateContentDefinitionSchemaDefinitions()
@@ -479,6 +489,7 @@ public sealed class BuiltInRecipeStepTests
     {
         public Task<IEnumerable<string>> GetPartNamesAsync()
             => Task.FromResult<IEnumerable<string>>(partNames);
+
         public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
             => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
     }

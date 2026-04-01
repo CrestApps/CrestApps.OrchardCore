@@ -6,6 +6,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 internal sealed class IndexProfileInfoAdapter : IIndexProfileInfo
 {
     private readonly IndexProfile _profile;
+
     public IndexProfileInfoAdapter(IndexProfile profile)
     {
         _profile = profile;

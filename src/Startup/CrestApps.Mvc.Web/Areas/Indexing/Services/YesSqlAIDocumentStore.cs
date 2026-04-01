@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlAIDocumentStore : IAIDocumentStore
 {
     private readonly ISession _session;
+
     public YesSqlAIDocumentStore(ISession session)
     {
         _session = session;

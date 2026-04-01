@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 public sealed class ListStartupRecipesTool : AIFunction
 {
     public const string TheName = "listStartupRecipes";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -20,9 +21,13 @@ public sealed class ListStartupRecipesTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Retrieves a list of predefined startup recipes that can be executed when the tenant is first set up.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

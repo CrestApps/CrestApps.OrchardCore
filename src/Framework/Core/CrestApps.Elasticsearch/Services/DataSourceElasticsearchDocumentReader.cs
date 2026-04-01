@@ -15,6 +15,7 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
     private const int BatchSize = 1000;
 
     private readonly ElasticsearchClient _elasticClient;
+
     public DataSourceElasticsearchDocumentReader(ElasticsearchClient elasticClient)
     {
         _elasticClient = elasticClient;
@@ -33,6 +34,7 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
         }
 
         string searchAfterValue = null;
+
         while (!cancellationToken.IsCancellationRequested)
         {
             var response = searchAfterValue == null
@@ -130,6 +132,7 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
             }
 
             var nativeId = hit.Id;
+
             var key = nativeId;
 
             if (!string.IsNullOrEmpty(keyFieldName))
@@ -207,7 +210,6 @@ internal sealed class DataSourceElasticsearchDocumentReader : IDataSourceDocumen
 
         return node.ToJsonString();
     }
-
     /// <summary>
     /// Resolves a field value from a JSON object using a dotted path (e.g., "Content.ContentItem.DisplayText").
     /// Falls back to a direct property lookup if the path has no dots.

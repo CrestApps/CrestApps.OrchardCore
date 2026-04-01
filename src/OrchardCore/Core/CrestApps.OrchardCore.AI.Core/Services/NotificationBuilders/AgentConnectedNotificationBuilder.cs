@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 internal sealed class AgentConnectedNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
     public string NotificationType => ChatNotificationTypes.AgentConnected;
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Content = relayEvent.Content
@@ -19,6 +20,7 @@ internal sealed class AgentConnectedNotificationBuilder : IExternalChatRelayNoti
         : T["You are now connected to {0}.", relayEvent.AgentName].Value);
         notification.Icon = "fa-solid fa-user-check";
         notification.Dismissible = true;
+
         result.RemoveNotificationTypes.Add(ChatNotificationTypes.Transfer);
     }
 }

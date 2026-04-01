@@ -15,6 +15,7 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateDeploymentStepDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<AIProfileTemplateDeploymentStepDisplayDriver> stringLocalizer)
@@ -45,6 +46,7 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplateDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIProfileTemplateDeploymentStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.TemplateNames);

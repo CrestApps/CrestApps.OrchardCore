@@ -33,7 +33,6 @@ public static class AIChatDocumentEndpoints
 
         return builder;
     }
-
     /// <summary>
     /// Adds the chat interaction document removal endpoint.
     /// </summary>
@@ -46,7 +45,6 @@ public static class AIChatDocumentEndpoints
 
         return builder;
     }
-
     /// <summary>
     /// Adds the chat session document upload endpoint.
     /// </summary>
@@ -59,7 +57,6 @@ public static class AIChatDocumentEndpoints
 
         return builder;
     }
-
     /// <summary>
     /// Adds the chat session document removal endpoint.
     /// </summary>
@@ -117,6 +114,7 @@ public static class AIChatDocumentEndpoints
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 
         interaction.Documents ??= [];
+
         var uploadedDocuments = new List<AIChatUploadedDocument>();
         var failedFiles = new List<object>();
 

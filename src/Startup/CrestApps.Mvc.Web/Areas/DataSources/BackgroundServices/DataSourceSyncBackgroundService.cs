@@ -16,6 +16,7 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DataSourceSyncBackgroundService> _logger;
+
     public DataSourceSyncBackgroundService(
         IServiceScopeFactory scopeFactory,
         ILogger<DataSourceSyncBackgroundService> logger)
@@ -27,6 +28,7 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(_interval);
+
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
@@ -44,7 +46,6 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
             }
         }
     }
-
     /// <summary>
     /// Synchronizes all configured data sources with their target indexes.
     /// </summary>

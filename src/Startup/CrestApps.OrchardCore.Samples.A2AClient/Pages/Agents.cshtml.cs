@@ -10,6 +10,7 @@ public sealed class AgentsModel : PageModel
 {
     private readonly A2AClientFactory _clientFactory;
     private readonly ILogger<AgentsModel> _logger;
+
     public AgentsModel(A2AClientFactory clientFactory, ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
@@ -17,7 +18,9 @@ public sealed class AgentsModel : PageModel
     }
 
     public List<AgentCard> AgentCards { get; private set; } = [];
+
     public string ErrorMessage { get; private set; }
+
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadAgentCardsAsync(cancellationToken);
@@ -40,6 +43,7 @@ public sealed class AgentsModel : PageModel
         try
         {
             var client = _clientFactory.Create(agentUrl);
+
             var agentMessage = new AgentMessage
             {
                 Role = MessageRole.User,
@@ -67,6 +71,7 @@ public sealed class AgentsModel : PageModel
             }
 
             var response = await client.SendMessageAsync(sendParams, cancellationToken);
+
             var responseText = ExtractTextFromResponse(response);
 
             return new JsonResult(new { response = responseText ?? "The agent did not produce a text response." });
@@ -126,6 +131,7 @@ public sealed class AgentsModel : PageModel
                 var artifactTexts = task.Artifacts
                     .SelectMany(a => a.Parts?.OfType<TextPart>() ?? [])
                     .Select(p => p.Text);
+
                 var combined = string.Join(string.Empty, artifactTexts);
 
                 if (!string.IsNullOrEmpty(combined))
@@ -137,6 +143,7 @@ public sealed class AgentsModel : PageModel
             if (task.Status.Message?.Parts is not null)
             {
                 var statusTexts = task.Status.Message.Parts.OfType<TextPart>().Select(p => p.Text);
+
                 var combined = string.Join(string.Empty, statusTexts);
 
                 if (!string.IsNullOrEmpty(combined))
@@ -167,7 +174,6 @@ public sealed class AgentsModel : PageModel
             ErrorMessage = $"An error occurred while loading agent cards: {ex.Message}";
         }
     }
-
     /// <summary>
     /// Custom <see cref="IActionResult"/> that streams A2A events as text/event-stream
     /// so the browser receives chunks incrementally.
@@ -177,6 +183,7 @@ public sealed class AgentsModel : PageModel
         private readonly A2A.A2AClient _client;
         private readonly MessageSendParams _sendParams;
         private readonly ILogger _logger;
+
         public StreamingA2AResult(A2A.A2AClient client, MessageSendParams sendParams, ILogger logger)
         {
             _client = client;
@@ -190,7 +197,9 @@ public sealed class AgentsModel : PageModel
             httpResponse.ContentType = "text/event-stream";
             httpResponse.Headers.CacheControl = "no-cache";
             httpResponse.Headers.Connection = "keep-alive";
+
             var cancellationToken = context.HttpContext.RequestAborted;
+
             try
             {
                 await foreach (var sseItem in _client.SendMessageStreamingAsync(_sendParams, cancellationToken))
@@ -215,6 +224,7 @@ public sealed class AgentsModel : PageModel
                                 ?.OfType<TextPart>()
                                     .Select(p => p.Text)
                                     .FirstOrDefault() ?? "Agent task failed.";
+
                                 await httpResponse.WriteAsync($"data: [ERROR]{errorText}\n\n", cancellationToken);
                                 await httpResponse.Body.FlushAsync(cancellationToken);
                                 break;

@@ -22,6 +22,7 @@ public sealed class GitHubOAuthService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<GitHubOAuthService> _logger;
+
     public GitHubOAuthService(
         ICopilotCredentialStore credentialStore,
         IDataProtectionProvider dataProtectionProvider,
@@ -50,6 +51,7 @@ public sealed class GitHubOAuthService
         var scopes = string.Join(" ", settings.Scopes ?? ["user:email", "read:org"]);
 
         var state = returnUrl ?? string.Empty;
+
         var queryParams = HttpUtility.ParseQueryString(string.Empty);
         queryParams["client_id"] = settings.ClientId;
         queryParams["redirect_uri"] = callbackUrl;
@@ -75,6 +77,7 @@ public sealed class GitHubOAuthService
         var httpClient = _httpClientFactory.CreateClient();
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
+
         var tokenRequest = new Dictionary<string, string>
         {
             ["client_id"] = settings.ClientId,
@@ -86,8 +89,11 @@ public sealed class GitHubOAuthService
             "https://github.com/login/oauth/access_token",
             tokenRequest,
             cancellationToken);
+
         tokenResponse.EnsureSuccessStatusCode();
+
         var tokenData = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
         var accessToken = tokenData.GetProperty("access_token").GetString();
 
         if (string.IsNullOrWhiteSpace(accessToken))
@@ -97,13 +103,17 @@ public sealed class GitHubOAuthService
 
         // Get user information from GitHub.
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
         var userResponse = await httpClient.GetAsync("https://api.github.com/user", cancellationToken);
         userResponse.EnsureSuccessStatusCode();
+
         var userData = await userResponse.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
         var username = userData.GetProperty("login").GetString();
+
         // Protect tokens.
         var tokenProtector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+
         var credential = new CopilotProtectedCredential
         {
             GitHubUsername = username,
@@ -143,7 +153,6 @@ public sealed class GitHubOAuthService
             UpdatedUtc = credential.UpdatedUtc,
         };
     }
-
     /// <summary>
     /// Gets the raw protected (encrypted) credentials for the specified user.
     /// These can be stored on an AIProfile entity for reuse across sessions.
@@ -174,6 +183,7 @@ public sealed class GitHubOAuthService
         }
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+
         try
         {
             var accessToken = protector.Unprotect(credential.ProtectedAccessToken);
@@ -187,7 +197,6 @@ public sealed class GitHubOAuthService
             return null;
         }
     }
-
     /// <summary>
     /// Unprotects a stored access token from a <see cref="CopilotSessionMetadata"/>,
     /// typically stored on an <see cref="AI.Models.AIProfile"/> entity.
@@ -201,6 +210,7 @@ public sealed class GitHubOAuthService
         }
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
+
         try
         {
             return protector.Unprotect(metadata.ProtectedAccessToken);
@@ -259,6 +269,7 @@ public sealed class GitHubOAuthService
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("CrestApps-OrchardCore-Copilot/1.0");
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             httpClient.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+
             var response = await httpClient.GetAsync("https://models.github.ai/catalog/models", cancellationToken);
 
             if (!response.IsSuccessStatusCode)
@@ -271,7 +282,9 @@ public sealed class GitHubOAuthService
             }
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: cancellationToken);
+
             var models = new List<CopilotModelInfo>();
+
             // The response could be a direct array or an object wrapping the array (e.g., { "data": [...] }).
             var items = json.ValueKind == JsonValueKind.Array
             ? json.EnumerateArray()

@@ -2,7 +2,9 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Speech;
 using CrestApps.AI.Tooling;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Orchestration;
+
 /// <summary>
 /// Aggregates tool entries from all registered <see cref="IToolRegistryProvider"/> instances
 /// and provides relevance-based search using the shared <see cref="ITextTokenizer"/>.

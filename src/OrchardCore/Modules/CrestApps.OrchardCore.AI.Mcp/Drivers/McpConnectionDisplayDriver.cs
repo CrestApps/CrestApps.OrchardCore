@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
 {
     internal readonly IStringLocalizer S;
+
     public McpConnectionDisplayDriver(IStringLocalizer<McpConnectionDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -29,12 +30,14 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
         return Initialize<McpConnectionFieldsViewModel>("McpConnectionFields_Edit", model =>
         {
             model.DisplayText = connection.DisplayText;
+
         }).Location("Content:1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpConnection connection, UpdateEditorContext context)
     {
         var model = new McpConnectionFieldsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))

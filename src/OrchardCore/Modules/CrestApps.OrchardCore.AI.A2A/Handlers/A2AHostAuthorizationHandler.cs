@@ -11,6 +11,7 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
+
     public A2AHostAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -27,6 +28,7 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
             case A2AHostAuthenticationType.None:
                 context.Succeed(requirement);
                 break;
+
             case A2AHostAuthenticationType.ApiKey:
 
                 if (context.User.Identity?.IsAuthenticated == true &&
@@ -36,6 +38,7 @@ internal sealed class A2AHostAuthorizationHandler : AuthorizationHandler<A2AHost
                 }
 
                 break;
+
             case A2AHostAuthenticationType.OpenId:
             default:
 

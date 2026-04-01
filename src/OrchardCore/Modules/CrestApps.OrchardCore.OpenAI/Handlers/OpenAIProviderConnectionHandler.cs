@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.OpenAI.Handlers;
 public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandler
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+
     public OpenAIProviderConnectionHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
@@ -30,6 +31,7 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
 
         // Always set the API key to an empty string during export to prevent accidental exposure.
         metadataNode[nameof(OpenAIConnectionMetadata.ApiKey)] = string.Empty;
+
         context.ExportData["Properties"][nameof(OpenAIConnectionMetadata)] = metadataNode;
     }
 
@@ -45,6 +47,7 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             context.Values["ApiKey"] = protector.Unprotect(metadata.ApiKey);
         }
 

@@ -13,6 +13,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
     private readonly ICatalog<AIDataSource> _store;
 
     internal readonly IStringLocalizer S;
+
     public AIDataSourceDeploymentStepDisplayDriver(
         ICatalog<AIDataSource> store,
         IStringLocalizer<AIDataSourceDeploymentStepDisplayDriver> stringLocalizer)
@@ -48,6 +49,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
     public override async Task<IDisplayResult> UpdateAsync(AIDataSourceDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIDataSourceDeploymentStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.DataSources);

@@ -14,7 +14,9 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
     public DefaultOrchestratorSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService)
@@ -41,7 +43,9 @@ public sealed class DefaultOrchestratorSettingsDisplayDriver : SiteDisplayDriver
         }
 
         var model = new DefaultOrchestratorSettingsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         settings.EnablePreemptiveRag = model.EnablePreemptiveRag;
 
         return Edit(site, settings, context);

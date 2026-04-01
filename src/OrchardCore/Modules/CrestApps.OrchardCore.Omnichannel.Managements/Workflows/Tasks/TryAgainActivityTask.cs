@@ -17,6 +17,7 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
+
     public TryAgainActivityTask(
         ISession session,
         IClock clock,
@@ -28,7 +29,9 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
     }
 
     public override LocalizedString DisplayText => S["Try Activity Again Task"];
+
     public override LocalizedString Category => S["Omnichannel"];
+
     public int? MaxAttempt
     {
         get => GetProperty<int?>();
@@ -122,6 +125,7 @@ public sealed class TryAgainActivityTask : TaskActivity<TryAgainActivityTask>
         }
 
         workflowContext.Output["Activity"] = nextAttempt;
+
         await _session.SaveAsync(nextAttempt, collection: OmnichannelConstants.CollectionName);
 
         return Outcomes("Done");

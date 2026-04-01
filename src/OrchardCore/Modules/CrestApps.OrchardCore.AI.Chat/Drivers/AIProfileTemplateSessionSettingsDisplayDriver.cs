@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateSessionSettingsDisplayDriver(
         IStringLocalizer<AIProfileTemplateSessionSettingsDisplayDriver> stringLocalizer)
     {
@@ -23,6 +24,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         {
             var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
             var analyticsMetadata = template.As<AnalyticsMetadata>();
+
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
         }).Location("Content:1#Data Processing & Metrics;10")
@@ -37,6 +39,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         }
 
         var model = new EditAIProfileSessionSettingsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (model.SessionInactivityTimeoutInMinutes < 1)
@@ -47,6 +50,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
         dataExtractionSettings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
         template.Put(dataExtractionSettings);
+
         var analyticsMetadata = template.As<AnalyticsMetadata>();
         analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         template.Put(analyticsMetadata);

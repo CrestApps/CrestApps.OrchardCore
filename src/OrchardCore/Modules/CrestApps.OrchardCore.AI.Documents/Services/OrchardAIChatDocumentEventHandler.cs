@@ -15,6 +15,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OrchardAIChatDocumentEventHandler> _logger;
+
     public OrchardAIChatDocumentEventHandler(
         IIndexProfileStore indexProfileStore,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,

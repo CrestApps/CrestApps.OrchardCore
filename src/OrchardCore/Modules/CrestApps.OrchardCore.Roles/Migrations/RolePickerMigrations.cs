@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.Roles.Migrations;
 internal sealed class RolePickerMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+
     public RolePickerMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;

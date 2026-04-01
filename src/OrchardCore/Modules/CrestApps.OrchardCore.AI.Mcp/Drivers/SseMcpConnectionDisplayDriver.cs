@@ -15,6 +15,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public SseMcpConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<SseMcpConnectionDisplayDriver> stringLocalizer)
@@ -35,6 +36,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             var metadata = connection.As<SseMcpConnectionMetadata>();
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationType = metadata.AuthenticationType;
+
             // Backward compatibility: if no auth type is set but headers exist, show as CustomHeaders.
 
             if (metadata.AuthenticationType == McpClientAuthenticationType.Anonymous &&
@@ -47,20 +49,25 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             model.ApiKeyHeaderName = metadata.ApiKeyHeaderName;
             model.ApiKeyPrefix = metadata.ApiKeyPrefix;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+
             // Basic auth fields.
             model.BasicUsername = metadata.BasicUsername;
             model.HasBasicPassword = !string.IsNullOrEmpty(metadata.BasicPassword);
+
             // OAuth 2.0 fields.
             model.OAuth2TokenEndpoint = metadata.OAuth2TokenEndpoint;
             model.OAuth2ClientId = metadata.OAuth2ClientId;
             model.OAuth2Scopes = metadata.OAuth2Scopes;
             model.HasOAuth2ClientSecret = !string.IsNullOrEmpty(metadata.OAuth2ClientSecret);
+
             // Private Key JWT fields.
             model.OAuth2KeyId = metadata.OAuth2KeyId;
             model.HasOAuth2PrivateKey = !string.IsNullOrEmpty(metadata.OAuth2PrivateKey);
+
             // mTLS fields.
             model.HasOAuth2ClientCertificate = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificate);
             model.HasOAuth2ClientCertificatePassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword);
+
             // Custom headers.
 
             if (metadata.AdditionalHeaders is not null)
@@ -78,6 +85,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
   }
 }
 """;
+
         }).Location("Content:1");
     }
 
@@ -89,7 +97,9 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         }
 
         var model = new SseConnectionFieldsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         Uri endpoint = null;
 
         if (string.IsNullOrEmpty(model.Endpoint))
@@ -103,6 +113,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
         var metadata = connection.As<SseMcpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(McpConstants.DataProtectionPurpose);
+
         // Preserve existing encrypted values before clearing.
         var existingApiKey = metadata.ApiKey;
         var existingBasicPassword = metadata.BasicPassword;
@@ -110,8 +121,10 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         var existingOAuth2PrivateKey = metadata.OAuth2PrivateKey;
         var existingOAuth2ClientCertificate = metadata.OAuth2ClientCertificate;
         var existingOAuth2ClientCertificatePassword = metadata.OAuth2ClientCertificatePassword;
+
         metadata.Endpoint = endpoint;
         metadata.AuthenticationType = model.AuthenticationType;
+
         // Clear all auth fields, then populate based on selected type.
         ClearAuthFields(metadata);
 
@@ -120,18 +133,23 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             case McpClientAuthenticationType.ApiKey:
                 ValidateAndPopulateApiKey(context, model, metadata, protector, existingApiKey);
                 break;
+
             case McpClientAuthenticationType.Basic:
                 ValidateAndPopulateBasic(context, model, metadata, protector, existingBasicPassword);
                 break;
+
             case McpClientAuthenticationType.OAuth2ClientCredentials:
                 ValidateAndPopulateOAuth2(context, model, metadata, protector, existingOAuth2ClientSecret);
                 break;
+
             case McpClientAuthenticationType.OAuth2PrivateKeyJwt:
                 ValidateAndPopulateOAuth2PrivateKeyJwt(context, model, metadata, protector, existingOAuth2PrivateKey);
                 break;
+
             case McpClientAuthenticationType.OAuth2Mtls:
                 ValidateAndPopulateOAuth2Mtls(context, model, metadata, protector, existingOAuth2ClientCertificate, existingOAuth2ClientCertificatePassword);
                 break;
+
             case McpClientAuthenticationType.CustomHeaders:
                 ValidateAndPopulateCustomHeaders(context, model, metadata);
                 break;
@@ -151,6 +169,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
     {
         metadata.ApiKeyHeaderName = model.ApiKeyHeaderName;
         metadata.ApiKeyPrefix = model.ApiKeyPrefix;
+
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
         var hasExistingKey = !string.IsNullOrEmpty(existingEncryptedApiKey);
 
@@ -182,6 +201,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         }
 
         metadata.BasicUsername = model.BasicUsername;
+
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.BasicPassword);
         var hasExistingPassword = !string.IsNullOrEmpty(existingEncryptedPassword);
 
@@ -208,6 +228,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         string existingEncryptedClientSecret)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
+
         var hasNewSecret = !string.IsNullOrWhiteSpace(model.OAuth2ClientSecret);
         var hasExistingSecret = !string.IsNullOrEmpty(existingEncryptedClientSecret);
 
@@ -234,7 +255,9 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         string existingEncryptedPrivateKey)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
+
         metadata.OAuth2KeyId = model.OAuth2KeyId;
+
         var hasNewKey = !string.IsNullOrWhiteSpace(model.OAuth2PrivateKey);
         var hasExistingKey = !string.IsNullOrEmpty(existingEncryptedPrivateKey);
 
@@ -262,6 +285,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
         string existingEncryptedCertificatePassword)
     {
         ValidateOAuth2CommonFields(context, model, metadata);
+
         var hasNewCert = !string.IsNullOrWhiteSpace(model.OAuth2ClientCertificate);
         var hasExistingCert = !string.IsNullOrEmpty(existingEncryptedCertificate);
 

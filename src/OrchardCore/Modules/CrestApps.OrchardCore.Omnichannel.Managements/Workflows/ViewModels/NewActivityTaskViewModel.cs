@@ -15,12 +15,16 @@ public class NewActivityTaskViewModel
     public string NormalizedUserName { get; set; }
 
     public int? DefaultScheduleHours { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Users { get; set; }
 }

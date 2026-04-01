@@ -26,12 +26,19 @@ CrestApps.Mvc.Web/
 │   ├── DataSources/            ← Data source CRUD and storage
 │   └── Indexing/               ← Index profiles and AI document indexing
 ├── BackgroundTasks/            ← Hosted services for maintenance
+
 ├── Controllers/                ← Non-area MVC controllers such as Home and Account
+
 ├── Hubs/                       ← SignalR hubs for real-time chat
+
 ├── Indexes/                    ← YesSql index providers
+
 ├── Tools/                      ← Custom AI tools
+
 ├── Views/                      ← Non-area Razor views
+
 ├── App_Data/                   ← Runtime data (DB, logs, documents, settings)
+
 └── wwwroot/                    ← Static files
 ```
 
@@ -50,6 +57,7 @@ Configures NLog with daily log file rotation in `App_Data/logs/`. Replaceable wi
 Loads settings from the normal appsettings chain plus `App_Data/appsettings.json` as the highest-priority local override file with automatic reload-on-change:
 
 | Service | Purpose |
+
 |---------|---------|
 | `App_Data/appsettings.json` | Local machine overrides for admin-managed AI, MCP, Copilot, and pagination settings |
 | `AppDataConfigurationFileService` | Writes admin-managed sections back into the same `App_Data/appsettings.json` file that ASP.NET Core watches, so changes persist and reload through `IConfiguration` without a restart |
@@ -79,9 +87,13 @@ The core framework registration chain:
 builder.Services
     .AddCrestAppsCoreServices()
     .AddCrestAppsAI()
+
     .AddOrchestrationServices()
+
     .AddCopilotOrchestrator()
+
     .AddChatInteractionHandlers()
+
     .AddDefaultDocumentProcessingServices()
     .AddCrestAppsA2AClient()
     .AddCrestAppsMcpClient()
@@ -94,11 +106,16 @@ builder.Services
 Registers all supported AI providers:
 
 ```csharp
+
 builder.Services
     .AddOpenAIProvider()
+
     .AddAzureOpenAIProvider()
+
     .AddOllamaProvider()
+
     .AddAzureAIInferenceProvider();
+
 ```
 
 Plus application-specific provider configuration via `MvcAIProviderOptionsStore`.
@@ -110,11 +127,14 @@ Keeps the Elasticsearch registrations together so you can remove that provider b
 ```csharp
 builder.Services
     .AddElasticsearchServices(
+
         builder.Configuration.GetSection("CrestApps:Elasticsearch"))
     .AddElasticsearchDataSource(IndexProfileTypes.AIDocuments, ...)
     .AddElasticsearchDataSource(IndexProfileTypes.DataSource, ...)
     .AddElasticsearchDataSource(IndexProfileTypes.AIMemory, ...)
+
     .AddElasticsearchDataSource(IndexProfileTypes.Articles, ...);
+
 ```
 
 ### Section 8 — Azure AI Search Services
@@ -123,9 +143,13 @@ Mirrors the Elasticsearch block so Azure AI Search is equally easy to enable or 
 
 ```csharp
 builder.Services
+
     .AddAzureAISearchServices(
+
         builder.Configuration.GetSection("CrestApps:AzureAISearch"))
+
     .AddAzureAISearchDataSource(IndexProfileTypes.AIDocuments, ...)
+
     .AddAzureAISearchDataSource(IndexProfileTypes.DataSource, ...)
     .AddAzureAISearchDataSource(IndexProfileTypes.AIMemory, ...)
     .AddAzureAISearchDataSource(IndexProfileTypes.Articles, ...);
@@ -136,6 +160,7 @@ builder.Services
 Full bidirectional MCP setup:
 
 - **Client**: `AddCrestAppsMcpClient()` for connecting to remote MCP servers
+
 - **Server**: `AddCrestAppsMcpServer()` plus `MapMcp("mcp")` and `AddMcpServer(...)` handlers for tools, prompts, and resources
 
 The MCP server endpoint at `/mcp` includes configurable authentication middleware supporting API key, cookie auth, and admin role checks.
@@ -149,7 +174,9 @@ builder.Services
     .AddAITool<CalculatorTool>(CalculatorTool.TheName)
         .WithTitle("Calculator")
         .WithDescription("Performs basic arithmetic.")
+
         .WithCategory("Utilities")
+
         .Selectable();
 
 builder.Services
@@ -192,6 +219,11 @@ Three hosted services for ongoing maintenance:
 | `AIChatSessionCloseBackgroundService` | Closes idle/expired chat sessions |
 | `DataSourceSyncBackgroundService` | Synchronizes vector search data |
 | `DataSourceAlignmentBackgroundService` | Aligns indices after config changes |
+
+
+
+
+
 
 ### Section 13 — Middleware Pipeline
 

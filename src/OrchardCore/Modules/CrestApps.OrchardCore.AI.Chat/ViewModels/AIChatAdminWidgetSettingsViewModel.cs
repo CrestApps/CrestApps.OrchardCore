@@ -10,6 +10,7 @@ public class AIChatAdminWidgetSettingsViewModel
     public int MaxSessions { get; set; }
 
     public string PrimaryColor { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; } = [];
 }

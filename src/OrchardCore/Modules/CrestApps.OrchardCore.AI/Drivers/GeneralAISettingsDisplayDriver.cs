@@ -19,7 +19,9 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     private readonly DefaultAIOptions _defaultAIOptions;
 
     internal readonly IStringLocalizer T;
+
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
     public GeneralAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,

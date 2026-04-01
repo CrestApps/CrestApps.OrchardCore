@@ -9,8 +9,11 @@ namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 {
     public const string TheName = "createOrUpdateWorkflow";
+
     public override string Name => TheName;
+
     public override string Description => "Creates or updates a workflow types.";
+
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);

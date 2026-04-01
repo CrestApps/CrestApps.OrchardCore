@@ -14,6 +14,7 @@ public sealed class DataSourceSyncBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var indexingService = serviceProvider.GetRequiredService<DataSourceIndexingService>();
+
         await indexingService.SyncAllAsync(cancellationToken);
     }
 }

@@ -6,6 +6,7 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 public class EditConnectionProfileViewModel
 {
     public string OrchestratorName { get; set; }
+
     [BindNever]
     public IList<SelectListItem> Orchestrators { get; set; }
 }

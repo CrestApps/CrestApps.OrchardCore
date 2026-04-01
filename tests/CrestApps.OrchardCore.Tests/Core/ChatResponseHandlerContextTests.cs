@@ -28,6 +28,7 @@ public sealed class ChatResponseHandlerContextTests
         };
 
         var result = context.AssistantAppearance;
+
         Assert.NotNull(result);
         Assert.Equal("Mike", result.Label);
         Assert.Equal("fa-solid fa-headset", result.Icon);

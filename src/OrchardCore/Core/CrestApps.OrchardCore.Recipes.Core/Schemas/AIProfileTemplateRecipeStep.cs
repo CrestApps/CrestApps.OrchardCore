@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class AIProfileTemplateRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
+
     public string Name => "AIProfileTemplate";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

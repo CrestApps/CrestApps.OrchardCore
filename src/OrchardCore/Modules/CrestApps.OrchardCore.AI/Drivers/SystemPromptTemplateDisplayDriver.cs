@@ -31,6 +31,7 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
 
         var model = new SystemPromptTemplateViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var metadata = template.As<SystemPromptTemplateMetadata>();
         metadata.SystemMessage = model.SystemMessage;
         template.Put(metadata);

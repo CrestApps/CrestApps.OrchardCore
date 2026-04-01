@@ -12,6 +12,7 @@ internal sealed class DeleteAIDeploymentStep : NamedRecipeStepHandler
     private readonly IAIDeploymentManager _manager;
 
     internal readonly IStringLocalizer S;
+
     public DeleteAIDeploymentStep(
         IAIDeploymentManager manager,
         IStringLocalizer<DeleteAIDeploymentStep> stringLocalizer)

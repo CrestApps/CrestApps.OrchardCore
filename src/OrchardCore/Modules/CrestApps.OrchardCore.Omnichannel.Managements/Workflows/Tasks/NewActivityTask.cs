@@ -11,6 +11,7 @@ using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
 using YesSql;
+
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 
 public sealed class NewActivityTask : TaskActivity<NewActivityTask>
@@ -19,7 +20,9 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
     private readonly IClock _clock;
     private readonly IContentManager _contentManager;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+
     internal readonly IStringLocalizer S;
+
     public NewActivityTask(
         ISession session,
         IClock clock,
@@ -33,37 +36,46 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         _campaignCatalog = campaignCatalog;
         S = stringLocalizer;
     }
+
     public override LocalizedString DisplayText => S["New Activity Task"];
+
     public override LocalizedString Category => S["Omnichannel"];
+
     public string CampaignId
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
+
     public string SubjectContentType
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
+
     public ActivityUrgencyLevel? UrgencyLevel
     {
         get => GetProperty<ActivityUrgencyLevel?>();
         set => SetProperty(value);
     }
+
     public string NormalizedUserName
     {
         get => GetProperty<string>();
         set => SetProperty(value);
     }
+
     public int? DefaultScheduleHours
     {
         get => GetProperty<int?>();
         set => SetProperty(value);
     }
+
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         return Outcomes(S["Done"]);
     }
+
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         var activity = workflowContext.Input["Activity"] as OmnichannelActivity;
@@ -71,6 +83,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         {
             return Outcomes("Done");
         }
+
         var now = _clock.UtcNow;
         var newAttempt = new OmnichannelActivity()
         {
@@ -93,6 +106,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
             UrgencyLevel = UrgencyLevel ?? activity.UrgencyLevel,
             Status = ActivityStatus.NotStated,
         };
+
         if (!string.IsNullOrEmpty(SubjectContentType))
         {
             newAttempt.SubjectContentType = SubjectContentType;
@@ -103,6 +117,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
             newAttempt.SubjectContentType = activity.SubjectContentType;
             newAttempt.Subject = await _contentManager.NewAsync(activity.SubjectContentType);
         }
+
         if (activity.TryGet<DispositionMetadata>(out var dispositionMetadata) && dispositionMetadata.ScheduledDate.HasValue)
         {
             newAttempt.ScheduledUtc = dispositionMetadata.ScheduledDate.Value;
@@ -115,9 +130,11 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         {
             newAttempt.ScheduledUtc = now.AddDays(1);
         }
+
         if (!string.IsNullOrEmpty(CampaignId))
         {
             var campaign = await _campaignCatalog.FindByIdAsync(CampaignId);
+
             if (campaign != null)
             {
                 newAttempt.Channel = campaign.Channel;
@@ -126,22 +143,29 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
                 newAttempt.CampaignId = campaign.ItemId;
             }
         }
+
         if (!string.IsNullOrEmpty(NormalizedUserName))
         {
             var owner = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == NormalizedUserName).FirstOrDefaultAsync();
+
             if (owner is not null)
             {
                 activity.AssignedToId = owner.UserId;
                 activity.AssignedToUsername = owner.UserName;
             }
         }
+
         var contact = workflowContext.Input["Contact"] as ContentItem;
+
         if (contact is not null)
         {
             newAttempt.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, newAttempt.Channel);
         }
+
         workflowContext.Output["Activity"] = newAttempt;
+
         await _session.SaveAsync(newAttempt, collection: OmnichannelConstants.CollectionName);
+
         return Outcomes("Done");
     }
 }

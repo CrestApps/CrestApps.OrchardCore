@@ -19,10 +19,12 @@ public class StringBuilderBenchmarks
 {
     [Params(10, 50, 200)]
     public int ItemCount { get; set; }
+
     // ──────────────────────────────────────────────────────────────
     //  1. System message generation (many AppendLine / Append calls)
     //     Simulates DefaultMcpMetadataPromptGenerator.Generate()
     // ──────────────────────────────────────────────────────────────
+
     [Benchmark(Description = "SystemMessage_StringBuilder")]
     public string SystemMessage_StringBuilder()
     {
@@ -99,6 +101,7 @@ public class StringBuilderBenchmarks
     //  2. RAG context building (interleaved formatting with indices)
     //     Simulates DocumentPreemptiveRagHandler / DataSourcePreemptiveRagOrchestrationHandler
     // ──────────────────────────────────────────────────────────────
+
     [Benchmark(Description = "RagContext_StringBuilder")]
     public string RagContext_StringBuilder()
     {
@@ -168,6 +171,7 @@ public class StringBuilderBenchmarks
     //  3. Streaming response accumulation (many small Append calls)
     //     Simulates AIChatHub / ChatInteractionHub streaming loop
     // ──────────────────────────────────────────────────────────────
+
     [Benchmark(Description = "Streaming_StringBuilder")]
     public string Streaming_StringBuilder()
     {
@@ -202,6 +206,7 @@ public class StringBuilderBenchmarks
     //  4. CSV export (structured row-by-row append)
     //     Simulates ChatAnalyticsController.GenerateCsvContent()
     // ──────────────────────────────────────────────────────────────
+
     [Benchmark(Description = "CsvExport_StringBuilder")]
     public string CsvExport_StringBuilder()
     {
@@ -274,6 +279,7 @@ public class StringBuilderBenchmarks
     //  5. Tool summary building (conditional appends with iteration)
     //     Simulates DefaultOrchestrator.BuildToolSummary()
     // ──────────────────────────────────────────────────────────────
+
     [Benchmark(Description = "ToolSummary_StringBuilder")]
     public string ToolSummary_StringBuilder()
     {

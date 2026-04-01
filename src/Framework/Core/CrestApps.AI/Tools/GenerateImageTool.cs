@@ -8,7 +8,9 @@ using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Tooling;
+
 /// <summary>
 /// System tool that generates images from text descriptions using DALL-E or compatible image generation models.
 /// Returns markdown image syntax for inline rendering.
@@ -119,6 +121,7 @@ public sealed class GenerateImageTool : AIFunction
             if (result?.Contents is null || result.Contents.Count == 0)
             {
                 logger.LogWarning("AI tool '{ToolName}' returned no images.", Name);
+
                 return "No images were generated.";
             }
 
@@ -158,6 +161,7 @@ public sealed class GenerateImageTool : AIFunction
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during image generation.");
+
             return "An error occurred while generating the image.";
         }
     }
@@ -165,6 +169,7 @@ public sealed class GenerateImageTool : AIFunction
     private static string ExtractImageUri(AIContent contentItem)
     {
         if (contentItem is UriContent uriContent)
+
         {
             return uriContent.Uri?.ToString();
         }

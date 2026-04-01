@@ -46,6 +46,7 @@ namespace CrestApps.OrchardCore.AI.Mcp;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -56,6 +57,7 @@ public sealed class Startup : StartupBase
         // Register McpInvokeFunction as a keyed singleton only (not via AddAITool)
         // so it can be resolved by name at runtime but does not appear in the UI tool list.
         services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
+
         services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
@@ -71,8 +73,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
         services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
         services.AddScoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>();
+
         services.AddOrchardCoreAgentSkillServices();
+
         services.AddOptions<McpMetadataCacheOptions>();
+
         // Register SSE transport type.
         services
             .AddScoped<IMcpClientTransportProvider, OrchardSseClientTransportProvider>()
@@ -95,6 +100,7 @@ public sealed class Startup : StartupBase
 public sealed class StdIoStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public StdIoStartup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -143,6 +149,7 @@ public sealed class McpServerStartup : StartupBase
     private const string McpServerPolicyName = "McpServerPolicy";
 
     internal readonly IStringLocalizer S;
+
     public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -155,8 +162,10 @@ public sealed class McpServerStartup : StartupBase
         services.AddScoped<OrchardMcpServerResourceService, OrchardDefaultMcpServerResourceService>();
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
+
         // Register the authorization handler for MCP server.
         services.AddScoped<IAuthorizationHandler, McpServerAuthorizationHandler>();
+
         // Register API key authentication scheme.
         services.AddAuthentication()
             .AddScheme<McpApiKeyAuthenticationOptions, McpApiKeyAuthenticationHandler>(
@@ -166,12 +175,15 @@ public sealed class McpServerStartup : StartupBase
         services.AddNavigationProvider<McpPromptsAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpPrompt>, McpPromptHandler>()
             .AddDisplayDriver<McpPrompt, McpPromptDisplayDriver>();
+
         // Register MCP Resource services.
         services.AddNavigationProvider<McpResourcesAdminMenu>()
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
+
         // Register the file provider resolver.
         services.AddScoped<IMcpFileProviderResolver, DefaultMcpFileProviderResolver>();
+
         // Register built-in File resource type handler.
         services.AddMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
@@ -217,6 +229,7 @@ public sealed class McpServerStartup : StartupBase
                 catch (Exception ex)
                 {
                     logger ??= request.Services.GetRequiredService<ILogger<McpServerStartup>>();
+
                     logger.LogError(ex, "Error creating tool instance for '{ToolName}'", name);
                 }
             }
@@ -397,6 +410,7 @@ public sealed class McpResourceDeploymentsStartup : StartupBase
 public sealed class McpContentResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public McpContentResourceStartup(IStringLocalizer<McpContentResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -432,6 +446,7 @@ public sealed class McpContentResourceStartup : StartupBase
 public sealed class McpRecipeSchemaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public McpRecipeSchemaResourceStartup(IStringLocalizer<McpRecipeSchemaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -472,6 +487,7 @@ public sealed class McpRecipeSchemaResourceStartup : StartupBase
 public sealed class McpMediaResourceStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public McpMediaResourceStartup(IStringLocalizer<McpMediaResourceStartup> stringLocalizer)
     {
         S = stringLocalizer;

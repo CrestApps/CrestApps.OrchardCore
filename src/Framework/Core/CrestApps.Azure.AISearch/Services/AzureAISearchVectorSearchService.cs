@@ -18,6 +18,7 @@ internal sealed class AzureAISearchVectorSearchService : IVectorSearchService
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger<AzureAISearchVectorSearchService> _logger;
+
     public AzureAISearchVectorSearchService(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchVectorSearchService> logger)
@@ -47,6 +48,7 @@ internal sealed class AzureAISearchVectorSearchService : IVectorSearchService
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
             var vectorQuery = new VectorizedQuery(embedding)
             {
                 KNearestNeighborsCount = topN,
@@ -78,13 +80,17 @@ internal sealed class AzureAISearchVectorSearchService : IVectorSearchService
                 searchText: null,
                 searchOptions,
                 cancellationToken);
+
             var results = new List<DocumentChunkSearchResult>();
+
             await foreach (var result in response.Value.GetResultsAsync())
             {
                 var document = result.Document;
+
                 var chunkText = document.TryGetValue(DocumentIndexConstants.ColumnNames.Content, out var textObj)
                     ? textObj?.ToString()
                     : null;
+
                 var chunkIndex = 0;
 
                 if (document.TryGetValue(DocumentIndexConstants.ColumnNames.ChunkIndex, out var indexObj))
@@ -104,9 +110,11 @@ internal sealed class AzureAISearchVectorSearchService : IVectorSearchService
                     var documentKey = document.TryGetValue(DocumentIndexConstants.ColumnNames.DocumentId, out var docIdObj)
                         ? docIdObj?.ToString()
                         : null;
+
                     var fileName = document.TryGetValue(DocumentIndexConstants.ColumnNames.FileName, out var fileNameObj)
                         ? fileNameObj?.ToString()
                         : null;
+
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk

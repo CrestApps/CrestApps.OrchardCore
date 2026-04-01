@@ -9,8 +9,10 @@ public class AIProfileChatModeViewModel
     public ChatMode ChatMode { get; set; }
 
     public string VoiceName { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> AvailableModes { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> AvailableVoices { get; set; }
 }

@@ -13,8 +13,10 @@ public sealed class ListOmnichannelActivityContainer : ShapeViewModel
 
     [BindNever]
     public IShape Header { get; set; }
+
     [BindNever]
     public List<IShape> Containers { get; set; }
+
     [BindNever]
     public IShape Pager { get; set; }
 }

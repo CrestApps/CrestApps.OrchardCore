@@ -25,6 +25,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
+
     public DocumentOrchestrationHandler(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         ITemplateService templateService,
@@ -137,12 +138,14 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
         // Signal document availability so system tools (e.g., search_documents)
         // are included in the tool registry for this completion context.
         context.OrchestrationContext.CompletionContext.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
+
         // Discover document processing tools dynamically by purpose
         // to list their descriptions in the system message.
         var docTools = _toolDefinitions.Tools
             .Where(t => t.Value.HasPurpose(AIToolPurposes.DocumentProcessing))
             .Select(t => t.Value)
             .ToList();
+
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = docTools,

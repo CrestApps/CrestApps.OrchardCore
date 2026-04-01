@@ -16,6 +16,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public AzureSpeechDeploymentDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureSpeechDeploymentDisplayDriver> stringLocalizer)
@@ -34,6 +35,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         return Initialize<AzureSpeechDeploymentViewModel>("AzureSpeechDeployment_Edit", model =>
         {
             model.Endpoint = GetPropertyString(deployment, "Endpoint");
+
             var authTypeStr = GetPropertyString(deployment, "AuthenticationType");
 
             if (!string.IsNullOrEmpty(authTypeStr) && Enum.TryParse<AzureAuthenticationType>(authTypeStr, true, out var authType))
@@ -43,6 +45,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
             model.IdentityId = GetPropertyString(deployment, "IdentityId");
             model.HasApiKey = !string.IsNullOrEmpty(GetPropertyString(deployment, "ApiKey"));
+
             model.AuthenticationTypes =
             [
                 new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
@@ -60,7 +63,9 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         }
 
         var model = new AzureSpeechDeploymentViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         deployment.Properties ??= new Dictionary<string, object>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out _))
@@ -73,8 +78,10 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         }
 
         deployment.Properties["AuthenticationType"] = model.AuthenticationType.ToString();
+
         var trimmedIdentityId = model.IdentityId?.Trim();
         deployment.Properties["IdentityId"] = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
+
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
         var existingKey = GetPropertyString(deployment, "ApiKey");
 
@@ -86,6 +93,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         if (hasNewKey)
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             deployment.Properties["ApiKey"] = protector.Protect(model.ApiKey);
         }
 

@@ -13,6 +13,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
+
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
 [Admin("AI/ChatAnalytics/{action}", "ChatAnalytics.{action}")]
@@ -24,6 +25,7 @@ public sealed class ChatAnalyticsController : Controller
     private readonly IDisplayManager<AIChatAnalyticsReport> _reportDisplayManager;
     private readonly IClock _clock;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+
     public ChatAnalyticsController(
         ISession session,
         IAuthorizationService authorizationService,
@@ -39,6 +41,7 @@ public sealed class ChatAnalyticsController : Controller
         _clock = clock;
         _updateModelAccessor = updateModelAccessor;
     }
+
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -46,16 +49,20 @@ public sealed class ChatAnalyticsController : Controller
         {
             return Forbid();
         }
+
         var filter = new AIChatAnalyticsFilter();
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
+
         var viewModel = new ChatAnalyticsIndexViewModel
         {
             FilterShape = filterShape,
             Filter = filter,
             ShowReport = false,
         };
+
         return View(viewModel);
     }
+
     [HttpPost]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> IndexPost()
@@ -64,8 +71,10 @@ public sealed class ChatAnalyticsController : Controller
         {
             return Forbid();
         }
+
         var filter = new AIChatAnalyticsFilter();
         var filterShape = await _filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
+
         if (!ModelState.IsValid)
         {
             var errorViewModel = new ChatAnalyticsIndexViewModel
@@ -74,17 +83,22 @@ public sealed class ChatAnalyticsController : Controller
                 Filter = filter,
                 ShowReport = false,
             };
+
             return View("Index", errorViewModel);
         }
+
         // Build and execute the query with accumulated conditions from display drivers.
         var events = await ExecuteQueryAsync(filter);
+
         // Build the report using display drivers.
         var reportContext = new AIChatAnalyticsReport
         {
             Events = events,
             Filter = filter,
         };
+
         var reportShape = await _reportDisplayManager.BuildDisplayAsync(reportContext, _updateModelAccessor.ModelUpdater);
+
         var viewModel = new ChatAnalyticsIndexViewModel
         {
             FilterShape = filterShape,
@@ -92,8 +106,10 @@ public sealed class ChatAnalyticsController : Controller
             Filter = filter,
             ShowReport = true,
         };
+
         return View(nameof(Index), viewModel);
     }
+
     [HttpPost]
     public async Task<IActionResult> Export()
     {
@@ -101,33 +117,44 @@ public sealed class ChatAnalyticsController : Controller
         {
             return Forbid();
         }
+
         var filter = new AIChatAnalyticsFilter();
         await _filterDisplayManager.UpdateEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
+
         if (!ModelState.IsValid)
         {
             return BadRequest();
         }
+
         var events = await ExecuteQueryAsync(filter);
+
         // Generate CSV content for export.
         var csv = GenerateCsvContent(events);
         var fileName = $"chat-analytics-{_clock.UtcNow:yyyyMMdd-HHmmss}.csv";
+
         return File(Encoding.UTF8.GetBytes(csv), "text/csv", fileName);
     }
+
     private async Task<IReadOnlyList<AIChatSessionEvent>> ExecuteQueryAsync(AIChatAnalyticsFilter filter)
     {
         var query = _session.Query<AIChatSessionEvent>(collection: AIConstants.AICollectionName);
+
         // Apply all conditions accumulated by display drivers.
         foreach (var condition in filter.Conditions)
         {
             query = condition(query);
         }
+
         var events = await query.ListAsync();
+
         return events.ToList();
     }
+
     private static string GenerateCsvContent(IReadOnlyList<AIChatSessionEvent> events)
     {
         using var builder = ZString.CreateStringBuilder();
         builder.AppendLine("SessionId,ProfileId,VisitorId,UserId,IsAuthenticated,SessionStartedUtc,SessionEndedUtc,MessageCount,HandleTimeSeconds,IsResolved");
+
         foreach (var evt in events)
         {
             builder.Append(EscapeCsv(evt.SessionId));
@@ -150,18 +177,22 @@ public sealed class ChatAnalyticsController : Controller
             builder.Append(',');
             builder.AppendLine(evt.IsResolved.ToString());
         }
+
         return builder.ToString();
     }
+
     private static string EscapeCsv(string value)
     {
         if (string.IsNullOrEmpty(value))
         {
             return string.Empty;
         }
+
         if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
         {
             return $"\"{value.Replace("\"", "\"\"")}\"";
         }
+
         return value;
     }
 }

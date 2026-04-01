@@ -24,9 +24,9 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
     private const string FrontMatterDelimiter = "---";
     private const string JsonFenceOpen = "```json";
     private const string FenceClose = "```";
-
     /// <inheritdoc />
     public IReadOnlyList<string> SupportedExtensions { get; } = [".md"];
+
     public TemplateParseResult Parse(string rawContent)
     {
         var result = new TemplateParseResult();
@@ -39,6 +39,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
         }
 
         var content = rawContent.AsSpan();
+
         // Check if the content starts with front matter delimiter.
         var trimmedStart = content.TrimStart();
 
@@ -73,6 +74,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
         // Extract front matter block.
         var frontMatter = afterFirstDelimiter[..secondDelimiterIndex];
         ParseFrontMatter(frontMatter, result.Metadata);
+
         // Extract body (everything after the closing delimiter line).
         var bodyStart = firstDelimiterEnd + 1 + secondDelimiterIndex;
         var closingDelimiterEnd = IndexOfLineEnd(content, bodyStart);
@@ -88,7 +90,6 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
 
         return result;
     }
-
     /// <summary>
     /// Compacts JSON within fenced <c>```json</c> code blocks.
     /// Pretty-printed JSON is re-serialized without indentation to reduce token usage.
@@ -103,6 +104,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
 
         var searchStart = 0;
         var result = body;
+
         while (true)
         {
             var fenceStart = result.IndexOf(JsonFenceOpen, searchStart, StringComparison.OrdinalIgnoreCase);
@@ -113,6 +115,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
             }
 
             var jsonStart = fenceStart + JsonFenceOpen.Length;
+
             // Move past optional whitespace/newline after ```json
             while (jsonStart < result.Length && (result[jsonStart] == '\r' || result[jsonStart] == '\n'))
             {
@@ -142,6 +145,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
                         var blockStart = fenceStart;
                         var blockEnd = fenceEnd + FenceClose.Length;
                         var replacement = JsonFenceOpen + "\n" + compacted + "\n" + FenceClose;
+
                         result = string.Concat(result.AsSpan(0, blockStart), replacement, result.AsSpan(blockEnd));
                         searchStart = blockStart + replacement.Length;
                         continue;
@@ -201,6 +205,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
 
             currentKey = trimmedLine[..colonIndex].Trim().ToString();
             currentValue = trimmedLine[(colonIndex + 1)..].Trim().ToString();
+
             // Support YAML literal block scalar indicator (e.g., "Key: |").
             // The pipe signals that the following indented lines are the value.
 
@@ -248,7 +253,6 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
             metadata.AdditionalProperties[key] = value;
         }
     }
-
     /// <summary>
     /// Parses parameter descriptors from the multi-line <c>Parameters:</c> value.
     /// Each parameter line has the format: <c>- name: description</c>.
@@ -329,6 +333,7 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
         private ReadOnlySpan<char> _remaining;
         private ReadOnlySpan<char> _current;
         private bool _started;
+
         public LineEnumerator(ReadOnlySpan<char> span)
         {
             _remaining = span;
@@ -337,7 +342,9 @@ public sealed class DefaultMarkdownTemplateParser : ITemplateParser
         }
 
         public readonly LineEnumerator GetEnumerator() => this;
+
         public readonly ReadOnlySpan<char> Current => _current;
+
         public bool MoveNext()
         {
             if (!_started)

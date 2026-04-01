@@ -16,6 +16,7 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
+
     public AIDataSourceHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -28,8 +29,10 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 
     public override Task InitializingAsync(InitializingContext<AIDataSource> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task UpdatingAsync(UpdatingContext<AIDataSource> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task ValidatingAsync(ValidatingContext<AIDataSource> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
@@ -43,6 +46,7 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
     public override Task InitializedAsync(InitializedContext<AIDataSource> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
+
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)
@@ -70,8 +74,11 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
             dataSource.Properties ??= new Dictionary<string, object>();
 
             foreach (var (key, value) in properties)
+
             {
+
                 dataSource.Properties[key] = value;
+
             }
         }
 

@@ -11,6 +11,7 @@ public sealed class CopilotAuthController : Controller
 {
     private readonly GitHubOAuthService _oauthService;
     private readonly ILogger<CopilotAuthController> _logger;
+
     public CopilotAuthController(
         GitHubOAuthService oauthService,
         ILogger<CopilotAuthController> logger)
@@ -29,6 +30,7 @@ public sealed class CopilotAuthController : Controller
         : Url.Action("Index", "Settings", new { area = "Admin" });
 
         var callbackUrl = Url.Action("OAuthCallback", "CopilotAuth", new { area = "AIChat" }, Request.Scheme);
+
         var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
 
         return Redirect(authUrl);
@@ -63,6 +65,7 @@ public sealed class CopilotAuthController : Controller
         try
         {
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, userId);
+
             TempData["SuccessMessage"] = $"Successfully connected to GitHub as {credential.GitHubUsername}.";
 
             return HandleOAuthReturn(state, success: true, username: credential.GitHubUsername);
@@ -125,6 +128,7 @@ public sealed class CopilotAuthController : Controller
         }
 
         await _oauthService.DisconnectAsync(userId);
+
         TempData["SuccessMessage"] = "Successfully disconnected from GitHub.";
 
         if (Url.IsLocalUrl(returnUrl))

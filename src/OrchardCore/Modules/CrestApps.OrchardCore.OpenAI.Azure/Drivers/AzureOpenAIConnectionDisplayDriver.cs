@@ -17,6 +17,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public AzureOpenAIConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureOpenAIConnectionDisplayDriver> stringLocalizer)
@@ -35,6 +36,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         return Initialize<AzureOpenAIConnectionViewModel>("AzureOpenAIConnection_Edit", model =>
         {
             var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
@@ -42,6 +44,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
                 new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
                 new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
             ];
+
             model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
@@ -57,7 +60,9 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         }
 
         var model = new AzureOpenAIConnectionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
@@ -70,8 +75,10 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         }
 
         metadata.AuthenticationType = model.AuthenticationType;
+
         var trimmedIdentityId = model.IdentityId?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
+
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
 
         if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey) && !hasNewKey)
@@ -82,10 +89,12 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         if (hasNewKey)
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
 
         metadata.EnableLogging = model.EnableLogging;
+
         connection.Put(metadata);
 
         return Edit(connection, context);

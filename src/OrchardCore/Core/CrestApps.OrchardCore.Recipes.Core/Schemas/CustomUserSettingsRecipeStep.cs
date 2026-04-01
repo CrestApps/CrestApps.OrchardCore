@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class CustomUserSettingsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "custom-user-settings";
+
     protected override JsonSchema CreateSchema()
     {
         var userSettingItem = RecipeStepSchemaBuilders.Object(

@@ -3,7 +3,9 @@ namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
 public class AIProfileDataExtractionViewModel
 {
     public bool EnableDataExtraction { get; set; }
+
     public int ExtractionCheckInterval { get; set; } = 1;
+
     public List<DataExtractionEntryViewModel> Entries { get; set; } = [];
 }
 

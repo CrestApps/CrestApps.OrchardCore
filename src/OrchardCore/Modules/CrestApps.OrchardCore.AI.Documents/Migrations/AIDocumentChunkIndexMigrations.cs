@@ -17,6 +17,7 @@ internal sealed class AIDocumentChunkIndexMigrations : DataMigration
             .Column<int>("Index"),
         collection: AIConstants.AIDocsCollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentChunkIndex>(table => table
             .CreateIndex("IDX_AIDocumentChunkIndex_DocId",
         "DocumentId",
@@ -25,6 +26,7 @@ internal sealed class AIDocumentChunkIndexMigrations : DataMigration
         "ReferenceType"),
         collection: AIConstants.AIDocsCollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentChunkIndex>(table => table
             .CreateIndex("IDX_AIDocumentChunkIndex_RefId",
         "AIDocumentId",

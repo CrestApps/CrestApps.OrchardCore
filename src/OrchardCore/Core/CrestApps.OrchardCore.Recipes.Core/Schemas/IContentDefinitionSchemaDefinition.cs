@@ -10,7 +10,6 @@ public enum ContentDefinitionSchemaType
     Part,
     Field,
 }
-
 /// <summary>
 /// Produces a JSON Schema fragment describing the settings of a particular
 /// content part or field definition.
@@ -18,10 +17,11 @@ public enum ContentDefinitionSchemaType
 public interface IContentDefinitionSchemaDefinition
 {
     ContentDefinitionSchemaType Type { get; }
+
     string Name { get; }
+
     ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync();
 }
-
 /// <summary>
 /// Handy base that targets <see cref="ContentDefinitionSchemaType.Part"/>,
 /// caches the schema after first construction, and exposes a helper to
@@ -30,8 +30,11 @@ public interface IContentDefinitionSchemaDefinition
 public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinition
 {
     private JsonSchemaBuilder _cache;
+
     public ContentDefinitionSchemaType Type => ContentDefinitionSchemaType.Part;
+
     public abstract string Name { get; }
+
     public ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync()
     {
         _cache ??= BuildSettingsCore();
@@ -40,7 +43,6 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     }
 
     protected abstract JsonSchemaBuilder BuildSettingsCore();
-
     /// <summary>
     /// Wraps <paramref name="innerSettings"/> under a top-level object
     /// property keyed by <paramref name="settingsKey"/>.
@@ -50,15 +52,17 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
         .Type(SchemaValueType.Object)
         .Properties((settingsKey, innerSettings))
         .AdditionalProperties(true);
+
     protected static JsonSchemaBuilder BoolProp()
         => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
+
     protected static JsonSchemaBuilder StringArray()
         => new JsonSchemaBuilder()
         .Type(SchemaValueType.Array)
         .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
+
     protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
         => (name, schema);
-
     /// <summary>
     /// Builds a settings-object with <c>additionalProperties: false</c>.
     /// </summary>

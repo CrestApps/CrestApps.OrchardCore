@@ -9,6 +9,7 @@ public sealed class FeatureProfilesRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "FeatureProfiles";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

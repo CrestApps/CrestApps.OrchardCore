@@ -19,6 +19,7 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
             .Column<bool>("DoNotChat", column => column.NotNull().WithDefault(false))
             .Column<DateTime>("DoNotChatUtc")
         );
+
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table => table
             .CreateIndex("IDX_OmnichannelContactCommunicationPreferenceIndex_DoNotCallUtc",
         "DocumentId",

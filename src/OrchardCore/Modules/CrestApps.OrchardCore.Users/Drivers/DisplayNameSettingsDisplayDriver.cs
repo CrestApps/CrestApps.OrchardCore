@@ -27,6 +27,7 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
+
     public DisplayNameSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -39,12 +40,14 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
         _authorizationService = authorizationService;
         _liquidTemplateManager = liquidTemplateManager;
         _tagCache = tagCache;
+
         H = htmlLocalizer;
         S = stringLocalizer;
     }
 
     protected override string SettingsGroupId
         => GroupId;
+
     public override IDisplayResult Edit(ISite site, DisplayNameSettings settings, BuildEditorContext context)
     {
         return Initialize<EditDisplayNameSettingPartViewModel>("DisplayNameSettings_Edit", model =>
@@ -62,6 +65,7 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
                 new SelectListItem(S["First Middle Last name"], nameof(DisplayNameType.FirstThenLast)),
                 new SelectListItem(S["Last, First Middle name"], nameof(DisplayNameType.LastThenFirst)),
                 new SelectListItem(S["Custom format"], nameof(DisplayNameType.Other)),
+
             ];
             model.PropertyTypes =
             [
@@ -85,6 +89,7 @@ public sealed class DisplayNameSettingsDisplayDriver : SiteDisplayDriver<Display
 
         var model = new EditDisplayNameSettingPartViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         settings.DisplayName = model.DisplayName;
         settings.FirstName = model.FirstName;
         settings.LastName = model.LastName;

@@ -17,6 +17,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
+
     public AzureAISearchVectorSearchService(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchVectorSearchService> logger)
@@ -24,7 +25,6 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
         _searchIndexClient = searchIndexClient;
         _logger = logger;
     }
-
     /// <inheritdoc />
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
@@ -47,6 +47,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
             var vectorQuery = new VectorizedQuery(embedding)
             {
                 KNearestNeighborsCount = topN,
@@ -78,13 +79,17 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                 searchText: null,
                 searchOptions,
                 cancellationToken);
+
             var results = new List<DocumentChunkSearchResult>();
+
             await foreach (var result in response.Value.GetResultsAsync())
             {
                 var document = result.Document;
+
                 var chunkText = document.TryGetValue(AIConstants.ColumnNames.Content, out var textObj)
                 ? textObj?.ToString()
                 : null;
+
                 var chunkIndex = 0;
 
                 if (document.TryGetValue(AIConstants.ColumnNames.ChunkIndex, out var indexObj))
@@ -104,9 +109,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                     var documentKey = document.TryGetValue(AIConstants.ColumnNames.DocumentId, out var docIdObj)
                     ? docIdObj?.ToString()
                     : null;
+
                     var fileName = document.TryGetValue(AIConstants.ColumnNames.FileName, out var fileNameObj)
                     ? fileNameObj?.ToString()
                     : null;
+
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk

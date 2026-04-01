@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class GetContentItemLinkTool : AIFunction
 {
     public const string TheName = "getLinkForContentItem";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -32,17 +33,25 @@ public sealed class GetContentItemLinkTool : AIFunction
         }
       },
       "required": [
+
         "contentItemId"
+
       ],
+
       "additionalProperties": false
+
     }
     """);
     public override string Name => TheName;
+
     public override string Description => "Get a URL for the given content item based on the type.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
+
     };
 
     protected async override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -54,6 +63,7 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
@@ -69,18 +79,24 @@ public sealed class GetContentItemLinkTool : AIFunction
         var httpContext = httpContextAccessor.HttpContext;
 
         if (httpContext is null)
+
         {
             if (logger.IsEnabled(LogLevel.Debug))
+
             {
                 logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Returning content item ID only.", TheName);
+
             }
 
             return $"Unable to generate a URL because the request context is not available (background execution). The content item ID is '{contentItemId}'.";
+
         }
 
         var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
         var type = arguments.GetFirstValueOrDefault("type", "display");
+
         var contentItem = await contentManager.GetAsync(contentItemId);
 
         if (contentItem is not null)
@@ -91,6 +107,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             {
                 return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
             }
+
             else if (metadata.DisplayRouteValues is not null)
             {
                 return linkGenerator.GetUriByRouteValues(httpContext, null, metadata.DisplayRouteValues);
@@ -109,10 +126,13 @@ public sealed class GetContentItemLinkTool : AIFunction
             _ => new RouteValueDictionary()
             {
                 { "Area", "OrchardCore.Contents" },
+
                 { "Controller", "Admin" },
+
                 { "Action", "Display" },
                 { "contentItemId", contentItemId },
             },
+
         };
 
         var link = linkGenerator.GetUriByRouteValues(httpContext, null, routeValues);
@@ -122,6 +142,7 @@ public sealed class GetContentItemLinkTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to generate a link for content item '{ContentItemId}'.", TheName, contentItemId);
 
             return "Unable to generate a link for the given content item.";
+
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

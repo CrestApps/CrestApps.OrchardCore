@@ -19,6 +19,7 @@ public sealed class AIDocumentController : Controller
     private readonly FileSystemFileStore _fileStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
+
     public AIDocumentController(
         IAIDocumentStore documentStore,
         IAIDocumentChunkStore chunkStore,
@@ -52,6 +53,7 @@ public sealed class AIDocumentController : Controller
         }
 
         var ext = Path.GetExtension(file.FileName);
+
         // Save the file to the file store.
         var storagePath = $"documents/{profileId}/{UniqueId.GenerateId()}{ext}";
         using (var stream = file.OpenReadStream())
@@ -79,6 +81,7 @@ public sealed class AIDocumentController : Controller
         }
 
         await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
+
         // Update the profile's document metadata.
         profile.AlterSettings<DocumentsMetadata>(m =>
         {

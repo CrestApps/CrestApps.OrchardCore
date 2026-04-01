@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class GetContentItemSchemaTool : AIFunction
 {
     public const string TheName = "getSampleContentItemForContentType";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -27,33 +28,45 @@ public sealed class GetContentItemSchemaTool : AIFunction
         "contentType"
       ],
       "additionalProperties": false
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Creates a new content item or updates an existing one by creating a new version.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentItemSchemaTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
+
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("contentType", out var contentType))
+
         {
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentType argument in the function arguments.", TheName);
 
@@ -61,16 +74,19 @@ public sealed class GetContentItemSchemaTool : AIFunction
         }
 
         if (await contentDefinitionManager.GetTypeDefinitionAsync(contentType) is null)
+
         {
             logger.LogWarning("AI tool '{ToolName}': The given content type '{ContentType}' does not exist.", TheName, contentType);
 
             return "The given content type does not exists";
+
         }
 
         var contentItem = await contentManager.NewAsync(contentType);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 

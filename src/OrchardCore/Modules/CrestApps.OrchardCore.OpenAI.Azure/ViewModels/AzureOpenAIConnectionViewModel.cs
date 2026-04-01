@@ -15,8 +15,10 @@ public class AzureOpenAIConnectionViewModel
     public string IdentityId { get; set; }
 
     public bool EnableLogging { get; set; }
+
     [BindNever]
     public bool HasApiKey { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
 }

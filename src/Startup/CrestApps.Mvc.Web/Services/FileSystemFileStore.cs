@@ -3,6 +3,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class FileSystemFileStore
 {
     private readonly string _basePath;
+
     public FileSystemFileStore(string basePath)
     {
         _basePath = Path.GetFullPath(basePath);
@@ -14,6 +15,7 @@ public sealed class FileSystemFileStore
         var filePath = GetSafePath(fileName);
         var directory = Path.GetDirectoryName(filePath);
         Directory.CreateDirectory(directory);
+
         using var fileStream = new FileStream(filePath, FileMode.Create);
         await content.CopyToAsync(fileStream);
 

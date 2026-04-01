@@ -15,6 +15,7 @@ public sealed class AvatarShapeTableProvider : IShapeTableProvider
             {
                 // UserDisplayNameIcon__DisplayIcon (e.g., 'UserDisplayNameIcon-DisplayIcon')
                 displaying.Shape.Metadata.Alternates.Add("UserDisplayNameIcon__DisplayIcon");
+
                 // UserDisplayNameIcon_[DisplayType]__DisplayIcon (e.g., 'UserDisplayNameIcon-DisplayIcon.SummaryAdmin')
                 displaying.Shape.Metadata.Alternates.Add($"UserDisplayNameIcon_{displaying.Shape.Metadata.DisplayType.EncodeAlternateElement()}__DisplayIcon");
             });

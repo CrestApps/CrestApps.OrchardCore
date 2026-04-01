@@ -9,7 +9,9 @@ namespace CrestApps.OrchardCore.AI.Core.Handlers;
 public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
+
     private readonly IAIClientFactory _aiClientFactory;
+
     protected DataSourceIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
@@ -19,6 +21,7 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
     protected async Task<int> GetEmbeddingDimensionsAsync(DataSourceIndexProfileMetadata metadata)
     {
         const int defaultDimensions = 1536;
+
 #pragma warning disable CS0618 // Type or member is obsolete
 
         if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||

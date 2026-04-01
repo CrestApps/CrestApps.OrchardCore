@@ -59,11 +59,13 @@ internal static class GetVoicesEndpoint
         try
         {
             var allVoices = await speechVoiceResolver.GetSpeechVoicesAsync(deployment);
+
             var supportedCultures = await localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
                 supportedCultures,
                 CultureInfo.CurrentCulture,
                 CultureInfo.CurrentUICulture);
+
             var voices = allVoices
                 .Where(v => SpeechVoiceLocalizationHelper.IsLanguageAllowed(v.Language, supportedSet))
                 .OrderBy(v => v.Language)

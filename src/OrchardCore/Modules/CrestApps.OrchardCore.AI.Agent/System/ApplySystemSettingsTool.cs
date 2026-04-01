@@ -9,8 +9,11 @@ namespace CrestApps.OrchardCore.AI.Agent.System;
 public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
 {
     public const string TheName = "applySiteSettings";
+
     public override string Name => TheName;
+
     public override string Description => "Applies site settings or configurations to the system.";
+
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);

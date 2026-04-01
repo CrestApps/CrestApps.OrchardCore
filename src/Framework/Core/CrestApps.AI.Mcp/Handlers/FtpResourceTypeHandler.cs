@@ -91,13 +91,16 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
         }
 
         await client.Connect(cancellationToken);
+
         try
         {
             using var stream = new MemoryStream();
             await client.DownloadStream(stream, remotePath, token: cancellationToken);
             stream.Position = 0;
+
             using var reader = new StreamReader(stream);
             var content = await reader.ReadToEndAsync(cancellationToken);
+
             var mimeType = resource.Resource?.MimeType;
 
             if (string.IsNullOrEmpty(mimeType) && !_contentTypeProvider.TryGetContentType(remotePath, out mimeType))

@@ -10,9 +10,14 @@ namespace CrestApps.OrchardCore.AI.Agent;
 internal static class OrchardCorePermissions
 {
     public static readonly Permission ManageFeatures = new("ManageFeatures", "Manage Features");
+
     public static readonly Permission ManageTenants = new("ManageTenants", "Manage tenants");
+
     public static readonly Permission ViewContentTypes = new("ViewContentTypes", "View content types.");
+
     public static readonly Permission EditContentTypes = new("EditContentTypes", "Edit content types.", isSecurityCritical: true);
+
     public static readonly Permission ManageRecipes = new("ManageRecipes", "Manage Recipes", isSecurityCritical: true);
+
     public static readonly Permission ManageWorkflows = new("ManageWorkflows", "Manage workflows", isSecurityCritical: true);
 }

@@ -19,6 +19,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
+
     public AIProfilePostSessionDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -38,6 +39,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
             var settings = profile.GetSettings<AIProfilePostSessionSettings>();
+
             model.EnablePostSessionProcessing = settings.EnablePostSessionProcessing;
             model.Tasks = settings.PostSessionTasks
             .Select(t => new PostSessionTaskViewModel
@@ -59,6 +61,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
             if (accessibleTools.Count > 0)
             {
                 var selectedToolNames = settings.ToolNames ?? [];
+
                 model.PostSessionTools = accessibleTools
                     .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
                     .OrderBy(group => group.Key)
@@ -76,7 +79,9 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new AIProfilePostSessionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         // Remove entries with empty names (deleted rows).
         var tasks = model.Tasks?.Where(t => !string.IsNullOrWhiteSpace(t.Name)).ToList() ?? [];
 

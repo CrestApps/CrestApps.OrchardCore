@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Communications;
 public sealed class SendSmsTool : AIFunction
 {
     public const string TheName = "sendSmsMessage";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -28,12 +29,19 @@ public sealed class SendSmsTool : AIFunction
       "required": [
         "phone",
         "body"
+
       ]
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Sends an SMS message to a phone number.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -47,8 +55,10 @@ public sealed class SendSmsTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<SendSmsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
+
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+
         }
 
         var smsService = arguments.Services.GetRequiredService<ISmsService>();
@@ -56,6 +66,7 @@ public sealed class SendSmsTool : AIFunction
 
         if (!arguments.TryGetFirstString("phone", out var phone))
         {
+
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "phone");
 
             return "Unable to find a phone argument in the function arguments.";
@@ -63,6 +74,7 @@ public sealed class SendSmsTool : AIFunction
 
         if (!arguments.TryGetFirstString("body", out var body))
         {
+
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
 
             return "Unable to find a body argument in the function arguments.";
@@ -70,6 +82,7 @@ public sealed class SendSmsTool : AIFunction
 
         if (!phoneFormatValidator.IsValid(phone))
         {
+
             logger.LogWarning("AI tool '{ToolName}' received invalid phone format '{Phone}'.", Name, phone);
 
             return "The given phone number must be in a international format.";
@@ -77,7 +90,9 @@ public sealed class SendSmsTool : AIFunction
 
         var message = new SmsMessage()
         {
+
             To = phone,
+
             Body = body,
         };
 
@@ -88,6 +103,7 @@ public sealed class SendSmsTool : AIFunction
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
+
             }
 
             return "The SMS message was sent successfully.";

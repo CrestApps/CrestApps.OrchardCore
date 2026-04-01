@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class TranslationsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "Translations";
+
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(
             Name,

@@ -14,11 +14,12 @@ public sealed class OptionsAITemplateProviderTests
     {
         var options = new TemplateOptions();
         options.Templates.Add(new Template { Id = "code-template", Content = "Registered via code." });
-
         options.Templates.Add(new Template { Id = "another", Content = "Another one." });
 
         var provider = new OptionsTemplateProvider(Options.Create(options));
+
         var result = await provider.GetTemplatesAsync();
+
         Assert.Equal(2, result.Count);
         Assert.Contains(result, t => t.Id == "code-template");
         Assert.Contains(result, t => t.Id == "another");
@@ -29,7 +30,9 @@ public sealed class OptionsAITemplateProviderTests
     {
         var options = new TemplateOptions();
         var provider = new OptionsTemplateProvider(Options.Create(options));
+
         var result = await provider.GetTemplatesAsync();
+
         Assert.Empty(result);
     }
 }
@@ -37,6 +40,7 @@ public sealed class OptionsAITemplateProviderTests
 public sealed class FileSystemAITemplateProviderTests : IDisposable
 {
     private readonly string _tempDir;
+
     public FileSystemAITemplateProviderTests()
     {
         _tempDir = Path.Combine(Path.GetTempPath(), "CrestAppsPromptTests_" + Guid.NewGuid().ToString("N"));
@@ -56,22 +60,26 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     {
         var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
+
         File.WriteAllText(Path.Combine(promptsDir, "test-prompt.md"), """
----
-Title: Test Prompt
-Description: A test prompt
----
-You are a test assistant.
-""");
+            ---
+            Title: Test Prompt
+            Description: A test prompt
+            ---
+            You are a test assistant.
+            """);
+
         var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
-        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
         var provider = new FileSystemTemplateProvider(
             Options.Create(options),
-        parsers,
-        NullLogger<FileSystemTemplateProvider>.Instance);
+            parsers,
+            NullLogger<FileSystemTemplateProvider>.Instance);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.Single(templates);
         Assert.Equal("test-prompt", templates[0].Id);
         Assert.Equal("Test Prompt", templates[0].Metadata.Title);
@@ -84,21 +92,25 @@ You are a test assistant.
         var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         var featureDir = Path.Combine(promptsDir, "MyModule.Feature");
         Directory.CreateDirectory(featureDir);
+
         File.WriteAllText(Path.Combine(featureDir, "feature-prompt.md"), """
----
-Title: Feature Prompt
----
-Feature-specific content.
-""");
+            ---
+            Title: Feature Prompt
+            ---
+            Feature-specific content.
+            """);
+
         var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
-        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
         var provider = new FileSystemTemplateProvider(
             Options.Create(options),
-        parsers,
-        NullLogger<FileSystemTemplateProvider>.Instance);
+            parsers,
+            NullLogger<FileSystemTemplateProvider>.Instance);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.Single(templates);
         Assert.Equal("feature-prompt", templates[0].Id);
         Assert.Equal("MyModule.Feature", templates[0].FeatureId);
@@ -109,13 +121,15 @@ Feature-specific content.
     {
         var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
-        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
         var provider = new FileSystemTemplateProvider(
             Options.Create(options),
-        parsers,
-        NullLogger<FileSystemTemplateProvider>.Instance);
+            parsers,
+            NullLogger<FileSystemTemplateProvider>.Instance);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.Empty(templates);
     }
 
@@ -124,16 +138,20 @@ Feature-specific content.
     {
         var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
+
         File.WriteAllText(Path.Combine(promptsDir, "my-cool-prompt.md"), "Just body, no front matter.");
+
         var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
-        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
         var provider = new FileSystemTemplateProvider(
             Options.Create(options),
-        parsers,
-        NullLogger<FileSystemTemplateProvider>.Instance);
+            parsers,
+            NullLogger<FileSystemTemplateProvider>.Instance);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.Single(templates);
         Assert.Equal("my cool prompt", templates[0].Metadata.Title);
     }
@@ -143,18 +161,22 @@ Feature-specific content.
     {
         var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
+
         File.WriteAllText(Path.Combine(promptsDir, "valid.md"), "Valid prompt.");
         File.WriteAllText(Path.Combine(promptsDir, "readme.txt"), "Not a prompt.");
         File.WriteAllText(Path.Combine(promptsDir, "data.json"), "{}");
+
         var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
-        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
         var provider = new FileSystemTemplateProvider(
             Options.Create(options),
-        parsers,
-        NullLogger<FileSystemTemplateProvider>.Instance);
+            parsers,
+            NullLogger<FileSystemTemplateProvider>.Instance);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.Single(templates);
         Assert.Equal("valid", templates[0].Id);
     }
@@ -170,7 +192,9 @@ public sealed class EmbeddedResourceAITemplateProviderTests
         // Use the test assembly which has embedded Templates/Prompts/*.md files.
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.NotEmpty(templates);
         Assert.Contains(templates, t => t.Id == "test-template");
     }
@@ -182,7 +206,9 @@ public sealed class EmbeddedResourceAITemplateProviderTests
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
+
         var templates = await provider.GetTemplatesAsync();
+
         var testTemplate = templates.FirstOrDefault(t => t.Id == "test-template");
         Assert.NotNull(testTemplate);
         Assert.Equal("Test Template", testTemplate.Metadata.Title);
@@ -199,7 +225,9 @@ public sealed class EmbeddedResourceAITemplateProviderTests
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.All(templates, t => Assert.Equal(assembly.GetName().Name, t.Source));
     }
 
@@ -211,7 +239,9 @@ public sealed class EmbeddedResourceAITemplateProviderTests
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers, source: "MySource", featureId: "MyFeature");
+
         var templates = await provider.GetTemplatesAsync();
+
         Assert.All(templates, t =>
         {
             Assert.Equal("MySource", t.Source);

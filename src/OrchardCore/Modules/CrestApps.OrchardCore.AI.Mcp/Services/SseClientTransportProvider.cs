@@ -13,6 +13,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IOAuth2TokenService _oauth2TokenService;
     private readonly ILogger _logger;
+
     public SseClientTransportProvider(
         IDataProtectionProvider dataProtectionProvider,
         IOAuth2TokenService oauth2TokenService,
@@ -25,9 +26,11 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
 
     public bool CanHandle(McpConnection connection)
         => connection.Source == McpConstants.TransportTypes.Sse;
+
     public async Task<IClientTransport> GetAsync(McpConnection connection)
     {
         var metadata = connection.As<SseMcpConnectionMetadata>();
+
         var headers = await BuildHeadersAsync(metadata);
 
         return new HttpClientTransport(new HttpClientTransportOptions()
@@ -55,10 +58,12 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                     var value = !string.IsNullOrWhiteSpace(metadata.ApiKeyPrefix)
                     ? $"{metadata.ApiKeyPrefix} {apiKey}"
                     : apiKey;
+
                     headers[headerName] = value;
                 }
 
                 break;
+
             case McpClientAuthenticationType.Basic:
 
                 if (!string.IsNullOrEmpty(metadata.BasicUsername))
@@ -68,10 +73,12 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                     : string.Empty;
                     var credentials = Convert.ToBase64String(
                         Encoding.UTF8.GetBytes($"{metadata.BasicUsername}:{password}"));
+
                     headers["Authorization"] = $"Basic {credentials}";
                 }
 
                 break;
+
             case McpClientAuthenticationType.OAuth2ClientCredentials:
 
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
@@ -79,6 +86,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                         !string.IsNullOrEmpty(metadata.OAuth2ClientSecret))
                 {
                     var clientSecret = Unprotect(protector, metadata.OAuth2ClientSecret);
+
                     try
                     {
                         var token = await _oauth2TokenService.AcquireTokenAsync(
@@ -86,6 +94,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                             metadata.OAuth2ClientId,
                             clientSecret,
                             metadata.OAuth2Scopes);
+
                         headers["Authorization"] = $"Bearer {token}";
                     }
                     catch (Exception ex)
@@ -96,6 +105,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 }
 
                 break;
+
             case McpClientAuthenticationType.OAuth2PrivateKeyJwt:
 
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
@@ -103,6 +113,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                         !string.IsNullOrEmpty(metadata.OAuth2PrivateKey))
                 {
                     var privateKey = Unprotect(protector, metadata.OAuth2PrivateKey);
+
                     try
                     {
                         var token = await _oauth2TokenService.AcquireTokenWithPrivateKeyJwtAsync(
@@ -111,6 +122,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                             privateKey,
                             metadata.OAuth2KeyId,
                             metadata.OAuth2Scopes);
+
                         headers["Authorization"] = $"Bearer {token}";
                     }
                     catch (Exception ex)
@@ -121,6 +133,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 }
 
                 break;
+
             case McpClientAuthenticationType.OAuth2Mtls:
 
                 if (!string.IsNullOrEmpty(metadata.OAuth2TokenEndpoint) &&
@@ -132,6 +145,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                     var certPassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword)
                     ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
                     : null;
+
                     try
                     {
                         var token = await _oauth2TokenService.AcquireTokenWithMtlsAsync(
@@ -140,6 +154,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                             certBytes,
                             certPassword,
                             metadata.OAuth2Scopes);
+
                         headers["Authorization"] = $"Bearer {token}";
                     }
                     catch (Exception ex)
@@ -150,6 +165,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 }
 
                 break;
+
             case McpClientAuthenticationType.CustomHeaders:
 
                 if (metadata.AdditionalHeaders is not null)
@@ -161,6 +177,7 @@ internal sealed class SseClientTransportProvider : IMcpClientTransportProvider
                 }
 
                 break;
+
             case McpClientAuthenticationType.Anonymous:
             default:
                 break;

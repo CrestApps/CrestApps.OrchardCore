@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
 {
     internal readonly IStringLocalizer S;
+
     public McpPromptDisplayDriver(IStringLocalizer<McpPromptDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -31,6 +32,7 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         return Initialize<McpPromptFieldsViewModel>("McpPromptFields_Edit", model =>
         {
             model.IsNew = context.IsNew;
+
             model.Name = entry.Name;
 
             if (entry.Prompt is not null)
@@ -51,6 +53,7 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
     public override async Task<IDisplayResult> UpdateAsync(McpPrompt entry, UpdateEditorContext context)
     {
         var model = new McpPromptFieldsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.Name))
@@ -62,7 +65,9 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         var validArguments = model.Arguments?
             .Where(a => !string.IsNullOrWhiteSpace(a.Name))
             .ToList() ?? [];
+
         var name = model.Name ?? string.Empty;
+
         entry.Name = name;
         entry.Prompt ??= new Prompt
         {
@@ -72,6 +77,7 @@ internal sealed class McpPromptDisplayDriver : DisplayDriver<McpPrompt>
         entry.Prompt.Name = name;
         entry.Prompt.Title = model.Title;
         entry.Prompt.Description = model.Description;
+
         entry.Prompt.Arguments = validArguments.Select(a => new PromptArgument
         {
             Name = a.Name,

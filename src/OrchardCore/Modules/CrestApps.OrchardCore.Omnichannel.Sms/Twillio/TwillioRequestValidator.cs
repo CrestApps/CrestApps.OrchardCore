@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 
 internal sealed class TwillioRequestValidator
@@ -14,6 +15,7 @@ internal sealed class TwillioRequestValidator
     public TwillioRequestValidator(string secret)
     {
         ArgumentException.ThrowIfNullOrEmpty(secret);
+
         _secret = Encoding.UTF8.GetBytes(secret);
     }
     /// <summary>
@@ -47,9 +49,11 @@ internal sealed class TwillioRequestValidator
     {
         ArgumentException.ThrowIfNullOrEmpty(url);
         ArgumentException.ThrowIfNullOrEmpty(expected);
+
 #pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
         using var hmac = new HMACSHA1(_secret);
 #pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
+
         if (parameters == null || parameters.Count == 0)
         {
             var sig = GetValidationSignature(url, hmac.ComputeHash);
@@ -57,6 +61,7 @@ internal sealed class TwillioRequestValidator
             {
                 return true;
             }
+
             // check signature of url with and without port, since sig generation on back end is inconsistent
             // If either url produces a valid signature, we accept the request as valid
             url = GetUriVariation(url);
@@ -65,8 +70,10 @@ internal sealed class TwillioRequestValidator
             {
                 return true;
             }
+
             return false;
         }
+
         var parameterStringBuilder = GetJoinedParametersStringBuilder(parameters);
         parameterStringBuilder.Insert(0, url);
         var signature = GetValidationSignature(parameterStringBuilder.ToString(), hmac.ComputeHash);
@@ -74,29 +81,38 @@ internal sealed class TwillioRequestValidator
         {
             return true;
         }
+
         parameterStringBuilder.Remove(0, url.Length);
+
         // check signature of url with and without port, since sig generation on back end is inconsistent
         // If either url produces a valid signature, we accept the request as valid
         url = GetUriVariation(url);
+
         parameterStringBuilder.Insert(0, url);
+
         signature = GetValidationSignature(parameterStringBuilder.ToString(), hmac.ComputeHash);
+
         if (SecureCompare(signature, expected))
         {
             return true;
         }
+
         return false;
     }
+
     public bool Validate(string url, string body, string expected)
     {
         ArgumentException.ThrowIfNullOrEmpty(url);
         ArgumentException.ThrowIfNullOrEmpty(body);
         ArgumentException.ThrowIfNullOrEmpty(expected);
+
         var paramString = new Uri(url, UriKind.Absolute).Query.TrimStart('?');
         var bodyHash = paramString.Split('&')
             .Select(param => param.Split('='))
             .Where(split => split[0] == "bodySHA256")
             .Select(split => Uri.UnescapeDataString(split[1]))
             .FirstOrDefault() ?? "";
+
         return Validate(url, (IDictionary<string, string>)null, expected) && ValidateBody(body, bodyHash);
     }
     /// <summary>
@@ -111,34 +127,46 @@ internal sealed class TwillioRequestValidator
 #pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
         using var hmac = new HMACSHA1(_secret);
 #pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
+
         var signature = hmac.ComputeHash(Encoding.UTF8.GetBytes(rawBody));
+
         return SecureCompare(Convert.ToHexStringLower(signature), expected);
     }
+
     private static Dictionary<string, string> ToDictionary(NameValueCollection col)
     {
         var dict = new Dictionary<string, string>();
+
         foreach (var k in col.AllKeys)
         {
             dict.Add(k, col[k]);
         }
+
         return dict;
     }
+
     private static StringBuilder GetJoinedParametersStringBuilder(IDictionary<string, string> parameters)
     {
         var keys = parameters.Keys.ToArray();
+
         Array.Sort(keys, StringComparer.Ordinal);
+
         var b = new StringBuilder();
         foreach (var key in keys)
         {
             b.Append(key).Append(parameters[key] ?? "");
         }
+
         return b;
     }
+
     private static string GetValidationSignature(string urlWithParameters, Func<byte[], byte[]> computeHash)
     {
         var hash = computeHash(Encoding.UTF8.GetBytes(urlWithParameters));
+
         return Convert.ToBase64String(hash);
     }
+
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     private static bool SecureCompare(string a, string b)
     {
@@ -146,16 +174,19 @@ internal sealed class TwillioRequestValidator
         {
             return false;
         }
+
         var n = a.Length;
         if (n != b.Length)
         {
             return false;
         }
+
         var mismatch = 0;
         for (var i = 0; i < n; i++)
         {
             mismatch |= a[i] ^ b[i];
         }
+
         return mismatch == 0;
     }
     /// <summary>
@@ -173,8 +204,10 @@ internal sealed class TwillioRequestValidator
         {
             return SetPort(url, uriBuilder, uriBuilder.Port);
         }
+
         return SetPort(url, uriBuilder, -1);
     }
+
     private static string SetPort(string url, UriBuilder uri, int newPort)
     {
         if (newPort == -1)
@@ -189,16 +222,22 @@ internal sealed class TwillioRequestValidator
         {
             uri.Port = uri.Scheme == "https" ? 443 : 80;
         }
+
         var uriStringBuilder = new StringBuilder(uri.ToString());
+
         var host = PreserveCase(url, uri.Host);
         uriStringBuilder.Replace(uri.Host, host);
+
         var scheme = PreserveCase(url, uri.Scheme);
         uriStringBuilder.Replace(uri.Scheme, scheme);
+
         return uriStringBuilder.ToString();
     }
+
     private static string PreserveCase(string url, string replacementString)
     {
         var startIndex = url.IndexOf(replacementString, StringComparison.OrdinalIgnoreCase);
+
         return url.Substring(startIndex, replacementString.Length);
     }
 }

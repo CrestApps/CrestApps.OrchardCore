@@ -9,6 +9,7 @@ public sealed class ResetIndexRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "ResetIndex";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

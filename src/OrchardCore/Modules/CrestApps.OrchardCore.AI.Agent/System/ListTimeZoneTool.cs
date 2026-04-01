@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.AI.Agent.System;
 public sealed class ListTimeZoneTool : AIFunction
 {
     public const string TheName = "listTimeZones";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -17,9 +18,13 @@ public sealed class ListTimeZoneTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Retrieves a list of time zones from the system.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,

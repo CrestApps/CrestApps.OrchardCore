@@ -38,7 +38,9 @@ internal static class TwilioWebhookEndpoint
         ILogger<Startup> logger)
     {
         var settings = await siteService.GetSettingsAsync<TwilioSettings>();
+
         var protector = dataProtectionProvider.CreateProtector(TwilioSmsProvider.ProtectorName);
+
         var authToken = string.IsNullOrEmpty(settings.AuthToken)
         ? null
         : protector.Unprotect(settings.AuthToken);
@@ -51,12 +53,15 @@ internal static class TwilioWebhookEndpoint
         }
 
         var request = context.Request;
+
         var requestUrl = $"{request.Scheme}://{request.Host}{request.Path}{request.QueryString}";
+
         Dictionary<string, string> parameters = null;
 
         if (request.HasFormContentType)
         {
             var form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
+
             parameters = form.ToDictionary(p => p.Key, p => p.Value.ToString());
         }
 
@@ -71,6 +76,7 @@ internal static class TwilioWebhookEndpoint
         }
 
         var data = await context.Request.ReadFormAsync();
+
         var from = data["From"].ToString();
         var to = data["To"].ToString();
         var body = data["Body"].ToString();
@@ -94,6 +100,7 @@ internal static class TwilioWebhookEndpoint
         };
 
         await session.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
+
         var omnichannelEvent = new OmnichannelEvent()
         {
             Id = messageSid,
@@ -104,6 +111,7 @@ internal static class TwilioWebhookEndpoint
         };
 
         await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
+
         // Return empty 200 OK to Twilio
 
         return TypedResults.Ok();

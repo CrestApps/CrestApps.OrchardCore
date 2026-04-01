@@ -3,7 +3,9 @@ using CrestApps.Infrastructure;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
 using CrestApps.Infrastructure.Indexing.Models;
+
 using Elastic.Clients.Elasticsearch;
+
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Microsoft.Extensions.Logging;
 
@@ -17,9 +19,11 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchDataSourceContentManager> _logger;
+
     internal static List<(string Kind, string Value)> BuildMustQueryDebug(string dataSourceId, string filter)
     {
         var list = new List<(string Kind, string Value)>
+
         {
             ("term", dataSourceId),
         };
@@ -27,8 +31,10 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var filterBytes = System.Text.Encoding.UTF8.GetBytes(filter);
+
             var filterBase64 = Convert.ToBase64String(filterBytes);
             list.Add(("wrapper", filterBase64));
+
         }
 
         return list;
@@ -38,6 +44,7 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchDataSourceContentManager> logger)
     {
+
         _elasticClient = elasticClient;
         _logger = logger;
     }
@@ -50,11 +57,13 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         string filter = null,
         CancellationToken cancellationToken = default)
     {
+
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentNullException.ThrowIfNull(embedding);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceId);
 
         if (embedding.Length == 0)
+
         {
             return [];
         }
@@ -74,6 +83,7 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 }
                 else if (item.Kind == "wrapper")
                 {
+
                     mustQueries.Add(m => m.Wrapper(w => w.Query(item.Value)));
                 }
             }
@@ -90,26 +100,32 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 .Must(mustQueries.ToArray())
             )
             )
+
             )
                 .Size(topN)
             , cancellationToken);
 
             if (!response.IsValidResponse)
             {
+
                 _logger.LogWarning("Elasticsearch data source vector search failed: {Error}", response.DebugInformation);
 
                 return [];
             }
 
             var results = new List<DataSourceSearchResult>();
+
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
+
             while (documents.MoveNext() && hits.MoveNext())
+
             {
                 var hit = hits.Current;
                 var document = documents.Current;
 
                 if (document == null)
+
                 {
                     continue;
                 }
@@ -117,15 +133,19 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 var referenceId = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ReferenceId, out var refNode)
                 ? refNode?.GetValue<string>()
                 : null;
+
                 var title = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.Title, out var titleNode)
                 ? titleNode?.GetValue<string>()
                 : null;
+
                 var content = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.Content, out var contentNode)
                 ? contentNode?.GetValue<string>()
                 : null;
+
                 var chunkIndex = 0;
 
                 if (document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexNode) && chunkIndexNode != null)
+
                 {
                     chunkIndex = chunkIndexNode.GetValue<int>();
                 }
@@ -144,6 +164,7 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                         ChunkIndex = chunkIndex,
                         ReferenceType = referenceType,
                         Score = (float)(hit.Score ?? 0.0),
+
                     });
                 }
             }
@@ -153,6 +174,7 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 .Take(topN)
                 .ToList();
         }
+
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error performing data source vector search in Elasticsearch index '{IndexName}'", indexProfile.IndexFullName);
@@ -165,6 +187,7 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         IIndexProfileInfo indexProfile,
         string dataSourceId,
         CancellationToken cancellationToken = default)
+
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceId);
@@ -176,13 +199,16 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 .Term(t => t
                 .Field(DataSourceConstants.ColumnNames.DataSourceId)
                 .Value(dataSourceId)
+
             )
             ),
             cancellationToken);
 
             if (!response.IsValidResponse)
+
             {
                 _logger.LogWarning("Elasticsearch delete by data source ID failed for index '{IndexName}': {Error}",
+
                 indexProfile.IndexFullName, response.DebugInformation);
 
                 return 0;
@@ -191,11 +217,13 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
             return response.Deleted ?? 0;
         }
         catch (Exception ex)
+
         {
             _logger.LogError(ex, "Error deleting documents by data source ID '{DataSourceId}' from Elasticsearch index '{IndexName}'.",
             dataSourceId, indexProfile.IndexFullName);
 
             return 0;
+
         }
     }
 }

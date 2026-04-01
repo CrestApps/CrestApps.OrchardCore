@@ -20,11 +20,16 @@ public sealed class IndexProfileViewModel
     public string Type { get; set; }
 
     public string EmbeddingDeploymentId { get; set; }
+
     public List<SelectListItem> Providers { get; set; } = [];
+
     public List<SelectListItem> Types { get; set; } = [];
+
     public List<SelectListItem> EmbeddingDeployments { get; set; } = [];
+
     [BindNever]
     public IReadOnlyList<IndexProfileSourceDescriptor> Sources { get; set; } = [];
+
     public static IndexProfileViewModel FromProfile(SearchIndexProfile profile)
     {
         return new IndexProfileViewModel

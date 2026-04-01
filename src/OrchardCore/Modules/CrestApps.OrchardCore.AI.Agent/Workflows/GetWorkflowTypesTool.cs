@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 public sealed class GetWorkflowTypesTool : AIFunction
 {
     public const string TheName = "getWorkflowType";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -26,18 +27,26 @@ public sealed class GetWorkflowTypesTool : AIFunction
         "workflowTypeId"
       ],
       "additionalProperties": false
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Get workflow type information.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
@@ -45,6 +54,7 @@ public sealed class GetWorkflowTypesTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -56,6 +66,7 @@ public sealed class GetWorkflowTypesTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "workflowTypeId");
 
             return "Unable to find a workflowTypeId argument in the function arguments.";
+
         }
 
         var workflowType = await workflowTypeStore.GetAsync(workflowTypeId);
@@ -69,6 +80,7 @@ public sealed class GetWorkflowTypesTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

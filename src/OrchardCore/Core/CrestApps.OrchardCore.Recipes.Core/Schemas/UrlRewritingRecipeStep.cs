@@ -9,6 +9,7 @@ public sealed class UrlRewritingRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "UrlRewriting";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

@@ -23,12 +23,16 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
                 return new OmnichannelContactCommunicationPreferenceIndex()
                 {
                     ContentItemId = contentItem.ContentItemId,
+
                     DoNotCall = preference.DoNotCall,
                     DoNotCallUtc = preference.DoNotCallUtc,
+
                     DoNotSms = preference.DoNotSms,
                     DoNotSmsUtc = preference.DoNotSmsUtc,
+
                     DoNotEmail = preference.DoNotEmail,
                     DoNotEmailUtc = preference.DoNotEmailUtc,
+
                     DoNotChat = preference.DoNotChat,
                     DoNotChatUtc = preference.DoNotChatUtc,
                 };

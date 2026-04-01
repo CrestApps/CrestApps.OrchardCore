@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
+
     public AIProfileAnalyticsDisplayDriver(
         IStringLocalizer<AIProfileAnalyticsDisplayDriver> stringLocalizer)
     {
@@ -45,6 +46,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
 
         var model = new EditAIProfileAnalyticsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var goals = model.ConversionGoals?.Where(g => !string.IsNullOrWhiteSpace(g.Name)).ToList() ?? [];
 
         if (model.EnableConversionMetrics)
@@ -99,6 +101,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
             MinScore = g.MinScore,
             MaxScore = g.MaxScore,
         }).ToList();
+
         profile.Put(metadata);
 
         return Edit(profile, context);

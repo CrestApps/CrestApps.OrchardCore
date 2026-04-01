@@ -36,7 +36,9 @@ internal static class TwilioEventGridEndpoint
         ILogger<Startup> logger)
     {
         var settings = await siteService.GetSettingsAsync<TwilioSettings>();
+
         var protector = dataProtectionProvider.CreateProtector(TwilioSmsProvider.ProtectorName);
+
         var authToken = string.IsNullOrEmpty(settings.AuthToken)
         ? null
         : protector.Unprotect(settings.AuthToken);
@@ -49,6 +51,7 @@ internal static class TwilioEventGridEndpoint
         }
 
         var data = await context.Request.ReadFormAsync();
+
         var from = data["From"].ToString();
         var to = data["To"].ToString();
         var body = data["Body"].ToString();
@@ -72,6 +75,7 @@ internal static class TwilioEventGridEndpoint
         };
 
         await session.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
+
         var omnichannelEvent = new OmnichannelEvent
         {
             Id = messageSid,
@@ -100,9 +104,11 @@ internal static class TwilioEventGridEndpoint
         }
 
         var requestUrl = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.Path}";
+
         var form = context.Request.HasFormContentType
         ? context.Request.Form.ToDictionary(k => k.Key, v => v.Value.ToString())
         : [];
+
         // Build string to sign
         var sb = new StringBuilder();
         sb.Append(requestUrl);
@@ -113,12 +119,14 @@ internal static class TwilioEventGridEndpoint
         }
 
         var encoding = new UTF8Encoding();
+
         // HMAC-SHA1 required by Twilio
 #pragma warning disable CA5350
         using var hmac = new System.Security.Cryptography.HMACSHA1(encoding.GetBytes(authToken));
 #pragma warning restore CA5350
         var hash = hmac.ComputeHash(encoding.GetBytes(sb.ToString()));
         var signature = Convert.ToBase64String(hash);
+
         var isValid = signature == twilioSignature;
 
         if (!isValid)

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Enhanced Roles",
     Author = CrestAppsManifestConstants.Author,

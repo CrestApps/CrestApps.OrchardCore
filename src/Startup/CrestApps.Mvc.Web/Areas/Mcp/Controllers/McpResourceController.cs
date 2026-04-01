@@ -18,6 +18,7 @@ public sealed class McpResourceController : Controller
     private readonly McpOptions _mcpOptions;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly TimeProvider _timeProvider;
+
     public McpResourceController(
         ISourceCatalog<McpResource> catalog,
         IOptions<McpOptions> mcpOptions,
@@ -34,6 +35,7 @@ public sealed class McpResourceController : Controller
         => View((await _catalog.GetAllAsync())
         .OrderBy(resource => resource.DisplayText, StringComparer.OrdinalIgnoreCase)
         .ToList());
+
     public IActionResult Create()
     {
         PopulateResourceTypes();
@@ -61,6 +63,7 @@ public sealed class McpResourceController : Controller
         };
 
         Apply(model, resource);
+
         await _catalog.CreateAsync(resource);
         await _catalog.SaveChangesAsync();
 
@@ -102,6 +105,7 @@ public sealed class McpResourceController : Controller
         }
 
         Apply(model, resource);
+
         await _catalog.UpdateAsync(resource);
         await _catalog.SaveChangesAsync();
 
@@ -129,6 +133,7 @@ public sealed class McpResourceController : Controller
         => ViewBag.ResourceTypes = _mcpOptions.ResourceTypes
         .OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
         .ToList();
+
     private void Validate(McpResourceViewModel model, bool isEditing)
     {
         if (string.IsNullOrWhiteSpace(model.DisplayText))
@@ -163,6 +168,7 @@ public sealed class McpResourceController : Controller
                 }
 
                 break;
+
             case SftpResourceConstants.Type:
 
                 if (string.IsNullOrWhiteSpace(model.Host))
@@ -239,6 +245,7 @@ public sealed class McpResourceController : Controller
 
     private static string ProtectOrReuse(string newValue, string existingValue, IDataProtector protector)
         => string.IsNullOrWhiteSpace(newValue) ? existingValue : protector.Protect(newValue);
+
     private static McpResourceViewModel ToViewModel(McpResource resource)
     {
         var model = new McpResourceViewModel

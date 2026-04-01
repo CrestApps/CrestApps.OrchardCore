@@ -9,6 +9,7 @@ public sealed class CustomSettingsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "custom-settings";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

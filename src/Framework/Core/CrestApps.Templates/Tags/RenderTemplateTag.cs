@@ -31,7 +31,6 @@ public static class RenderTemplateTag
 
     private const int MaxRecursionDepth = 10;
     private const string RecursionDepthKey = "__render_ai_template_depth";
-
     /// <summary>
     /// Tag handler invoked by the Fluid engine when <c>{% render_ai_template "id" %}</c> is encountered.
     /// </summary>
@@ -96,6 +95,7 @@ public static class RenderTemplateTag
         // but new variables defined in the sub-template do not leak upward.
         context.AmbientValues[RecursionDepthKey] = depth + 1;
         context.EnterChildScope();
+
         try
         {
             await fluidTemplate.RenderAsync(writer, encoder, context);

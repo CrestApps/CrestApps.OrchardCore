@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 public sealed class ListAIProfilesTool : AIFunction
 {
     public const string TheName = "listAIProfiles";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -38,15 +39,21 @@ public sealed class ListAIProfilesTool : AIFunction
           "type": "boolean",
           "description": "Optional. When true, only return profiles that have post-session processing enabled."
         }
+
       },
+
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description =>
         "Lists AI profiles with optional filters. " +
         "Can filter by profile type and by enabled features such as session analytics, data extraction, or post-session processing.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -60,14 +67,18 @@ public sealed class ListAIProfilesTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
+
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
+
         var profiles = (await profileManager.GetAllAsync()).ToList();
 
         if (arguments.TryGetFirstString("type", out var typeStr)
+
             && Enum.TryParse<AIProfileType>(typeStr, ignoreCase: true, out var profileType))
         {
             profiles = profiles.Where(p => p.Type == profileType).ToList();
@@ -94,6 +105,7 @@ public sealed class ListAIProfilesTool : AIFunction
             ["name"] = p.Name,
             ["displayText"] = p.DisplayText,
             ["type"] = p.Type.ToString(),
+
             ["metricsEnabled"] = p.As<AnalyticsMetadata>().EnableSessionMetrics,
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,

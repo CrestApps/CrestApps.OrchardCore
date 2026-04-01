@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.A2A;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Agent-to-Agent (A2A) Protocol",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = A2AConstants.Feature.Area,
     Name = "Agent-to-Agent (A2A) Client",
@@ -19,6 +21,7 @@ using OrchardCore.Modules.Manifest;
     "CrestApps.OrchardCore.Resources",
     ]
     )]
+
 [assembly: Feature(
     Id = A2AConstants.Feature.Host,
     Name = "Agent-to-Agent (A2A) Host",

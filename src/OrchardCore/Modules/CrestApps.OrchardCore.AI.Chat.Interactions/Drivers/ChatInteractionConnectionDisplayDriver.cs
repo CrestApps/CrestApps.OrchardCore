@@ -18,6 +18,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     private readonly AIOptions _aiOptions;
 
     internal readonly IStringLocalizer S;
+
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
@@ -39,10 +40,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
+
             model.ChatDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+
         }).Location("Parameters:3#Settings;1");
 
         return connectionResult;
@@ -50,8 +54,11 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
+
         var model = new EditChatInteractionConnectionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         interaction.ChatDeploymentName = model.ChatDeploymentName;
         interaction.UtilityDeploymentName = model.UtilityDeploymentName;
 

@@ -12,6 +12,7 @@ public sealed class DefaultSpeechVoiceResolver : ISpeechVoiceResolver
     private readonly IEnumerable<IAIClientProvider> _clientProviders;
     private readonly AIProviderOptions _options;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+
     public DefaultSpeechVoiceResolver(
         IEnumerable<IAIClientProvider> clientProviders,
         IDataProtectionProvider dataProtectionProvider,

@@ -14,6 +14,7 @@ public sealed class ListOmnichannelActivityFilterContext
     public ListOmnichannelActivityFilter Filter { get; }
 
     public IQuery<OmnichannelActivity, OmnichannelActivityIndex> Query { get; set; }
+
     public ListOmnichannelActivityFilterContext(ListOmnichannelActivityFilter filter, IQuery<OmnichannelActivity, OmnichannelActivityIndex> query)
     {
         Filter = filter;

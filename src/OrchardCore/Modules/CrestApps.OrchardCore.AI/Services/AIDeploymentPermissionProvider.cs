@@ -10,8 +10,10 @@ internal sealed class AIDeploymentPermissionProvider : IPermissionProvider
     [
         AIPermissions.ManageAIDeployments,
     ];
+
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
+
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

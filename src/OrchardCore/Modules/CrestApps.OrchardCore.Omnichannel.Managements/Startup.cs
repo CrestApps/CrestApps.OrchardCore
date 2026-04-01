@@ -42,37 +42,50 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
+
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
+
         services
             .AddDisplayDriver<OmnichannelActivity, OmnichannelActivityDisplayDriver>();
+
         services
             .AddDisplayDriver<ListOmnichannelActivityFilter, ListOmnichannelActivityFilterDisplayDriver>()
             .AddScoped<IListOmnichannelActivityFilterHandler, ListOmnichannelActivityFilterHandler>();
+
         services
             .AddDisplayDriver<OmnichannelDisposition, OmnichannelDispositionDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelDisposition>, OmnichannelDispositionHandler>();
+
         services
             .AddDisplayDriver<OmnichannelCampaign, OmnichannelCampaignDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelCampaign>, OmnichannelCampaignHandler>();
+
         services
             .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
             .AddDisplayDriver<OmnichannelChannelEndpoint, OmnichannelChannelEndpointDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<OmnichannelChannelEndpoint>, OmnichannelChannelEndpointHandler>();
+
         services.AddPermissionProvider<PermissionProvider>();
         services.AddNavigationProvider<AdminMenu>();
+
         services
             .AddIndexProvider<OmnichannelContactIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
         services.AddDataMigration<ContactMethodMigrations>();
+
         services.AddContentPart<PhoneNumberInfoPart>();
         services.AddContentPart<EmailInfoPart>();
         services.AddContentPart<OmnichannelContactInfoPart>();
+
         services
             .AddIndexProvider<OmnichannelActivityIndexProvider>()
             .AddDataMigration<OmnichannelActivityIndexMigrations>();
+
         services.AddActivity<TryAgainActivityTask, TryAgainActivityTaskDisplayDriver>();
         services.AddActivity<NewActivityTask, NewActivityTaskDisplayDriver>();
+
         services.AddActivity<CompletedActivityEvent, CompletedActivityEventDisplayDriver>();
         services.AddActivity<SetContactCommunicationPreferenceActivityTask, SetContactCommunicationPreferenceActivityTaskDisplayDriver>();
     }

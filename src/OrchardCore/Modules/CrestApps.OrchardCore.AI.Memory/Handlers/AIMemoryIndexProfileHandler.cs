@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Handlers;
 internal sealed class AIMemoryIndexProfileHandler : IndexProfileHandlerBase
 {
     private readonly AIMemoryIndexingService _indexingService;
+
     public AIMemoryIndexProfileHandler(AIMemoryIndexingService indexingService)
     {
         _indexingService = indexingService;

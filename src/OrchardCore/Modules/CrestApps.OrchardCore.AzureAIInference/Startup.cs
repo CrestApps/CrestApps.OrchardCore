@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.AzureAIInference;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -26,6 +27,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIClientProvider, AzureAIInferenceClientProvider>());
+
         services
             .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
             .AddAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ClientName, o =>
@@ -47,6 +49,7 @@ public sealed class Startup : StartupBase
 public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public ConnectionManagementStartup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;

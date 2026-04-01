@@ -23,6 +23,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
     private readonly PagerOptions _pagerOptions;
 
     internal readonly IStringLocalizer S;
+
     public AIChatProfilePartDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,
@@ -45,6 +46,7 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         }
 
         var user = _httpContextAccessor?.HttpContext.User;
+
         // When displaying history, we should only target session that belong to authenticated users.
 
         if (user is null || !user.Identity.IsAuthenticated)
@@ -80,16 +82,22 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
         return Initialize<AIChatWidgetViewModel>("AIChatWidgetPart_Edit", async model =>
         {
             model.ProfileId = part.ProfileId;
+
             model.TotalHistory = part.TotalHistory;
+
             model.MaxHistoryAllowed = _pagerOptions.MaxPageSize;
+
             var profiles = await _profileStore.GetByTypeAsync(AIProfileType.Chat);
+
             model.Profiles = profiles.Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
+
         }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfilePart part, UpdatePartEditorContext context)
     {
         var model = new AIChatWidgetViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrEmpty(model.ProfileId))

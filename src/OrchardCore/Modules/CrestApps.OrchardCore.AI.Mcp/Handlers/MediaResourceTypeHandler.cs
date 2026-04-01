@@ -19,6 +19,7 @@ public sealed class MediaResourceTypeHandler : McpResourceTypeHandlerBase
 
     private readonly IMediaFileStore _mediaFileStore;
     private readonly ILogger _logger;
+
     public MediaResourceTypeHandler(
         IMediaFileStore mediaFileStore,
         ILogger<MediaResourceTypeHandler> logger)

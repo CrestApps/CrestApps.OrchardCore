@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class SaveUserMemoryTool : AIFunction
 {
     public const string TheName = "save_user_memory";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -35,17 +36,26 @@ public sealed class SaveUserMemoryTool : AIFunction
         "name",
         "description",
         "content"
+
       ],
+
       "additionalProperties": false
+
     }
+
     """);
     public override string Name => TheName;
+
     public override string Description => "Creates or updates a durable memory for the current authenticated user, such as a preference, project, recurring topic, interest, or other reusable background detail.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
+
         new Dictionary<string, object>()
         {
             ["Strict"] = false,
+
         };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -55,7 +65,9 @@ public sealed class SaveUserMemoryTool : AIFunction
         if (!arguments.TryGetFirstString("name", out var name) ||
             !arguments.TryGetFirstString("description", out var description) ||
                 !arguments.TryGetFirstString("content", out var content))
+
         {
+
             logger.LogWarning("AI tool '{ToolName}' missing required arguments.", Name);
 
             return "'name', 'description', and 'content' arguments are required.";
@@ -64,10 +76,12 @@ public sealed class SaveUserMemoryTool : AIFunction
         var userId = AIMemoryToolHelpers.GetCurrentUserId(arguments.Services);
 
         if (string.IsNullOrEmpty(userId))
+
         {
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
 
             return "User memory is only available for authenticated users.";
+
         }
 
         name = name.Trim();
@@ -85,6 +99,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         }
 
         if (description.Length > 1000)
+
         {
             return "Memory description must be 1000 characters or fewer.";
         }
@@ -97,6 +112,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         }
 
         var store = arguments.Services.GetRequiredService<IAIMemoryStore>();
+
         var manager = arguments.Services.GetRequiredService<ICatalogManager<AIMemoryEntry>>();
         var clock = arguments.Services.GetRequiredService<IClock>();
         var existingMemory = await store.FindByUserAndNameAsync(userId, name);
@@ -109,6 +125,7 @@ public sealed class SaveUserMemoryTool : AIFunction
                 UserId = userId,
                 Name = name,
                 Description = description,
+
                 CreatedUtc = clock.UtcNow,
                 Content = content,
                 UpdatedUtc = clock.UtcNow,
@@ -120,6 +137,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         {
             existingMemory.Name = name;
             existingMemory.Description = description;
+
             existingMemory.Content = content;
             existingMemory.UpdatedUtc = clock.UtcNow;
             await manager.UpdateAsync(existingMemory);

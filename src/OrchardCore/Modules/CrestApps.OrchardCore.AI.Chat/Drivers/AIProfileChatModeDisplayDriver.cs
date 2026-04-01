@@ -15,6 +15,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
@@ -58,7 +59,9 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
         }
 
         var model = new AIProfileChatModeViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         profile.AlterSettings<ChatModeProfileSettings>(settings =>
         {
             settings.ChatMode = model.ChatMode;

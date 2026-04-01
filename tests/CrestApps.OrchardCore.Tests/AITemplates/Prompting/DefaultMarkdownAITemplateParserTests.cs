@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 public sealed class DefaultMarkdownAITemplateParserTests
 {
     private readonly DefaultMarkdownTemplateParser _parser;
+
     public DefaultMarkdownAITemplateParserTests()
     {
         _parser = new DefaultMarkdownTemplateParser();
@@ -14,6 +15,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_NullContent_ReturnsEmptyBody()
     {
         var result = _parser.Parse(null);
+
         Assert.Equal(string.Empty, result.Body);
         Assert.NotNull(result.Metadata);
     }
@@ -22,6 +24,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_EmptyContent_ReturnsEmptyBody()
     {
         var result = _parser.Parse(string.Empty);
+
         Assert.Equal(string.Empty, result.Body);
     }
 
@@ -29,6 +32,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_WhitespaceContent_ReturnsEmptyBody()
     {
         var result = _parser.Parse("   \n  \n  ");
+
         Assert.Equal(string.Empty, result.Body);
     }
 
@@ -36,7 +40,9 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_NoFrontMatter_ReturnsBodyAsIs()
     {
         var content = "You are a helpful assistant.";
+
         var result = _parser.Parse(content);
+
         Assert.Equal("You are a helpful assistant.", result.Body);
         Assert.Null(result.Metadata.Title);
         Assert.Null(result.Metadata.Description);
@@ -52,7 +58,9 @@ Description: A helpful prompt
 ---
 You are a helpful assistant.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("My Prompt", result.Metadata.Title);
         Assert.Equal("A helpful prompt", result.Metadata.Description);
         Assert.Equal("You are a helpful assistant.", result.Body);
@@ -70,7 +78,9 @@ Category: Data Visualization
 ---
 You are a data visualization expert.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Chart Generator", result.Metadata.Title);
         Assert.Equal("Generates Chart.js configs", result.Metadata.Description);
         Assert.True(result.Metadata.IsListable);
@@ -87,7 +97,9 @@ Title: A Prompt
 ---
 Body here.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.True(result.Metadata.IsListable);
     }
 
@@ -100,7 +112,9 @@ IsListable: false
 ---
 Body here.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.False(result.Metadata.IsListable);
     }
 
@@ -115,7 +129,9 @@ AnotherKey: AnotherValue
 ---
 Body content.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Test", result.Metadata.Title);
         Assert.Equal("CustomValue", result.Metadata.AdditionalProperties["CustomKey"]);
 
@@ -130,7 +146,9 @@ Body content.
 Title: My Prompt
 You are a helpful assistant.
 """;
+
         var result = _parser.Parse(content);
+
         // Without closing ---, the whole thing should be treated as body
         Assert.Contains("You are a helpful assistant.", result.Body);
     }
@@ -143,7 +161,9 @@ You are a helpful assistant.
 ---
 Body here.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Body here.", result.Body);
         Assert.Null(result.Metadata.Title);
     }
@@ -159,7 +179,9 @@ Line one.
 Line two.
 Line three.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Multi-line", result.Metadata.Title);
         Assert.Contains("Line one.", result.Body);
         Assert.Contains("Line two.", result.Body);
@@ -178,7 +200,9 @@ category: Test
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Lower Case Title", result.Metadata.Title);
         Assert.Equal("Upper case desc", result.Metadata.Description);
         Assert.False(result.Metadata.IsListable);
@@ -194,7 +218,9 @@ Title: A Title: With Colons
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("A Title: With Colons", result.Metadata.Title);
     }
 
@@ -207,7 +233,9 @@ IsListable: notabool
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         // Default is true; invalid value should not change it.
         Assert.True(result.Metadata.IsListable);
     }
@@ -222,7 +250,9 @@ Description:
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal(string.Empty, result.Metadata.Title);
         Assert.Equal(string.Empty, result.Metadata.Description);
     }
@@ -238,7 +268,9 @@ Description: Also Valid
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Valid", result.Metadata.Title);
         Assert.Equal("Also Valid", result.Metadata.Description);
     }
@@ -253,7 +285,9 @@ Description:    Also spaces
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Lots of spaces", result.Metadata.Title);
         Assert.Equal("Also spaces", result.Metadata.Description);
     }
@@ -270,7 +304,9 @@ Description: First line
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Test", result.Metadata.Title);
         Assert.Equal("First line\nsecond line\nthird line", result.Metadata.Description);
     }
@@ -287,7 +323,9 @@ Category: General
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Line one\nLine two", result.Metadata.AdditionalProperties["Notes"]);
 
         Assert.Equal("General", result.Metadata.Category);
@@ -297,7 +335,9 @@ Body.
     public void Parse_TabIndentedContinuation_JoinsWithNewline()
     {
         var content = "---\nDescription: Start\n\tindented with tab\n---\nBody.";
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Start\nindented with tab", result.Metadata.Description);
     }
 
@@ -319,7 +359,9 @@ Title: Test
 }
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("""```json""", result.Body);
         Assert.Contains("""{"type":"bar","data":{"labels":["Jan","Feb"]}}""", result.Body);
         Assert.DoesNotContain("    ", result.Body);
@@ -332,12 +374,14 @@ Title: Test
 ---
 Title: Test
 ---
+
 First block:
 ```json
 {
 "a": 1
 }
 ```
+
 Second block:
 ```json
 {
@@ -345,7 +389,9 @@ Second block:
 }
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("""{"a":1}""", result.Body);
         Assert.Contains("""{"b":2}""", result.Body);
     }
@@ -357,6 +403,7 @@ Second block:
 ---
 Title: Test
 ---
+
 ```csharp
 var x = new {
 Name = "test"
@@ -364,7 +411,9 @@ Name = "test"
 
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("var x = new {", result.Body);
     }
 
@@ -375,11 +424,14 @@ Name = "test"
 ---
 Title: Test
 ---
+
 ```json
 { not valid json }
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("{ not valid json }", result.Body);
     }
 
@@ -390,11 +442,14 @@ Title: Test
 ---
 Title: Test
 ---
+
 ```json
 {"type":"bar","data":{"labels":["Jan"]}}
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("""{"type":"bar","data":{"labels":["Jan"]}}""", result.Body);
     }
 
@@ -405,6 +460,7 @@ Title: Test
 ---
 Title: Test
 ---
+
 ```json
 
 [
@@ -414,7 +470,9 @@ Title: Test
 ]
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("""["one","two","three"]""", result.Body);
     }
 
@@ -423,13 +481,16 @@ Title: Test
     {
         var content = """
 Some text before.
+
 ```json
 {
 "key": "value"
 }
 ```
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("""{"key":"value"}""", result.Body);
     }
 
@@ -437,6 +498,7 @@ Some text before.
     public void CompactJsonBlocks_EmptyString_ReturnsEmpty()
     {
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(string.Empty);
+
         Assert.Equal(string.Empty, result);
     }
 
@@ -444,6 +506,7 @@ Some text before.
     public void CompactJsonBlocks_NullString_ReturnsNull()
     {
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(null);
+
         Assert.Null(result);
     }
 
@@ -454,7 +517,9 @@ Some text before.
 ```json
 { "key": "value" }
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("""{ "key": "value" }""", result);
     }
 
@@ -474,7 +539,9 @@ Some text before.
 }
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("""{"level1":{"level2":{"level3":{"value":"deep"}}}}""", result);
     }
 
@@ -492,7 +559,9 @@ Some text before.
 }
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("""{"name":"test","count":42,"active":true,"tags":null,"scores":[1,2,3]}""", result);
     }
 
@@ -504,7 +573,9 @@ Some text before.
 {}
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("{}", result);
     }
 
@@ -519,7 +590,9 @@ Some text before.
 }
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         // Contains pipe operator making it invalid JSON; should be preserved as-is
         Assert.Contains("true | false", result);
     }
@@ -534,12 +607,15 @@ Valid block:
 "key": "value"
 }
 ```
+
 Invalid block:
 ```json
 { not valid }
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("""{"key":"value"}""", result);
         Assert.Contains("{ not valid }", result);
     }
@@ -555,7 +631,9 @@ Invalid block:
 }
 ```
 """;
+
         var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
+
         Assert.Contains("\"greeting\":", result);
         Assert.Contains("\"emoji\":", result);
         Assert.DoesNotContain("    ", result);
@@ -568,7 +646,9 @@ Invalid block:
 ---
 Title: Test
 ---
+
 Some instructions before JSON.
+
 ```json
 {
 "response_format": {
@@ -576,9 +656,12 @@ Some instructions before JSON.
 }
 }
 ```
+
 Some instructions after JSON.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Contains("Some instructions before JSON.", result.Body);
         Assert.Contains("""{"response_format":{"type":"json_object"}}""", result.Body);
         Assert.Contains("Some instructions after JSON.", result.Body);
@@ -593,9 +676,12 @@ Title: Test
 Parameters:
   - tools: array of tool objects for document processing.
 ---
+
 Body text.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Single(result.Metadata.Parameters);
         Assert.Equal("tools", result.Metadata.Parameters[0].Name);
         Assert.Equal("array of tool objects for document processing.", result.Metadata.Parameters[0].Description);
@@ -612,9 +698,12 @@ Parameters:
   - availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
   - searchToolName: the name of the search tool.
 ---
+
 Body text.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal(3, result.Metadata.Parameters.Count);
         Assert.Equal("tools", result.Metadata.Parameters[0].Name);
         Assert.Equal("availableDocuments", result.Metadata.Parameters[1].Name);
@@ -630,9 +719,12 @@ Body text.
 Title: Test
 Parameters:
 ---
+
 Body text.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Empty(result.Metadata.Parameters);
     }
 
@@ -648,9 +740,12 @@ Parameters:
 IsListable: false
 Category: Testing
 ---
+
 Hello {{ name }}.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("My Template", result.Metadata.Title);
         Assert.Equal("A test template with parameters.", result.Metadata.Description);
         Assert.False(result.Metadata.IsListable);
@@ -671,9 +766,12 @@ Parameters:
   - missingcolon
   - : no name
 ---
+
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Single(result.Metadata.Parameters);
         Assert.Equal("validParam", result.Metadata.Parameters[0].Name);
     }
@@ -687,9 +785,12 @@ Title: Test
 Parameters:
   toolName: the tool to use.
 ---
+
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Single(result.Metadata.Parameters);
         Assert.Equal("toolName", result.Metadata.Parameters[0].Name);
         Assert.Equal("the tool to use.", result.Metadata.Parameters[0].Description);
@@ -699,8 +800,11 @@ Body.
     public void Parse_BlockScalarIndicator_StripsIndicatorFromValue()
     {
         var content = "---\nTitle: Test\nPromptTemplate: |\n  {% for item in items %}\n  {{ item.Name }}\n  {% endfor %}\n---\nBody.";
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Test", result.Metadata.Title);
+
         var template = result.Metadata.AdditionalProperties["PromptTemplate"];
         Assert.DoesNotContain("|", template.Split('\n')[0]);
 
@@ -723,7 +827,9 @@ Category: General
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         var notes = result.Metadata.AdditionalProperties["Notes"];
         Assert.Equal("Line one\nLine two\nLine three", notes);
         Assert.Equal("General", result.Metadata.Category);
@@ -739,7 +845,9 @@ Description: Use A | B syntax
 ---
 Body.
 """;
+
         var result = _parser.Parse(content);
+
         Assert.Equal("Use A | B syntax", result.Metadata.Description);
     }
 }

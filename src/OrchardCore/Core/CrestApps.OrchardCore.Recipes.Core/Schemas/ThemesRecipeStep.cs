@@ -11,6 +11,7 @@ public sealed class ThemesRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
     public string Name => "themes";
+
     public ThemesRecipeStep(IFeatureSchemaProvider featureProvider)
     {
         _featureProvider = featureProvider;
@@ -24,6 +25,7 @@ public sealed class ThemesRecipeStep : IRecipeStep
         }
 
         var themeIds = await _featureProvider.GetThemeIdsAsync();
+
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(

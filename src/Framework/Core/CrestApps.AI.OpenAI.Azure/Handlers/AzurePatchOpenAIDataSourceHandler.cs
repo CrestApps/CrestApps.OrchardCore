@@ -12,6 +12,7 @@ public sealed class AzurePatchOpenAIDataSourceHandler : IOpenAIChatOptionsConfig
         {
             // This is a workaround until we have first-class support for MaxTokens in ChatCompletionOptions in Azure.
             chatCompletionOptions.Patch.Set("$.max_tokens"u8, context.ChatOptions.MaxOutputTokens.Value);
+
             context.ChatOptions.MaxOutputTokens = null;
         }
 

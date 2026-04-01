@@ -13,6 +13,7 @@ public sealed class AIDeploymentController : Controller
 {
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly ICatalog<AIProviderConnection> _connectionCatalog;
+
     private static readonly List<SelectListItem> _providers =
     [
         new("OpenAI", "OpenAI"),
@@ -21,12 +22,14 @@ public sealed class AIDeploymentController : Controller
         new("Azure AI Services", "AzureSpeech"),
         new("Ollama", "Ollama"),
     ];
+
     private static readonly List<SelectListItem> _authTypes =
     [
         new("API Key", "ApiKey"),
         new("Default Azure Credential", "Default"),
         new("Managed Identity", "ManagedIdentity"),
     ];
+
     // Providers that are standalone (do not require a connection).
     private static readonly HashSet<string> _standaloneProviders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -60,6 +63,7 @@ public sealed class AIDeploymentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AIDeploymentViewModel model)
     {
+
         if (string.IsNullOrWhiteSpace(model.TechnicalName))
         {
             ModelState.AddModelError(nameof(model.TechnicalName), "Technical name is required.");
@@ -96,6 +100,7 @@ public sealed class AIDeploymentController : Controller
         };
 
         model.ApplyTo(deployment);
+
         await _deploymentCatalog.CreateAsync(deployment);
         await _deploymentCatalog.SaveChangesAsync();
 
@@ -158,6 +163,7 @@ public sealed class AIDeploymentController : Controller
         }
 
         model.ApplyTo(existing);
+
         await _deploymentCatalog.UpdateAsync(existing);
         await _deploymentCatalog.SaveChangesAsync();
 

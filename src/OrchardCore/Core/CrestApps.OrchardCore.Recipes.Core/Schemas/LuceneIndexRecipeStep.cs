@@ -9,6 +9,7 @@ public sealed class LuceneIndexRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "lucene-index";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

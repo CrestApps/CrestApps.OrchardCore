@@ -10,6 +10,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchMemoryVectorSearchService> _logger;
+
     public ElasticsearchMemoryVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchMemoryVectorSearchService> logger)
@@ -55,6 +56,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
             var results = new List<AIMemorySearchResult>();
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
+
             while (documents.MoveNext() && hits.MoveNext())
             {
                 var document = documents.Current;
@@ -68,6 +70,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
                 var updatedUtc = document.TryGetPropertyValue(MemoryConstants.ColumnNames.UpdatedUtc, out var updatedNode) && updatedNode != null
                 ? updatedNode.GetValue<DateTime>()
                 : null as DateTime?;
+
                 results.Add(new AIMemorySearchResult
                 {
                     MemoryId = document.TryGetPropertyValue(MemoryConstants.ColumnNames.MemoryId, out var idNode) ? idNode?.GetValue<string>() : null,

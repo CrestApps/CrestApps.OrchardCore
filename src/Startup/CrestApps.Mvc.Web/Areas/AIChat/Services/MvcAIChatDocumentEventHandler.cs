@@ -5,6 +5,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class MvcAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
+
     public MvcAIChatDocumentEventHandler(MvcAIDocumentIndexingService documentIndexingService)
     {
         _documentIndexingService = documentIndexingService;

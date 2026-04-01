@@ -10,6 +10,7 @@ public sealed class AIProfileAuthorizationHandler : AuthorizationHandler<Permiss
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
+
     public AIProfileAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -42,6 +43,7 @@ public sealed class AIProfileAuthorizationHandler : AuthorizationHandler<Permiss
         }
 
         var permission = AIPermissions.CreateProfilePermission(profileName);
+
         _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
 
         if (await _authorizationService.AuthorizeAsync(context.User, permission))

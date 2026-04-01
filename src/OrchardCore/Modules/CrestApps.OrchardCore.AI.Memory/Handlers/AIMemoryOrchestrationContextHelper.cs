@@ -12,6 +12,7 @@ internal static class AIMemoryOrchestrationContextHelper
         => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true
     ? httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
     : null;
+
     public static async Task<bool> IsEnabledAsync(object resource, ISiteService siteService)
     {
         if (resource is AIProfile profile)

@@ -25,6 +25,7 @@ public sealed class FtpMcpResourceHandler : IMcpResourceHandler
 
         // Always set the password to an empty string during export to prevent accidental exposure.
         metadataNode[nameof(FtpConnectionMetadata.Password)] = string.Empty;
+
         context.ExportData["Properties"][nameof(FtpConnectionMetadata)] = metadataNode;
     }
 }

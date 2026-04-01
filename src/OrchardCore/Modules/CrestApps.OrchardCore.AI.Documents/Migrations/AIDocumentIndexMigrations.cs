@@ -11,6 +11,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
     {
         await CreateAIDocumentIndexTableAsync();
 
+
         return 2;
     }
 
@@ -30,6 +31,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
             .Column<string>("Extension", column => column.WithLength(20)),
         collection: AIConstants.AIDocsCollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
             .CreateIndex("IDX_AIDocumentIndex_ItemId",
         "DocumentId",
@@ -39,6 +41,7 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
         "Extension"),
         collection: AIConstants.AIDocsCollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIDocumentIndex>(table => table
             .CreateIndex("IDX_AIDocumentIndex_ReferenceId",
         "DocumentId",

@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Models;
 public sealed class AIChatSessionFieldExtractedEvent : EventActivity
 {
     internal readonly IStringLocalizer S;
+
     public AIChatSessionFieldExtractedEvent(
         IStringLocalizer<AIChatSessionFieldExtractedEvent> stringLocalizer)
     {
@@ -15,8 +16,11 @@ public sealed class AIChatSessionFieldExtractedEvent : EventActivity
     }
 
     public override string Name => nameof(AIChatSessionFieldExtractedEvent);
+
     public override LocalizedString DisplayText => S["AI Chat Session Field Extracted"];
+
     public override LocalizedString Category => S["AI Chat"];
+
     public string ProfileId
     {
         get => GetProperty<string>();

@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Services;
 public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public AIDeploymentAdminMenu(IStringLocalizer<AIDeploymentAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

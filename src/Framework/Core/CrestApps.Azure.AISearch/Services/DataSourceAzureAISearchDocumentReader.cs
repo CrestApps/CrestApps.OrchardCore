@@ -16,6 +16,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
     private const int BatchSize = 1000;
 
     private readonly SearchIndexClient _searchIndexClient;
+
     public DataSourceAzureAISearchDocumentReader(SearchIndexClient searchIndexClient)
     {
         _searchIndexClient = searchIndexClient;
@@ -34,6 +35,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
         }
 
         var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
         var searchOptions = new SearchOptions
         {
             Size = BatchSize,
@@ -44,6 +46,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
             searchText: "*",
             searchOptions,
             cancellationToken);
+
         await foreach (var searchResult in response.Value.GetResultsAsync())
         {
             if (cancellationToken.IsCancellationRequested)
@@ -52,6 +55,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
             }
 
             var doc = searchResult.Document;
+
             // Use the configured key field, or fall back to the first field (typically the document key).
             string documentKey = null;
 
@@ -99,6 +103,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
         }
 
         var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
         // Build an OData filter to select documents by their keys.
         // Azure AI Search key field is the first field by default.
         var filterField = !string.IsNullOrEmpty(keyFieldName) ? keyFieldName : null;
@@ -106,6 +111,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
         if (filterField != null)
         {
             var filterValues = string.Join(" or ", idList.Select(id => $"{filterField} eq '{SanitizeODataValue(id)}'"));
+
             var searchOptions = new SearchOptions
             {
                 Filter = filterValues,
@@ -117,6 +123,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
                 searchText: null,
                 searchOptions,
                 cancellationToken);
+
             await foreach (var searchResult in response.Value.GetResultsAsync())
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -151,6 +158,7 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
                 }
 
                 SearchDocument document = null;
+
                 try
                 {
                     var doc = await searchClient.GetDocumentAsync<SearchDocument>(id, cancellationToken: cancellationToken);
@@ -233,7 +241,6 @@ internal sealed class DataSourceAzureAISearchDocumentReader : IDataSourceDocumen
 
         return firstLine.ToString().Trim();
     }
-
     /// <summary>
     /// Escapes a value for safe use in an OData filter expression by replacing
     /// single quotes with doubled single quotes.

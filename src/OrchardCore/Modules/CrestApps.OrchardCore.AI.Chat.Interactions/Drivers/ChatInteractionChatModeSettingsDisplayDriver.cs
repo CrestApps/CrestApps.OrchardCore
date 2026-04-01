@@ -20,7 +20,9 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IStringLocalizer S;
+
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
     public ChatInteractionChatModeSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -52,7 +54,9 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         }
 
         var model = new ChatInteractionChatModeSettingsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         settings.ChatMode = model.ChatMode;
 
         return Edit(site, settings, context);
@@ -62,6 +66,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     {
         var hasSpeechToText = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText) != null;
         var hasTextToSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech) != null;
+
         var modes = new List<SelectListItem>
         {
             new(S["Text input"], nameof(ChatMode.TextInput)),

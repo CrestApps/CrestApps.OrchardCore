@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Services;
 public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemoryEntryIndex>, IAIMemoryStore
 {
     private readonly ILookupNormalizer _lookupNormalizer;
+
     public DefaultAIMemoryStore(ISession session, ILookupNormalizer lookupNormalizer)
     : base(session)
     {
@@ -51,6 +52,7 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
         IQuery<AIMemoryEntry> query = Session.Query<AIMemoryEntry, AIMemoryEntryIndex>(
             x => x.UserId == userId,
             CollectionName);
+
         query = query
             .With<AIMemoryEntryIndex>()
             .OrderByDescending(x => x.UpdatedUtc);

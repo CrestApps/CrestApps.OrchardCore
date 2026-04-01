@@ -48,8 +48,10 @@ public sealed class FunctionInvocationAICompletionServiceHandler : IAICompletion
         }
 
         context.ChatOptions.Tools ??= [];
+
         var user = _httpContextAccessor.HttpContext?.User;
         var addedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         // Process entries in priority order: Local/System first, then MCP.
         // This ensures local tools win name collisions over MCP tools.
         var orderedEntries = scopedEntries

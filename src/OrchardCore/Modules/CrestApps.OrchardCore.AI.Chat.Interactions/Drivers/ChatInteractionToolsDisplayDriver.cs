@@ -18,6 +18,7 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
+
     public ChatInteractionToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -86,8 +87,11 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
         }
 
         var model = new EditChatInteractionToolsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+
         interaction.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
         ? []
         : _toolDefinitions.Tools.Keys

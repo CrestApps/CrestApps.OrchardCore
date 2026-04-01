@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
     {
         services.AddDataMigration<AzureOpenAIFeatureMigrations>();
         services.AddSingleton<CrestApps.Services.IODataValidator, CrestApps.Services.ODataFilterValidator>();
+
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
             .AddScoped<IAIClientProvider, AzureSpeechClientProvider>()
@@ -46,6 +48,7 @@ public sealed class Startup : StartupBase
                 o.Description = S["Azure deployment via a service connection."];
             })
             .AddDisplayDriver<AIDeployment, AzureSpeechDeploymentDisplayDriver>();
+
         services.AddAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, AzureOpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
@@ -68,6 +71,7 @@ public sealed class DataSourcesStartup : StartupBase
 public sealed class ConnectionManagementStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public ConnectionManagementStartup(IStringLocalizer<ConnectionManagementStartup> stringLocalizer)
     {
         S = stringLocalizer;

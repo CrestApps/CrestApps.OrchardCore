@@ -1,5 +1,6 @@
 using CrestApps.AI.Clients;
 using Microsoft.Extensions.Localization;
+
 namespace CrestApps.AI;
 
 public sealed class AIOptions

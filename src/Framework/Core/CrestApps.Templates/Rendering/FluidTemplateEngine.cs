@@ -13,6 +13,7 @@ public sealed class FluidTemplateEngine : ITemplateEngine
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<FluidTemplateEngine> _logger;
+
     public FluidTemplateEngine(
         IServiceProvider serviceProvider,
         ILogger<FluidTemplateEngine> logger)
@@ -75,7 +76,6 @@ public sealed class FluidTemplateEngine : ITemplateEngine
 
         return true;
     }
-
     /// <summary>
     /// Normalizes whitespace in the rendered output so templates can be written
     /// with readable formatting while producing clean output for AI consumption.
@@ -123,6 +123,7 @@ public sealed class FluidTemplateEngine : ITemplateEngine
     private static FluidParser CreateParser()
     {
         var parser = new FluidParser();
+
         parser.RegisterExpressionTag(
             RenderTemplateTag.TagName,
             RenderTemplateTag.WriteToAsync);

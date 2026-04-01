@@ -37,6 +37,7 @@ internal static class CreateChatSessionEndpoint
         var session = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
         session.Title = profile.DisplayText ?? profile.Name;
         session.UserId = httpContext.User.Identity?.Name ?? "anonymous";
+
         await sessionManager.SaveAsync(session);
 
         return TypedResults.Ok(new { sessionId = session.SessionId });

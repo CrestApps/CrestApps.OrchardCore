@@ -20,6 +20,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+
     public PostSessionProcessingChatSessionHandler(
         PostSessionProcessingService postSessionProcessingService,
         IServiceProvider serviceProvider,
@@ -57,8 +58,10 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
         }
 
         var taskNames = settings.PostSessionTasks.Select(t => t.Name).ToList();
+
         // Mark as pending so the background task can retry if this attempt fails.
         context.ChatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Pending;
+
         try
         {
             context.ChatSession.PostSessionProcessingAttempts++;
@@ -91,6 +94,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 context.Profile,
                 context.ChatSession,
                 context.Prompts);
+
             // Merge new results into the session's PostSessionResults.
 
             if (results is not null && results.Count > 0)
@@ -115,6 +119,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
             var allSucceeded = taskNames.All(name =>
             context.ChatSession.PostSessionResults.TryGetValue(name, out var r)
                 && r.Status == PostSessionTaskResultStatus.Succeeded);
+
             context.ChatSession.IsPostSessionTasksProcessed = allSucceeded;
 
             if (_logger.IsEnabled(LogLevel.Information))
@@ -122,6 +127,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 var succeededCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Succeeded);
                 var failedCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Failed);
                 var pendingCount = context.ChatSession.PostSessionResults.Values.Count(r => r.Status == PostSessionTaskResultStatus.Pending);
+
                 _logger.LogInformation(
                     "Inline post-session tasks for session '{SessionId}': {Succeeded} succeeded, {Failed} failed, {Pending} pending out of {Total} total.",
                     context.ChatSession.SessionId,
@@ -146,6 +152,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
                 context.ChatSession.SessionId,
                 context.ChatSession.PostSessionProcessingAttempts,
                 string.Join(", ", taskNames));
+
             // Mark all non-succeeded tasks as Failed.
 
             foreach (var taskName in taskNames)

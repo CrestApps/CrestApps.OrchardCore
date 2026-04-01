@@ -6,6 +6,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.ViewModels;
 public class AIChatSessionAllFieldsExtractedEventViewModel
 {
     public string ProfileId { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Profiles { get; set; }
 }

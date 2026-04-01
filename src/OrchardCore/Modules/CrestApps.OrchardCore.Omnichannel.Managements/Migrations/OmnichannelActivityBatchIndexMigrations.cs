@@ -15,6 +15,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : DataMigration
             .Column<string>("Status", column => column.WithLength(20)),
         collection: OmnichannelConstants.CollectionName
         );
+
         // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityBatchIndex_DocumentId",

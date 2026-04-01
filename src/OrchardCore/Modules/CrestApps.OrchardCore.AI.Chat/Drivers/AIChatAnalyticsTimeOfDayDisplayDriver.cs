@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatAnalyticsTimeOfDayDisplayDriver : DisplayDriver<AIChatAnalyticsReport>
 {
     internal readonly IStringLocalizer S;
+
     public AIChatAnalyticsTimeOfDayDisplayDriver(IStringLocalizer<AIChatAnalyticsTimeOfDayDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;

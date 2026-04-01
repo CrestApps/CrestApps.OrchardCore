@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 public sealed class TestNamedCatalogEntry : CatalogItem, INameAwareModel
 {
     public string Name { get; set; }
+
     public override bool Equals(object obj)
     {
         if (obj is not TestNamedCatalogEntry other)

@@ -14,7 +14,6 @@ public sealed class TemplateBuilder
     private readonly List<Segment> _segments = [];
 
     private string _separator = Environment.NewLine + Environment.NewLine;
-
     /// <summary>
     /// Sets the separator used between segments when building the final string.
     /// Defaults to a double newline.
@@ -25,7 +24,6 @@ public sealed class TemplateBuilder
 
         return this;
     }
-
     /// <summary>
     /// Appends a raw string segment.
     /// </summary>
@@ -38,7 +36,6 @@ public sealed class TemplateBuilder
 
         return this;
     }
-
     /// <summary>
     /// Appends the body of an <see cref="Template"/>.
     /// </summary>
@@ -51,7 +48,6 @@ public sealed class TemplateBuilder
 
         return this;
     }
-
     /// <summary>
     /// Appends a template by ID. The template will be resolved and rendered
     /// when <see cref="BuildAsync"/> is called.
@@ -65,7 +61,6 @@ public sealed class TemplateBuilder
 
         return this;
     }
-
     /// <summary>
     /// Builds the final composed string by resolving any template IDs
     /// through the provided <paramref name="templateService"/> and joining
@@ -135,6 +130,7 @@ public sealed class TemplateBuilder
 
         // Build the final string using a rented buffer.
         var buffer = ArrayPool<char>.Shared.Rent(totalLength);
+
         try
         {
             var position = 0;
@@ -165,7 +161,6 @@ public sealed class TemplateBuilder
             ArrayPool<char>.Shared.Return(buffer);
         }
     }
-
     /// <summary>
     /// Builds the final composed string from only raw string and
     /// <see cref="Template"/> segments. Does not require a template service.

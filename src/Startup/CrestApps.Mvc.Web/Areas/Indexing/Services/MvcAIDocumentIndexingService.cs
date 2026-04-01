@@ -1,7 +1,9 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
+
 using CrestApps.Infrastructure.Indexing;
+
 using CrestApps.Infrastructure.Indexing.Models;
 
 namespace CrestApps.Mvc.Web.Services;
@@ -13,8 +15,10 @@ public sealed class MvcAIDocumentIndexingService
 {
     private readonly IInteractionDocumentSettingsProvider _settingsProvider;
     private readonly ISearchIndexProfileStore _indexProfileStore;
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MvcAIDocumentIndexingService> _logger;
+
     public MvcAIDocumentIndexingService(
         IInteractionDocumentSettingsProvider settingsProvider,
         ISearchIndexProfileStore indexProfileStore,
@@ -24,15 +28,18 @@ public sealed class MvcAIDocumentIndexingService
         _settingsProvider = settingsProvider;
         _indexProfileStore = indexProfileStore;
         _serviceProvider = serviceProvider;
+
         _logger = logger;
     }
 
     public async Task IndexAsync(AIDocument document, IReadOnlyCollection<AIDocumentChunk> chunks, CancellationToken cancellationToken = default)
     {
+
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(chunks);
 
         var indexedChunks = chunks
+
             .Where(chunk => chunk.Embedding is { Length: > 0 } && !string.IsNullOrWhiteSpace(chunk.Content))
             .ToList();
 
@@ -40,6 +47,7 @@ public sealed class MvcAIDocumentIndexingService
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
+
                 _logger.LogDebug("Skipping AI document indexing for '{FileName}' because no embedded chunks were created.", document.FileName);
             }
 
@@ -50,6 +58,7 @@ public sealed class MvcAIDocumentIndexingService
 
         if (indexProfile == null)
         {
+
             return;
         }
 
@@ -66,6 +75,7 @@ public sealed class MvcAIDocumentIndexingService
         if (!await indexManager.ExistsAsync(indexProfile.IndexFullName, cancellationToken))
         {
             var dimensions = indexedChunks[0].Embedding!.Length;
+
             await indexManager.CreateAsync(indexProfile, BuildFields(dimensions), cancellationToken);
         }
 
@@ -84,13 +94,17 @@ public sealed class MvcAIDocumentIndexingService
                     [DocumentIndexConstants.ColumnNames.Embedding] = chunk.Embedding,
                     [DocumentIndexConstants.ColumnNames.ChunkIndex] = chunk.Index,
                 },
+
             })
+
         .ToArray();
+
         var indexed = await documentManager.AddOrUpdateAsync(indexProfile, documents, cancellationToken);
 
         if (!indexed)
         {
             _logger.LogWarning("AI document indexing reported failure for file '{FileName}' into index '{IndexName}'.", document.FileName, indexProfile.IndexFullName);
+
         }
     }
 
@@ -102,6 +116,7 @@ public sealed class MvcAIDocumentIndexingService
 
         if (indexProfile == null)
         {
+
             return;
         }
 
@@ -125,6 +140,7 @@ public sealed class MvcAIDocumentIndexingService
 
         if (ids.Length == 0)
         {
+
             return;
         }
 
@@ -132,6 +148,7 @@ public sealed class MvcAIDocumentIndexingService
 
         if (indexProfile == null)
         {
+
             return;
         }
 

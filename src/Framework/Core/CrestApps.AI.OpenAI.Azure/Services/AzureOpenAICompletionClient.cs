@@ -16,6 +16,7 @@ using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
+
 namespace CrestApps.AI.OpenAI.Azure.Services;
 
 public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICompletionClient
@@ -94,6 +95,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var azureMessages = new List<ChatMessage>();
 
         var currentPrompt = string.Empty;
+
         foreach (var message in messages)
         {
             if (string.IsNullOrWhiteSpace(message.Text))

@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
+
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
         S = stringLocalizer;
@@ -22,10 +23,13 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddIndexProfileHandler<AIDocumentElasticsearchIndexProfileHandler>();
+
         // Register Elasticsearch document index handler for AI document embeddings.
         services.AddScoped<IDocumentIndexHandler, AIDocumentElasticsearchDocumentIndexHandler>();
+
         // Register Elasticsearch vector search service as a keyed service.
         services.AddKeyedScoped<IVectorSearchService, ElasticsearchVectorSearchService>(ElasticsearchConstants.ProviderName);
+
         services.AddElasticsearchIndexingSource(AIConstants.AIDocumentsIndexingTaskType, o =>
         {
             o.DisplayName = S["AI Documents (Elasticsearch)"];

@@ -18,6 +18,7 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         var document = await DocumentManager.GetOrCreateImmutableAsync();
+
         var record = document.Records.Values.FirstOrDefault(x => OrdinalIgnoreCaseEquals(x.Name, name));
 
         return Clone(record);

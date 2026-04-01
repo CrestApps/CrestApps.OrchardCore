@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Mcp.Services;
 
 public sealed class DefaultOAuth2TokenService : IOAuth2TokenService

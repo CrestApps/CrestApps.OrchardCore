@@ -13,6 +13,7 @@ public class DefaultTemplateService : ITemplateService
 {
     private readonly IEnumerable<ITemplateProvider> _providers;
     private readonly ITemplateEngine _renderer;
+
     public DefaultTemplateService(
         IEnumerable<ITemplateProvider> providers,
         ITemplateEngine renderer)

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "AI Data Sources",
     Description = "Provides AI data source management, knowledge base indexing, and RAG search capabilities.",

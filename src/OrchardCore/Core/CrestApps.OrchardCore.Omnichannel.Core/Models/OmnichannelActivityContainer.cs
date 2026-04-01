@@ -13,6 +13,7 @@ public sealed class OmnichannelActivityContainer
     public ContentTypeDefinition SubjectContentTypeDefinition { get; }
 
     public User User { get; }
+
     public OmnichannelActivityContainer(OmnichannelActivity activity, ContentTypeDefinition subjectContentTypeDefinition, ContentItem contact, User user)
     {
         ArgumentNullException.ThrowIfNull(activity);

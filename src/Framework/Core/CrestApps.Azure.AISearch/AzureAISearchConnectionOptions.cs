@@ -10,7 +10,6 @@ public sealed class AzureAISearchConnectionOptions
     /// The Azure AI Search service endpoint (e.g. "https://my-search.search.windows.net").
     /// </summary>
     public string Endpoint { get; set; }
-
     /// <summary>
     /// The admin API key used for authentication.
     /// When empty, <c>DefaultAzureCredential</c> is used instead.

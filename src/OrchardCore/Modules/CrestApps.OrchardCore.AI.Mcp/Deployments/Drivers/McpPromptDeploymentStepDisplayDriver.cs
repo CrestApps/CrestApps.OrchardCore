@@ -17,6 +17,7 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     private readonly INamedCatalog<McpPrompt> _store;
 
     internal readonly IStringLocalizer S;
+
     public McpPromptDeploymentStepDisplayDriver(
         INamedCatalog<McpPrompt> store,
         IStringLocalizer<McpPromptDeploymentStepDisplayDriver> stringLocalizer)
@@ -63,6 +64,7 @@ internal sealed class McpPromptDeploymentStepDisplayDriver : DisplayDriver<Deplo
     public override async Task<IDisplayResult> UpdateAsync(McpPromptDeploymentStep step, UpdateEditorContext context)
     {
         var model = new McpPromptStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.Prompts);

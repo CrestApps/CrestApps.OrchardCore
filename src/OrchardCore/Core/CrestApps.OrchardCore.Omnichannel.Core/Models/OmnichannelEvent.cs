@@ -11,6 +11,7 @@ public sealed class OmnichannelEvent
     public OmnichannelMessage Message { get; set; }
 
     public BinaryData Data { get; set; }
+
     public T GetDataFromJson<T>()
     {
         if (Data == null)

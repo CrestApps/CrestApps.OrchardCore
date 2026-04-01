@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<OmnichannelDisposition>
 {
     private readonly IStringLocalizer S;
+
     public OmnichannelDispositionDisplayDriver(
         IStringLocalizer<OmnichannelCampaignDisplayDriver> stringLocalizer)
     {
@@ -42,6 +43,7 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelDisposition disposition, UpdateEditorContext context)
     {
         var model = new OmnichannelDispositionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))

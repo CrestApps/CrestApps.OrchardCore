@@ -6,6 +6,7 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 public class EditResponseHandlerProfileSettingsViewModel
 {
     public string InitialResponseHandlerName { get; set; }
+
     [BindNever]
     public IList<SelectListItem> ResponseHandlers { get; set; }
 }

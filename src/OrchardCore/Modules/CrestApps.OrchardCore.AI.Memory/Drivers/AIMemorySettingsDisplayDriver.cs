@@ -21,7 +21,9 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
     private readonly IAuthorizationService _authorizationService;
 
     internal readonly IStringLocalizer S;
+
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
     public AIMemorySettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,
@@ -55,7 +57,9 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
         }
 
         var model = new AIMemorySettingsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
         ? null
         : model.IndexProfileName;

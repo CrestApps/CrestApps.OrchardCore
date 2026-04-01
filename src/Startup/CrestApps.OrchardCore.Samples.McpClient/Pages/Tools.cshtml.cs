@@ -10,13 +10,16 @@ namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 public sealed class ToolsModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
+
     public ToolsModel(McpClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
     public IList<McpClientTool> Tools { get; private set; } = [];
+
     public string ErrorMessage { get; private set; }
+
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadToolsAsync(cancellationToken);
@@ -39,6 +42,7 @@ public sealed class ToolsModel : PageModel
         try
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
+
             Dictionary<string, object> args = [];
 
             if (!string.IsNullOrWhiteSpace(arguments))
@@ -47,6 +51,7 @@ public sealed class ToolsModel : PageModel
             }
 
             var result = await client.CallToolAsync(toolName, args, cancellationToken: cancellationToken);
+
             var contents = new List<object>();
 
             if (result.Content?.Count > 0)

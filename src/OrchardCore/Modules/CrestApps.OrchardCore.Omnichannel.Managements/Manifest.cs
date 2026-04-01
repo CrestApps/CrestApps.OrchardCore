@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Omnichannel Management",
     Author = CrestAppsManifestConstants.Author,
@@ -9,6 +10,7 @@ using OrchardCore.Modules.Manifest;
     Version = CrestAppsManifestConstants.Version,
     Category = "Communications"
     )]
+
 [assembly: Feature(
     Name = "Omnichannel Management",
     Id = OmnichannelConstants.Features.Managements,

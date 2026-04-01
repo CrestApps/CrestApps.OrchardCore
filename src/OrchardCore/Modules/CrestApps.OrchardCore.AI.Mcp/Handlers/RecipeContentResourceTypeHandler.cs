@@ -21,6 +21,7 @@ public sealed class RecipeContentResourceTypeHandler : McpResourceTypeHandlerBas
     private readonly IEnumerable<IRecipeHarvester> _recipeHarvesters;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly ILogger _logger;
+
     public RecipeContentResourceTypeHandler(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager,

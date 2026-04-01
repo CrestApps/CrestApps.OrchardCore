@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDeploymentManager : CrestApps.AI.Services.DefaultAIDeploymentManager
 {
     private readonly ISiteService _siteService;
+
     public DefaultAIDeploymentManager(
         INamedSourceCatalog<AIDeployment> deploymentStore,
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,

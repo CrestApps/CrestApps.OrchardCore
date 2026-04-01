@@ -12,6 +12,7 @@ internal sealed class JsonFileCopilotCredentialStore : ICopilotCredentialStore
     };
 
     private readonly string _credentialsPath;
+
     public JsonFileCopilotCredentialStore(IWebHostEnvironment env)
     {
         _credentialsPath = Path.Combine(env.ContentRootPath, "App_Data", "CopilotCredentials");
@@ -36,6 +37,7 @@ internal sealed class JsonFileCopilotCredentialStore : ICopilotCredentialStore
     {
         var filePath = GetFilePath(userId);
         var json = JsonSerializer.Serialize(credential, _jsonOptions);
+
         await File.WriteAllTextAsync(filePath, json, cancellationToken);
     }
 

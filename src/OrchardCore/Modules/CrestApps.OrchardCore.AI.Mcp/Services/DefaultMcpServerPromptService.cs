@@ -12,6 +12,7 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
     private readonly INamedCatalogManager<McpPrompt> _catalogManager;
     private readonly IMcpPromptProvider _skillPromptProvider;
     private readonly IEnumerable<McpServerPrompt> _sdkPrompts;
+
     public DefaultMcpServerPromptService(
         INamedCatalogManager<McpPrompt> catalogManager,
         IMcpPromptProvider skillPromptProvider,
@@ -25,10 +26,12 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
     public async Task<IList<Prompt>> ListAsync()
     {
         var entries = await _catalogManager.GetAllAsync();
+
         var prompts = entries
             .Where(e => e.Prompt != null)
             .Select(e => e.Prompt)
             .ToList();
+
         var skillPrompts = await _skillPromptProvider.GetPromptsAsync();
 
         foreach (var skillPrompt in skillPrompts)

@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.AI.Memory.Handlers;
 public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
+
     private readonly IAIClientFactory _aiClientFactory;
+
     protected AIMemoryIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;

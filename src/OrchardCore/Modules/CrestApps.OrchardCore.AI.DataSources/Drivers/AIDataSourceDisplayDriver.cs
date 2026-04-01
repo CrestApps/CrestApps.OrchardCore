@@ -15,6 +15,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     private readonly IIndexProfileStore _indexProfileStore;
 
     internal readonly IStringLocalizer S;
+
     public AIDataSourceDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IStringLocalizer<AIDataSourceDisplayDriver> stringLocalizer)
@@ -44,13 +45,16 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             model.KeyFieldName = dataSource.KeyFieldName;
             model.TitleFieldName = dataSource.TitleFieldName;
             model.ContentFieldName = dataSource.ContentFieldName;
+
             // Lock configuration once both index and master index are set (already created),
             // but allow editing if either is missing (e.g., migration failure).
             model.IsLocked = !string.IsNullOrEmpty(dataSource.SourceIndexProfileName) &&
                 !string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) &&
                     !string.IsNullOrEmpty(dataSource.ContentFieldName);
+
             // Show ALL source indexes from all providers, excluding master indexes.
             var allIndexes = await _indexProfileStore.GetAllAsync();
+
             model.SourceIndexProfileNames = allIndexes
             .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
             .GroupBy(i => i.ProviderName)
@@ -83,6 +87,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)
     {
         var model = new EditAIDataSourceViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrEmpty(model.DisplayText))
@@ -91,6 +96,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         }
 
         dataSource.DisplayText = model.DisplayText;
+
         // Allow updating index config if new OR if fields are missing (migration failure recovery).
         var canUpdateIndex = context.IsNew ||
             string.IsNullOrEmpty(dataSource.SourceIndexProfileName) ||

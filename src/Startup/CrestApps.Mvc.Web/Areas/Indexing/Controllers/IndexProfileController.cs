@@ -20,6 +20,7 @@ public sealed class IndexProfileController : Controller
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly IEnumerable<IIndexProfileHandler> _handlers;
     private readonly IReadOnlyList<IndexProfileSourceDescriptor> _sources;
+
     public IndexProfileController(
         ISearchIndexProfileStore store,
         ICatalog<AIDeployment> deploymentCatalog,
@@ -72,6 +73,7 @@ public sealed class IndexProfileController : Controller
 
         var profile = new SearchIndexProfile();
         model.ApplyTo(profile);
+
         await _store.CreateAsync(profile);
         await _store.SaveChangesAsync();
         await NotifySynchronizedAsync(profile);
@@ -115,6 +117,7 @@ public sealed class IndexProfileController : Controller
         }
 
         model.ApplyTo(profile);
+
         await _store.UpdateAsync(profile);
         await _store.SaveChangesAsync();
         await NotifySynchronizedAsync(profile);
@@ -188,7 +191,9 @@ public sealed class IndexProfileController : Controller
             .Select(group => group.First())
             .Select(source => new SelectListItem(source.DisplayName, source.Type))
             .ToList();
+
         var deployments = await _deploymentCatalog.GetAllAsync();
+
         model.EmbeddingDeployments = [new SelectListItem("— None —", "")];
         model.EmbeddingDeployments.AddRange(
             deployments

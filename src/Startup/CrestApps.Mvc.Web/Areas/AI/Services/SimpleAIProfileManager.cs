@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class SimpleAIProfileManager : IAIProfileManager
 {
     private readonly ISession _session;
+
     public SimpleAIProfileManager(ISession session)
     {
         _session = session;

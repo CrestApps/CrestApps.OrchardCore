@@ -16,6 +16,7 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
             .Column<DateTime>("CreatedUtc"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
             .CreateIndex("IDX_ChatInteractionPromptIndex_DocumentId",
         "DocumentId",
@@ -23,6 +24,7 @@ internal sealed class ChatInteractionPromptIndexMigrations : DataMigration
         "ChatInteractionId"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<ChatInteractionPromptIndex>(table => table
             .CreateIndex("IDX_ChatInteractionPromptIndex_ChatInteractionId",
         "DocumentId",

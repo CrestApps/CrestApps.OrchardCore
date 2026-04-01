@@ -13,6 +13,7 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
     private readonly HashSet<string> _removedMemoryIds = [];
 
     private bool _taskAdded;
+
     public override Task CreatedAsync(CreatedContext<AIMemoryEntry> context)
     {
         AddDeferredTask();
@@ -53,8 +54,10 @@ internal sealed class AIMemoryEntryHandler : CatalogEntryHandlerBase<AIMemoryEnt
         }
 
         _taskAdded = true;
+
         var memories = _memories;
         var removedMemoryIds = _removedMemoryIds;
+
         ShellScope.AddDeferredTask(scope => IndexAsync(scope, memories.Values, removedMemoryIds));
     }
 

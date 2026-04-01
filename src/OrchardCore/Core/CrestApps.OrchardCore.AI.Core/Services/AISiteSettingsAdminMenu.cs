@@ -14,6 +14,7 @@ public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
     };
 
     internal readonly IStringLocalizer S;
+
     public AISiteSettingsAdminMenu(IStringLocalizer<AISiteSettingsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

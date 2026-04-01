@@ -12,6 +12,7 @@ public sealed class FeatureRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
     public string Name => "feature";
+
     public FeatureRecipeStep(IShellFeaturesManager shellFeaturesManager)
     {
         _shellFeaturesManager = shellFeaturesManager;
@@ -25,9 +26,11 @@ public sealed class FeatureRecipeStep : IRecipeStep
         }
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
+
         var featureItemSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
             .Enum(features.Select(f => f.Id));
+
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(

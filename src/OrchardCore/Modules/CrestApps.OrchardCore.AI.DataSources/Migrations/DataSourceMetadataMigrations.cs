@@ -13,6 +13,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private const string NewKey = nameof(DataSourceMetadata);
 
     private readonly ShellSettings _shellSettings;
+
     public DataSourceMetadataMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
@@ -40,6 +41,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
                 var legacyNode = profile.Properties[LegacyKey];
                 profile.Properties.Remove(LegacyKey);
                 profile.Properties[NewKey] = legacyNode;
+
                 await profileStore.UpdateAsync(profile);
             }
         });

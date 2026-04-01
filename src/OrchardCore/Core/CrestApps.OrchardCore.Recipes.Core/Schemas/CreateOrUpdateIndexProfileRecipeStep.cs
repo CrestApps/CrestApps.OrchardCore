@@ -9,6 +9,7 @@ public sealed class CreateOrUpdateIndexProfileRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "CreateOrUpdateIndexProfile";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

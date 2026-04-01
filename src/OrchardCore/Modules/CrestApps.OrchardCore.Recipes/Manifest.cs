@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "CrestApps Recipes",
     Author = CrestAppsManifestConstants.Author,

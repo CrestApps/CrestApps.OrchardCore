@@ -12,8 +12,10 @@ public sealed class UserDisplayNamePermissionsProvider : IPermissionProvider
     [
         UserPermissions.ManageDisplaySettings,
     ];
+
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
+
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

@@ -15,6 +15,7 @@ public sealed class AvatarAdminMenu : AdminNavigationProvider
     };
 
     internal readonly IStringLocalizer S;
+
     public AvatarAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

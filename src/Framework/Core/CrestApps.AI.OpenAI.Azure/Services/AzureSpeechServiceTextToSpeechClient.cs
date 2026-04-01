@@ -9,6 +9,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
+
 namespace CrestApps.AI.OpenAI.Azure.Services;
 
 /// <summary>
@@ -185,6 +186,7 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
         {
             yield return update;
         }
+
         // Await the task to propagate any startup exceptions.
         await speakTask;
 
@@ -193,7 +195,6 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
             _logger.LogDebug("Streaming synthesis iteration completed.");
         }
     }
-
     /// <summary>
     /// Gets the available voices for text-to-speech synthesis.
     /// </summary>
@@ -236,7 +237,6 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
 
         return [];
     }
-
     /// <inheritdoc/>
     public object GetService(Type serviceType, object serviceKey = null)
     {

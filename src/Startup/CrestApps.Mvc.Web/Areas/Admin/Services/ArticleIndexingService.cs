@@ -14,6 +14,7 @@ public sealed class ArticleIndexingService
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ArticleIndexingService> _logger;
+
     public ArticleIndexingService(
         ICatalog<Article> articleCatalog,
         ISearchIndexProfileStore indexProfileStore,
@@ -95,6 +96,7 @@ public sealed class ArticleIndexingService
     private async Task<IReadOnlyCollection<SearchIndexProfile>> GetConfiguredIndexProfilesAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         var indexProfiles = await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.Articles);
 
         if (indexProfiles.Count == 0)

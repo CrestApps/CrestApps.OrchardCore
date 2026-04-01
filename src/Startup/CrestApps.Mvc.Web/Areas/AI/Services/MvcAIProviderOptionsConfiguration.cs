@@ -12,6 +12,7 @@ public sealed class MvcAIProviderOptionsConfiguration : IConfigureOptions<AIProv
 {
     private readonly MvcAIProviderOptionsStore _providerOptionsStore;
     private readonly ILogger<MvcAIProviderOptionsConfiguration> _logger;
+
     public MvcAIProviderOptionsConfiguration(
         MvcAIProviderOptionsStore providerOptionsStore,
         ILogger<MvcAIProviderOptionsConfiguration> logger)

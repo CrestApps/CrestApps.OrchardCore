@@ -16,8 +16,10 @@ public static class IndexProfileServiceCollectionExtensions
 
     public static IServiceCollection AddElasticsearchDataSource(this IServiceCollection services, string type, Action<IndexProfileSourceDescriptor> configure = null)
         => services.AddIndexingSource("Elasticsearch", "Elasticsearch", type, configure);
+
     public static IServiceCollection AddAzureAISearchDataSource(this IServiceCollection services, string type, Action<IndexProfileSourceDescriptor> configure = null)
         => services.AddIndexingSource("AzureAISearch", "Azure AI Search", type, configure);
+
     public static IServiceCollection AddIndexingSource(this IServiceCollection services, string providerName, string providerDisplayName, string type, Action<IndexProfileSourceDescriptor> configure = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
@@ -53,6 +55,7 @@ internal sealed class IndexProfileSourceRegistration
 internal sealed class ConfigureIndexProfileSourceOptions : IConfigureOptions<IndexProfileSourceOptions>
 {
     private readonly IEnumerable<IndexProfileSourceRegistration> _registrations;
+
     public ConfigureIndexProfileSourceOptions(IEnumerable<IndexProfileSourceRegistration> registrations)
     {
         _registrations = registrations;

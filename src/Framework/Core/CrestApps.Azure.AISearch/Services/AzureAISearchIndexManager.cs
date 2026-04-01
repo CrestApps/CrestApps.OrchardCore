@@ -15,6 +15,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger<AzureAISearchIndexManager> _logger;
+
     public AzureAISearchIndexManager(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchIndexManager> logger)
@@ -113,6 +114,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating Azure AI Search index '{IndexName}'.", profile.IndexFullName);
+
             throw;
         }
     }
@@ -132,6 +134,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting Azure AI Search index '{IndexName}'.", indexFullName);
+
             throw;
         }
     }

@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "AI Chat Interactions",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatInteractions,
     Name = "AI Chat Interactions",

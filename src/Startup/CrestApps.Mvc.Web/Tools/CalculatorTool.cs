@@ -10,6 +10,7 @@ namespace CrestApps.Mvc.Web.Tools;
 public sealed class CalculatorTool : AIFunction
 {
     public const string TheName = "calculator";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -33,25 +34,35 @@ public sealed class CalculatorTool : AIFunction
         "a": {
           "type": "number",
           "description": "The first operand."
+
         },
+
         "b": {
+
           "type": "number",
+
           "description": "The second operand."
         }
       },
       "additionalProperties": false
+
     }
     """);
     public override string Name => TheName;
+
     public override string Description => "Performs basic arithmetic: add, subtract, multiply, or divide two numbers.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>
     {
+
         ["Strict"] = true,
     };
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
 
         if (!arguments.TryGetValue("operation", out var opVal) || opVal is not string operation)
@@ -68,6 +79,7 @@ public sealed class CalculatorTool : AIFunction
         {
             "add" => (a + b, (string)null),
             "subtract" => (a - b, null),
+
             "multiply" => (a * b, null),
             "divide" when b != 0 => (a / b, null),
             "divide" => (0d, "Division by zero is not allowed."),
@@ -75,6 +87,7 @@ public sealed class CalculatorTool : AIFunction
         };
 
         if (error != null)
+
         {
             return ValueTask.FromResult<object>(JsonSerializer.Serialize(new { error }));
         }
@@ -83,6 +96,7 @@ public sealed class CalculatorTool : AIFunction
         {
             expression = $"{a} {GetSymbol(operation)} {b}",
             result,
+
         }));
     }
 
@@ -91,8 +105,10 @@ public sealed class CalculatorTool : AIFunction
         value = 0;
 
         if (!arguments.TryGetValue(key, out var raw))
+
         {
             return false;
+
         }
 
         if (raw is double d) { value = d; return true; }

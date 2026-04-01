@@ -19,6 +19,7 @@ public sealed class FileSystemTemplateProvider : ITemplateProvider
     private readonly TemplateOptions _options;
     private readonly IEnumerable<ITemplateParser> _parsers;
     private readonly ILogger<FileSystemTemplateProvider> _logger;
+
     public FileSystemTemplateProvider(
         IOptions<TemplateOptions> options,
         IEnumerable<ITemplateParser> parsers,
@@ -43,6 +44,7 @@ public sealed class FileSystemTemplateProvider : ITemplateProvider
             }
 
             DiscoverTemplates(promptsDir, featureId: null, basePath, templates);
+
             // Scan subdirectories for feature-specific prompts.
 
             foreach (var subDir in Directory.GetDirectories(promptsDir))
@@ -72,6 +74,7 @@ public sealed class FileSystemTemplateProvider : ITemplateProvider
                 var content = File.ReadAllText(file);
                 var parseResult = parser.Parse(content);
                 var id = Path.GetFileNameWithoutExtension(file);
+
                 var template = new Template
                 {
                     Id = id,

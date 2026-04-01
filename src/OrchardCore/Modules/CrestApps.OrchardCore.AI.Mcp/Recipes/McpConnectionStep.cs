@@ -16,6 +16,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
     private readonly McpClientAIOptions _mcpClientOptions;
 
     internal readonly IStringLocalizer S;
+
     public McpConnectionStep(
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
@@ -35,7 +36,9 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             McpConnection connection = null;
+
             var id = token[nameof(McpConnection.ItemId)]?.GetValue<string>();
+
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)

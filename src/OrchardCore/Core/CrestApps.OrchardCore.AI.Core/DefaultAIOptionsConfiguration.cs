@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core;
 public sealed class DefaultAIOptionsConfiguration : IConfigureOptions<DefaultAIOptions>
 {
     private readonly IShellConfiguration _shellConfiguration;
+
     public DefaultAIOptionsConfiguration(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;

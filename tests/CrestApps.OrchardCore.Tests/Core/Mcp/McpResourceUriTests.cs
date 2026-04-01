@@ -11,6 +11,7 @@ public sealed class McpResourceUriTests
     public void TryMatch_WithSingleVariable_ExtractsCorrectly(string template, string uri, string expectedVar, string expectedValue)
     {
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.NotNull(variables);
         Assert.Equal(expectedValue, variables[expectedVar]);
@@ -21,7 +22,9 @@ public sealed class McpResourceUriTests
     {
         var template = "content-type://items/{contentType}/{contentItemId}";
         var uri = "content-type://items/Article/abc123";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("Article", variables["contentType"]);
 
@@ -33,7 +36,9 @@ public sealed class McpResourceUriTests
     {
         var template = "recipe-schema://full-schema/recipe";
         var uri = "recipe-schema://full-schema/recipe";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.NotNull(variables);
         Assert.Empty(variables);
@@ -44,7 +49,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{path}";
         var uri = "ftp://other/documents/report.pdf";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.False(result);
         Assert.Null(variables);
     }
@@ -57,6 +64,7 @@ public sealed class McpResourceUriTests
     public void TryMatch_WithNullOrEmptyInputs_ReturnsFalse(string template, string uri)
     {
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.False(result);
         Assert.Null(variables);
     }
@@ -66,7 +74,9 @@ public sealed class McpResourceUriTests
     {
         var template = "Recipe-Schema://Steps/{stepName}";
         var uri = "recipe-schema://steps/Feature";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("Feature", variables["stepName"]);
     }
@@ -76,7 +86,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{path}";
         var uri = "other://server/path/extra/segments";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.False(result);
     }
 
@@ -89,6 +101,7 @@ public sealed class McpResourceUriTests
     public void IsTemplate_ReturnsExpected(string uri, bool expected)
     {
         var result = McpResourceUri.IsTemplate(uri);
+
         Assert.Equal(expected, result);
     }
 
@@ -100,6 +113,7 @@ public sealed class McpResourceUriTests
     public void TryMatch_WithWhitespace_TrimsAndMatchesCorrectly(string template, string uri, string expectedVar, string expectedValue)
     {
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.NotNull(variables);
         Assert.Equal(expectedValue, variables[expectedVar]);
@@ -112,6 +126,7 @@ public sealed class McpResourceUriTests
     public void TryMatch_WithWhitespaceOnlyInputs_ReturnsFalse(string template, string uri)
     {
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.False(result);
         Assert.Null(variables);
     }
@@ -123,6 +138,7 @@ public sealed class McpResourceUriTests
     public void IsTemplate_WithWhitespace_TrimsAndReturnsExpected(string uri, bool expected)
     {
         var result = McpResourceUri.IsTemplate(uri);
+
         Assert.Equal(expected, result);
     }
 
@@ -131,7 +147,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{path}";
         var uri = "file://server/my%20file%20name.txt";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("my file name.txt", variables["path"]);
     }
@@ -141,7 +159,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{path}";
         var uri = "file://server/docs/reports/2024/report.pdf";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("docs/reports/2024/report.pdf", variables["path"]);
     }
@@ -151,7 +171,9 @@ public sealed class McpResourceUriTests
     {
         var template = "content://{type}/{id}";
         var uri = "content://Article/abc123";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("Article", variables["type"]);
 
@@ -163,7 +185,9 @@ public sealed class McpResourceUriTests
     {
         var template = "content://{type}/{id}";
         var uri = "content://Article/Sub/abc123";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         // {type} matches "Article", {id} (last var) matches "Sub/abc123"
         Assert.True(result);
         Assert.Equal("Article", variables["type"]);
@@ -176,7 +200,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{FileName}";
         var uri = "file://server/test.txt";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("test.txt", variables["FileName"]);
 
@@ -188,7 +214,9 @@ public sealed class McpResourceUriTests
     {
         var template = "schema://host.name/{param}";
         var uri = "schema://host.name/value";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("value", variables["param"]);
     }
@@ -198,7 +226,9 @@ public sealed class McpResourceUriTests
     {
         var template = "data://{org}/{repo}/{file}";
         var uri = "data://myorg/myrepo/src/main.cs";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.Equal("myorg", variables["org"]);
 
@@ -212,7 +242,9 @@ public sealed class McpResourceUriTests
     {
         var template = "file://server/{path}";
         var uri = "file://server/";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         // .+ requires at least one character
         Assert.False(result);
     }
@@ -222,7 +254,9 @@ public sealed class McpResourceUriTests
     {
         var template = "static://exact/uri/path";
         var uri = "static://exact/uri/path";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.True(result);
         Assert.NotNull(variables);
         Assert.Empty(variables);
@@ -233,7 +267,9 @@ public sealed class McpResourceUriTests
     {
         var template = "static://exact/uri/path";
         var uri = "static://exact/uri/other";
+
         var result = McpResourceUri.TryMatch(template, uri, out var variables);
+
         Assert.False(result);
     }
 }

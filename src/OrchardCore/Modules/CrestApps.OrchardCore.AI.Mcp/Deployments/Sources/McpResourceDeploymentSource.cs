@@ -16,6 +16,7 @@ internal sealed class McpResourceDeploymentSource : DeploymentSourceBase<McpReso
     private readonly ICatalog<McpResource> _store;
     private readonly IEnumerable<IMcpResourceHandler> _handlers;
     private readonly ILogger _logger;
+
     public McpResourceDeploymentSource(
         ICatalog<McpResource> store,
         IEnumerable<IMcpResourceHandler> handlers,
@@ -29,7 +30,9 @@ internal sealed class McpResourceDeploymentSource : DeploymentSourceBase<McpReso
     protected override async Task ProcessAsync(McpResourceDeploymentStep step, DeploymentPlanResult result)
     {
         var entries = await _store.GetAllAsync();
+
         var resourcesData = new JsonArray();
+
         var resourceIds = step.IncludeAll
         ? []
         : step.ResourceIds ?? [];
@@ -63,7 +66,9 @@ internal sealed class McpResourceDeploymentSource : DeploymentSourceBase<McpReso
             };
 
             var exportingContext = new ExportingMcpResourceContext(entry, deploymentInfo);
+
             _handlers.Invoke((handler, context) => handler.Exporting(context), exportingContext, _logger);
+
             resourcesData.Add(deploymentInfo);
         }
 

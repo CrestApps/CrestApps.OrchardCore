@@ -9,6 +9,7 @@ public sealed class AzureAIIndexRebuildRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "azureai-index-rebuild";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

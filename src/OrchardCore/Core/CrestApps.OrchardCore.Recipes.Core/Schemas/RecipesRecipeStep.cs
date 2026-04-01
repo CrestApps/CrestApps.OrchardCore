@@ -15,6 +15,7 @@ public sealed class RecipesRecipeStep : IRecipeStep
     private readonly IShellFeaturesManager _shellFeaturesManager;
 
     private JsonSchema _cached;
+
     public RecipesRecipeStep(
         IEnumerable<IRecipeHarvester> recipeHarvesters,
         IShellFeaturesManager shellFeaturesManager)
@@ -24,6 +25,7 @@ public sealed class RecipesRecipeStep : IRecipeStep
     }
 
     public string Name => "recipes";
+
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -33,12 +35,14 @@ public sealed class RecipesRecipeStep : IRecipeStep
 
         var features = await _shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(_recipeHarvesters, features);
+
         var recipeNames = recipes
             .Select(r => r.Name)
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
         _cached = CreateSchema(recipeNames);
 
         return _cached;

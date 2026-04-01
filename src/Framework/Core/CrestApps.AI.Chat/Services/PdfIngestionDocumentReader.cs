@@ -48,6 +48,7 @@ public sealed class PdfIngestionDocumentReader : IngestionDocumentReader
             foreach (var page in pdf.GetPages())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
                 var section = GetPageSection(page);
 
                 if (section.Elements.Count > 0)

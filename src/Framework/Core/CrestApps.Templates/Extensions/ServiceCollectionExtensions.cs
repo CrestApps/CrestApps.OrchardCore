@@ -30,8 +30,10 @@ public static class ServiceCollectionExtensions
         // Register the built-in Markdown parser. Additional parsers can be added
         // by registering more ITemplateParser implementations.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ITemplateParser, DefaultMarkdownTemplateParser>());
+
         services.TryAddSingleton<ITemplateEngine, FluidTemplateEngine>();
         services.TryAddScoped<ITemplateService, DefaultTemplateService>();
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ITemplateProvider, OptionsTemplateProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ITemplateProvider, FileSystemTemplateProvider>());
 
@@ -42,7 +44,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Registers an assembly's embedded <c>Templates/Prompts/*.md</c> resources as templates.
     /// </summary>

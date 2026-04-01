@@ -18,6 +18,7 @@ internal sealed class AIProfileTemplateIndexMigrations : DataMigration
             .Column<bool>("IsListable"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIProfileTemplateIndex>(table => table
             .CreateIndex("IDX_AIProfileTemplateIndex_DocumentId",
         "DocumentId",
@@ -26,6 +27,7 @@ internal sealed class AIProfileTemplateIndexMigrations : DataMigration
         "Name"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIProfileTemplateIndex>(table => table
             .CreateIndex("IDX_AIProfileTemplateIndex_Listable",
         "DocumentId",

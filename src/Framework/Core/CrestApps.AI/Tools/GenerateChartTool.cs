@@ -7,7 +7,9 @@ using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Tooling;
+
 /// <summary>
 /// System tool that generates Chart.js configuration JSON from a data description.
 /// Returns the chart config in the <c>[chart:json]</c> format recognized by the client.
@@ -42,19 +44,23 @@ public sealed class GenerateChartTool : AIFunction
         ["Strict"] = false,
     };
 
+
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
+
         CancellationToken cancellationToken)
     {
         var logger = arguments.Services.GetRequiredService<ILogger<GenerateChartTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
+
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         if (!arguments.TryGetFirstString("data_description", out var dataDescription))
         {
+
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'data_description'.", Name);
             return "Unable to find a 'data_description' argument in the arguments parameter.";
         }
@@ -65,8 +71,10 @@ public sealed class GenerateChartTool : AIFunction
 
             if (executionContext is null)
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: execution context is missing.", Name);
                 return $"Chart generation is not available. The {nameof(AIToolExecutionContext)} is missing from the invocation context.";
+
             }
 
             var providerName = executionContext.ProviderName;
@@ -74,25 +82,31 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(providerName))
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: AI provider is not configured.", Name);
                 return "Chart generation is not available. AI provider is not configured.";
             }
 
             var deploymentManager = arguments.Services.GetRequiredService<IAIDeploymentManager>();
+
             var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
                 clientName: providerName,
                 connectionName: connectionName);
 
             if (deployment == null)
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: no chat model deployment configured.", Name);
                 return "Chart generation is not available. No chat model deployment is configured.";
             }
 
             if (string.IsNullOrEmpty(deployment.ConnectionName))
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: chart deployment '{DeploymentName}' has no connection reference.", Name, deployment.Name);
+
                 return "Chart generation is not available. The resolved deployment does not define a connection.";
+
             }
 
             var aIClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
@@ -107,13 +121,16 @@ public sealed class GenerateChartTool : AIFunction
 
             var messages = new List<ChatMessage>
             {
+
                 new(ChatRole.System, systemPrompt ?? string.Empty),
                 new(ChatRole.User, dataDescription),
             };
 
             var chatOptions = new ChatOptions
             {
+
                 Temperature = 0.3f,
+
                 MaxOutputTokens = 2000,
             };
 
@@ -121,7 +138,9 @@ public sealed class GenerateChartTool : AIFunction
 
             if (response is null || string.IsNullOrWhiteSpace(response.Text))
             {
+
                 logger.LogWarning("AI tool '{ToolName}' received an empty response from the chat client.", Name);
+
                 return "Failed to generate chart configuration.";
             }
 
@@ -129,11 +148,13 @@ public sealed class GenerateChartTool : AIFunction
 
             if (string.IsNullOrEmpty(chartConfig))
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed to extract valid JSON from the chat response.", Name);
                 return "Failed to generate valid chart configuration.";
             }
 
             // Validate it's valid Chart.js JSON.
+
             try
             {
                 using var doc = JsonDocument.Parse(chartConfig);
@@ -146,11 +167,13 @@ public sealed class GenerateChartTool : AIFunction
             }
             catch (JsonException)
             {
+
                 logger.LogWarning("AI tool '{ToolName}' generated invalid JSON for chart configuration.", Name);
                 return "Failed to generate valid chart configuration.";
             }
 
             if (logger.IsEnabled(LogLevel.Debug))
+
             {
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
@@ -160,6 +183,7 @@ public sealed class GenerateChartTool : AIFunction
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during chart generation.");
+
             return "An error occurred while generating the chart.";
         }
     }
@@ -167,7 +191,9 @@ public sealed class GenerateChartTool : AIFunction
     private static string ExtractJsonFromResponse(string response)
     {
         if (string.IsNullOrWhiteSpace(response))
+
         {
+
             return null;
         }
 
@@ -191,13 +217,16 @@ public sealed class GenerateChartTool : AIFunction
                 if (endIndex > startIndex)
                 {
                     text = text[(startIndex + 1)..endIndex].Trim();
+
                 }
+
             }
         }
 
         var jsonStart = text.IndexOf('{');
 
         if (jsonStart < 0)
+
         {
             return null;
         }
@@ -212,23 +241,27 @@ public sealed class GenerateChartTool : AIFunction
 
             if (escape)
             {
+
                 escape = false;
                 continue;
             }
 
             if (c == '\\' && inString)
             {
+
                 escape = true;
                 continue;
             }
 
             if (c == '"')
             {
+
                 inString = !inString;
                 continue;
             }
 
             if (inString)
+
             {
                 continue;
             }
@@ -243,6 +276,7 @@ public sealed class GenerateChartTool : AIFunction
                 if (depth == 0)
                 {
                     return text[jsonStart..(i + 1)];
+
                 }
             }
         }

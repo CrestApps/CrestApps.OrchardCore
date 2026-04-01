@@ -18,6 +18,7 @@ public sealed class McpConnectionController : Controller
     private readonly ICatalog<McpConnection> _catalog;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly TimeProvider _timeProvider;
+
     public McpConnectionController(
         ICatalog<McpConnection> catalog,
         IDataProtectionProvider dataProtectionProvider,
@@ -32,8 +33,10 @@ public sealed class McpConnectionController : Controller
         => View((await _catalog.GetAllAsync())
         .OrderBy(connection => connection.DisplayText, StringComparer.OrdinalIgnoreCase)
         .ToList());
+
     public IActionResult Create()
         => View(new McpConnectionViewModel());
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(McpConnectionViewModel model)
@@ -52,6 +55,7 @@ public sealed class McpConnectionController : Controller
         };
 
         Apply(model, connection);
+
         await _catalog.CreateAsync(connection);
         await _catalog.SaveChangesAsync();
 
@@ -89,6 +93,7 @@ public sealed class McpConnectionController : Controller
         }
 
         Apply(model, connection);
+
         await _catalog.UpdateAsync(connection);
         await _catalog.SaveChangesAsync();
 
@@ -140,6 +145,7 @@ public sealed class McpConnectionController : Controller
                     }
 
                     break;
+
                 case McpClientAuthenticationType.Basic:
 
                     if (string.IsNullOrWhiteSpace(model.BasicUsername))
@@ -153,6 +159,7 @@ public sealed class McpConnectionController : Controller
                     }
 
                     break;
+
                 case McpClientAuthenticationType.OAuth2ClientCredentials:
                     ValidateOAuth2Common(model);
 
@@ -162,6 +169,7 @@ public sealed class McpConnectionController : Controller
                     }
 
                     break;
+
                 case McpClientAuthenticationType.OAuth2PrivateKeyJwt:
                     ValidateOAuth2Common(model);
 
@@ -171,6 +179,7 @@ public sealed class McpConnectionController : Controller
                     }
 
                     break;
+
                 case McpClientAuthenticationType.OAuth2Mtls:
                     ValidateOAuth2Common(model);
 
@@ -180,6 +189,7 @@ public sealed class McpConnectionController : Controller
                     }
 
                     break;
+
                 case McpClientAuthenticationType.CustomHeaders:
 
                     if (!string.IsNullOrWhiteSpace(model.AdditionalHeaders))
@@ -279,6 +289,7 @@ public sealed class McpConnectionController : Controller
             var existingOAuth2PrivateKey = metadata.OAuth2PrivateKey;
             var existingCertificate = metadata.OAuth2ClientCertificate;
             var existingCertificatePassword = metadata.OAuth2ClientCertificatePassword;
+
             metadata.Endpoint = Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var endpoint) ? endpoint : null;
             metadata.AuthenticationType = model.AuthenticationType;
             metadata.ApiKeyHeaderName = null;
@@ -355,6 +366,7 @@ public sealed class McpConnectionController : Controller
 
     private static string ProtectOrReuse(string newValue, string existingValue, IDataProtector protector)
         => string.IsNullOrWhiteSpace(newValue) ? existingValue : protector.Protect(newValue);
+
     private static McpConnectionViewModel ToViewModel(McpConnection connection)
     {
         var model = new McpConnectionViewModel

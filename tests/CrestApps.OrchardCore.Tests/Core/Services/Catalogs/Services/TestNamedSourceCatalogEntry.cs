@@ -7,6 +7,7 @@ public sealed class TestNamedSourceCatalogEntry : CatalogItem, INameAwareModel, 
     public string Name { get; set; }
 
     public string Source { get; set; }
+
     public override bool Equals(object obj)
     {
         if (obj is not TestNamedSourceCatalogEntry other)

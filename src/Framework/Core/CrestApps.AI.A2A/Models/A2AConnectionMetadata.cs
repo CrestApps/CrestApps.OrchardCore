@@ -15,6 +15,7 @@ public sealed class A2AConnectionMetadata
     public string BasicUsername { get; set; }
 
     public string BasicPassword { get; set; }
+
     // OAuth 2.0 Client Credentials.
     public string OAuth2TokenEndpoint { get; set; }
 

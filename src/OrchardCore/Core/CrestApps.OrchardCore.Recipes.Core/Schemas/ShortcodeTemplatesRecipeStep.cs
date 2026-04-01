@@ -9,6 +9,7 @@ public sealed class ShortcodeTemplatesRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "ShortcodeTemplates";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

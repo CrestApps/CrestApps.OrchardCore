@@ -12,6 +12,7 @@ public class OmnichannelChannelEndpointViewModel
     public string Channel { get; set; }
 
     public string Value { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Channels { get; set; }
 }

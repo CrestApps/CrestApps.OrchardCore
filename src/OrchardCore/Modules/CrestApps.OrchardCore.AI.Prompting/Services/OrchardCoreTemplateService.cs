@@ -22,6 +22,7 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger _logger;
+
     public OrchardCoreTemplateService(
         IEnumerable<ITemplateProvider> providers,
         ITemplateEngine renderer,
@@ -44,8 +45,10 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
         }
 
         var enabledFeatures = await GetEnabledFeatureIdsAsync();
+
         var filteredTemplates = allTemplates
             .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId));
+
         var deduplicatedTemplates = new List<Template>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -67,6 +70,7 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
         var allTemplates = await ListAsync();
+
         var template = allTemplates.FirstOrDefault(t =>
         string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
 

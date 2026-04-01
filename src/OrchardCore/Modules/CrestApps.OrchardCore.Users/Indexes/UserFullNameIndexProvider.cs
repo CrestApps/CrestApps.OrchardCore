@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.Users.Indexes;
 public sealed class UserFullNameIndexProvider : IndexProvider<User>
 {
     private readonly ILookupNormalizer _lookupNormalizer;
+
     public UserFullNameIndexProvider(ILookupNormalizer lookupNormalizer)
     {
         _lookupNormalizer = lookupNormalizer;

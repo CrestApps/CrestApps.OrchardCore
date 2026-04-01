@@ -21,6 +21,7 @@ internal sealed class CopilotChatInteractionSettingsHandler : IChatInteractionSe
 
         var copilotModel = GetString(settings, "copilotModel");
         var isAllowAll = GetBool(settings, "isAllowAll");
+
         interaction.Put(new CopilotSessionMetadata
         {
             CopilotModel = copilotModel,
@@ -32,6 +33,7 @@ internal sealed class CopilotChatInteractionSettingsHandler : IChatInteractionSe
 
     public Task UpdatedAsync(ChatInteraction interaction, JsonElement settings)
         => Task.CompletedTask;
+
     private static string GetString(JsonElement element, string propertyName)
     {
         if (element.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String)

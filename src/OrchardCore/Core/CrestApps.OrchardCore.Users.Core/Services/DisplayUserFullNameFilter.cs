@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 public sealed class DisplayUserFullNameFilter : ILiquidFilter
 {
     private readonly IDisplayNameProvider _displayNameProvider;
+
     public DisplayUserFullNameFilter(IDisplayNameProvider displayNameProvider)
     {
         _displayNameProvider = displayNameProvider;

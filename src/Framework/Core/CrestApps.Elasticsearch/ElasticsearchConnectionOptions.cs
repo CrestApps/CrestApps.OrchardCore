@@ -10,17 +10,14 @@ public sealed class ElasticsearchConnectionOptions
     /// The Elasticsearch server URL (e.g. "https://localhost:9200").
     /// </summary>
     public string Url { get; set; }
-
     /// <summary>
     /// Optional username for basic authentication.
     /// </summary>
     public string Username { get; set; }
-
     /// <summary>
     /// Optional password for basic authentication.
     /// </summary>
     public string Password { get; set; }
-
     /// <summary>
     /// Optional certificate fingerprint for TLS verification.
     /// </summary>

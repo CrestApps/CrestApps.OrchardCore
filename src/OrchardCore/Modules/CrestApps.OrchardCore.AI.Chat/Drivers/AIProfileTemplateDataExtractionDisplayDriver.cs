@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateDataExtractionDisplayDriver(
         IStringLocalizer<AIProfileTemplateDataExtractionDisplayDriver> stringLocalizer)
     {
@@ -22,6 +23,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
         return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
             var settings = template.As<AIProfileDataExtractionSettings>();
+
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
@@ -45,7 +47,9 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
         }
 
         var model = new AIProfileDataExtractionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var entries = model.Entries?.Where(e => !string.IsNullOrWhiteSpace(e.Name)).ToList() ?? [];
 
         if (model.EnableDataExtraction)

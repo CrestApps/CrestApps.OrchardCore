@@ -12,6 +12,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
+
     public AzureAISearchMemoryVectorSearchService(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchMemoryVectorSearchService> logger)
@@ -64,6 +65,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 
             var response = await searchClient.SearchAsync<SearchDocument>(null, options, cancellationToken);
             var results = new List<AIMemorySearchResult>();
+
             await foreach (var result in response.Value.GetResultsAsync())
             {
                 var document = result.Document;
@@ -71,6 +73,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
                     DateTime.TryParse(updatedObj?.ToString(), out var parsedUpdatedUtc)
                 ? parsedUpdatedUtc
                 : null as DateTime?;
+
                 results.Add(new AIMemorySearchResult
                 {
                     MemoryId = document.TryGetValue(MemoryConstants.ColumnNames.MemoryId, out var idObj) ? idObj?.ToString() : null,

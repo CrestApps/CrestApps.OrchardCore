@@ -7,6 +7,7 @@ public sealed class McpClientFactory
 {
     private readonly IConfiguration _configuration;
     private readonly ILoggerFactory _loggerFactory;
+
     public McpClientFactory(
         IConfiguration configuration,
         ILoggerFactory loggerFactory)
@@ -31,6 +32,7 @@ public sealed class McpClientFactory
         };
 
         var transport = new HttpClientTransport(transportOptions, _loggerFactory);
+
         var clientOptions = new McpClientOptions
         {
             ClientInfo = new Implementation

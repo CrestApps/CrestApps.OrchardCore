@@ -8,6 +8,7 @@ public class AIChatSessionListOptions
 {
     [FromQuery(Name = "q")]
     public string SearchText { get; set; }
+
     [BindNever]
     public RouteValueDictionary RouteValues { get; set; } = [];
 }

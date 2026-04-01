@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 internal sealed class DefaultChatNotificationSender : IChatNotificationSender
 {
     private readonly IServiceProvider _serviceProvider;
+
     public DefaultChatNotificationSender(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

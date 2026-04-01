@@ -26,6 +26,7 @@ public sealed class AIDeploymentTests
         };
 
         var clone = deployment.Clone();
+
         Assert.Equal("azure-chat", clone.Name);
         Assert.Equal("azure-chat", clone.ModelName);
     }
@@ -40,6 +41,7 @@ public sealed class AIDeploymentTests
           "ModelName": "gpt-4.1"
         }
         """);
+
         Assert.NotNull(deployment);
         Assert.Equal("openai-chat", deployment.Name);
         Assert.Equal("gpt-4.1", deployment.ModelName);
@@ -56,6 +58,7 @@ public sealed class AIDeploymentTests
           "DefaultEmbeddingDeploymentId": "embedding-technical-name"
         }
         """);
+
         Assert.NotNull(settings);
         Assert.Equal("chat-technical-name", settings.DefaultChatDeploymentName);
         Assert.Equal("utility-technical-name", settings.DefaultUtilityDeploymentName);
@@ -72,6 +75,7 @@ public sealed class AIDeploymentTests
           "UtilityDeploymentId": "utility-technical-name"
         }
         """);
+
         Assert.NotNull(profile);
         Assert.Equal("chat-technical-name", profile.ChatDeploymentName);
         Assert.Equal("utility-technical-name", profile.UtilityDeploymentName);
@@ -87,6 +91,7 @@ public sealed class AIDeploymentTests
           "UtilityDeploymentId": "utility-technical-name"
         }
         """);
+
         Assert.NotNull(interaction);
         Assert.Equal("chat-technical-name", interaction.ChatDeploymentName);
         Assert.Equal("utility-technical-name", interaction.UtilityDeploymentName);

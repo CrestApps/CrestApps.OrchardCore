@@ -17,6 +17,7 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
             .Column<bool>("IsInbound", column => column.NotNull().WithDefault(false)),
         collection: OmnichannelConstants.CollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
             .CreateIndex("IDX_OmnichannelMessageIndex_DocumentId",
         "DocumentId",

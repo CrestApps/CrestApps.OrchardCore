@@ -14,6 +14,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
     private readonly McpOptions _mcpOptions;
 
     internal readonly IStringLocalizer S;
+
     public McpResourceDisplayDriver(
         IOptions<McpOptions> mcpOptions,
         IStringLocalizer<McpResourceDisplayDriver> stringLocalizer)
@@ -40,6 +41,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
             model.Source = entry.Source;
             model.McpPromptItemId = entry.ItemId;
             model.DisplayText = entry.DisplayText;
+
             // Get the supported variables from the options for this resource type.
 
             if (!string.IsNullOrEmpty(entry.Source) &&
@@ -72,6 +74,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
     public override async Task<IDisplayResult> UpdateAsync(McpResource entry, UpdateEditorContext context)
     {
         var model = new McpResourceFieldsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))
@@ -85,6 +88,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
         }
 
         entry.DisplayText = model.DisplayText ?? string.Empty;
+
         entry.Resource ??= new Resource
         {
             Uri = string.Empty,
@@ -93,6 +97,7 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
         // Build the full URI from the user-provided path.
         entry.Resource.Uri = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path?.Trim());
+
         entry.Resource.Name = model.Name ?? string.Empty;
         entry.Resource.Title = entry.DisplayText;
         entry.Resource.Description = model.Description;

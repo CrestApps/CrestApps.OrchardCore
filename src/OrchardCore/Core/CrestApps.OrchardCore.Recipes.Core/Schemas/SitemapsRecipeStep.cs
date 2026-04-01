@@ -9,6 +9,7 @@ public sealed class SitemapsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "Sitemaps";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

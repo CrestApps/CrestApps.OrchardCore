@@ -10,6 +10,7 @@ public abstract class AICompletionServiceBase
     protected readonly AIProviderOptions ProviderOptions;
     protected readonly ITemplateService AITemplateService;
     protected readonly IAIDeploymentManager DeploymentResolver;
+
     protected AICompletionServiceBase(
         AIProviderOptions providerOptions,
         ITemplateService aiTemplateService)
@@ -45,7 +46,6 @@ public abstract class AICompletionServiceBase
         return provider.DefaultChatDeploymentName;
 #pragma warning restore CS0618
     }
-
     /// <summary>
     /// Resolves a deployment name and connection name using the <see cref="IAIDeploymentManager"/>
     /// with fallback to the legacy dictionary-based resolution.

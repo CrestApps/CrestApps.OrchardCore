@@ -47,6 +47,7 @@ internal sealed partial class ElasticsearchODataFilterTranslator : IODataFilterT
     private static string ParseExpression(List<string> tokens, ref int index)
     {
         var left = ParseUnary(tokens, ref index);
+
         while (index < tokens.Count)
         {
             var token = tokens[index];
@@ -113,9 +114,11 @@ internal sealed partial class ElasticsearchODataFilterTranslator : IODataFilterT
         {
             var funcName = tokens[index].ToLowerInvariant();
             index += 2; // skip funcName and (
+
             var field = PrefixField(tokens[index]);
 
             index++;
+
             // skip comma
 
             if (index < tokens.Count && tokens[index] == ",")
@@ -126,6 +129,7 @@ internal sealed partial class ElasticsearchODataFilterTranslator : IODataFilterT
             var value = UnquoteValue(tokens[index]);
 
             index++;
+
             // skip )
 
             if (index < tokens.Count && tokens[index] == ")")
@@ -161,6 +165,7 @@ internal sealed partial class ElasticsearchODataFilterTranslator : IODataFilterT
 
         var valueToken = tokens[index];
         index++;
+
         var prefixedField = PrefixField(fieldToken);
         var parsedValue = UnquoteValue(valueToken);
 

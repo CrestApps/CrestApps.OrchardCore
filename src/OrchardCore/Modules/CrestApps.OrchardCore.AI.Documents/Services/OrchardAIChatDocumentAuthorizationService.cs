@@ -11,6 +11,7 @@ public sealed class OrchardAIChatDocumentAuthorizationService : IAIChatDocumentA
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+
     public OrchardAIChatDocumentAuthorizationService(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor)

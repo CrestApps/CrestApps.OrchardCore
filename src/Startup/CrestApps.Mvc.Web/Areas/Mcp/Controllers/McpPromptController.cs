@@ -16,6 +16,7 @@ public sealed class McpPromptController : Controller
 
     private readonly INamedCatalog<McpPrompt> _catalog;
     private readonly TimeProvider _timeProvider;
+
     public McpPromptController(INamedCatalog<McpPrompt> catalog, TimeProvider timeProvider)
     {
         _catalog = catalog;
@@ -26,8 +27,10 @@ public sealed class McpPromptController : Controller
         => View((await _catalog.GetAllAsync())
         .OrderBy(prompt => prompt.Name, StringComparer.OrdinalIgnoreCase)
         .ToList());
+
     public IActionResult Create()
         => View(new McpPromptViewModel());
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(McpPromptViewModel model)
@@ -46,6 +49,7 @@ public sealed class McpPromptController : Controller
         };
 
         Apply(model, prompt, arguments);
+
         await _catalog.CreateAsync(prompt);
         await _catalog.SaveChangesAsync();
 
@@ -86,6 +90,7 @@ public sealed class McpPromptController : Controller
 
         // Preserve the original name since it is readonly after creation.
         model.Name = prompt.Name;
+
         var arguments = ParseArguments(model);
 
         if (!ModelState.IsValid)
@@ -94,6 +99,7 @@ public sealed class McpPromptController : Controller
         }
 
         Apply(model, prompt, arguments);
+
         await _catalog.UpdateAsync(prompt);
         await _catalog.SaveChangesAsync();
 

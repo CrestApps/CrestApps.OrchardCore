@@ -15,6 +15,7 @@ public sealed class DefaultSpeechVoicePresenter
     private readonly ISpeechVoiceResolver _speechVoiceResolver;
     private readonly ILocalizationService _localizationService;
     private readonly ILogger _logger;
+
     public DefaultSpeechVoicePresenter(
         IAIDeploymentManager deploymentManager,
         ISpeechVoiceResolver speechVoiceResolver,
@@ -41,11 +42,13 @@ public sealed class DefaultSpeechVoicePresenter
             }
 
             var speechVoices = await _speechVoiceResolver.GetSpeechVoicesAsync(deployment);
+
             var supportedCultures = await _localizationService.GetSupportedCulturesAsync();
             var supportedSet = SpeechVoiceLocalizationHelper.CreateAllowedCultures(
                 supportedCultures,
                 CultureInfo.CurrentCulture,
                 CultureInfo.CurrentUICulture);
+
             var voices = new List<SelectListItem>();
 
             foreach (var voiceGroup in speechVoices

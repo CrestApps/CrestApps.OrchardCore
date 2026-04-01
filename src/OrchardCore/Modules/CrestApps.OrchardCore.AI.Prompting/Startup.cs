@@ -17,10 +17,13 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAITemplating();
+
         // Replace default service with feature-aware version.
         services.Replace(ServiceDescriptor.Scoped<ITemplateService, OrchardCoreTemplateService>());
+
         // Add module directory scanner.
         services.AddSingleton<ITemplateProvider, ModuleTemplateProvider>();
+
         // Add display drivers for prompt selection UI.
         services.AddDisplayDriver<AIProfile, AIProfilePromptSelectionDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionPromptSelectionDisplayDriver>();

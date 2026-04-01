@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 public sealed class ContactMethodMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+
     public ContactMethodMigrations(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
@@ -33,6 +34,7 @@ public sealed class ContactMethodMigrations : DataMigration
             })
         )
         );
+
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
             .Attachable()
             .Reusable()
@@ -98,6 +100,7 @@ public sealed class ContactMethodMigrations : DataMigration
             })
         )
         );
+
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.EmailAddress, type => type
             .Creatable()
             .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
@@ -114,6 +117,7 @@ public sealed class ContactMethodMigrations : DataMigration
         part.WithPosition("5")
         )
         );
+
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
             .WithDisplayName("Phone Number")
             .Creatable()

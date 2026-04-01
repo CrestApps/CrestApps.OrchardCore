@@ -22,6 +22,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
+
     public ChatInteractionCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<IUser> userManager,
@@ -41,8 +42,10 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
         return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
             var copilotSettings = interaction.As<CopilotSessionMetadata>();
+
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
+
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
@@ -78,6 +81,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                         {
                             var credential = await _oauthService.GetCredentialAsync(userId);
                             model.GitHubUsername = credential?.GitHubUsername;
+
                             var models = await _oauthService.ListModelsAsync(userId);
 
                             if (models.Count > 0)

@@ -8,6 +8,7 @@ using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Services;
 
 public abstract class NamedAICompletionClient : AICompletionServiceBase, IAICompletionClient

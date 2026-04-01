@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 public sealed class TemplateLiquidRenderingTests
 {
     private readonly FluidTemplateEngine _engine;
+
     public TemplateLiquidRenderingTests()
     {
         var services = new ServiceCollection().BuildServiceProvider();
@@ -38,6 +39,7 @@ Available document tools:
 {% endfor %}
 {% endif %}
 """;
+
         var tools = new[]
         {
             new AIToolDefinitionEntry(typeof(object))
@@ -73,6 +75,7 @@ Available document tools:
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("read_document", result);
         Assert.Contains("Reads document content", result);
         Assert.Contains("doc1", result);
@@ -96,12 +99,14 @@ Available document tools:
 The user has uploaded documents as supplementary context.
 {% endif %}
 """;
+
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = Array.Empty<AIToolDefinitionEntry>(),
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("supplementary context", result);
         Assert.DoesNotContain("Available document tools", result);
     }
@@ -125,6 +130,7 @@ System tools:
 {% endif %}{% endfor %}
 {% endif %}
 """;
+
         // Fluid renders enums as integers, so Source must be projected to string.
         var tools = new object[]
         {
@@ -138,6 +144,7 @@ System tools:
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("search_web", result);
         Assert.Contains("Searches the web for information", result);
         Assert.Contains("read_document", result);
@@ -160,12 +167,14 @@ System tools available.
 {% endif %}
 No tools needed.
 """;
+
         var arguments = new Dictionary<string, object>
         {
             ["tools"] = Array.Empty<object>(),
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.DoesNotContain("User tools available", result);
         Assert.DoesNotContain("System tools available", result);
         Assert.Contains("No tools needed", result);
@@ -175,12 +184,14 @@ No tools needed.
     public async Task DataSourceContextHeader_WithSearchToolName_RendersCorrectly()
     {
         var template = "Use the {{ searchToolName }} tool to search for relevant data sources.";
+
         var arguments = new Dictionary<string, object>
         {
             ["searchToolName"] = "search_data_source",
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Equal("Use the search_data_source tool to search for relevant data sources.", result);
     }
 
@@ -189,14 +200,17 @@ No tools needed.
     {
         var template = """
 {{ baseSystemMessage }}
+
 Process the data in tabular format.
 """;
+
         var arguments = new Dictionary<string, object>
         {
             ["baseSystemMessage"] = "You are a helpful data analyst.",
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("You are a helpful data analyst.", result);
         Assert.Contains("Process the data in tabular format.", result);
     }
@@ -209,6 +223,7 @@ Process the data in tabular format.
 - {{ tool.Name }}{% if tool.Description %}: {{ tool.Description }}{% endif %}
 {% endfor %}
 """;
+
         var tools = new[]
         {
             new ToolRegistryEntry
@@ -233,6 +248,7 @@ Process the data in tabular format.
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("tool_with_desc: Has a description", result);
         Assert.Contains("tool_no_desc", result);
         Assert.DoesNotContain("tool_no_desc:", result);
@@ -246,6 +262,7 @@ Process the data in tabular format.
 - {{ doc.FileName }} ({{ doc.ContentType | default: "unknown" }})
 {% endfor %}
 """;
+
         var docs = new[]
         {
             new ChatDocumentInfo
@@ -263,6 +280,7 @@ Process the data in tabular format.
         };
 
         var result = await _engine.RenderAsync(template, arguments);
+
         Assert.Contains("file.txt", result);
         Assert.Contains("unknown", result);
     }

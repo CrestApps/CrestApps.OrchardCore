@@ -19,7 +19,9 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, SmsOmnichannelProcessor>());
+
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();
+
         services
             .AddDataMigration<OminchannelActivityAIChatSessionIndexMigrations>()
             .AddIndexProvider<OminchannelActivityAIChatSessionIndexProvider>();

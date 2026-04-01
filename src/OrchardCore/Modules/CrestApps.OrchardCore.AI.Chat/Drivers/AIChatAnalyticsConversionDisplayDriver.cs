@@ -16,7 +16,9 @@ public sealed class AIChatAnalyticsConversionDisplayDriver : DisplayDriver<AICha
         return Initialize<ChatAnalyticsConversionViewModel>("ChatAnalyticsConversion", model =>
         {
             var events = context.Events;
+
             model.TotalSessions = events.Count;
+
             // AI Resolution Detection metrics.
             var closedSessions = events.Where(e => e.SessionEndedUtc.HasValue).ToList();
 
@@ -39,13 +41,16 @@ public sealed class AIChatAnalyticsConversionDisplayDriver : DisplayDriver<AICha
                 model.SessionsWithConversionData = sessionsWithConversion.Count;
                 model.TotalConversionScore = sessionsWithConversion.Sum(e => e.ConversionScore!.Value);
                 model.TotalConversionMaxScore = sessionsWithConversion.Sum(e => e.ConversionMaxScore!.Value);
+
                 model.AverageConversionScorePercent = Math.Round(
                     (double)model.TotalConversionScore / model.TotalConversionMaxScore * 100, 1);
+
                 // High performing: sessions scoring >= 70% of max.
                 model.HighPerformingSessions = sessionsWithConversion
                     .Count(e => (double)e.ConversionScore!.Value / e.ConversionMaxScore!.Value >= 0.7);
                 model.LowPerformingSessions = sessionsWithConversion
                     .Count(e => (double)e.ConversionScore!.Value / e.ConversionMaxScore!.Value < 0.3);
+
                 model.HighPerformingPercent = Math.Round(
                     (double)model.HighPerformingSessions / sessionsWithConversion.Count * 100, 1);
                 model.LowPerformingPercent = Math.Round(

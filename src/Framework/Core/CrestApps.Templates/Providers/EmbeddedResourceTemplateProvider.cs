@@ -12,6 +12,7 @@ namespace CrestApps.Templates.Providers;
 public sealed class EmbeddedResourceTemplateProvider : ITemplateProvider
 {
     private const string PromptsResourceSegment = ".Templates.Prompts.";
+
     // OrchardCore Module Targets use '>' as the path separator in embedded resource logical names.
     private const string OrchardCorePromptsResourceSegment = ".Templates>Prompts>";
 
@@ -19,6 +20,7 @@ public sealed class EmbeddedResourceTemplateProvider : ITemplateProvider
     private readonly IEnumerable<ITemplateParser> _parsers;
     private readonly string _source;
     private readonly string _featureId;
+
     public EmbeddedResourceTemplateProvider(
         Assembly assembly,
         IEnumerable<ITemplateParser> parsers,
@@ -71,12 +73,15 @@ public sealed class EmbeddedResourceTemplateProvider : ITemplateProvider
             using var reader = new StreamReader(stream);
             var content = reader.ReadToEnd();
             var parseResult = parser.Parse(content);
+
             // Extract the filename portion from the resource name.
             var afterPrompts = resourceName[(promptsIndex + segmentLength)..];
+
             // Remove the file extension.
             var id = extension != null && afterPrompts.EndsWith(extension, StringComparison.OrdinalIgnoreCase)
                 ? afterPrompts[..^extension.Length]
                 : afterPrompts;
+
             var template = new Template
             {
                 Id = id,

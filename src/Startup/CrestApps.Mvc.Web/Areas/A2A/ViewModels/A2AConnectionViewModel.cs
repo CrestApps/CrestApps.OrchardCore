@@ -12,8 +12,10 @@ public sealed class A2AConnectionViewModel
     };
 
     public string ItemId { get; set; }
+
     [Required]
     public string DisplayText { get; set; }
+
     [Required]
     public string Endpoint { get; set; }
 
@@ -58,6 +60,7 @@ public sealed class A2AConnectionViewModel
     public bool HasOAuth2ClientCertificate { get; set; }
 
     public bool HasOAuth2ClientCertificatePassword { get; set; }
+
     public static A2AConnectionViewModel FromConnection(A2AConnection connection)
     {
         var metadata = connection.As<A2AConnectionMetadata>();

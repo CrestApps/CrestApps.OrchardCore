@@ -48,12 +48,15 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
         services.AddScoped<IAIDataSourceSettingsProvider, OrchardCoreAIDataSourceSettingsProvider>();
+
         services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
+
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
         services.AddSingleton<IBackgroundTask, DataSourceSyncBackgroundTask>();
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
+
         services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
             .WithPurpose(AIToolPurposes.DataSourceSearch);
     }

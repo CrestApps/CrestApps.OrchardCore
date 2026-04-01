@@ -14,6 +14,7 @@ public sealed class AIChatController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
+
     public AIChatController(
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager,
@@ -28,6 +29,7 @@ public sealed class AIChatController : Controller
     {
         var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
         var sessions = await _sessionManager.PageAsync(1, 50);
+
         ViewData["Sessions"] = sessions;
 
         return View(profiles);
@@ -55,6 +57,7 @@ public sealed class AIChatController : Controller
         }
 
         var prompts = await _promptStore.GetPromptsAsync(sessionId);
+
         ViewData["Session"] = session;
         ViewData["Prompts"] = prompts;
 
@@ -73,8 +76,10 @@ public sealed class AIChatController : Controller
         }
 
         var session = await _sessionManager.NewAsync(profile, new NewAIChatSessionContext());
+
         session.Title = profile.DisplayText ?? profile.Name;
         session.UserId = User.Identity?.Name ?? "anonymous";
+
         await _sessionManager.SaveAsync(session);
 
         return RedirectToAction(nameof(Chat), new { sessionId = session.SessionId });

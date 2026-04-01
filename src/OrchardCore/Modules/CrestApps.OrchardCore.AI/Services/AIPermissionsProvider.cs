@@ -13,8 +13,10 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
         AIPermissions.ManageAIProfiles,
         AIPermissions.QueryAnyAIProfile,
     ];
+
     private readonly IAIProfileStore _profileStore;
     private readonly ILogger _logger;
+
     public AIPermissionsProvider(
         IAIProfileStore profileStore,
         ILogger<AIPermissionsProvider> logger)
@@ -26,6 +28,7 @@ internal sealed class AIPermissionsProvider : IPermissionProvider
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
+
         try
         {
             foreach (var profile in await _profileStore.GetAllAsync())

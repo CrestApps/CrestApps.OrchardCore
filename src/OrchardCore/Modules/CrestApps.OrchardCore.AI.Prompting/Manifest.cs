@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Prompting;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "AI Prompt Templates",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = AIPromptingConstants.Feature.Area,
     Name = "AI Prompt Templates",

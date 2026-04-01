@@ -13,6 +13,7 @@ public abstract class DeploymentAwareAICompletionClient : NamedAICompletionClien
 {
     private readonly INamedCatalog<AIDeployment> _store;
     private readonly IAIDeploymentManager _deploymentManager;
+
     public DeploymentAwareAICompletionClient(
         string name,
         IAIClientFactory aIClientFactory,

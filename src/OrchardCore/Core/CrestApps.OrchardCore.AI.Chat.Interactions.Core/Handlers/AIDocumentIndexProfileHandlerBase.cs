@@ -22,6 +22,7 @@ public abstract class AIDocumentIndexProfileHandlerBase : IndexProfileHandlerBas
     {
         // Default to 1536 (OpenAI text-embedding-ada-002) if we can't determine dynamically
         const int defaultDimensions = 1536;
+
         // Use the embedding connection configured in the index profile
 
         if (string.IsNullOrEmpty(interactionMetadata?.EmbeddingProviderName) ||

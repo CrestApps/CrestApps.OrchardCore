@@ -19,7 +19,6 @@ public interface IAIClientFactory
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="IChatClient"/>.
     /// </returns>
     ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName);
-
     /// <summary>
     /// Asynchronously creates an <see cref="IEmbeddingGenerator{TInput, TEmbedding}"/> instance for the given provider, connection, and deployment.
     /// </summary>
@@ -30,7 +29,6 @@ public interface IAIClientFactory
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="IEmbeddingGenerator{TInput, TEmbedding}"/>.
     /// </returns>
     ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName);
-
     /// <summary>
     /// Asynchronously creates an <see cref="IImageGenerator"/> instance for the given provider, connection, and deployment.
     /// </summary>
@@ -43,7 +41,6 @@ public interface IAIClientFactory
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
     /// <summary>
     /// Asynchronously creates an <see cref="ISpeechToTextClient"/> instance for the given provider, connection, and deployment.
     /// </summary>
@@ -56,7 +53,6 @@ public interface IAIClientFactory
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
     /// <summary>
     /// Asynchronously creates an <see cref="ISpeechToTextClient"/> instance from a deployment that may use
     /// either a connection reference or contained connection parameters.
@@ -68,7 +64,6 @@ public interface IAIClientFactory
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(AIDeployment deployment);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
     /// <summary>
     /// Asynchronously creates an <see cref="ITextToSpeechClient"/> instance for the given provider, connection, and deployment.
     /// </summary>
@@ -81,7 +76,6 @@ public interface IAIClientFactory
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
     ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null);
 #pragma warning restore MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-
     /// <summary>
     /// Asynchronously creates an <see cref="ITextToSpeechClient"/> instance from a deployment that may use
     /// either a connection reference or contained connection parameters.

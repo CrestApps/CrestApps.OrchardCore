@@ -19,6 +19,7 @@ internal sealed class AIProfileDefaultContextMigrations : DataMigration
         {
             var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
             var defaultOptions = scope.ServiceProvider.GetRequiredService<DefaultAIOptions>();
+
             var profiles = await profileStore.GetAllAsync();
 
             foreach (var profile in profiles)

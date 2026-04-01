@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfile>
 {
     internal readonly IStringLocalizer S;
+
     public AIProfileDataExtractionDisplayDriver(
         IStringLocalizer<AIProfileDataExtractionDisplayDriver> stringLocalizer)
     {
@@ -21,6 +22,7 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
         return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
             var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
+
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
             model.Entries = settings.DataExtractionEntries
@@ -38,7 +40,9 @@ public sealed class AIProfileDataExtractionDisplayDriver : DisplayDriver<AIProfi
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new AIProfileDataExtractionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         // Remove entries with empty names (deleted rows).
         var entries = model.Entries?.Where(e => !string.IsNullOrWhiteSpace(e.Name)).ToList() ?? [];
 

@@ -23,6 +23,7 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
     private readonly IApplicationContext _applicationContext;
     private readonly IEnumerable<ITemplateParser> _parsers;
     private readonly ILogger<ModuleTemplateProvider> _logger;
+
     public ModuleTemplateProvider(
         IExtensionManager extensionManager,
         IApplicationContext applicationContext,
@@ -51,6 +52,7 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
             }
 
             var defaultFeatureId = extension.Features.FirstOrDefault()?.Id ?? moduleId;
+
             // Module.Root is "Areas/ModuleName/", so promptsRoot becomes
             // "Areas/ModuleName/Templates/Prompts/" which matches the asset path format.
             var promptsRoot = module.Root + PromptsDirectorySubPath;
@@ -83,6 +85,7 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
                 // or the module's default feature for root-level templates.
                 var slashIndex = relativePath.IndexOf('/');
                 var featureId = slashIndex >= 0 ? relativePath[..slashIndex] : defaultFeatureId;
+
                 try
                 {
                     // Read the file via Module.GetFileInfo() — the same mechanism
@@ -103,8 +106,10 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
                     using var stream = fileInfo.CreateReadStream();
                     using var reader = new StreamReader(stream);
                     var content = reader.ReadToEnd();
+
                     var parseResult = parser.Parse(content);
                     var id = Path.GetFileNameWithoutExtension(fileName);
+
                     var template = new Template
                     {
                         Id = id,

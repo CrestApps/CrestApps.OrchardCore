@@ -49,6 +49,7 @@ public sealed class NamedSourceCatalogManagerTests
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
+
         var handler = new TestCatalogEntryHandler<TestNamedSourceCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -60,6 +61,7 @@ public sealed class NamedSourceCatalogManagerTests
 
         var manager = new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, [handler], logger);
         await manager.FindByNameAsync("Test");
+
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);
@@ -76,6 +78,7 @@ public sealed class NamedSourceCatalogManagerTests
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
+
         var handler = new TestCatalogEntryHandler<TestNamedSourceCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -87,6 +90,7 @@ public sealed class NamedSourceCatalogManagerTests
 
         var manager = new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, [handler], logger);
         await manager.GetAsync("Test", "A");
+
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);

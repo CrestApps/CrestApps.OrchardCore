@@ -19,10 +19,13 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -33,6 +36,7 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
         var memoryMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(memoryMetadata);
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = MemoryConstants.ColumnNames.MemoryId,

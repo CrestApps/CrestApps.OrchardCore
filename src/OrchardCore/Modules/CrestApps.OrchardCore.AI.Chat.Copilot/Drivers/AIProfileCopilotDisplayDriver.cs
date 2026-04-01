@@ -22,6 +22,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
@@ -41,8 +42,10 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
         {
             var copilotSettings = profile.As<CopilotSessionMetadata>();
+
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
+
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
@@ -74,6 +77,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
                     {
                         var credential = await _oauthService.GetCredentialAsync(userId);
                         model.GitHubUsername = credential?.GitHubUsername;
+
                         var models = await _oauthService.ListModelsAsync(userId);
 
                         if (models.Count > 0)
@@ -97,7 +101,9 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new EditCopilotProfileViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         // Only save Copilot settings if Copilot orchestrator is selected
 
         if (string.Equals(profile.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))

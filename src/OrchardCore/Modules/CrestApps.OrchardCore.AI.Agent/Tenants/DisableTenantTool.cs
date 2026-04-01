@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Tenants;
 public sealed class DisableTenantTool : AIFunction
 {
     public const string TheName = "disableTenant";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -24,25 +25,35 @@ public sealed class DisableTenantTool : AIFunction
       "required": [
         "name"
       ]
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Disabled site or tenant.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<DisableTenantTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -50,6 +61,7 @@ public sealed class DisableTenantTool : AIFunction
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
 
         if (!shellSettings.IsDefaultShell())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
@@ -57,6 +69,7 @@ public sealed class DisableTenantTool : AIFunction
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
@@ -64,6 +77,7 @@ public sealed class DisableTenantTool : AIFunction
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
 
@@ -71,6 +85,7 @@ public sealed class DisableTenantTool : AIFunction
         }
 
         if (tenantSettings.IsDefaultShell())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: cannot disable the default tenant.", Name);
 
@@ -78,16 +93,19 @@ public sealed class DisableTenantTool : AIFunction
         }
 
         if (!tenantSettings.IsRunning())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not running.", Name, name);
 
             return "You can only disable a Running tenant.";
+
         }
 
         await shellHost.UpdateShellSettingsAsync(tenantSettings.AsDisabled());
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Localization;
+
 namespace CrestApps.AI;
+
 /// <summary>
 /// Provides shared error message formatting for AI chat hubs.
 /// </summary>
@@ -7,7 +9,6 @@ internal static class AIHubErrorMessageHelper
 {
     private const string ClientResultExceptionName = "ClientResultException";
     private static readonly string[] RateLimitIndicators = ["ratelimitreached", "rate limit", "too many requests"];
-
     /// <summary>
     /// Maps provider exceptions to localized, user-friendly error messages.
     /// </summary>

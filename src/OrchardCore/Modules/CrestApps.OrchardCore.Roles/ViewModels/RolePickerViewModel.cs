@@ -9,8 +9,10 @@ public class RolePickerViewModel
     public string DisplayName { get; set; }
 
     public string[] Roles { get; set; }
+
     [BindNever]
     public RolePickerPartSettings Settings { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> AvailableRoles { get; set; }
 }

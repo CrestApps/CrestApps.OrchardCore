@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
+
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
 public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
@@ -22,7 +23,9 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
     private readonly INamedCatalog<AIDeployment> _deploymentCatalog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IClock _clock;
+
     internal readonly IStringLocalizer S;
+
     public AIProfileHandler(
         IHttpContextAccessor httpContextAccessor,
         IAIProfileStore profileStore,
@@ -38,10 +41,13 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         _clock = clock;
         S = stringLocalizer;
     }
+
     public override Task InitializingAsync(InitializingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data, true);
+
     public override Task UpdatingAsync(UpdatingContext<AIProfile> context)
         => PopulateAsync(context.Model, context.Data, false);
+
     public override async Task ValidatingAsync(ValidatingContext<AIProfile> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.Name))
@@ -51,11 +57,13 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         else
         {
             var profile = await _profileStore.FindByNameAsync(context.Model.Name);
+
             if (profile is not null && profile.ItemId != context.Model.ItemId)
             {
                 context.Result.Fail(new ValidationResult(S["A profile with this name already exists. The name must be unique."], [nameof(AIProfile.Name)]));
             }
         }
+
         if (context.Model.Type == AIProfileType.TemplatePrompt)
         {
             if (string.IsNullOrWhiteSpace(context.Model.PromptTemplate))
@@ -67,6 +75,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
                 context.Result.Fail(new ValidationResult(S["Invalid liquid template used for Prompt template."], [nameof(AIProfile.PromptTemplate)]));
             }
         }
+
         if (context.Model.Type == AIProfileType.Agent)
         {
             if (string.IsNullOrWhiteSpace(context.Model.Description))
@@ -75,56 +84,74 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             }
         }
     }
+
     public override Task InitializedAsync(InitializedContext<AIProfile> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
+
         var user = _httpContextAccessor.HttpContext?.User;
+
         if (user != null)
         {
             context.Model.OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
             context.Model.Author = user.Identity.Name;
         }
+
         return Task.CompletedTask;
     }
+
     public override Task CreatingAsync(CreatingContext<AIProfile> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
         {
             context.Model.DisplayText = context.Model.Name;
         }
+
         return Task.CompletedTask;
     }
+
     private async Task PopulateAsync(AIProfile profile, JsonNode data, bool isNew)
     {
         if (isNew)
         {
             var name = data[nameof(AIProfile.Name)]?.GetValue<string>()?.Trim();
+
             if (!string.IsNullOrEmpty(name))
             {
                 profile.Name = name;
             }
         }
+
         var displayText = data[nameof(AIProfile.DisplayText)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrEmpty(displayText))
         {
             profile.DisplayText = displayText;
         }
+
         var description = data[nameof(AIProfile.Description)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrEmpty(description))
         {
             profile.Description = description;
         }
+
         var type = data[nameof(AIProfile.Type)]?.GetEnumValue<AIProfileType>();
+
         if (type.HasValue)
         {
             profile.Type = type.Value;
         }
+
         var titleType = data[nameof(AIProfile.TitleType)]?.GetEnumValue<AISessionTitleType>();
+
         if (titleType.HasValue)
         {
             profile.TitleType = titleType.Value;
         }
+
         var chatDeploymentName = data[nameof(AIProfile.ChatDeploymentName)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrWhiteSpace(chatDeploymentName))
         {
             profile.ChatDeploymentName = chatDeploymentName;
@@ -135,9 +162,12 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
             var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
             ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
+
             profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
         }
+
         var utilityDeploymentName = data[nameof(AIProfile.UtilityDeploymentName)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrWhiteSpace(utilityDeploymentName))
         {
             profile.UtilityDeploymentName = utilityDeploymentName;
@@ -147,61 +177,81 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 #pragma warning disable CS0618 // Type or member is obsolete
             var utilityDeploymentId = data[nameof(AIProfile.UtilityDeploymentId)]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
+
             profile.UtilityDeploymentName = await ResolveLegacyDeploymentIdAsync(utilityDeploymentId, profile.UtilityDeploymentName);
         }
+
         var welcomeMessage = data[nameof(AIProfile.WelcomeMessage)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrEmpty(welcomeMessage))
         {
             profile.WelcomeMessage = welcomeMessage;
         }
+
         var promptTemplate = data[nameof(AIProfile.PromptTemplate)]?.GetValue<string>()?.Trim();
+
         if (!string.IsNullOrEmpty(promptTemplate))
         {
             profile.PromptTemplate = promptTemplate;
         }
+
         var properties = data[nameof(AIProfile.Properties)]?.AsObject();
+
         if (properties != null)
         {
             profile.Properties ??= new Dictionary<string, object>();
+
             // Convert current properties to JsonObject for merge.
             var currentJson = JsonSerializer.SerializeToNode(profile.Properties)?.AsObject() ?? [];
+
             // Snapshot existing properties before merge so named entries can be
             // merged by name (upsert) instead of being fully replaced.
             var existingPropertiesSnapshot = currentJson.Clone();
+
             // Merge incoming properties.
             currentJson.Merge(properties, new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
             });
+
             AIPropertiesMergeHelper.MergeNamedEntries(currentJson, existingPropertiesSnapshot);
+
             // Convert back to dictionary.
             profile.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
+
         var settings = data[nameof(AIProfile.Settings)]?.AsObject();
+
         if (settings != null)
         {
             var existingSettingsSnapshot = profile.Settings.Clone();
+
             profile.Settings.Merge(settings, new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
             });
+
             AIPropertiesMergeHelper.MergeNamedEntries(profile.Settings, existingSettingsSnapshot);
         }
+
         if (string.IsNullOrWhiteSpace(profile.DisplayText))
         {
             profile.DisplayText = profile.Name;
         }
     }
+
     private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
     {
         if (!string.IsNullOrWhiteSpace(deploymentId))
         {
             var deployment = await _deploymentCatalog.FindByIdAsync(deploymentId);
+
             if (deployment != null)
             {
                 return deployment.Name;
             }
         }
+
         return currentValue;
     }
 }

@@ -13,6 +13,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
     private readonly ICatalog<A2AConnection> _store;
 
     internal readonly IStringLocalizer S;
+
     public ChatInteractionA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<ChatInteractionA2AConnectionsDisplayDriver> stringLocalizer)
@@ -40,6 +41,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
                 IsSelected = interaction.A2AConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
+
         }).Location("Parameters:4#Capabilities;5");
     }
 
@@ -53,7 +55,9 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
         }
 
         var model = new ChatInteractionA2AConnectionsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
 
         if (ids is null || ids.Length == 0)

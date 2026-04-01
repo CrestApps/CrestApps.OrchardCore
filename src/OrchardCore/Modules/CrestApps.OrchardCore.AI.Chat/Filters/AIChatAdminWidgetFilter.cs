@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Layout;
+
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Filters;
@@ -23,7 +24,9 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
     private readonly IAIProfileManager _profileManager;
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
+
     private readonly AdminOptions _adminOptions;
+
     public AIChatAdminWidgetFilter(
         ILayoutAccessor layoutAccessor,
         IShapeFactory shapeFactory,
@@ -40,6 +43,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
         _adminOptions = adminOptions.Value;
+
     }
 
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
@@ -49,6 +53,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             await next();
 
             return;
+
         }
 
         if (context.HttpContext.User.Identity?.IsAuthenticated != true)
@@ -56,6 +61,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             await next();
 
             return;
+
         }
 
         var settings = await _siteService.GetSettingsAsync<AIChatAdminWidgetSettings>();
@@ -65,6 +71,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             await next();
 
             return;
+
         }
 
         var profile = await _profileManager.FindByIdAsync(settings.ProfileId);
@@ -74,6 +81,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             await next();
 
             return;
+
         }
 
         if (!await _authorizationService.AuthorizeAsync(context.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
@@ -81,6 +89,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             await next();
 
             return;
+
         }
 
         var sessionResult = await _sessionManager.PageAsync(
@@ -90,6 +99,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
             {
                 ProfileId = settings.ProfileId,
                 Sorted = true,
+
             });
 
         var shape = await _shapeFactory.CreateAsync("AIChatAdminWidget");
@@ -98,10 +108,14 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         shape.Properties["MaxSessions"] = settings.MaxSessions;
         shape.Properties["PrimaryColor"] = string.IsNullOrWhiteSpace(settings.PrimaryColor)
         ? AIChatAdminWidgetSettings.DefaultPrimaryColor
+
         : settings.PrimaryColor;
         var layout = await _layoutAccessor.GetLayoutAsync();
+
         await layout.Zones["Footer"].AddAsync(shape, "999");
+
         await next();
+
     }
 
     private bool IsAdminPage(ResultExecutingContext context)
@@ -109,6 +123,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         if (context.Result is not (ViewResult or PageResult))
         {
             return false;
+
         }
 
         return context.HttpContext.Request.Path.StartsWithSegments('/' + _adminOptions.AdminUrlPrefix, StringComparison.OrdinalIgnoreCase);

@@ -11,12 +11,14 @@ public sealed class RolesRecipeStep : IRecipeStep
     private JsonSchema _cached;
 
     private readonly IPermissionService _permissionService;
+
     public RolesRecipeStep(IPermissionService permissionService)
     {
         _permissionService = permissionService;
     }
 
     public string Name => "Roles";
+
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= await CreateSchemaAsync();
@@ -27,6 +29,7 @@ public sealed class RolesRecipeStep : IRecipeStep
     private async Task<JsonSchema> CreateSchemaAsync()
     {
         var permission = await _permissionService.GetPermissionsAsync();
+
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(

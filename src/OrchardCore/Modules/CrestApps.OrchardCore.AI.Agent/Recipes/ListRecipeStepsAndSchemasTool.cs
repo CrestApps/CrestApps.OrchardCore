@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 public sealed class ListRecipeStepsAndSchemasTool : AIFunction
 {
     public const string TheName = "listOrchardCoreRecipeStepsAndSchemas";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -19,9 +20,13 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Lists all available Orchard Core recipe steps and returns their JSON schema definitions.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -41,6 +46,7 @@ public sealed class ListRecipeStepsAndSchemasTool : AIFunction
 
         var recipeSchemaService = arguments.Services.GetRequiredService<RecipeSchemaService>();
         var recipeSteps = arguments.Services.GetRequiredService<IEnumerable<IRecipeStep>>();
+
         var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var stepName in recipeSchemaService.GetStepNames())

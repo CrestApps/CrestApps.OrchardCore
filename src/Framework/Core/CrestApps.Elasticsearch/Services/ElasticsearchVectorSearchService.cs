@@ -2,7 +2,9 @@ using System.Text.Json.Nodes;
 using CrestApps.Infrastructure;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
+
 using Elastic.Clients.Elasticsearch;
+
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.Elasticsearch.Services;
@@ -13,13 +15,16 @@ namespace CrestApps.Elasticsearch.Services;
 /// </summary>
 internal sealed class ElasticsearchVectorSearchService : IVectorSearchService
 {
+
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchVectorSearchService> _logger;
+
     public ElasticsearchVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchVectorSearchService> logger)
     {
         _elasticClient = elasticClient;
+
         _logger = logger;
     }
 
@@ -33,11 +38,13 @@ internal sealed class ElasticsearchVectorSearchService : IVectorSearchService
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentNullException.ThrowIfNull(embedding);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(referenceId);
         ArgumentException.ThrowIfNullOrWhiteSpace(referenceType);
 
         if (embedding.Length == 0)
         {
+
             return [];
         }
 
@@ -65,45 +72,56 @@ internal sealed class ElasticsearchVectorSearchService : IVectorSearchService
             )
             )
             )
+
                 .Size(topN)
             , cancellationToken);
 
             if (!response.IsValidResponse)
+
             {
                 _logger.LogWarning("Elasticsearch vector search failed: {Error}", response.DebugInformation);
 
                 return [];
+
             }
 
             var results = new List<DocumentChunkSearchResult>();
+
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
+
             while (documents.MoveNext() && hits.MoveNext())
             {
+
                 var hit = hits.Current;
                 var document = documents.Current;
 
                 if (document == null)
                 {
+
                     continue;
                 }
 
                 var chunkText = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.Content, out var textNode)
+
                 ? textNode?.GetValue<string>()
                 : null;
                 var chunkIndex = 0;
 
                 if (document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
                 {
+
                     chunkIndex = indexNode.GetValue<int>();
                 }
 
                 if (!string.IsNullOrEmpty(chunkText))
                 {
                     var documentKey = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.DocumentId, out var docIdNode)
+
                     ? docIdNode?.GetValue<string>()
                     : null;
                     var fileName = document.TryGetPropertyValue(DocumentIndexConstants.ColumnNames.FileName, out var fileNameNode)
+
                     ? fileNameNode?.GetValue<string>()
                     : null;
                     results.Add(new DocumentChunkSearchResult
@@ -117,6 +135,7 @@ internal sealed class ElasticsearchVectorSearchService : IVectorSearchService
                         FileName = fileName,
                         Score = (float)(hit.Score ?? 0.0),
                     });
+
                 }
             }
 
@@ -126,10 +145,12 @@ internal sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 .ToList();
         }
         catch (Exception ex)
+
         {
             _logger.LogError(ex, "Error performing vector search in Elasticsearch index '{IndexName}'.", indexProfile.IndexFullName);
 
             return [];
         }
+
     }
 }

@@ -17,6 +17,7 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
             .Column<DateTime>("UpdatedUtc"),
         collection: MemoryConstants.CollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIMemoryEntryIndex>(table => table
             .CreateIndex(
                 "IDX_AIMemoryEntryIndex_ItemId",
@@ -24,6 +25,7 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
                 "ItemId"),
         collection: MemoryConstants.CollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIMemoryEntryIndex>(table => table
             .CreateIndex(
                 "IDX_AIMemoryEntryIndex_User_UpdatedUtc",
@@ -32,6 +34,7 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
                 "UpdatedUtc"),
         collection: MemoryConstants.CollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIMemoryEntryIndex>(table => table
             .CreateIndex(
                 "IDX_AIMemoryEntryIndex_User_NormalizedName",
@@ -53,6 +56,7 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
         },
             collection: MemoryConstants.CollectionName
             );
+
         await SchemaBuilder.AlterIndexTableAsync<AIMemoryEntryIndex>(table => table
         .CreateIndex(
             "IDX_AIMemoryEntryIndex_User_NormalizedName",

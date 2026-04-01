@@ -15,6 +15,7 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DataSourceAlignmentBackgroundService> _logger;
+
     public DataSourceAlignmentBackgroundService(
         IServiceScopeFactory scopeFactory,
         ILogger<DataSourceAlignmentBackgroundService> logger)
@@ -26,6 +27,7 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(_alignmentCheckInterval);
+
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             if (!ShouldRunAlignment())
@@ -48,7 +50,6 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
             }
         }
     }
-
     /// <summary>
     /// Determines whether the alignment should run based on the current UTC hour.
     /// Alignment runs daily between 2:00 AM and 2:30 AM UTC.
@@ -59,7 +60,6 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
 
         return utcNow.Hour == 2 && utcNow.Minute < 30;
     }
-
     /// <summary>
     /// Performs full alignment of all data source indexes by upserting missing
     /// documents and removing orphaned records.
@@ -117,6 +117,7 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
         }
 
         await session.SaveChangesAsync(cancellationToken);
+
         _logger.LogInformation("Daily data source alignment completed.");
     }
 }

@@ -32,6 +32,7 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
             }
 
             var clock = context.Services.GetRequiredService<IClock>();
+
             session.Status = ChatSessionStatus.Closed;
             session.ClosedAtUtc = clock.UtcNow;
             await sessionManager.SaveAsync(session);

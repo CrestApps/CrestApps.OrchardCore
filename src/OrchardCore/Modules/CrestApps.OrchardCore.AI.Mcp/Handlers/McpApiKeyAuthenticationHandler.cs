@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<McpApiKeyAuthenticationOptions>
 {
     private readonly IOptionsMonitor<McpServerOptions> _mcpServerOptionsMonitor;
+
     public McpApiKeyAuthenticationHandler(
         IOptionsMonitor<McpApiKeyAuthenticationOptions> options,
         IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,
@@ -23,6 +24,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var mcpServerOptions = _mcpServerOptionsMonitor.CurrentValue;
+
         // Only handle authentication if ApiKey authentication type is configured.
 
         if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.ApiKey)

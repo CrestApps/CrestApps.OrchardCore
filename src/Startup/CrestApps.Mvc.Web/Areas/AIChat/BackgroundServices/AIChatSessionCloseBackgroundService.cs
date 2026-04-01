@@ -19,6 +19,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AIChatSessionCloseBackgroundService> _logger;
+
     public AIChatSessionCloseBackgroundService(
         IServiceScopeFactory scopeFactory,
         ILogger<AIChatSessionCloseBackgroundService> logger)
@@ -30,6 +31,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(_interval);
+
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
             try
@@ -38,8 +40,10 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
                 var profileManager = scope.ServiceProvider.GetRequiredService<IAIProfileManager>();
                 var utcNow = DateTime.UtcNow;
+
                 await CloseInactiveSessionsAsync(session, profileManager, utcNow, stoppingToken);
                 await RetryPendingProcessingAsync(session, utcNow, stoppingToken);
+
                 await session.SaveChangesAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -52,7 +56,6 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             }
         }
     }
-
     /// <summary>
     /// Finds active sessions that have exceeded their profile's inactivity timeout and closes them.
     /// </summary>
@@ -75,7 +78,9 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             var timeout = settings?.SessionInactivityTimeoutInMinutes > 0
                 ? TimeSpan.FromMinutes(settings.SessionInactivityTimeoutInMinutes)
                 : _defaultInactivityTimeout;
+
             var cutoffUtc = utcNow - timeout;
+
             var inactiveSessions = await session
                 .Query<AIChatSession, AIChatSessionIndex>(
                     i => i.ProfileId == profile.ItemId
@@ -87,6 +92,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             {
                 chatSession.Status = ChatSessionStatus.Closed;
                 chatSession.ClosedAtUtc = utcNow;
+
                 var hasPostProcessing = NeedsPostSessionProcessing(profile);
 
                 if (hasPostProcessing)
@@ -113,7 +119,6 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             }
         }
     }
-
     /// <summary>
     /// Retries post-session processing for sessions that are still pending and within the retry window.
     /// </summary>
@@ -143,6 +148,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
                 await session.SaveAsync(chatSession);
+
                 _logger.LogWarning(
                     "Post-session processing for session '{SessionId}' failed after {MaxAttempts} attempts.",
                     chatSession.SessionId,
@@ -158,6 +164,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
 
             chatSession.PostSessionProcessingAttempts++;
             chatSession.PostSessionProcessingLastAttemptUtc = utcNow;
+
             // Mark as completed since we don't have OC-specific post-session pipeline.
             // When a post-session processing service is registered at the framework level,
             // this should call it and only mark completed on success.
@@ -172,7 +179,6 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
             }
         }
     }
-
     /// <summary>
     /// Determines whether a profile has any post-session processing configured.
     /// </summary>

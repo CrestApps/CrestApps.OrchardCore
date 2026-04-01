@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 internal sealed class McpResourcesAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public McpResourcesAdminMenu(IStringLocalizer<McpResourcesAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

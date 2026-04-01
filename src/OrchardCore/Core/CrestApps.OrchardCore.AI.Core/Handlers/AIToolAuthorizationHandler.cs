@@ -15,6 +15,7 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
+
     public AIToolAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -51,6 +52,7 @@ public sealed class AIToolAuthorizationHandler : AuthorizationHandler<Permission
         }
 
         _authorizationService ??= _serviceProvider.GetService<IAuthorizationService>();
+
         // Check the specific tool permission (Permission #3)
         // Note: AccessAnyAITool is implied by the permission hierarchy and will be automatically checked
         var toolPermission = AIPermissions.CreateAIToolPermission(toolIdentifier);

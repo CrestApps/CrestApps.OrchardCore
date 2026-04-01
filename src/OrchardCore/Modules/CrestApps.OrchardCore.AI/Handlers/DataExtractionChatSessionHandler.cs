@@ -21,6 +21,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+
     public DataExtractionChatSessionHandler(
         DataExtractionService dataExtractionService,
         IServiceProvider serviceProvider,
@@ -49,6 +50,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 
             var now = _clock.UtcNow;
             var workflowManager = _serviceProvider.GetService<IWorkflowManager>();
+
             // Trigger workflow events for each newly extracted field.
 
             if (workflowManager is not null)

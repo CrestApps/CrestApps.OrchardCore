@@ -17,6 +17,7 @@ namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 public class OpenAICompletionClient : DeploymentAwareAICompletionClient
 {
     private readonly IEnumerable<IOpenAIChatOptionsConfiguration> _openAIChatOptionsConfigurations;
+
     public OpenAICompletionClient(
         IAIClientFactory aIClientFactory,
         ILoggerFactory loggerFactory,
@@ -76,6 +77,7 @@ public class OpenAICompletionClient : DeploymentAwareAICompletionClient
 
     protected override string ProviderName
         => OpenAIConstants.ClientName;
+
     protected override async ValueTask ConfigureChatOptionsAsync(CompletionServiceConfigureContext configureContext)
     {
         foreach (var handler in _openAIChatOptionsConfigurations)

@@ -15,6 +15,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AIChatAnalyticsFilter>
 {
     private readonly IAIProfileStore _profileStore;
+
     public AIChatAnalyticsProfileFilterDisplayDriver(
         IAIProfileStore profileStore)
     {
@@ -34,7 +35,9 @@ public sealed class AIChatAnalyticsProfileFilterDisplayDriver : DisplayDriver<AI
     public override async Task<IDisplayResult> UpdateAsync(AIChatAnalyticsFilter filter, UpdateEditorContext context)
     {
         var model = new ChatAnalyticsProfileFilterViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         filter.ProfileId = model.ProfileId;
 
         if (!string.IsNullOrEmpty(filter.ProfileId))

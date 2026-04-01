@@ -27,6 +27,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
+
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
         IAIChatSessionPromptStore promptStore,
@@ -50,6 +51,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     }
 
     public string Channel { get; } = OmnichannelConstants.Channels.Sms;
+
     public async Task StartAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         AIChatSession chatSession = null;
@@ -81,6 +83,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         }
 
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
         var initialPrompt = await _liquidTemplateManager.RenderStringAsync(campaign.InitialOutboundPromptPattern, NullEncoder.Default,
         new Dictionary<string, FluidValue>()
         {
@@ -125,6 +128,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             });
 
             await _aIChatSessionManager.SaveAsync(chatSession);
+
             // Update the activity with the AI session details.
             activity.AISessionId = chatSession.SessionId;
             activity.Status = ActivityStatus.AwaitingCustomerAnswer;

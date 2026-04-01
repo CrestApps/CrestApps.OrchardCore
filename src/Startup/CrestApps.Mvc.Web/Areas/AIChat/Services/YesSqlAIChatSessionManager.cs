@@ -9,6 +9,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
 {
     private readonly ISession _session;
+
     public YesSqlAIChatSessionManager(ISession session)
     {
         _session = session;

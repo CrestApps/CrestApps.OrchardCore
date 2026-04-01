@@ -12,8 +12,10 @@ internal sealed class McpPermissionsProvider : IPermissionProvider
         McpPermissions.ManageMcpPrompts,
         McpPermissions.ManageMcpResources,
     ];
+
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
+
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes() =>
     [
         new PermissionStereotype

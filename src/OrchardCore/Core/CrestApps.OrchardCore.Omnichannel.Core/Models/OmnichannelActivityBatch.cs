@@ -1,29 +1,50 @@
 using CrestApps.Models;
 using CrestApps.Services;
+
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareModel, ICloneable<OmnichannelActivityBatch>
 {
     public string DisplayText { get; set; }
+
     public string CampaignId { get; set; }
+
     public string SubjectContentType { get; set; }
+
     public string ContactContentType { get; set; }
+
     public string[] UserIds { get; set; }
+
     public bool IncludeDoNoCalls { get; set; }
+
     public bool IncludeDoNoSms { get; set; }
+
     public bool IncludeDoNoEmail { get; set; }
+
     public DateTime CreatedUtc { get; set; }
+
     public string Author { get; set; }
+
     public string OwnerId { get; set; }
+
     public DateTime ScheduleAt { get; set; }
+
     public string Instructions { get; set; }
+
     public long? TotalLoaded { get; set; }
+
     public bool PreventDuplicates { get; set; }
+
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
+
     public OmnichannelActivityBatchStatus Status { get; set; }
+
     public DateTime? LeadCreatedFrom { get; set; }
+
     public DateTime? LeadCreatedTo { get; set; }
+
     public bool OnlyPublishedLeads { get; set; } = true;
+
     public OmnichannelActivityBatch Clone()
     {
         return new OmnichannelActivityBatch()

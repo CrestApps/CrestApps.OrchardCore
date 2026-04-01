@@ -21,6 +21,7 @@ internal sealed class TryAgainActivityTaskDisplayDriver : ActivityDisplayDriver<
     private readonly IDisplayNameProvider _displayNameProvider;
 
     internal readonly IStringLocalizer S;
+
     public TryAgainActivityTaskDisplayDriver(
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
@@ -46,13 +47,17 @@ internal sealed class TryAgainActivityTaskDisplayDriver : ActivityDisplayDriver<
             new(S["High"], nameof(ActivityUrgencyLevel.High)),
             new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
         ];
+
         var users = await _userManager.GetUsersInRoleAsync(OmnichannelConstants.AgentRole);
+
         var userItems = new List<SelectListItem>();
 
         foreach (var user in users)
         {
             var displayName = await _displayNameProvider.GetAsync(user);
+
             var normalizedUserName = user is User su ? su.NormalizedUserName : _userManager.NormalizeName(user.UserName);
+
             userItems.Add(new SelectListItem
             {
                 Text = displayName,
@@ -66,6 +71,7 @@ internal sealed class TryAgainActivityTaskDisplayDriver : ActivityDisplayDriver<
     public override async Task<IDisplayResult> UpdateAsync(TryAgainActivityTask activity, UpdateEditorContext context)
     {
         var model = new TryAgainActivityTaskViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (model.MaxAttempt.HasValue && model.MaxAttempt < 1)

@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 internal sealed class DefaultExternalChatRelayNotificationHandler : IExternalChatRelayNotificationHandler
 {
     private readonly IChatNotificationSender _sender;
+
     public DefaultExternalChatRelayNotificationHandler(IChatNotificationSender sender)
     {
         _sender = sender;

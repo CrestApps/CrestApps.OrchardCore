@@ -53,6 +53,7 @@ public abstract class AIClientProviderBase : IAIClientProvider
         }
 
         var client = GetEmbeddingGenerator(connection, deploymentName);
+
         var builder = new EmbeddingGeneratorBuilder<string, Embedding<float>>(client);
 
         return ValueTask.FromResult(builder.Build(_serviceProvider));

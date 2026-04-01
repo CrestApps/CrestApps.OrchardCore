@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers;
 internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver : ActivityDisplayDriver<SetContactCommunicationPreferenceActivityTask, SetContactCommunicationPreferenceActivityTaskViewModel>
 {
     internal readonly IStringLocalizer S;
+
     public SetContactCommunicationPreferenceActivityTaskDisplayDriver(IStringLocalizer<TryAgainActivityTaskDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
@@ -27,6 +28,7 @@ internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver
     public override async Task<IDisplayResult> UpdateAsync(SetContactCommunicationPreferenceActivityTask activity, UpdateEditorContext context)
     {
         var model = new SetContactCommunicationPreferenceActivityTaskViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (!model.SetDoNotCall.HasValue &&

@@ -14,16 +14,19 @@ public sealed class AIDeploymentViewModel
     public string ConnectionName { get; set; }
 
     public string ClientName { get; set; }
+
     // Standalone deployment fields (e.g., Azure AI Services).
     public string Endpoint { get; set; }
 
     public string AuthenticationType { get; set; }
 
     public string ApiKey { get; set; }
+
     public List<SelectListItem> Connections { get; set; } = [];
     public List<SelectListItem> Providers { get; set; } = [];
     public List<SelectListItem> AuthenticationTypes { get; set; } = [];
     public List<SelectListItem> Types { get; set; } = [];
+
     public static AIDeploymentViewModel FromDeployment(AIDeployment deployment)
     {
         var model = new AIDeploymentViewModel
@@ -56,6 +59,7 @@ public sealed class AIDeploymentViewModel
         deployment.ConnectionName = ConnectionName;
         deployment.ClientName = ClientName;
         deployment.IsDefault = false;
+
         deployment.Properties ??= new Dictionary<string, object>();
 
         if (!string.IsNullOrWhiteSpace(Endpoint))

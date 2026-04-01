@@ -14,6 +14,7 @@ public sealed class AIDataSourceController : Controller
 {
     private readonly IAIDataSourceStore _store;
     private readonly ISearchIndexProfileStore _indexProfileStore;
+
     public AIDataSourceController(
         IAIDataSourceStore store,
         ISearchIndexProfileStore indexProfileStore)
@@ -56,6 +57,7 @@ public sealed class AIDataSourceController : Controller
         };
 
         model.ApplyTo(dataSource);
+
         await _store.CreateAsync(dataSource);
         await _store.SaveChangesAsync();
 
@@ -98,6 +100,7 @@ public sealed class AIDataSourceController : Controller
         }
 
         model.ApplyTo(dataSource);
+
         await _store.UpdateAsync(dataSource);
         await _store.SaveChangesAsync();
 
@@ -140,12 +143,14 @@ public sealed class AIDataSourceController : Controller
     private async Task PopulateDropdownsAsync(AIDataSourceViewModel model)
     {
         var indexProfiles = await _indexProfileStore.GetAllAsync();
+
         // Source index profiles: exclude DataSource type profiles
         model.SourceIndexProfiles = [new SelectListItem("— Select index profile —", "")];
         model.SourceIndexProfiles.AddRange(
             indexProfiles
             .Where(p => !string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
                 .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name)));
+
         // Knowledge base index profiles: only DataSource type profiles
         model.KnowledgeBaseIndexProfiles = [new SelectListItem("— Select index profile —", "")];
         model.KnowledgeBaseIndexProfiles.AddRange(

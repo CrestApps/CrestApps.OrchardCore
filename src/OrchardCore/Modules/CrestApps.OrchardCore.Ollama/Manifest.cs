@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Ollama AI Chat",
     Author = CrestAppsManifestConstants.Author,

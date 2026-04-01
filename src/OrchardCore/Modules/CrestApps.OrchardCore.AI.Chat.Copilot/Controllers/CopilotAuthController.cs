@@ -11,6 +11,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Settings;
 using USR = OrchardCore.Users;
+
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Controllers;
 
 [Authorize]
@@ -23,7 +24,9 @@ public sealed class CopilotAuthController : Controller
     private readonly AdminOptions _adminOptions;
     private readonly ISiteService _siteService;
     private readonly CopilotCallbackUrlProvider _callbackUrlProvider;
+
     internal readonly IHtmlLocalizer H;
+
     public CopilotAuthController(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
@@ -57,10 +60,12 @@ public sealed class CopilotAuthController : Controller
         : returnUrl != null && Url.IsLocalUrl(returnUrl)
         ? returnUrl
         : "~/" + _adminOptions.AdminUrlPrefix;
+
         try
         {
             var callbackUrl = await _callbackUrlProvider.GetCallbackUrlAsync();
             var authUrl = _oauthService.GetAuthorizationUrl(callbackUrl, safeReturnUrl);
+
             return Redirect(authUrl);
         }
         catch (InvalidOperationException)
@@ -79,26 +84,34 @@ public sealed class CopilotAuthController : Controller
         {
             _logger.LogWarning("GitHub OAuth error: {Error}", error.SanitizeLogValue());
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
+
             return HandleOAuthReturn(state, success: false, username: null);
         }
+
         if (string.IsNullOrEmpty(code))
         {
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
+
             return HandleOAuthReturn(state, success: false, username: null);
         }
+
         // Get current user
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             _logger.LogWarning("No authenticated user found during OAuth callback");
+
             return Unauthorized();
         }
+
         try
         {
             // Exchange code for tokens and store on user
             var credential = await _oauthService.ExchangeCodeForTokenAsync(code, await _userManager.GetUserIdAsync(user));
+
             await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
+
             return HandleOAuthReturn(state, success: true, username: credential.GitHubUsername);
         }
         catch (Exception ex)
@@ -106,6 +119,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogError(ex, "Failed to exchange GitHub authorization code for tokens");
             await _notifier.ErrorAsync(H["Failed to connect to GitHub. Please try again."]);
         }
+
         return HandleOAuthReturn(state, success: false, username: null);
     }
     /// <summary>
@@ -119,6 +133,7 @@ public sealed class CopilotAuthController : Controller
         if (string.Equals(state, "__popup__", StringComparison.Ordinal))
         {
             var safeUsername = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(username ?? string.Empty);
+
             return Content(
                 "<!DOCTYPE html><html><body><script>" +
                 $"window.opener.postMessage({{ type: 'github-auth-complete', success: {(success ? "true" : "false")}, username: '{safeUsername}' }}, window.location.origin);" +
@@ -126,6 +141,7 @@ public sealed class CopilotAuthController : Controller
                 "</script></body></html>",
                 "text/html");
         }
+
         return RedirectToLocal(state);
     }
     /// <summary>
@@ -140,8 +156,11 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
+
         await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
+
         await _notifier.SuccessAsync(H["Successfully disconnected from GitHub"]);
+
         return RedirectToLocal(returnUrl);
     }
     /// <summary>
@@ -155,14 +174,17 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
+
         var userId = await _userManager.GetUserIdAsync(user);
         var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
         string gitHubUsername = null;
+
         if (isAuthenticated)
         {
             var credential = await _oauthService.GetCredentialAsync(userId);
             gitHubUsername = credential?.GitHubUsername;
         }
+
         return Json(new { isAuthenticated, gitHubUsername });
     }
     /// <summary>
@@ -176,8 +198,10 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
+
         var userId = await _userManager.GetUserIdAsync(user);
         var models = await _oauthService.ListModelsAsync(userId);
+
         return Json(models.Select(m => new { m.Id, m.Name }));
     }
     /// <summary>
@@ -192,15 +216,19 @@ public sealed class CopilotAuthController : Controller
         {
             return Unauthorized();
         }
+
         await _oauthService.DisconnectAsync(await _userManager.GetUserIdAsync(user));
+
         return Json(new { success = true });
     }
+
     private IActionResult RedirectToLocal(string returnUrl)
     {
         if (Url.IsLocalUrl(returnUrl))
         {
             return Redirect(returnUrl);
         }
+
         return LocalRedirect("~/" + _adminOptions.AdminUrlPrefix);
     }
 }

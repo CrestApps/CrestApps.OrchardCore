@@ -21,13 +21,14 @@ public static class QueryHelpers
     public static string AddQueryString(string uri, string name, string value)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
         ArgumentNullException.ThrowIfNull(name);
+
         ArgumentNullException.ThrowIfNull(value);
 
         return AddQueryString(
             uri, [new KeyValuePair<string, string>(name, value)]);
     }
-
     /// <summary>
     /// Append the given query keys and values to the URI.
     /// </summary>
@@ -43,7 +44,6 @@ public static class QueryHelpers
 
         return AddQueryString(uri, (IEnumerable<KeyValuePair<string, string>>)queryString);
     }
-
     /// <summary>
     /// Append the given query keys and values to the URI.
     /// </summary>
@@ -55,6 +55,7 @@ public static class QueryHelpers
     public static string AddQueryString(string uri, IEnumerable<KeyValuePair<string, string>> queryString)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
         ArgumentNullException.ThrowIfNull(queryString);
 
         var anchorIndex = uri.IndexOf('#');

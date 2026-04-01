@@ -6,6 +6,7 @@ namespace CrestApps.AI.A2A.Services;
 internal sealed class A2AAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public A2AAdminMenu(IStringLocalizer<A2AAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

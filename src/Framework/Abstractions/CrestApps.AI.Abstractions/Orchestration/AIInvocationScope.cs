@@ -29,13 +29,11 @@ namespace CrestApps.AI.Orchestration;
 public static class AIInvocationScope
 {
     private static readonly AsyncLocal<AIInvocationContext> _current = new();
-
     /// <summary>
     /// Gets the <see cref="AIInvocationContext"/> for the current async execution flow,
     /// or <c>null</c> if no scope has been started.
     /// </summary>
     public static AIInvocationContext Current => _current.Value;
-
     /// <summary>
     /// Begins a new invocation scope with a fresh <see cref="AIInvocationContext"/>.
     /// The returned <see cref="Scope"/> must be disposed to clear the context.
@@ -43,7 +41,6 @@ public static class AIInvocationScope
     /// <returns>A disposable scope that clears the context on disposal.</returns>
     public static Scope Begin()
         => new(new AIInvocationContext());
-
     /// <summary>
     /// Begins a new invocation scope with the specified <see cref="AIInvocationContext"/>.
     /// The returned <see cref="Scope"/> must be disposed to clear the context.
@@ -56,7 +53,6 @@ public static class AIInvocationScope
 
         return new Scope(context);
     }
-
     /// <summary>
     /// A disposable wrapper that sets and clears the <see cref="AIInvocationScope.Current"/> context.
     /// </summary>
@@ -66,12 +62,12 @@ public static class AIInvocationScope
         /// Gets the <see cref="AIInvocationContext"/> associated with this scope.
         /// </summary>
         public AIInvocationContext Context { get; }
+
         internal Scope(AIInvocationContext context)
         {
             Context = context;
             _current.Value = context;
         }
-
         /// <summary>
         /// Clears the current invocation context, preventing data from leaking
         /// into subsequent operations on the same thread.

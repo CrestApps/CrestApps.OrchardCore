@@ -32,6 +32,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("InteractionType", column => column.WithLength(50)),
         collection: OmnichannelConstants.CollectionName
         );
+
         // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityIndex_DocumentId",
@@ -42,6 +43,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         "ScheduledUtc"),
         collection: OmnichannelConstants.CollectionName
         );
+
         // This SQL index is for locating activities assigned to a specific user (My Activities view).
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityMyActivities_DocumentId",
@@ -52,6 +54,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         "ScheduledUtc"),
         collection: OmnichannelConstants.CollectionName
         );
+
         // This SQL index is for locating duplicate activities during batch loading.
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivityMyActivities_BatchLoading",

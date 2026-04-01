@@ -7,6 +7,7 @@ public abstract class RecipeStepSchemaBase : IRecipeStep
     private JsonSchema _cached;
 
     public abstract string Name { get; }
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

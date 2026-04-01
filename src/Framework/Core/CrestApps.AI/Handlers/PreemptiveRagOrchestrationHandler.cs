@@ -6,7 +6,9 @@ using CrestApps.AI.Tooling;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 namespace CrestApps.AI.Handlers;
+
 /// <summary>
 /// Orchestration handler that coordinates preemptive RAG across all registered
 /// <see cref="IPreemptiveRagHandler"/> implementations. Extracts focused search queries
@@ -21,6 +23,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
     private readonly ITemplateService _templateService;
     private readonly DefaultOrchestratorSettings _settings;
     private readonly ILogger _logger;
+
     public PreemptiveRagOrchestrationHandler(
         IEnumerable<IPreemptiveRagHandler> handlers,
         PreemptiveSearchQueryProvider queryProvider,

@@ -20,9 +20,11 @@ public sealed class DataSourceAlignmentBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<DataSourceAlignmentBackgroundTask>>();
+
         try
         {
             var indexingService = serviceProvider.GetRequiredService<DataSourceIndexingService>();
+
             // Full sync handles both upsert and orphan cleanup.
             await indexingService.SyncAllAsync(cancellationToken);
         }

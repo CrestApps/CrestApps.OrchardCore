@@ -12,8 +12,11 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
     private readonly IActivityLibrary _library;
 
     private JsonSchema _cached;
+
     public WorkflowTypeRecipeStep(IActivityLibrary library) => _library = library;
+
     public string Name => "WorkflowType";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -24,6 +27,7 @@ public sealed class WorkflowTypeRecipeStep : IRecipeStep
         var all = _library.ListActivities();
         var eventNames = all.Where(a => a is IEvent).Select(a => a.Name);
         var taskNames = all.Where(a => a is ITask).Select(a => a.Name);
+
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(

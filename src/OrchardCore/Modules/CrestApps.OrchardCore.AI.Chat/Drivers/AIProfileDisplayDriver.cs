@@ -25,6 +25,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     private readonly OrchestratorOptions _orchestratorOptions;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileDisplayDriver(
         INamedCatalog<AIProfile> profilesCatalog,
         ILiquidTemplateManager liquidTemplateManager,
@@ -79,6 +80,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Set the first prompt as the title"], nameof(AISessionTitleType.InitialPrompt)),
                 new SelectListItem(S["Generate a title based on the first prompt"], nameof(AISessionTitleType.Generated)),
             ];
+
             model.ProfileTypes =
             [
                 new SelectListItem(S["Chat"], nameof(AIProfileType.Chat)),
@@ -86,6 +88,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 new SelectListItem(S["Template generated prompt"], nameof(AIProfileType.TemplatePrompt)),
                 new SelectListItem(S["Agent"], nameof(AIProfileType.Agent)),
             ];
+
             model.AvailabilityTypes =
             [
                 new SelectListItem(S["On demand"], nameof(AgentAvailability.OnDemand)),
@@ -96,6 +99,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         void PopulateParameters(ProfileMetadataViewModel model)
         {
             var metadata = profile.As<AIProfileMetadata>();
+
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
             model.PastMessagesCount = context.IsNew ? _defaultAIOptions.PastMessagesCount : metadata.PastMessagesCount;
@@ -105,6 +109,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.TopP = context.IsNew ? _defaultAIOptions.TopP : metadata.TopP;
             model.UseCaching = metadata.UseCaching;
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
+
             model.IsSystemMessageLocked = profile.GetSettings<AIProfileSettings>().LockSystemMessage;
         }
 
@@ -114,6 +119,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             model.DisplayText = profile.DisplayText;
             model.IsNew = context.IsNew;
         }).Location("Content:1%General;1");
+
         var connectionFieldResult = Initialize<EditConnectionProfileViewModel>("AIProfileConnection_Edit", model =>
         {
             var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
@@ -126,14 +132,19 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 .ToArray();
             }
         }).Location("Content:2%General;1");
+
         var generalFieldsResult = Initialize<EditProfileViewModel>("AIProfileFields_Edit", PopulateProfileFields)
             .Location("Content:5%General;1");
+
         var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
             .Location("Content:1%Interactions;3");
+
         var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
             .Location("Content:5%Instructions;4");
+
         var systemInstructionsResult = Initialize<ProfileMetadataViewModel>("AIProfileSystemInstructions_Edit", PopulateParameters)
             .Location("Content:10%Instructions;4");
+
         var parametersResult = Initialize<ProfileMetadataViewModel>("AIProfileParameters_Edit", PopulateParameters)
             .Location("Content:1%Parameters;5");
 
@@ -150,8 +161,11 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var mainFieldsModel = new EditProfileMainFieldsViewModel();
+
         var model = new EditProfileViewModel();
+
         var connectionModel = new EditConnectionProfileViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
         await context.Updater.TryUpdateModelAsync(mainFieldsModel, Prefix);
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
@@ -210,10 +224,14 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         profile.TitleType = model.TitleType;
         profile.Type = model.ProfileType;
         profile.OrchestratorName = connectionModel.OrchestratorName;
+
         var parametersModel = new ProfileMetadataViewModel();
+
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
+
         var metadata = profile.As<AIProfileMetadata>();
         metadata.InitialPrompt = model.AddInitialPrompt ? model.InitialPrompt?.Trim() : null;
+
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;
 
         if (model.ProfileType == AIProfileType.Chat && model.AddInitialPrompt && string.IsNullOrWhiteSpace(metadata.InitialPrompt))

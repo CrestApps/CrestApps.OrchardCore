@@ -5,7 +5,9 @@ using CrestApps.AI.Models;
 using CrestApps.Templates.Services;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
+
 using Microsoft.Extensions.Logging;
+
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI.Chat.Services;
@@ -19,8 +21,10 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     private readonly IAICompletionService _completionService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ITemplateService _aiTemplateService;
+
     private readonly RowLevelTabularBatchOptions _settings;
     private readonly ILogger<TabularBatchProcessor> _logger;
+
     public TabularBatchProcessor(
         IAICompletionService completionService,
         IAIDeploymentManager deploymentManager,
@@ -32,9 +36,9 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         _deploymentManager = deploymentManager;
         _aiTemplateService = aiTemplateService;
         _settings = settings.Value;
+
         _logger = logger;
     }
-
     /// <inheritdoc />
     public IList<TabularBatch> SplitIntoBatches(string content, string fileName)
     {
@@ -42,17 +46,21 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
         if (string.IsNullOrWhiteSpace(content))
         {
+
             return batches;
+
         }
 
         var lines = content.Split('\n', StringSplitOptions.None);
 
         if (lines.Length == 0)
         {
+
             return batches;
         }
 
         // First line is always the header
+
         var headerRow = lines[0];
         var dataLines = lines.Skip(1).ToList();
 
@@ -64,11 +72,13 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             _logger.LogWarning(
                 "Document '{FileName}' has {ActualRows} rows, exceeding the maximum of {MaxRows}. Truncating.",
                 fileName, dataLines.Count, maxRows);
+
             dataLines = dataLines.Take(maxRows).ToList();
         }
 
         if (dataLines.Count == 0)
         {
+
             return batches;
         }
 
@@ -76,14 +86,17 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
         if (batchSize <= 0)
         {
+
             batchSize = 25; // Default fallback
         }
 
         var batchIndex = 0;
 
         for (var i = 0; i < dataLines.Count; i += batchSize)
+
         {
             var batchRows = dataLines.Skip(i).Take(batchSize).ToList();
+
             batches.Add(new TabularBatch
             {
                 BatchIndex = batchIndex,
@@ -91,6 +104,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 HeaderRow = headerRow,
                 DataRows = batchRows,
                 RowStartIndex = i + 1, // 1-based index
+
                 RowEndIndex = i + batchRows.Count, // 1-based index
             });
 
@@ -101,12 +115,12 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         {
             _logger.LogDebug(
                 "Split document '{FileName}' into {BatchCount} batches of up to {BatchSize} rows each.",
+
                 fileName, batches.Count, batchSize);
         }
 
         return batches;
     }
-
     /// <inheritdoc />
     public async Task<IList<TabularBatchResult>> ProcessBatchesAsync(
         IList<TabularBatch> batches,
@@ -116,16 +130,21 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
     {
         if (batches is null || batches.Count == 0)
         {
+
             return [];
         }
 
         var results = new TabularBatchResult[batches.Count];
         var maxConcurrency = Math.Max(1, _settings.MaxConcurrentBatches);
+
         var continueOnFailure = _settings.ContinueOnBatchFailure;
         var delayBetweenBatches = _settings.DelayBetweenBatchesMs;
+
         using var semaphore = new SemaphoreSlim(maxConcurrency);
+
         var failureOccurred = false;
         var processedCount = 0;
+
         var tasks = batches.Select(async batch =>
         {
             // Check if we should stop due to a previous failure
@@ -139,9 +158,11 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     "Processing stopped due to previous batch failure.");
 
                 return;
+
             }
 
             await semaphore.WaitAsync(cancellationToken);
+
             try
             {
                 // Check again after acquiring semaphore
@@ -160,6 +181,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 // Add delay between batch submissions to avoid rate limiting
                 if (delayBetweenBatches > 0 && Interlocked.Increment(ref processedCount) > 1)
                 {
+
                     await Task.Delay(delayBetweenBatches, cancellationToken);
                 }
 
@@ -174,19 +196,21 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             finally
             {
                 semaphore.Release();
+
             }
+
         }).ToArray();
 
         await Task.WhenAll(tasks);
 
         return results.ToList();
     }
-
     /// <inheritdoc />
     public string MergeResults(IList<TabularBatchResult> results, bool includeHeader = true)
     {
         if (results is null || results.Count == 0)
         {
+
             return string.Empty;
         }
 
@@ -203,6 +227,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 if (hasSuccessfulResults)
                 {
                     // Add newline between batch outputs
+
                     builder.AppendLine();
                 }
 
@@ -212,6 +237,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             else if (!result.Success)
             {
                 failedBatches.Add(result);
+
             }
         }
 
@@ -220,6 +246,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         {
             builder.AppendLine();
             builder.AppendLine();
+
             builder.AppendLine("---");
             builder.AppendLine("Processing Errors:");
 
@@ -231,6 +258,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 builder.Append(failed.RowEndIndex);
                 builder.Append(": ");
                 builder.AppendLine(failed.ErrorMessage ?? "Unknown error");
+
             }
         }
 
@@ -254,11 +282,13 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     batch.RowStartIndex,
                     batch.RowEndIndex,
                     batch.RowCount,
+
                     "Completion context is not available.");
             }
 
             // Build the batch-specific prompt with instructions
             var batchPrompt = BuildBatchPrompt(batch, userPrompt);
+
             // Create
             // completion context for this batch
             var completionContext = new AICompletionContext
@@ -270,11 +300,14 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 TopP = sourceContext.TopP ?? 1.0f,
                 FrequencyPenalty = sourceContext.FrequencyPenalty,
                 PresencePenalty = sourceContext.PresencePenalty,
+
                 MaxTokens = sourceContext.MaxTokens,
                 DisableTools = true, // Disable tools for batch processing
+
             };
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_settings.BatchTimeoutSeconds));
+
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: sourceContext.ChatDeploymentName)
@@ -282,7 +315,9 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
 
             var response = await _completionService.CompleteAsync(
                 deployment,
+
                 [new ChatMessage(ChatRole.User, batchPrompt)],
+
                 completionContext,
                 linkedCts.Token);
 
@@ -294,6 +329,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                     batch.BatchIndex,
                     batch.RowStartIndex,
                     batch.RowEndIndex,
+
                     batch.RowCount,
                     "LLM returned empty response.");
             }
@@ -301,6 +337,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
+
                     "Successfully processed batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
                     batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
             }
@@ -332,6 +369,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         }
         catch (Exception ex)
         {
+
             _logger.LogError(ex,
             "Error processing batch {BatchIndex} (rows {StartRow}-{EndRow}) from '{FileName}'.",
             batch.BatchIndex, batch.RowStartIndex, batch.RowEndIndex, batch.FileName);
@@ -341,6 +379,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
                 batch.RowStartIndex,
                 batch.RowEndIndex,
                 batch.RowCount,
+
                 $"An error occurred while processing the batch.");
         }
     }
@@ -363,8 +402,10 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         builder.AppendLine("--- DATA START ---");
         builder.AppendLine(batch.GetContent());
         builder.AppendLine("--- DATA END ---");
+
         builder.AppendLine();
         builder.AppendLine("User Instructions:");
+
         builder.AppendLine(userPrompt);
 
         return builder.ToString();
@@ -375,6 +416,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
         var arguments = new Dictionary<string, object>();
 
         if (!string.IsNullOrWhiteSpace(baseSystemMessage))
+
         {
             arguments["baseSystemMessage"] = baseSystemMessage;
         }

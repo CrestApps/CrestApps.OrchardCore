@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 internal sealed class AgentTypingNotificationBuilder : IExternalChatRelayNotificationBuilder
 {
     public string NotificationType => ChatNotificationTypes.Typing;
+
     public void Build(ExternalChatRelayEvent relayEvent, ChatNotification notification, ExternalChatRelayNotificationResult result, IStringLocalizer T)
     {
         notification.Content = string.IsNullOrEmpty(relayEvent.AgentName)

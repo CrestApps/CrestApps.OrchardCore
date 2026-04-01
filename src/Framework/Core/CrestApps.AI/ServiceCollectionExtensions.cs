@@ -10,7 +10,9 @@ using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
 using CrestApps.AI.Tooling;
 using CrestApps.Templates;
+
 using CrestApps.Templates.Extensions;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
@@ -28,24 +30,27 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddAITemplating(
         this IServiceCollection services,
+
         Action<TemplateOptions> configure = null)
+
     {
         services
             .AddTemplating(configure)
             .AddAITemplateSource(AITemplateSources.Profile, entry =>
             {
+
                 entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
                 entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
             })
             .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
             {
                 entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
+
                 entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
             });
 
         return services;
     }
-
     /// <summary>
     /// Registers an AI tool with the builder pattern for fluent configuration.
     /// By default, tools are registered as system tools (hidden from UI).
@@ -63,6 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddCoreAITool<TTool>(name);
 
         var entry = new AIToolDefinitionEntry(typeof(TTool))
+
         {
             Name = name,
             IsSystemTool = true,
@@ -84,8 +90,8 @@ public static class ServiceCollectionExtensions
         });
 
         return new AIToolBuilder<TTool>(entry);
-    }
 
+    }
     /// <summary>
     /// Registers the core DI services for an AI tool (singleton and keyed singleton)
     /// without adding it to the tool definition options. Use this for tools that
@@ -101,7 +107,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Adds core CrestApps AI services to the service collection.
     /// This is the main entry point for any ASP.NET Core application to use CrestApps AI.
@@ -109,6 +114,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCrestAppsAI(this IServiceCollection services)
     {
         // Ensure IHttpContextAccessor is available for services that need HTTP context.
+
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services
@@ -122,17 +128,22 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>());
 
         return services;
+
     }
 
+
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
+
         where TClient : class, IAICompletionClient
     {
         return services
             .Configure<AIOptions>(o =>
             {
                 o.AddProfileSource(implementationName, providerName, configure);
+
             })
             .AddAICompletionClient<TClient>(implementationName);
+
     }
 
     public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
@@ -140,6 +151,7 @@ public static class ServiceCollectionExtensions
         services
             .Configure<AIOptions>(o =>
             {
+
                 o.AddDeploymentProvider(providerName, configure);
             });
 
@@ -162,6 +174,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
     {
+
         services.Configure<AIOptions>(o =>
         {
             o.AddConnectionSource(providerName, configure);
@@ -172,6 +185,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddAITemplateSource(this IServiceCollection services, string sourceName, Action<AITemplateSourceEntry> configure = null)
     {
+
         services.Configure<AIOptions>(o =>
         {
             o.AddTemplateSource(sourceName, configure);
@@ -179,7 +193,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
     /// for each supported file extension.
@@ -190,6 +203,7 @@ public static class ServiceCollectionExtensions
         services.Configure<ChatDocumentsOptions>(options =>
         {
             foreach (var extension in supportedExtensions)
+
             {
                 options.Add(extension);
             }
@@ -199,36 +213,46 @@ public static class ServiceCollectionExtensions
 
         foreach (var extension in supportedExtensions)
         {
+
             services.AddKeyedSingleton<IngestionDocumentReader>(
                 extension.Extension,
+
                 (sp, _) => sp.GetRequiredService<T>());
         }
 
         return services;
     }
-
     /// <summary>
     /// Adds the orchestration services including the default progressive tool orchestrator,
     /// tool registry, orchestration context builder, and orchestrator resolver.
     /// </summary>
+
     public static IServiceCollection AddOrchestrationServices(this IServiceCollection services)
     {
         // Register embedded templates from this assembly so they are available
         // regardless of the host (OrchardCore, MVC, or any ASP.NET Core app).
+
         services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
+
         services.TryAddSingleton(TimeProvider.System);
         services.AddOptions<OrchestratorOptions>();
         services.AddOptions<DefaultOrchestratorOptions>();
+
         services.AddOptions<DefaultOrchestratorSettings>();
         services.AddOptions<DefaultAIDeploymentSettings>();
         services.AddOptions<InteractionDocumentSettings>();
         services.AddOptions<AIDataSourceSettings>();
 
         // Register DefaultAIOptions as a scoped service that reads from IOptionsSnapshot
+
         // and applies GeneralAISettings overrides. Host applications (OrchardCore, MVC, etc.)
+
         // can replace this with their own implementation (e.g., reading from ISiteService).
         services.TryAddScoped(sp =>
+
         {
+
+
             var snapshot = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>();
             var settings = sp.GetRequiredService<IOptionsSnapshot<GeneralAISettings>>();
 
@@ -236,6 +260,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Register the Framework-level deployment manager.
+
         // OrchardCore overrides this with its ISiteService-backed implementation.
         services.TryAddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>();
         services.TryAddScoped<IInteractionDocumentSettingsProvider, DefaultInteractionDocumentSettingsProvider>();
@@ -247,6 +272,7 @@ public static class ServiceCollectionExtensions
 
         services.TryAddScoped<IAIToolsService, DefaultAIToolsService>();
         services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();
+
         services.TryAddScoped<IAIToolAccessEvaluator, DefaultAIToolAccessEvaluator>();
         services.TryAddScoped<PreemptiveSearchQueryProvider>();
 
@@ -258,6 +284,7 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, PreemptiveRagOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIToolExecutionContextOrchestrationHandler>());
+
         services.TryAddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>());
@@ -269,9 +296,11 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
 
+
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
             .WithTitle("Generate Image")
+
             .WithDescription("Generates an image from a text description using an AI image generation model.")
             .WithPurpose(AIToolPurposes.ContentGeneration);
 
@@ -288,7 +317,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Registers an orchestrator implementation with the given name.
     /// </summary>

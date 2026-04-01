@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActivity>, IOmnichannelActivityManager
 {
     private readonly IOmnichannelActivityStore _store;
+
     public OmnichannelActivityManager(
         IOmnichannelActivityStore omnichannelActivityStore,
         IEnumerable<ICatalogEntryHandler<OmnichannelActivity>> handlers,

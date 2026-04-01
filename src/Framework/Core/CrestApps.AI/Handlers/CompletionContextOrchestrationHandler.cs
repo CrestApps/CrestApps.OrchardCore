@@ -22,6 +22,7 @@ internal sealed class CompletionContextOrchestrationHandler : IOrchestrationCont
     {
         // Build the AICompletionContext using the existing handler pipeline.
         var completionContext = await _completionContextBuilder.BuildAsync(context.Resource);
+
         context.Context.CompletionContext = completionContext;
 
         // Resolve the SourceName from the connection configured on the completion context.

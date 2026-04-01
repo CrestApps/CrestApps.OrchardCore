@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Features;
 public sealed class ListFeaturesTool : AIFunction
 {
     public const string TheName = "listSiteFeature";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -18,9 +19,13 @@ public sealed class ListFeaturesTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "List features on the site";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -39,8 +44,10 @@ public sealed class ListFeaturesTool : AIFunction
         }
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+
         var features = (await shellFeaturesManager.GetAvailableFeaturesAsync())
             .Where(feature => !feature.EnabledByDependencyOnly && !feature.IsTheme());
+
         var enabledFeatureIds = (await shellFeaturesManager.GetEnabledFeaturesAsync())
             .Select(x => x.Id)
             .ToHashSet();

@@ -22,6 +22,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 {
     private const int _batchSize = 50;
     private const string _sessionDocumentType = "CrestApps.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
+
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -29,21 +30,27 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionPromptDataMigrations>>();
+
             var dialect = store.Configuration.SqlDialect;
+
             var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
             var table = $"{store.Configuration.TablePrefix}{documentTableName}";
             var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
+
             var quotedIdColumnName = dialect.QuoteForColumnName(nameof(Document.Id));
             var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
             var quotedContentColumnName = dialect.QuoteForColumnName(nameof(Document.Content));
+
             await using var connection = dbConnectionAccessor.CreateConnection();
             await connection.OpenAsync();
+
             // Query all AIChatSession documents from the AI collection.
             var sqlBuilder = new SqlBuilder(store.Configuration.TablePrefix, store.Configuration.SqlDialect);
             sqlBuilder.AddSelector(quotedIdColumnName);
             sqlBuilder.AddSelector("," + quotedContentColumnName);
             sqlBuilder.From(quotedTableName);
             sqlBuilder.WhereAnd($" {quotedTypeColumnName} = '{_sessionDocumentType}' ");
+
             try
             {
                 var documents = (await connection.QueryAsync<Document>(sqlBuilder.ToSqlString())).ToList();
@@ -63,6 +70,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                 for (var batchStart = 0; batchStart < documents.Count; batchStart += _batchSize)
                 {
                     var batch = documents.Skip(batchStart).Take(_batchSize).ToList();
+
                     using var session = store.CreateSession();
 
                     foreach (var document in batch)
@@ -126,7 +134,9 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 
                             // Remove the Prompts property from the original document.
                             sessionObject.Remove("Prompts");
+
                             var updatedContent = store.Configuration.ContentSerializer.Serialize(sessionObject);
+
                             await connection.ExecuteAsync(
                                 $"update {quotedTableName} set {quotedContentColumnName} = @content where {quotedIdColumnName} = @id",
                                 new
@@ -162,6 +172,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             catch (Exception ex)
             {
                 logger.LogError(ex, "An error occurred while migrating AIChatSession prompts to separate documents.");
+
                 throw;
             }
         });

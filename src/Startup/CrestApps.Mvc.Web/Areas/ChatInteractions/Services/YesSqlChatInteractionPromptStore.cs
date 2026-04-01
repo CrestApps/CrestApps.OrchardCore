@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlChatInteractionPromptStore : IChatInteractionPromptStore
 {
     private readonly ISession _session;
+
     public YesSqlChatInteractionPromptStore(ISession session)
     {
         _session = session;
@@ -34,6 +35,7 @@ public sealed class YesSqlChatInteractionPromptStore : IChatInteractionPromptSto
         var prompts = await _session
             .Query<ChatInteractionPrompt, ChatInteractionPromptIndex>(x => x.ChatInteractionId == chatInteractionId)
             .ListAsync();
+
         var count = 0;
 
         foreach (var prompt in prompts)

@@ -17,6 +17,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public AzureAIInferenceConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<AzureAIInferenceConnectionHandler> stringLocalizer)
@@ -27,8 +28,10 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
 
     public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
         if (!string.Equals(context.Model.Source, AzureAIInferenceConstants.ClientName, StringComparison.Ordinal))
@@ -61,14 +64,18 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         }
 
         var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
+
         var identityId = metadataNode[nameof(metadata.IdentityId)]?.GetValue<string>()?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(identityId) ? null : identityId;
+
         var apiKey = metadataNode[nameof(metadata.ApiKey)]?.GetValue<string>();
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             metadata.ApiKey = protector.Protect(apiKey);
         }
 

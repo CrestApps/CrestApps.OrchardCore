@@ -33,6 +33,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
             .Column<DateTime>("CreatedUtc"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
             .CreateIndex("IDX_AIChatSessionMetrics_DocumentId",
         "DocumentId",
@@ -41,6 +42,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
         "CreatedUtc"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
             .CreateIndex("IDX_AIChatSessionMetrics_ProfileDate",
         "DocumentId",
@@ -50,6 +52,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
         "IsResolved"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
             .CreateIndex("IDX_AIChatSessionMetrics_VisitorId",
         "DocumentId",
@@ -58,6 +61,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
         "SessionStartedUtc"),
         collection: AIConstants.AICollectionName
         );
+
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table => table
             .CreateIndex("IDX_AIChatSessionMetrics_TimeOfDay",
         "DocumentId",

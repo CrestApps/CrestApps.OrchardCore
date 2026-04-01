@@ -12,7 +12,9 @@ internal sealed class AIToolPermissionProvider : IPermissionProvider
     [
         AIPermissions.AccessAnyAITool,
     ];
+
     private readonly AIToolDefinitionOptions _toolDefinitions;
+
     public AIToolPermissionProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions)
     {
@@ -22,6 +24,7 @@ internal sealed class AIToolPermissionProvider : IPermissionProvider
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
         var permissions = new List<Permission>(_allPermissions);
+
         // Add dynamic permissions for tool definitions
 
         foreach (var toolName in _toolDefinitions.Tools.Keys)

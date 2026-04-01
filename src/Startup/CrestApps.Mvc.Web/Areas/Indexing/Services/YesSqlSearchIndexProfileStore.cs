@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlSearchIndexProfileStore : ISearchIndexProfileStore
 {
     private readonly ISession _session;
+
     public YesSqlSearchIndexProfileStore(ISession session)
     {
         _session = session;

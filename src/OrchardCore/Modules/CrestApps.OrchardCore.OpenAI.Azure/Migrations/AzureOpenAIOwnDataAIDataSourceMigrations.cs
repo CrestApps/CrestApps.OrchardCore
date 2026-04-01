@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
 {
     private readonly ShellSettings _shellSettings;
+
     public AzureOpenAIOwnDataAIDataSourceMigrations(ShellSettings shellSettings)
     {
         _shellSettings = shellSettings;
@@ -32,6 +33,7 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {
                 var needsUpdate = false;
+
                 // Migrate legacy AzureAIDataSourceIndexMetadata to first-class fields.
 
                 if (dataSource.Properties?.ContainsKey("AzureAIDataSourceIndexMetadata") == true)

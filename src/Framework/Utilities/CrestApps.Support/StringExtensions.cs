@@ -10,6 +10,7 @@ public static class StringExtensions
     /// </summary>
     public static string SanitizeLogValue(this string value)
         => value?.Replace("\r", "").Replace("\n", "") ?? string.Empty;
+
     public static bool Like(this string toSearch, string toFind)
     {
         var match = new Regex(@"\.|\$|\^|\{|\[|\(|\||\)|\*|\+|\?|\\").Replace(toFind, ch => @"\" + ch)

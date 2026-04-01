@@ -13,6 +13,7 @@ public static class ExpressionHelper
             throw new ArgumentException(string.Format(
                 "Expression '{0}' refers to a method, not a property.",
                 propertyLambda.ToString()));
+
         var propInfo = member.Member as PropertyInfo ?? throw new ArgumentException(string.Format(
             "Expression '{0}' refers to a field, not a property.",
             propertyLambda.ToString()));

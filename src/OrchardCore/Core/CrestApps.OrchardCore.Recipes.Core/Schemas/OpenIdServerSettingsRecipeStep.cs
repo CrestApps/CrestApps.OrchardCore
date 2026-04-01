@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class OpenIdServerSettingsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "OpenIdServerSettings";
+
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
     [

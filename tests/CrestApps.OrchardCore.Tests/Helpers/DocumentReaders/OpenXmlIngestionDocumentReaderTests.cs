@@ -14,16 +14,20 @@ namespace CrestApps.OrchardCore.Tests.Helpers.DocumentReaders;
 public sealed class OpenXmlIngestionDocumentReaderTests
 {
     private readonly OpenXmlIngestionDocumentReader _reader = new();
+
     #region Word (.docx)
+
     [Fact]
     public async Task ReadAsync_WordDocument_ExtractsParagraphs()
     {
         using var stream = CreateWordDocument("Hello World", "Second paragraph");
+
         var result = await _reader.ReadAsync(
             stream,
             "test.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
         Assert.Equal("Hello World", result.Sections[0].Elements[0].Text);
@@ -34,11 +38,13 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_WordDocument_SkipsEmptyParagraphs()
     {
         using var stream = CreateWordDocument("Content", "", "More content");
+
         var result = await _reader.ReadAsync(
             stream,
             "test.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
     }
@@ -47,16 +53,20 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_EmptyWordDocument_ReturnsNoSections()
     {
         using var stream = CreateWordDocument();
+
         var result = await _reader.ReadAsync(
             stream,
             "test.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             TestContext.Current.CancellationToken);
+
         Assert.Empty(result.Sections);
     }
 
     #endregion
+
     #region Excel (.xlsx) - Shared Strings
+
     [Fact]
     public async Task ReadAsync_ExcelWithSharedStrings_ExtractsRows()
     {
@@ -71,6 +81,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
         Assert.Equal("Title\tQuestion\tAnswer", result.Sections[0].Elements[0].Text);
@@ -91,6 +102,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
         Assert.Equal("Name\tValue", result.Sections[0].Elements[0].Text);
@@ -111,6 +123,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
         Assert.Equal("1\t2.5\t3.7", result.Sections[0].Elements[0].Text);
@@ -121,11 +134,13 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_ExcelWithBooleanValues_ExtractsRows()
     {
         using var stream = CreateExcelWithBooleans(true, false);
+
         var result = await _reader.ReadAsync(
         stream,
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Single(result.Sections[0].Elements);
         Assert.Equal("TRUE\tFALSE", result.Sections[0].Elements[0].Text);
@@ -135,12 +150,15 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_ExcelWithMultipleSheets_ExtractsAll()
     {
         using var stream = CreateExcelWithMultipleSheets();
+
         var result = await _reader.ReadAsync(
         stream,
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
+
         // Should have rows from both sheets.
         Assert.True(result.Sections[0].Elements.Count >= 2);
     }
@@ -149,11 +167,13 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_EmptyExcel_ReturnsNoSections()
     {
         using var stream = CreateEmptyExcel();
+
         var result = await _reader.ReadAsync(
         stream,
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Empty(result.Sections);
     }
 
@@ -161,26 +181,32 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_ExcelWithMixedCellTypes_ExtractsAll()
     {
         using var stream = CreateExcelWithMixedTypes();
+
         var result = await _reader.ReadAsync(
         stream,
         "test.xlsx",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.True(result.Sections[0].Elements.Count > 0);
     }
 
     #endregion
+
     #region PowerPoint (.pptx)
+
     [Fact]
     public async Task ReadAsync_PowerPoint_ExtractsSlideText()
     {
         using var stream = CreatePowerPoint("Slide 1 Title", "Slide 2 Content");
+
         var result = await _reader.ReadAsync(
         stream,
         "test.pptx",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
     }
@@ -189,43 +215,54 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     public async Task ReadAsync_EmptyPowerPoint_ReturnsNoSections()
     {
         using var stream = CreateEmptyPowerPoint();
+
         var result = await _reader.ReadAsync(
         stream,
         "test.pptx",
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         TestContext.Current.CancellationToken);
+
         Assert.Empty(result.Sections);
     }
 
     #endregion
+
     #region Unsupported Media Types
+
     [Fact]
     public async Task ReadAsync_UnsupportedMediaType_ThrowsNotSupportedException()
     {
         using var stream = new MemoryStream();
+
         await Assert.ThrowsAsync<NotSupportedException>(() =>
         _reader.ReadAsync(stream, "test.txt", "text/plain", TestContext.Current.CancellationToken));
     }
 
     #endregion
+
     #region Non-Seekable Stream
+
     [Fact]
     public async Task ReadAsync_NonSeekableStream_ExtractsCorrectly()
     {
         using var seekableStream = CreateWordDocument("Test content");
         using var nonSeekable = new NonSeekableStream(seekableStream);
+
         var result = await _reader.ReadAsync(
         nonSeekable,
         "test.docx",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         TestContext.Current.CancellationToken);
+
         Assert.Single(result.Sections);
         Assert.Single(result.Sections[0].Elements);
         Assert.Equal("Test content", result.Sections[0].Elements[0].Text);
     }
 
     #endregion
+
     #region Helpers
+
     private static MemoryStream CreateWordDocument(params string[] paragraphs)
     {
         var stream = new MemoryStream();
@@ -254,6 +291,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             // Build shared string table.
             var allStrings = rows.SelectMany(r => r).Distinct().ToList();
             var sstPart = workbookPart.AddNewPart<SharedStringTablePart>();
@@ -265,8 +303,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             }
 
             sstPart.SharedStringTable = sst;
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
+
             uint rowIndex = 1;
 
             foreach (var rowData in rows)
@@ -294,6 +334,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             }
 
             worksheetPart.Worksheet = new Worksheet(sheetData);
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -315,8 +356,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
+
             uint rowIndex = 1;
 
             foreach (var rowData in rows)
@@ -344,6 +387,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             }
 
             worksheetPart.Worksheet = new Worksheet(sheetData);
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -365,8 +409,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
+
             uint rowIndex = 1;
 
             foreach (var rowData in rows)
@@ -394,6 +440,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             }
 
             worksheetPart.Worksheet = new Worksheet(sheetData);
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -415,6 +462,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
             var row = new Row { RowIndex = 1 };
@@ -432,6 +480,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
 
             sheetData.AppendChild(row);
             worksheetPart.Worksheet = new Worksheet(sheetData);
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -470,6 +519,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
 
                 sheetData.AppendChild(row);
                 worksheetPart.Worksheet = new Worksheet(sheetData);
+
                 sheets.AppendChild(new Sheet
                 {
                     Id = workbookPart.GetIdOfPart(worksheetPart),
@@ -491,10 +541,12 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             var sstPart = workbookPart.AddNewPart<SharedStringTablePart>();
             var sst = new SharedStringTable();
             sst.AppendChild(new SharedStringItem(new DocumentFormat.OpenXml.Spreadsheet.Text("SharedText")));
             sstPart.SharedStringTable = sst;
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             var sheetData = new SheetData();
             var row = new Row { RowIndex = 1 };
@@ -532,6 +584,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
 
             sheetData.AppendChild(row);
             worksheetPart.Worksheet = new Worksheet(sheetData);
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -553,8 +606,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         {
             var workbookPart = doc.AddWorkbookPart();
             workbookPart.Workbook = new Workbook();
+
             var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
             worksheetPart.Worksheet = new Worksheet(new SheetData());
+
             var sheets = workbookPart.Workbook.AppendChild(new Sheets());
             sheets.AppendChild(new Sheet
             {
@@ -577,6 +632,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             var presentationPart = doc.AddPresentationPart();
             presentationPart.Presentation = new P.Presentation();
             var slideIdList = presentationPart.Presentation.AppendChild(new P.SlideIdList());
+
             uint slideId = 256;
 
             foreach (var text in slideTexts)
@@ -603,6 +659,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
                 new Drawing.Run(
                 new Drawing.RunProperties { Language = "en-US" },
                 new Drawing.Text(text))))))));
+
                 slideIdList.AppendChild(new P.SlideId
                 {
                     Id = slideId++,
@@ -630,14 +687,15 @@ public sealed class OpenXmlIngestionDocumentReaderTests
 
         return stream;
     }
-
     /// <summary>
     /// A wrapper stream that disables seeking to test the non-seekable code path.
     /// </summary>
     private sealed class NonSeekableStream : Stream
     {
         private readonly Stream _inner;
+
         public NonSeekableStream(Stream inner) => _inner = inner;
+
         public override bool CanRead => _inner.CanRead;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
@@ -648,10 +706,13 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => _inner.ReadAsync(buffer, offset, count, cancellationToken);
+
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
             => _inner.ReadAsync(buffer, cancellationToken);
+
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
             => _inner.CopyToAsync(destination, bufferSize, cancellationToken);
     }

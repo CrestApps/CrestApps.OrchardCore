@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
+
     public OmnichannelActivityStore(
         ISession session,
         IEnumerable<IListOmnichannelActivityFilterHandler> handlers)
@@ -29,6 +30,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         , collection: OmnichannelConstants.CollectionName)
             .OrderBy(x => x.ScheduledUtc)
             .ThenBy(x => x.Id);
+
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
         return new PageResult<OmnichannelActivity>()
@@ -47,6 +49,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         index.AssignedToId == userId &&
             index.Status == ActivityStatus.NotStated &&
                 index.InteractionType == ActivityInteractionType.Manual, collection: OmnichannelConstants.CollectionName);
+
         var context = new ListOmnichannelActivityFilterContext(filter, query);
 
         foreach (var handler in _handlers)
@@ -55,6 +58,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         }
 
         query = context.Query.OrderByDescending(x => x.ScheduledUtc).ThenBy(x => x.Id);
+
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
         return new PageResult<OmnichannelActivity>()
@@ -74,6 +78,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         , collection: OmnichannelConstants.CollectionName)
             .OrderByDescending(x => x.CompletedUtc)
             .ThenBy(x => x.Id);
+
         var skip = (Math.Max(page, 1) - 1) * pageSize;
 
         return new PageResult<OmnichannelActivity>()

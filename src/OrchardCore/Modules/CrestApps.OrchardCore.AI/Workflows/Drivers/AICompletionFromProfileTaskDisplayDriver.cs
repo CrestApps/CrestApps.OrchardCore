@@ -17,6 +17,7 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
+
     public AICompletionFromProfileTaskDisplayDriver(
         IAIProfileStore profileStore,
         ILiquidTemplateManager liquidTemplateManager,
@@ -32,6 +33,7 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
         model.ProfileId = activity.ProfileId;
         model.PromptTemplate = activity.PromptTemplate;
         model.ResultPropertyName = activity.ResultPropertyName;
+
         model.Profiles = (await _profileStore.GetAllAsync())
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
     }
@@ -39,6 +41,7 @@ public sealed class AICompletionFromProfileTaskDisplayDriver : ActivityDisplayDr
     public override async Task<IDisplayResult> UpdateAsync(AICompletionFromProfileTask activity, UpdateEditorContext context)
     {
         var model = new AICompletionFromProfileTaskViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrEmpty(model.ProfileId))

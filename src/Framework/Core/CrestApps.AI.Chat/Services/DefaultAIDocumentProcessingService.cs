@@ -9,7 +9,9 @@ using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 namespace CrestApps.AI.Chat.Services;
+
 /// <summary>
 /// Default host-agnostic document processor used by MVC and Orchard Core hosts.
 /// </summary>

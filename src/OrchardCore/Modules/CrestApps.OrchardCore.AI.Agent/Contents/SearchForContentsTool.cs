@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Contents;
 public sealed class SearchForContentsTool : AIFunction
 {
     public const string TheName = "searchForContentItems";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -37,57 +38,78 @@ public sealed class SearchForContentsTool : AIFunction
         "term"
       ],
       "additionalProperties": false
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Search for content items that match the given query along with a way to paginate the results.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SearchForContentsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
+
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("term", out var term))
+
         {
             logger.LogWarning("AI tool '{ToolName}': Unable to find a term argument in the function arguments.", TheName);
 
             return "Unable to find a term argument in the function arguments.";
+
         }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
+
         var startingIndex = (Math.Max(1, page) - 1) * pagerOptions.PageSize;
+
         var query = await contentsAdminListQueryService.QueryAsync(new ContentOptionsViewModel()
         {
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
+
             FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
+
         }, updateModelAccessor.ModelUpdater);
+
         var contentItemsCount = await query.CountAsync(cancellationToken);
+
         var contentItems = await query.Skip(startingIndex)
+
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
         }
 

@@ -9,6 +9,7 @@ public sealed class MediaRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "media";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

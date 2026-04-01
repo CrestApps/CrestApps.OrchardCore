@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Core.Services;
 public sealed class SentenceBoundaryDetectorTests
 {
     // --- Null / Empty / Whitespace ---
+
     [Fact]
     public void EndsWithSentenceBoundary_WhenNull_ShouldReturnFalse()
     {
@@ -24,6 +25,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Hard boundaries (. ! ? … \n) ---
+
     [Theory]
     [InlineData("Hello world.")]
     [InlineData("What is AI?")]
@@ -45,6 +47,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Hard boundary with trailing whitespace ---
+
     [Theory]
     [InlineData("Hello world.  ")]
     [InlineData("What is AI?  ")]
@@ -55,6 +58,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Hard boundary with trailing wrappers (" ' ) ] }) ---
+
     [Theory]
     [InlineData("He said \"hello.\"")]
     [InlineData("She replied 'yes!'")]
@@ -68,6 +72,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Abbreviations (should NOT count as hard boundary) ---
+
     [Theory]
     [InlineData("Talk to Mr.")]
     [InlineData("Hello Mrs.")]
@@ -84,6 +89,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Abbreviations are case-insensitive ---
+
     [Theory]
     [InlineData("Talk to MR.")]
     [InlineData("Talk to mr.")]
@@ -94,6 +100,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Soft boundaries (, ; : -) below threshold ---
+
     [Theory]
     [InlineData("Hello,")]
     [InlineData("First;")]
@@ -105,6 +112,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Soft boundaries at or above 120 chars ---
+
     [Theory]
     [InlineData(',')]
     [InlineData(';')]
@@ -130,6 +138,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Force flush at 200 chars (any content) ---
+
     [Fact]
     public void EndsWithSentenceBoundary_WhenAtForceFlushLength_ShouldReturnTrue()
     {
@@ -152,6 +161,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Hard boundary followed by period that's not abbreviation ---
+
     [Theory]
     [InlineData("This is fine.")]
     [InlineData("I agree.")]
@@ -162,6 +172,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Span overload ---
+
     [Fact]
     public void EndsWithSentenceBoundary_SpanOverload_WhenEmpty_ShouldReturnFalse()
     {
@@ -176,6 +187,7 @@ public sealed class SentenceBoundaryDetectorTests
     }
 
     // --- Edge cases ---
+
     [Fact]
     public void EndsWithSentenceBoundary_WhenOnlyPeriod_ShouldReturnTrue()
     {

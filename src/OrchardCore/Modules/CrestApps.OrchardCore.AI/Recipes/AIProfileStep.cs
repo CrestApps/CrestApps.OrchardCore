@@ -14,6 +14,7 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
     private readonly IAIProfileManager _profileManager;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileStep(
         IAIProfileManager profileManager,
         IStringLocalizer<AIProfileStep> stringLocalizer)
@@ -31,7 +32,9 @@ internal sealed class AIProfileStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProfile profile = null;
+
             var id = token[nameof(AIProfile.ItemId)]?.GetValue<string>();
+
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
+
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs;
 
 public sealed class CatalogManagerTests
@@ -14,6 +15,7 @@ public sealed class CatalogManagerTests
         var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
         return new CatalogManager<TestCatalogEntry>(catalog, [], logger);
     }
+
     private static (CatalogManager<TestCatalogEntry> manager, Mock<ICatalogEntryHandler<TestCatalogEntry>> handlerMock) CreateManagerWithHandler(List<TestCatalogEntry> records = null)
     {
         records ??= new List<TestCatalogEntry>();
@@ -23,6 +25,7 @@ public sealed class CatalogManagerTests
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handlerMock.Object], logger);
         return (manager, handlerMock);
     }
+
     [Fact]
     public async Task FindByIdAsync_ReturnsEntry_WhenExists()
     {
@@ -31,6 +34,7 @@ public sealed class CatalogManagerTests
         var result = await manager.FindByIdAsync("1");
         Assert.Equal(entry, result);
     }
+
     [Fact]
     public async Task FindByIdAsync_ReturnsNull_WhenNotExists()
     {
@@ -38,6 +42,7 @@ public sealed class CatalogManagerTests
         var result = await manager.FindByIdAsync("notfound");
         Assert.Null(result);
     }
+
     [Fact]
     public async Task CreateAsync_AddsEntry()
     {
@@ -48,6 +53,7 @@ public sealed class CatalogManagerTests
         var result = await manager.FindByIdAsync("new");
         Assert.NotNull(result);
     }
+
     [Fact]
     public async Task UpdateAsync_UpdatesEntry()
     {
@@ -57,6 +63,7 @@ public sealed class CatalogManagerTests
         var result = await manager.FindByIdAsync("1");
         Assert.Equal(entry, result);
     }
+
     [Fact]
     public async Task DeleteAsync_RemovesEntry_WhenExists()
     {
@@ -67,6 +74,7 @@ public sealed class CatalogManagerTests
         var deleted = await manager.FindByIdAsync("1");
         Assert.Null(deleted);
     }
+
     [Fact]
     public async Task DeleteAsync_ReturnsFalse_WhenNotExists()
     {
@@ -75,6 +83,7 @@ public sealed class CatalogManagerTests
         var result = await manager.DeleteAsync(entry);
         Assert.False(result);
     }
+
     [Fact]
     public async Task GetAllAsync_ReturnsAllEntries()
     {
@@ -83,6 +92,7 @@ public sealed class CatalogManagerTests
         var result = await manager.GetAllAsync();
         Assert.Equal(2, result.Count());
     }
+
     [Fact]
     public async Task PageAsync_ReturnsPagedResults()
     {
@@ -94,6 +104,7 @@ public sealed class CatalogManagerTests
         Assert.Equal(3, result.Entries.Count);
         Assert.Equal("4", result.Entries.First().ItemId);
     }
+
     [Fact]
     public async Task NewAsync_CreatesNewEntry()
     {
@@ -102,6 +113,7 @@ public sealed class CatalogManagerTests
         Assert.NotNull(entry);
         Assert.False(string.IsNullOrEmpty(entry.ItemId));
     }
+
     [Fact]
     public async Task ValidateAsync_ReturnsValidationResult()
     {
@@ -110,6 +122,7 @@ public sealed class CatalogManagerTests
         var result = await manager.ValidateAsync(entry);
         Assert.NotNull(result);
     }
+
     [Fact]
     public async Task DeleteAsync_InvokesHandlersInOrder()
     {
@@ -119,6 +132,7 @@ public sealed class CatalogManagerTests
         handlerMock.Verify(h => h.DeletingAsync(It.Is<DeletingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.DeletedAsync(It.Is<DeletedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task CreateAsync_InvokesHandlersInOrder()
     {
@@ -128,6 +142,7 @@ public sealed class CatalogManagerTests
         handlerMock.Verify(h => h.CreatingAsync(It.Is<CreatingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.CreatedAsync(It.Is<CreatedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task UpdateAsync_InvokesHandlersInOrder()
     {
@@ -137,6 +152,7 @@ public sealed class CatalogManagerTests
         handlerMock.Verify(h => h.UpdatingAsync(It.Is<UpdatingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.UpdatedAsync(It.Is<UpdatedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task ValidateAsync_InvokesHandlersInOrder()
     {
@@ -146,6 +162,7 @@ public sealed class CatalogManagerTests
         handlerMock.Verify(h => h.ValidatingAsync(It.Is<ValidatingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.ValidatedAsync(It.Is<ValidatedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task NewAsync_InvokesHandlersInOrder()
     {
@@ -154,6 +171,7 @@ public sealed class CatalogManagerTests
         handlerMock.Verify(h => h.InitializingAsync(It.Is<InitializingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.InitializedAsync(It.Is<InitializedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task FindByIdAsync_InvokesLoadedHandler()
     {
@@ -162,6 +180,7 @@ public sealed class CatalogManagerTests
         await manager.FindByIdAsync("1");
         handlerMock.Verify(h => h.LoadedAsync(It.Is<LoadedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
     }
+
     [Fact]
     public async Task GetAllAsync_InvokesLoadedHandlerForEach()
     {
@@ -170,6 +189,7 @@ public sealed class CatalogManagerTests
         await manager.GetAllAsync();
         handlerMock.Verify(h => h.LoadedAsync(It.IsAny<LoadedContext<TestCatalogEntry>>()), Times.Exactly(2));
     }
+
     [Fact]
     public async Task DeleteAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -180,6 +200,7 @@ public sealed class CatalogManagerTests
         var callOrder = new Queue<string>();
         var existsInCatalogDuringDeleting = false;
         var existsInCatalogDuringDeleted = false;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnDeletingAsync = async ctx =>
@@ -194,14 +215,17 @@ public sealed class CatalogManagerTests
                 callOrder.Enqueue("DeletedAsync");
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         await manager.DeleteAsync(entry);
+
         Assert.Equal("DeletingAsync", callOrder.Dequeue());
         Assert.Equal("DeletedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringDeleting); // Should exist before deletion
         Assert.False(existsInCatalogDuringDeleted); // Should not exist after deletion
     }
+
     [Fact]
     public async Task CreateAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -212,6 +236,7 @@ public sealed class CatalogManagerTests
         var callOrder = new Queue<string>();
         var existsInCatalogDuringCreating = false;
         var existsInCatalogDuringCreated = false;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnCreatingAsync = async ctx =>
@@ -225,14 +250,17 @@ public sealed class CatalogManagerTests
                 callOrder.Enqueue("CreatedAsync");
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         await manager.CreateAsync(entry);
+
         Assert.Equal("CreatingAsync", callOrder.Dequeue());
         Assert.Equal("CreatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringCreating); // Should not exist before creation
         Assert.True(existsInCatalogDuringCreated); // Should exist after creation
     }
+
     [Fact]
     public async Task UpdateAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -243,6 +271,7 @@ public sealed class CatalogManagerTests
         var callOrder = new Queue<string>();
         var existsInCatalogDuringUpdating = false;
         var existsInCatalogDuringUpdated = false;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnUpdatingAsync = async ctx =>
@@ -256,14 +285,17 @@ public sealed class CatalogManagerTests
                 callOrder.Enqueue("UpdatedAsync");
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         await manager.UpdateAsync(entry);
+
         Assert.Equal("UpdatingAsync", callOrder.Dequeue());
         Assert.Equal("UpdatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringUpdating); // Should exist before update
         Assert.True(existsInCatalogDuringUpdated); // Should exist after update
     }
+
     [Fact]
     public async Task ValidateAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -274,6 +306,7 @@ public sealed class CatalogManagerTests
         var callOrder = new Queue<string>();
         var existsInCatalogDuringValidating = false;
         var existsInCatalogDuringValidated = false;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnValidatingAsync = async ctx =>
@@ -287,14 +320,17 @@ public sealed class CatalogManagerTests
                 callOrder.Enqueue("ValidatedAsync");
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         await manager.ValidateAsync(entry);
+
         Assert.Equal("ValidatingAsync", callOrder.Dequeue());
         Assert.Equal("ValidatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringValidating); // Should exist before validating
         Assert.True(existsInCatalogDuringValidated); // Should exist after validated
     }
+
     [Fact]
     public async Task NewAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -304,23 +340,28 @@ public sealed class CatalogManagerTests
         var callOrder = new Queue<string>();
         var entryIdDuringInitializing = string.Empty;
         var entryIdDuringInitialized = string.Empty;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnInitializingAsync = ctx =>
             {
                 entryIdDuringInitializing = ctx.Model.ItemId;
                 callOrder.Enqueue("InitializingAsync");
+
                 return Task.CompletedTask;
             },
             OnInitializedAsync = ctx =>
             {
                 entryIdDuringInitialized = ctx.Model.ItemId;
                 callOrder.Enqueue("InitializedAsync");
+
                 return Task.CompletedTask;
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         var entry = await manager.NewAsync();
+
         Assert.Equal("InitializingAsync", callOrder.Dequeue());
         Assert.Equal("InitializedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
@@ -328,6 +369,7 @@ public sealed class CatalogManagerTests
         Assert.False(string.IsNullOrEmpty(entryIdDuringInitialized));
         Assert.Equal(entryIdDuringInitializing, entryIdDuringInitialized);
     }
+
     [Fact]
     public async Task FindByIdAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -337,6 +379,7 @@ public sealed class CatalogManagerTests
         var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -345,12 +388,15 @@ public sealed class CatalogManagerTests
                 callOrder.Enqueue("LoadedAsync");
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         await manager.FindByIdAsync("1");
+
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded); // Should exist when loaded
     }
+
     [Fact]
     public async Task PageAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -359,6 +405,7 @@ public sealed class CatalogManagerTests
         var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var loadedIds = new List<string>();
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnLoadedAsync = ctx =>
@@ -368,9 +415,11 @@ public sealed class CatalogManagerTests
                 return Task.CompletedTask;
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         var context = new QueryContext();
         var result = await manager.PageAsync(1, 5, context);
+
         foreach (var entry in entries)
         {
             Assert.Equal($"LoadedAsync:{entry.ItemId}", callOrder.Dequeue());
@@ -378,6 +427,7 @@ public sealed class CatalogManagerTests
         Assert.Empty(callOrder);
         Assert.Equal(entries.Select(e => e.ItemId), loadedIds);
     }
+
     [Fact]
     public async Task GetAllAsync_InvokesHandlersInCorrectOrderAndTiming()
     {
@@ -387,10 +437,12 @@ public sealed class CatalogManagerTests
             new() { ItemId = "2" },
             new() { ItemId = "3" }
         };
+
         var catalog = FakeDocumentManager.CreateCatalog(entries, out _);
         var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var loadedIds = new List<string>();
+
         var handler = new TestCatalogEntryHandler<TestCatalogEntry>
         {
             OnLoadedAsync = ctx =>
@@ -400,8 +452,10 @@ public sealed class CatalogManagerTests
                 return Task.CompletedTask;
             }
         };
+
         var manager = new CatalogManager<TestCatalogEntry>(catalog, [handler], logger);
         var result = (await manager.GetAllAsync()).ToList();
+
         foreach (var entry in entries)
         {
             Assert.Equal($"LoadedAsync:{entry.ItemId}", callOrder.Dequeue());

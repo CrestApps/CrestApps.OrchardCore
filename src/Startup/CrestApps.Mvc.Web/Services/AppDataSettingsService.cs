@@ -6,6 +6,7 @@ public sealed class AppDataSettingsService<T>
     private readonly IConfiguration _configuration;
     private readonly AppDataConfigurationFileService _configurationFileService;
     private readonly AppDataSettingsSectionResolver _sectionResolver;
+
     public AppDataSettingsService(
         IConfiguration configuration,
         AppDataConfigurationFileService configurationFileService,

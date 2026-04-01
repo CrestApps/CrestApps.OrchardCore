@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "OpenAI Chat",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = OpenAIConstants.Feature.Area,
     Name = "OpenAI Chat",

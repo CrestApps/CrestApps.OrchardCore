@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHandler
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+
     public AzureAIInferenceConnectionHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
@@ -30,6 +31,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
 
         // Always set the API key to an empty string during export to prevent accidental exposure.
         metadataNode[nameof(AzureAIInferenceConnectionMetadata.ApiKey)] = string.Empty;
+
         context.ExportData["Properties"][nameof(AzureAIInferenceConnectionMetadata)] = metadataNode;
     }
 
@@ -41,6 +43,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
         }
 
         var metadata = context.Connection.As<AzureAIInferenceConnectionMetadata>();
+
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();
         context.Values["IdentityId"] = metadata.IdentityId;
@@ -48,6 +51,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             context.Values["ApiKey"] = protector.Unprotect(metadata.ApiKey);
         }
     }

@@ -9,6 +9,7 @@ public sealed class AvatarStylesFilter : IAsyncResultFilter
 {
     private readonly IResourceManager _resourceManager;
     private readonly UserAvatarOptions _avatarOptions;
+
     public AvatarStylesFilter(
         IResourceManager resourceManager,
         IOptions<UserAvatarOptions> options)

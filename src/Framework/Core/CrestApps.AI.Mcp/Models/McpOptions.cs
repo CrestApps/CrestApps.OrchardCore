@@ -44,7 +44,6 @@ public sealed class McpResourceTypeEntry
     public LocalizedString DisplayName { get; set; }
 
     public LocalizedString Description { get; set; }
-
     /// <summary>
     /// Gets or sets the variables supported by this resource type.
     /// These are displayed in the UI to help users understand what variables can be used in URI patterns.

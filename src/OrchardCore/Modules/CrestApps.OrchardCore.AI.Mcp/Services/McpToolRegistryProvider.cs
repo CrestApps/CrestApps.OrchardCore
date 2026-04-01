@@ -21,9 +21,11 @@ internal sealed class McpToolRegistryProvider : IToolRegistryProvider
 {
     private static readonly JsonElement _emptySchema = JsonSerializer.Deserialize<JsonElement>(
         """{"type": "object", "properties": {}, "additionalProperties": false}""");
+
     private readonly IMcpServerMetadataCacheProvider _metadataProvider;
     private readonly ISourceCatalog<McpConnection> _store;
     private readonly ILogger _logger;
+
     public McpToolRegistryProvider(
         IMcpServerMetadataCacheProvider metadataProvider,
         ISourceCatalog<McpConnection> store,
@@ -77,6 +79,7 @@ internal sealed class McpToolRegistryProvider : IToolRegistryProvider
                     var toolName = tool.Name;
                     var toolDescription = tool.Description ?? toolName;
                     var toolSchema = tool.InputSchema ?? _emptySchema;
+
                     entries.Add(new ToolRegistryEntry
                     {
                         Id = $"mcp:{connectionId}:{toolName}",

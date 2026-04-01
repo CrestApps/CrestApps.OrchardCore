@@ -5,7 +5,9 @@ using CrestApps.AI.Models;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Services;
+
 /// <summary>
 /// Extracts focused search queries from the user's message using a lightweight utility LLM call.
 /// Results are cached per <see cref="OrchestrationContext"/> so that multiple preemptive RAG
@@ -28,6 +30,7 @@ public sealed class PreemptiveSearchQueryProvider
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ITemplateService _aiTemplateService;
     private readonly ILogger _logger;
+
     public PreemptiveSearchQueryProvider(
         IAIClientFactory aiClientFactory,
         IAIDeploymentManager deploymentManager,
@@ -58,6 +61,7 @@ public sealed class PreemptiveSearchQueryProvider
 
         return queries;
     }
+
     private async Task<IList<string>> ExtractSearchQueriesAsync(OrchestrationContext context)
     {
         var chatClient = await TryCreateUtilityChatClientAsync(context);

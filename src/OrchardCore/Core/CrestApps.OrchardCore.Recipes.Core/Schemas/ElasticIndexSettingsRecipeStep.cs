@@ -9,6 +9,7 @@ public sealed class ElasticIndexSettingsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "ElasticIndexSettings";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

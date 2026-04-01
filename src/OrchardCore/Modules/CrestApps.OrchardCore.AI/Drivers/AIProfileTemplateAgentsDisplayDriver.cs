@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIProfileManager _profileManager;
+
     public AIProfileTemplateAgentsDisplayDriver(IAIProfileManager profileManager)
     {
         _profileManager = profileManager;
@@ -18,8 +19,10 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
     {
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
         var alwaysAvailableCount = allAgents
             .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+
         var onDemandAgents = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
@@ -28,6 +31,7 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         {
             var metadata = template.As<ProfileTemplateMetadata>();
             var selectedNames = metadata?.AgentNames ?? [];
+
             model.AlwaysAvailableAgentCount = alwaysAvailableCount;
             model.Agents = onDemandAgents.Select(agent => new ToolEntry
             {
@@ -36,6 +40,7 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
                 Description = agent.Description,
                 IsSelected = selectedNames.Contains(agent.Name),
             }).OrderBy(entry => entry.DisplayText).ToArray();
+
         }).Location("Content:5#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -48,14 +53,19 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         }
 
         var model = new EditProfileAgentsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var selectedAgentNames = model.Agents?.Where(a => a.IsSelected).Select(a => a.ItemId);
+
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
+
         var validAgentNames = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
             .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var metadata = template.As<ProfileTemplateMetadata>();
 
         if (selectedAgentNames is null || !selectedAgentNames.Any())

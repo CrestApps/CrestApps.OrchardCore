@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Users;
 internal sealed class GetUserInfoTool : AIFunction
 {
     public const string TheName = "getUserInfo";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -34,9 +35,13 @@ internal sealed class GetUserInfoTool : AIFunction
       "required": []
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Gets users information.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -55,9 +60,11 @@ internal sealed class GetUserInfoTool : AIFunction
         }
 
         var userManager = arguments.Services.GetRequiredService<UserManager<IUser>>();
+
         var userId = arguments.GetFirstValueOrDefault<string>("userId");
         var username = arguments.GetFirstValueOrDefault<string>("username");
         var email = arguments.GetFirstValueOrDefault<string>("email");
+
         var hasUserId = !string.IsNullOrEmpty(userId);
         var hasUsername = !string.IsNullOrEmpty(username);
         var hasEmail = !string.IsNullOrEmpty(email);

@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Deployments.Sources;
 internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<AIProfileTemplateDeploymentStep>
 {
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
+
     public AIProfileTemplateDeploymentSource(INamedCatalog<AIProfileTemplate> templatesCatalog)
     {
         _templatesCatalog = templatesCatalog;
@@ -18,7 +19,9 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
     protected override async Task ProcessAsync(AIProfileTemplateDeploymentStep step, DeploymentPlanResult result)
     {
         var templates = await _templatesCatalog.GetAllAsync();
+
         var templatesData = new JsonArray();
+
         var templateNames = step.IncludeAll
         ? []
         : step.TemplateNames ?? [];

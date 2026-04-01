@@ -15,7 +15,9 @@ using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using CrestApps.Templates.Services;
+
 using Microsoft.AspNetCore.Authorization;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
@@ -40,10 +42,12 @@ public sealed class AIProfileController : Controller
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
+
     private readonly CopilotOptions _copilotOptions;
     private readonly GitHubOAuthService _oauthService;
     private readonly AIToolDefinitionOptions _toolOptions;
     private readonly IAIDataSourceStore _dataSourceStore;
+
     public AIProfileController(
         IAIProfileManager profileManager,
         ICatalog<AIDeployment> deploymentCatalog,
@@ -79,9 +83,11 @@ public sealed class AIProfileController : Controller
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
         _copilotOptions = copilotOptions.Value;
+
         _oauthService = oauthService;
         _toolOptions = toolOptions.Value;
         _dataSourceStore = dataSourceStore;
+
     }
 
     public async Task<IActionResult> Index()
@@ -89,10 +95,12 @@ public sealed class AIProfileController : Controller
         var profiles = await _profileManager.GetAllAsync();
 
         return View(profiles);
+
     }
 
     public async Task<IActionResult> Create([FromQuery] string templateId = null)
     {
+
         var model = new AIProfileViewModel { Type = AIProfileType.Chat, UseCaching = true, IsListable = true, IsRemovable = true };
 
         if (!string.IsNullOrWhiteSpace(templateId))
@@ -104,9 +112,12 @@ public sealed class AIProfileController : Controller
                 var profile = new AIProfile { Type = AIProfileType.Chat };
 
                 ApplyTemplateToProfile(profile, template);
+
                 model = AIProfileViewModel.FromProfile(profile);
+
                 await NormalizeDeploymentSelectorsAsync(model);
             }
+
         }
 
         await PopulateDropdownsAsync(model);
@@ -118,12 +129,14 @@ public sealed class AIProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AIProfileViewModel model, List<IFormFile> Documents)
     {
+
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
         if (!ModelState.IsValid)
+
         {
             await PopulateDropdownsAsync(model);
 
@@ -135,14 +148,17 @@ public sealed class AIProfileController : Controller
         model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
         model.ApplyTo(profile);
+
         await _profileManager.CreateAsync(profile);
 
         if (Documents != null && Documents.Count > 0)
         {
+
             await UploadDocumentsAsync(profile, Documents);
         }
 
         return RedirectToAction(nameof(Index));
+
     }
 
     public async Task<IActionResult> Edit(string id)
@@ -152,9 +168,11 @@ public sealed class AIProfileController : Controller
         if (profile == null)
         {
             return NotFound();
+
         }
 
         var model = AIProfileViewModel.FromProfile(profile);
+
         await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDropdownsAsync(model);
 
@@ -165,13 +183,16 @@ public sealed class AIProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AIProfileViewModel model)
     {
+
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
         if (!ModelState.IsValid)
+
         {
+
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -182,46 +203,58 @@ public sealed class AIProfileController : Controller
         if (existing == null)
         {
             return NotFound();
+
         }
 
         model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
+
         model.ApplyTo(existing);
+
         await _profileManager.UpdateAsync(existing);
 
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
+
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
         var profile = await _profileManager.FindByIdAsync(id);
 
         if (profile == null)
+
         {
             return NotFound();
+
         }
 
         await _profileManager.DeleteAsync(profile);
 
         return RedirectToAction(nameof(Index));
+
     }
 
     private async Task PopulateDropdownsAsync(AIProfileViewModel model)
     {
         var allDeployments = await _deploymentCatalog.GetAllAsync();
+
         model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
         model.ChatDeployments.AddRange(allDeployments
             .Where(d => d.Type.Supports(AIDeploymentType.Chat))
             .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
+
         model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
         model.UtilityDeployments.AddRange(allDeployments
             .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+
             .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
+
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
         model.Orchestrators = [new SelectListItem("— Default orchestrator —", "")];
         model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+
         // Copilot
         model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
         model.CopilotIsConfigured = IsCopilotConfigured();
@@ -242,18 +275,22 @@ public sealed class AIProfileController : Controller
                     var models = await _oauthService.ListModelsAsync(userId);
                     model.CopilotAvailableModels = models
                         .Select(m => new SelectListItem(m.Name, m.Id))
+
                         .ToList();
                 }
             }
+
         }
 
         var templates = await _templateCatalog.GetAllAsync();
         model.Templates = [new SelectListItem("— No Template —", "")];
         model.Templates.AddRange(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
+
         model.AvailableProfileTemplates = [new SelectListItem("— Select a template to apply —", "")];
         model.AvailableProfileTemplates.AddRange(templates
             .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
             .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
+
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableTools = _toolOptions.Tools
             .Where(kvp => !kvp.Value.IsSystemTool)
@@ -264,10 +301,12 @@ public sealed class AIProfileController : Controller
                 Description = kvp.Value.Description,
                 Category = kvp.Value.Category ?? "Miscellaneous",
                 IsSelected = selectedNames.Contains(kvp.Key),
+
             })
         .OrderBy(t => t.Category)
         .ThenBy(t => t.Title)
         .ToList();
+
         var connections = await _a2aConnectionCatalog.GetAllAsync();
         var selectedConnectionIds = new HashSet<string>(model.SelectedA2AConnectionIds ?? [], StringComparer.Ordinal);
         model.AvailableA2AConnections = connections
@@ -276,10 +315,12 @@ public sealed class AIProfileController : Controller
             {
                 ItemId = connection.ItemId,
                 DisplayText = connection.DisplayText,
+
                 Endpoint = connection.Endpoint,
                 IsSelected = selectedConnectionIds.Contains(connection.ItemId),
             })
         .ToList();
+
         var mcpConnections = await _mcpConnectionCatalog.GetAllAsync();
         var selectedMcpIds = new HashSet<string>(model.SelectedMcpConnectionIds ?? [], StringComparer.Ordinal);
         model.AvailableMcpConnections = mcpConnections
@@ -288,10 +329,12 @@ public sealed class AIProfileController : Controller
             {
                 ItemId = c.ItemId,
                 DisplayText = c.DisplayText,
+
                 Source = c.Source,
                 IsSelected = selectedMcpIds.Contains(c.ItemId),
             })
         .ToList();
+
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
         var selectedAgentNames = new HashSet<string>(model.SelectedAgentNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableAgents = allAgents
@@ -301,15 +344,20 @@ public sealed class AIProfileController : Controller
             {
                 Name = a.Name,
                 DisplayText = a.DisplayText ?? a.Name,
+
                 Description = a.Description,
                 IsSelected = selectedAgentNames.Contains(a.Name),
             })
         .ToList();
+
         var allDataSources = await _dataSourceStore.GetAllAsync();
+
         model.DataSources = [new SelectListItem("— No data source —", "")];
         model.DataSources.AddRange(allDataSources
+
             .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
             .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)));
+
         var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
 
@@ -319,6 +367,7 @@ public sealed class AIProfileController : Controller
             model.HasDocumentIndexConfiguration = documentIndexProfile != null &&
                 string.Equals(documentIndexProfile.Type, IndexProfileTypes.AIDocuments, StringComparison.OrdinalIgnoreCase);
         }
+
         else
         {
             model.HasDocumentIndexConfiguration = false;
@@ -339,6 +388,7 @@ public sealed class AIProfileController : Controller
                 {
                     Name = p.Name,
                     Description = p.Description,
+
                 }).ToList(),
             })
         .ToList();
@@ -351,6 +401,7 @@ public sealed class AIProfileController : Controller
             .ToHashSet(StringComparer.Ordinal);
 
         return (selectedIds ?? [])
+
             .Where(id => !string.IsNullOrWhiteSpace(id) && allIds.Contains(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
@@ -363,9 +414,11 @@ public sealed class AIProfileController : Controller
             .ToHashSet(StringComparer.Ordinal);
 
         return (selectedIds ?? [])
+
             .Where(id => !string.IsNullOrWhiteSpace(id) && allIds.Contains(id))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+
     }
 
     private async Task UploadDocumentsAsync(AIProfile profile, List<IFormFile> files)
@@ -374,25 +427,31 @@ public sealed class AIProfileController : Controller
 
         foreach (var file in files)
         {
+
             if (file.Length == 0)
+
             {
                 continue;
             }
 
             var ext = Path.GetExtension(file.FileName);
+
             var storagePath = $"documents/{profile.ItemId}/{UniqueId.GenerateId()}{ext}";
+
             using (var stream = file.OpenReadStream())
             {
                 await _fileStore.SaveFileAsync(storagePath, stream);
             }
 
             var result = await _documentProcessingService.ProcessFileAsync(
+
                 file,
                 profile.ItemId,
                 AIReferenceTypes.Document.Profile,
                 embeddingGenerator);
 
             if (!result.Success)
+
             {
                 continue;
             }
@@ -400,20 +459,25 @@ public sealed class AIProfileController : Controller
             await _documentStore.CreateAsync(result.Document);
 
             foreach (var chunk in result.Chunks)
+
             {
                 await _chunkStore.CreateAsync(chunk);
             }
 
             await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
+
             profile.AlterSettings<DocumentsMetadata>(m =>
             {
+
                 m.Documents ??= [];
                 m.Documents.Add(result.DocumentInfo);
             });
+
         }
 
         await _profileManager.UpdateAsync(profile);
         await _documentStore.SaveChangesAsync();
+
     }
 
     private static void ApplyTemplateToProfile(AIProfile profile, AIProfileTemplate template)
@@ -468,6 +532,7 @@ public sealed class AIProfileController : Controller
         if (metadata.AgentAvailability.HasValue)
         {
             profile.Put(new AgentMetadata
+
             {
                 Availability = metadata.AgentAvailability.Value,
             });
@@ -475,6 +540,7 @@ public sealed class AIProfileController : Controller
 
         profile.AlterSettings<AIProfileMetadata>(m =>
         {
+
             if (!string.IsNullOrWhiteSpace(metadata.SystemMessage))
             {
                 m.SystemMessage = metadata.SystemMessage;
@@ -506,6 +572,7 @@ public sealed class AIProfileController : Controller
             }
 
             if (metadata.PastMessagesCount.HasValue)
+
             {
                 m.PastMessagesCount = metadata.PastMessagesCount;
             }
@@ -514,6 +581,7 @@ public sealed class AIProfileController : Controller
         if (metadata.ToolNames?.Length > 0)
         {
             profile.WithSettings(new FunctionInvocationMetadata
+
             {
                 Names = metadata.ToolNames,
             });
@@ -522,6 +590,7 @@ public sealed class AIProfileController : Controller
         if (metadata.A2AConnectionIds?.Length > 0)
         {
             profile.Put(new AIProfileA2AMetadata
+
             {
                 ConnectionIds = metadata.A2AConnectionIds,
             });
@@ -535,12 +604,14 @@ public sealed class AIProfileController : Controller
                 IsAllowAll = copilotMetadata.IsAllowAll,
             });
         }
+
         else
         {
             profile.Remove<CopilotSessionMetadata>();
         }
 
         if (!string.IsNullOrWhiteSpace(metadata.Description))
+
         {
             profile.Description = metadata.Description;
         }
@@ -554,9 +625,12 @@ public sealed class AIProfileController : Controller
 
     private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
     {
+
         if (string.IsNullOrWhiteSpace(selector))
+
         {
             return selector;
+
         }
 
         var deployment = await _deploymentCatalog.FindByIdAsync(selector);
@@ -568,5 +642,6 @@ public sealed class AIProfileController : Controller
         => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
     ? deployment.Name
     : $"{deployment.Name} ({deployment.ModelName})";
+
     private bool IsCopilotConfigured() => _copilotOptions.IsConfigured();
 }

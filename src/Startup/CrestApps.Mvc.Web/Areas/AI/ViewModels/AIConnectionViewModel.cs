@@ -12,14 +12,17 @@ public sealed class AIConnectionViewModel
     public string DisplayText { get; set; }
 
     public string Source { get; set; }
+
     // Provider-specific connection settings.
     public string Endpoint { get; set; }
 
     public string AuthenticationType { get; set; }
 
     public string ApiKey { get; set; }
+
     public List<SelectListItem> Providers { get; set; } = [];
     public List<SelectListItem> AuthenticationTypes { get; set; } = [];
+
     public static AIConnectionViewModel FromConnection(AIProviderConnection connection)
     {
         var model = new AIConnectionViewModel
@@ -47,6 +50,7 @@ public sealed class AIConnectionViewModel
         connection.Name = Name;
         connection.DisplayText = DisplayText;
         connection.Source = Source;
+
         // Store provider-specific settings in Properties dictionary.
         connection.Properties ??= new Dictionary<string, object>();
 

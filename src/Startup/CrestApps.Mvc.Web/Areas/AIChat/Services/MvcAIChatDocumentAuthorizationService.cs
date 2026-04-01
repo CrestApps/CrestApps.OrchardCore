@@ -8,6 +8,7 @@ public sealed class MvcAIChatDocumentAuthorizationService : IAIChatDocumentAutho
 {
     public Task<bool> CanManageChatInteractionDocumentsAsync(ClaimsPrincipal user, ChatInteraction interaction)
         => Task.FromResult(user?.IsInRole("Administrator") == true);
+
     public Task<bool> CanManageChatSessionDocumentsAsync(ClaimsPrincipal user, AIProfile profile, AIChatSession session)
         => Task.FromResult(user?.Identity?.IsAuthenticated == true);
 }

@@ -8,6 +8,7 @@ public sealed class OrchestrationContextTests
     public void DefaultValues_AreCorrect()
     {
         var context = new OrchestrationContext();
+
         Assert.Null(context.UserMessage);
         Assert.Null(context.SourceName);
         Assert.Null(context.CompletionContext);
@@ -21,6 +22,7 @@ public sealed class OrchestrationContextTests
     {
         var context = new OrchestrationContext();
         context.Properties["Key"] = "value";
+
         Assert.True(context.Properties.ContainsKey("key"));
         Assert.True(context.Properties.ContainsKey("KEY"));
         Assert.Equal("value", context.Properties["key"]);
@@ -30,6 +32,7 @@ public sealed class OrchestrationContextTests
     public void Documents_CanBePopulated()
     {
         var context = new OrchestrationContext();
+
         context.Documents.Add(new ChatDocumentInfo
         {
             DocumentId = "test",
@@ -44,6 +47,7 @@ public sealed class OrchestrationContextTests
     public void Documents_CanBeReplaced()
     {
         var context = new OrchestrationContext();
+
         var docs = new List<ChatDocumentInfo>
         {
             new() { DocumentId = "a" },
@@ -51,6 +55,7 @@ public sealed class OrchestrationContextTests
         };
 
         context.Documents = docs;
+
         Assert.Equal(2, context.Documents.Count);
         Assert.Same(docs, context.Documents);
     }

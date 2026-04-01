@@ -17,6 +17,7 @@ public sealed class DefaultAIProfileStore : NamedDocumentCatalog<AIProfile, AIPr
     public async ValueTask<IReadOnlyCollection<AIProfile>> GetByTypeAsync(AIProfileType type)
     {
         var typeValue = type.ToString();
+
         var items = await Session.Query<AIProfile, AIProfileIndex>(
             x => x.Type == typeValue,
             collection: CollectionName)

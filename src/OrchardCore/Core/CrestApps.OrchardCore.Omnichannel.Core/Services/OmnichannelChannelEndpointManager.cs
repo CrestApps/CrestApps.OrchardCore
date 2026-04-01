@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public sealed class OmnichannelChannelEndpointManager : CatalogManager<OmnichannelChannelEndpoint>, IOmnichannelChannelEndpointManager
 {
     private readonly IOmnichannelChannelEndpointStore _store;
+
     public OmnichannelChannelEndpointManager(
         IOmnichannelChannelEndpointStore store,
         IEnumerable<ICatalogEntryHandler<OmnichannelChannelEndpoint>> handlers,

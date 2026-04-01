@@ -10,6 +10,7 @@ public sealed class AIProfileRecipeStepTests
     {
         var step = new AIProfileRecipeStep();
         var json = JsonSerializer.Serialize(await step.GetSchemaAsync());
+
         Assert.Contains("\"ChatDeploymentName\"", json);
         Assert.Contains("\"UtilityDeploymentName\"", json);
         Assert.Contains("\"ChatDeploymentId\"", json);

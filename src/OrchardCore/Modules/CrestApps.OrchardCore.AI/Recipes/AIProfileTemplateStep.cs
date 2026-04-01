@@ -15,6 +15,7 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
     private readonly INamedCatalogManager<AIProfileTemplate> _templateManager;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateStep(
         INamedCatalogManager<AIProfileTemplate> templateManager,
         IStringLocalizer<AIProfileTemplateStep> stringLocalizer)
@@ -32,7 +33,9 @@ internal sealed class AIProfileTemplateStep : NamedRecipeStepHandler
         foreach (var token in tokens)
         {
             AIProfileTemplate template = null;
+
             var id = token[nameof(AIProfileTemplate.ItemId)]?.GetValue<string>();
+
             var hasId = !string.IsNullOrEmpty(id);
 
             if (hasId)

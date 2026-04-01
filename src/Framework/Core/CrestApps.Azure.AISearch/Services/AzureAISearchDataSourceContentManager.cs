@@ -18,10 +18,12 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger _logger;
+
     internal static string BuildODataFilter(string dataSourceId, string filter)
     {
         // Always filter by dataSourceId.
         var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+
         // Merge with user-provided filter (already translated to OData for Azure).
 
         if (!string.IsNullOrWhiteSpace(filter))
@@ -60,6 +62,7 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
             var vectorQuery = new VectorizedQuery(embedding)
             {
                 KNearestNeighborsCount = topN,
@@ -70,6 +73,7 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
             };
 
             var odataFilter = BuildODataFilter(dataSourceId, filter);
+
             var searchOptions = new SearchOptions
             {
                 Filter = odataFilter,
@@ -94,19 +98,25 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
                 searchText: null,
                 searchOptions,
                 cancellationToken);
+
             var results = new List<DataSourceSearchResult>();
+
             await foreach (var result in response.Value.GetResultsAsync())
             {
                 var document = result.Document;
+
                 var referenceId = document.TryGetValue(DataSourceConstants.ColumnNames.ReferenceId, out var refObj)
                     ? refObj?.ToString()
                     : null;
+
                 var title = document.TryGetValue(DataSourceConstants.ColumnNames.Title, out var titleObj)
                     ? titleObj?.ToString()
                     : null;
+
                 var content = document.TryGetValue(DataSourceConstants.ColumnNames.Content, out var contentObj)
                     ? contentObj?.ToString()
                     : null;
+
                 var chunkIndex = 0;
 
                 if (document.TryGetValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexObj))
@@ -171,8 +181,11 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+
             var odataFilter = $"{DataSourceConstants.ColumnNames.DataSourceId} eq '{dataSourceId}'";
+
             long totalDeleted = 0;
+
             // Paginate through all matching documents and batch-delete them.
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -187,7 +200,9 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
                     searchText: "*",
                     searchOptions,
                     cancellationToken);
+
                 var keysToDelete = new List<string>();
+
                 await foreach (var result in response.Value.GetResultsAsync())
                 {
                     if (result.Document.TryGetValue(DataSourceConstants.ColumnNames.ChunkId, out var chunkIdObj)
@@ -206,8 +221,11 @@ internal sealed class AzureAISearchDataSourceContentManager : IDataSourceContent
                 var batch = IndexDocumentsBatch.Delete(
                     DataSourceConstants.ColumnNames.ChunkId,
                     keysToDelete);
+
                 await searchClient.IndexDocumentsAsync(batch, cancellationToken: cancellationToken);
+
                 totalDeleted += keysToDelete.Count;
+
                 // If we got fewer results than the page size, all matching documents have been processed.
 
                 if (keysToDelete.Count < 1000)

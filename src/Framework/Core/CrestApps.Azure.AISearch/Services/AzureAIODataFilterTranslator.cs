@@ -32,6 +32,7 @@ internal sealed class AzureAIODataFilterTranslator : IODataFilterTranslator
         // and inside function calls (contains, startswith, endswith).
         var result = new System.Text.StringBuilder();
         var i = 0;
+
         while (i < filter.Length)
         {
             // Skip quoted strings.
@@ -55,12 +56,14 @@ internal sealed class AzureAIODataFilterTranslator : IODataFilterTranslator
             if (char.IsLetter(filter[i]) || filter[i] == '_')
             {
                 var start = i;
+
                 while (i < filter.Length && (char.IsLetterOrDigit(filter[i]) || filter[i] == '_' || filter[i] == '.'))
                 {
                     i++;
                 }
 
                 var token = filter[start..i];
+
                 // Don't prefix OData keywords and function names.
 
                 if (IsODataKeyword(token))

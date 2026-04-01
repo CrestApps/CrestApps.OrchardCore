@@ -35,12 +35,14 @@ public sealed class AIProfileViewModel
     public string Description { get; set; }
 
     public AISessionTitleType? TitleType { get; set; }
+
     // Chat-type interaction fields
     public string WelcomeMessage { get; set; }
 
     public bool AddInitialPrompt { get; set; }
 
     public string InitialPrompt { get; set; }
+
     // AI Parameters (from AIProfileMetadata)
     public string SystemMessage { get; set; }
 
@@ -56,28 +58,36 @@ public sealed class AIProfileViewModel
 
     public int? PastMessagesCount { get; set; }
     public bool UseCaching { get; set; } = true;
+
     // Settings (from AIProfileSettings)
     public bool LockSystemMessage { get; set; }
     public bool IsListable { get; set; } = true;
     public bool IsRemovable { get; set; } = true;
+
     // AI Tools
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
+
     // AI Agents
     public string[] SelectedAgentNames { get; set; } = [];
     public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
+
     // Data Source
     public string DataSourceId { get; set; }
     public List<SelectListItem> DataSources { get; set; } = [];
+
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
     public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+
     // MCP Connections
     public string[] SelectedMcpConnectionIds { get; set; } = [];
     public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+
     // Prompt Templates
     public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
     public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+
     // Documents
     public List<DocumentItem> AttachedDocuments { get; set; } = [];
     public int? DocumentTopN { get; set; }
@@ -87,30 +97,38 @@ public sealed class AIProfileViewModel
     public bool HasDocumentIndexConfiguration { get; set; }
 
     public string DocumentIndexProfileName { get; set; }
+
     // Data Extraction
     public bool EnableDataExtraction { get; set; }
     public int ExtractionCheckInterval { get; set; } = 1;
     public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
     public List<DataExtractionEntryItem> DataExtractionEntries { get; set; } = [];
+
     // Session Metrics
     public bool EnableSessionMetrics { get; set; }
     public bool EnableAIResolutionDetection { get; set; } = true;
     public bool EnableConversionMetrics { get; set; }
     public List<ConversionGoalItem> ConversionGoals { get; set; } = [];
+
     // Post Session Processing
     public bool EnablePostSessionProcessing { get; set; }
     public List<PostSessionTaskItem> PostSessionTasks { get; set; } = [];
+
     // Dropdowns
     public List<SelectListItem> Orchestrators { get; set; } = [];
     public List<SelectListItem> ChatDeployments { get; set; } = [];
     public List<SelectListItem> UtilityDeployments { get; set; } = [];
     public List<SelectListItem> Templates { get; set; } = [];
+
     // Template
     public string SelectedTemplateId { get; set; }
+
     // Apply Template (templates with source "Profile" for pre-filling)
     public List<SelectListItem> AvailableProfileTemplates { get; set; } = [];
+
     // Memory
     public bool EnableUserMemory { get; set; }
+
     // Copilot
     public string CopilotModel { get; set; }
 
@@ -124,6 +142,7 @@ public sealed class AIProfileViewModel
 
     public int CopilotAuthenticationType { get; set; }
     public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
     public static AIProfileViewModel FromProfile(AIProfile profile)
     {
         var metadata = profile.GetSettings<AIProfileMetadata>();
@@ -138,6 +157,7 @@ public sealed class AIProfileViewModel
         var a2aMetadata = profile.As<AIProfileA2AMetadata>();
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
         var promptMetadata = profile.As<PromptTemplateMetadata>();
+
         var vm = new AIProfileViewModel
         {
             ItemId = profile.ItemId,
@@ -153,8 +173,10 @@ public sealed class AIProfileViewModel
             PromptSubject = profile.PromptSubject,
             Description = profile.Description,
             TitleType = profile.TitleType,
+
             AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt),
             InitialPrompt = metadata.InitialPrompt,
+
             SystemMessage = metadata.SystemMessage,
             Temperature = metadata.Temperature,
             TopP = metadata.TopP,
@@ -163,14 +185,17 @@ public sealed class AIProfileViewModel
             MaxTokens = metadata.MaxTokens,
             PastMessagesCount = metadata.PastMessagesCount,
             UseCaching = metadata.UseCaching,
+
             LockSystemMessage = settings.LockSystemMessage,
             IsListable = settings.IsListable,
             IsRemovable = settings.IsRemovable,
+
             SelectedToolNames = toolMetadata?.Names ?? [],
             SelectedAgentNames = profile.As<AgentInvocationMetadata>()?.Names ?? [],
             DataSourceId = profile.As<DataSourceMetadata>()?.DataSourceId,
             SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
             SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
+
             PromptTemplates = (promptMetadata.Templates ?? [])
                 .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
                 .Select(t => new PromptTemplateSelectionItem
@@ -181,6 +206,7 @@ public sealed class AIProfileViewModel
                 : null,
                 })
             .ToList(),
+
             DocumentTopN = docMetadata?.DocumentTopN,
             AllowSessionDocuments = sessionDocMetadata?.AllowSessionDocuments ?? false,
             AttachedDocuments = (docMetadata?.Documents ?? []).Select(d => new DocumentItem
@@ -190,6 +216,7 @@ public sealed class AIProfileViewModel
                 ContentType = d.ContentType,
                 FileSize = d.FileSize,
             }).ToList(),
+
             EnableDataExtraction = dataExtractionSettings.EnableDataExtraction,
             ExtractionCheckInterval = dataExtractionSettings.ExtractionCheckInterval,
             SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes,
@@ -202,6 +229,7 @@ public sealed class AIProfileViewModel
                     IsUpdatable = e.IsUpdatable,
                 })
             .ToList(),
+
             EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics,
             EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection,
             EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics,
@@ -214,6 +242,7 @@ public sealed class AIProfileViewModel
                     MaxScore = g.MaxScore,
                 })
             .ToList(),
+
             EnablePostSessionProcessing = postSessionSettings.EnablePostSessionProcessing,
             PostSessionTasks = postSessionSettings.PostSessionTasks.Select(t => new PostSessionTaskItem
             {
@@ -223,6 +252,7 @@ public sealed class AIProfileViewModel
                 AllowMultipleValues = t.AllowMultipleValues,
                 Options = string.Join(Environment.NewLine, t.Options.Select(o => o.Value)),
             }).ToList(),
+
             EnableUserMemory = memorySettings.EnableUserMemory,
         };
 
@@ -250,8 +280,10 @@ public sealed class AIProfileViewModel
         profile.PromptSubject = PromptSubject;
         profile.Description = Description;
         profile.TitleType = TitleType;
+
         // Welcome message is only used when initial prompt is not enabled.
         profile.WelcomeMessage = AddInitialPrompt ? null : WelcomeMessage;
+
         profile.AlterSettings<AIProfileMetadata>(m =>
         {
             m.SystemMessage = SystemMessage;
@@ -273,6 +305,7 @@ public sealed class AIProfileViewModel
         });
 
         var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+
         profile.WithSettings(new FunctionInvocationMetadata
         {
             Names = toolNames?.Length > 0 ? toolNames : null,
@@ -338,6 +371,7 @@ public sealed class AIProfileViewModel
                     return entry;
                 }));
         profile.Put(promptTemplateMetadata);
+
         profile.AlterSettings<DocumentsMetadata>(m =>
         {
             m.DocumentTopN = DocumentTopN;

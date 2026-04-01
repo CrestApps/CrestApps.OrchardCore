@@ -17,6 +17,7 @@ internal sealed class McpResourceDeploymentStepDisplayDriver : DisplayDriver<Dep
     private readonly ISourceCatalog<McpResource> _store;
 
     internal readonly IStringLocalizer S;
+
     public McpResourceDeploymentStepDisplayDriver(
         ISourceCatalog<McpResource> store,
         IStringLocalizer<McpResourceDeploymentStepDisplayDriver> stringLocalizer)
@@ -63,6 +64,7 @@ internal sealed class McpResourceDeploymentStepDisplayDriver : DisplayDriver<Dep
     public override async Task<IDisplayResult> UpdateAsync(McpResourceDeploymentStep step, UpdateEditorContext context)
     {
         var model = new McpResourceStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.Resources);

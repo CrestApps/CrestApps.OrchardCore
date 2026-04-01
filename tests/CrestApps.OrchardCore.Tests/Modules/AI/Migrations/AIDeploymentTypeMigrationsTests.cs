@@ -31,6 +31,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
+
         Assert.Equal("chat-default", result);
     }
 
@@ -62,6 +63,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
+
         Assert.Equal("chat-first", result);
     }
 
@@ -83,6 +85,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeFindDefaultChatDeploymentName(profile, deployments);
+
         Assert.Equal("chat-utility-default", result);
     }
 
@@ -149,6 +152,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
         Assert.True(result);
         Assert.Equal("default-chat", settings.DefaultChatDeploymentName);
         Assert.Equal("default-utility", settings.DefaultUtilityDeploymentName);
@@ -180,6 +184,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
         Assert.True(result);
         Assert.Equal("chat-utility-default", settings.DefaultChatDeploymentName);
         Assert.Equal("chat-utility-default", settings.DefaultUtilityDeploymentName);
@@ -231,6 +236,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         };
 
         var result = InvokeTryPopulateDefaultDeploymentSettings(settings, connections, deployments);
+
         Assert.True(result);
         Assert.Equal("existing-chat", settings.DefaultChatDeploymentName);
         Assert.Equal("existing-embedding", settings.DefaultEmbeddingDeploymentName);
@@ -265,6 +271,7 @@ public sealed class AIDeploymentTypeMigrationsTests
             deploymentNameMap,
             settings.DefaultEmbeddingDeploymentName,
             value => settings.DefaultEmbeddingDeploymentName = value);
+
         Assert.True(chatUpdated);
         Assert.True(utilityUpdated);
         Assert.False(embeddingUpdated);

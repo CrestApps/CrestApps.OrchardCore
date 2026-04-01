@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInteractionPrompt, ChatInteractionPromptIndex>, IChatInteractionPromptStore
 {
     private readonly IClock _clock;
+
     public DefaultChatInteractionPromptStore(
         ISession session,
         IClock clock)
@@ -22,7 +23,6 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
         CollectionName = AIConstants.AICollectionName;
         _clock = clock;
     }
-
     /// <inheritdoc />
     public async Task<IReadOnlyCollection<ChatInteractionPrompt>> GetPromptsAsync(string chatInteractionId)
     {
@@ -37,7 +37,6 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
 
         return prompts.ToArray();
     }
-
     /// <inheritdoc />
     public async Task<int> DeleteAllPromptsAsync(string chatInteractionId)
     {
@@ -47,6 +46,7 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
             x => x.ChatInteractionId == chatInteractionId,
             collection: CollectionName)
                 .ListAsync();
+
         var count = 0;
 
         foreach (var prompt in prompts)
@@ -57,7 +57,6 @@ public sealed class DefaultChatInteractionPromptStore : DocumentCatalog<ChatInte
 
         return count;
     }
-
     /// <inheritdoc />
     protected override ValueTask SavingAsync(ChatInteractionPrompt record)
     {

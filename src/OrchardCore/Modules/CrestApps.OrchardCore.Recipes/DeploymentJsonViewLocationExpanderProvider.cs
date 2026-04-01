@@ -8,10 +8,13 @@ internal sealed class DeploymentJsonViewLocationExpander : IViewLocationExpander
     // Priority determines which expander runs first.
     // Higher priority runs first; set 0 or 10 is fine here.
     // Called by Razor; we don't need any custom values here
+
     // Return your view location before the default ones
     public int Priority => 0;
+
     public void PopulateValues(ViewLocationExpanderContext context)
     {
+
     }
 
     public IEnumerable<string> ExpandViewLocations(ViewLocationExpanderContext context, IEnumerable<string> viewLocations)

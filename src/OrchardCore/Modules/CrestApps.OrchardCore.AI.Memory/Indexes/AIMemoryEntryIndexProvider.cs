@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Indexes;
 internal sealed class AIMemoryEntryIndexProvider : IndexProvider<AIMemoryEntry>
 {
     private readonly ILookupNormalizer _lookupNormalizer;
+
     public AIMemoryEntryIndexProvider(ILookupNormalizer lookupNormalizer)
     {
         _lookupNormalizer = lookupNormalizer;

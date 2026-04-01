@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class RemoveUserMemoryTool : AIFunction
 {
     public const string TheName = "remove_user_memory";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -26,14 +27,21 @@ public sealed class RemoveUserMemoryTool : AIFunction
         "name"
       ],
       "additionalProperties": false
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Removes a previously saved long-term memory for the current authenticated user when it should be forgotten.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
+
             ["Strict"] = false,
         };
 
@@ -46,6 +54,7 @@ public sealed class RemoveUserMemoryTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'name'.", Name);
 
             return "The 'name' argument is required.";
+
         }
 
         var userId = AIMemoryToolHelpers.GetCurrentUserId(arguments.Services);
@@ -55,21 +64,25 @@ public sealed class RemoveUserMemoryTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' requires an authenticated user.", Name);
 
             return "User memory is only available for authenticated users.";
+
         }
 
         name = name.Trim();
 
         if (name.Length > 256)
         {
+
             return "Memory names must be 256 characters or fewer.";
         }
 
         var store = arguments.Services.GetRequiredService<IAIMemoryStore>();
+
         var manager = arguments.Services.GetRequiredService<ICatalogManager<AIMemoryEntry>>();
         var existingMemory = await store.FindByUserAndNameAsync(userId, name);
 
         if (existingMemory is null)
         {
+
             return "No saved memory was found with that name.";
         }
 

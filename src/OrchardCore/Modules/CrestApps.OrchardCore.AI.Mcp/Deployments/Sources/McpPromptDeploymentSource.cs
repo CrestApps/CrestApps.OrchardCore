@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPromptDeploymentStep>
 {
     private readonly INamedCatalog<McpPrompt> _store;
+
     public McpPromptDeploymentSource(INamedCatalog<McpPrompt> store)
     {
         _store = store;
@@ -18,7 +19,9 @@ internal sealed class McpPromptDeploymentSource : DeploymentSourceBase<McpPrompt
     protected override async Task ProcessAsync(McpPromptDeploymentStep step, DeploymentPlanResult result)
     {
         var entries = await _store.GetAllAsync();
+
         var promptsData = new JsonArray();
+
         var promptIds = step.IncludeAll
         ? []
         : step.PromptIds ?? [];

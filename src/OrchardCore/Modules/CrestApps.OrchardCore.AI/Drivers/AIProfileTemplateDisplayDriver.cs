@@ -18,6 +18,7 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
     private readonly INamedCatalog<AIProfileTemplate> _templatesCatalog;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateDisplayDriver(
         INamedCatalog<AIProfileTemplate> templatesCatalog,
         IStringLocalizer<ProfileTemplateDisplayDriver> stringLocalizer)

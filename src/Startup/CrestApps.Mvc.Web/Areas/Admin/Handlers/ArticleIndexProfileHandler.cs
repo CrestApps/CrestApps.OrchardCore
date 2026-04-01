@@ -8,6 +8,7 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Handlers;
 public sealed class ArticleIndexProfileHandler : IndexProfileHandlerBase
 {
     private readonly ArticleIndexingService _indexingService;
+
     public ArticleIndexProfileHandler(ArticleIndexingService indexingService)
     {
         _indexingService = indexingService;

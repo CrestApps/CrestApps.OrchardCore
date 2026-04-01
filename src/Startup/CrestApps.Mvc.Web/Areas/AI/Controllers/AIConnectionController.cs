@@ -16,6 +16,7 @@ public sealed class AIConnectionController : Controller
     private readonly ICatalog<AIProviderConnection> _catalog;
     private readonly MvcAIProviderOptionsStore _providerOptionsStore;
     private readonly IOptionsMonitorCache<AIProviderOptions> _providerOptionsCache;
+
     private static readonly List<SelectListItem> _providers =
     [
         new("OpenAI", "OpenAI"),
@@ -23,12 +24,14 @@ public sealed class AIConnectionController : Controller
         new("Azure AI Inference (GitHub Models)", "AzureAIInference"),
         new("Ollama", "Ollama"),
     ];
+
     private static readonly List<SelectListItem> _authTypes =
     [
         new("API Key", "ApiKey"),
         new("Default Azure Credential", "Default"),
         new("Managed Identity", "ManagedIdentity"),
     ];
+
     public AIConnectionController(
         ICatalog<AIProviderConnection> catalog,
         MvcAIProviderOptionsStore providerOptionsStore,
@@ -88,6 +91,7 @@ public sealed class AIConnectionController : Controller
 
         connection.CreatedUtc = DateTime.UtcNow;
         model.ApplyTo(connection);
+
         await _catalog.CreateAsync(connection);
         await _catalog.SaveChangesAsync();
         await RefreshProviderOptionsAsync();
@@ -136,6 +140,7 @@ public sealed class AIConnectionController : Controller
         }
 
         model.ApplyTo(existing);
+
         await _catalog.UpdateAsync(existing);
         await _catalog.SaveChangesAsync();
         await RefreshProviderOptionsAsync();

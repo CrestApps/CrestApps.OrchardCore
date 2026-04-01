@@ -9,8 +9,11 @@ namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseTool
 {
     public const string TheName = "applyContentTypeDefinitionFromRecipe";
+
     public override string Name => TheName;
+
     public override string Description => "Creates or updates a content type or part definition based on the provided JSON recipe.";
+
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);

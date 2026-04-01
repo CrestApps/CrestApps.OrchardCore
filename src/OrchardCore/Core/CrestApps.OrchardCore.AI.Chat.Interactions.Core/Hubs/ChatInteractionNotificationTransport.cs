@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 internal sealed class ChatInteractionNotificationTransport : IChatNotificationTransport
 {
     private readonly IHubContext<ChatInteractionHub, IChatInteractionHubClient> _hubContext;
+
     public ChatInteractionNotificationTransport(IHubContext<ChatInteractionHub, IChatInteractionHubClient> hubContext)
     {
         _hubContext = hubContext;

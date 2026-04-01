@@ -16,6 +16,7 @@ public sealed class AIChatAnalyticsFeedbackDisplayDriver : DisplayDriver<AIChatA
         return Initialize<ChatAnalyticsFeedbackViewModel>("ChatAnalyticsFeedback", model =>
         {
             var events = context.Events;
+
             model.ThumbsUpCount = events.Sum(e => e.ThumbsUpCount);
             model.ThumbsDownCount = events.Sum(e => e.ThumbsDownCount);
             model.NoFeedbackCount = events.Count(e => e.ThumbsUpCount == 0 && e.ThumbsDownCount == 0);

@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlAIChatSessionPromptStore : IAIChatSessionPromptStore
 {
     private readonly ISession _session;
+
     public YesSqlAIChatSessionPromptStore(ISession session)
     {
         _session = session;

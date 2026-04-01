@@ -13,6 +13,7 @@ public sealed class CompletedActivityEvent : EventActivity
     private readonly ICatalog<OmnichannelDisposition> _dispositionsCatalog;
 
     internal readonly IStringLocalizer S;
+
     public CompletedActivityEvent(
         ICatalog<OmnichannelCampaign> campaignsCatalog,
         ICatalog<OmnichannelDisposition> dispositionsCatalog,
@@ -25,8 +26,11 @@ public sealed class CompletedActivityEvent : EventActivity
 
     public override string Name
         => nameof(CompletedActivityEvent);
+
     public override LocalizedString DisplayText => S["Completed Omnichannel Activity"];
+
     public override LocalizedString Category => S["Omnichannel"];
+
     public string CampaignId
     {
         get => GetProperty<string>();
@@ -48,7 +52,9 @@ public sealed class CompletedActivityEvent : EventActivity
         }
 
         var dispositionIds = campaign.DispositionIds ?? [];
+
         var dispositions = await _dispositionsCatalog.GetAsync(dispositionIds);
+
         var outcomes = new List<Outcome>();
 
         foreach (var disposition in dispositions.OrderBy(x => x.DisplayText))

@@ -20,10 +20,13 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -34,6 +37,7 @@ internal sealed class DataSourceAzureAISearchIndexProfileHandler : DataSourceInd
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
         var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = DataSourceConstants.ColumnNames.ChunkId,

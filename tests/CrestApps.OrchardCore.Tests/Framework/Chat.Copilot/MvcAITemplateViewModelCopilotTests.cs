@@ -23,6 +23,7 @@ public sealed class MvcAITemplateViewModelCopilotTests
         });
 
         var model = AITemplateViewModel.FromTemplate(template);
+
         Assert.Equal("gpt-4.1", model.CopilotModel);
         Assert.True(model.CopilotIsAllowAll);
     }
@@ -40,7 +41,9 @@ public sealed class MvcAITemplateViewModelCopilotTests
         };
 
         var template = new AIProfileTemplate();
+
         model.ApplyTo(template);
+
         Assert.True(template.TryGet<CopilotSessionMetadata>(out var metadata));
         Assert.Equal("claude-3.7-sonnet", metadata.CopilotModel);
         Assert.True(metadata.IsAllowAll);
@@ -64,6 +67,7 @@ public sealed class MvcAITemplateViewModelCopilotTests
         });
 
         model.ApplyTo(template);
+
         Assert.False(template.TryGet<CopilotSessionMetadata>(out _));
     }
 }

@@ -14,6 +14,7 @@ public sealed class MvcAIProviderOptionsStore
     private readonly object _syncLock = new();
 
     private Dictionary<string, AIProvider> _providers = new(StringComparer.OrdinalIgnoreCase);
+
     public void Replace(IEnumerable<AIProviderConnection> connections)
     {
         var providers = new Dictionary<string, AIProvider>(StringComparer.OrdinalIgnoreCase);
@@ -57,6 +58,7 @@ public sealed class MvcAIProviderOptionsStore
                 values["SpeechToTextDeploymentName"] = connection.SpeechToTextDeploymentName;
 #pragma warning restore CS0618
                 values["ConnectionNameAlias"] = connection.Name;
+
                 provider.Connections[connection.Name] = new AIProviderConnectionEntry(values);
             }
 
@@ -72,6 +74,7 @@ public sealed class MvcAIProviderOptionsStore
             provider.DefaultImagesDeploymentName = defaultConnection?.ImagesDeploymentName;
             provider.DefaultUtilityDeploymentName = defaultConnection?.UtilityDeploymentName;
 #pragma warning restore CS0618
+
             providers[group.Key] = provider;
         }
 
@@ -84,6 +87,7 @@ public sealed class MvcAIProviderOptionsStore
     public void ApplyTo(AIProviderOptions options)
     {
         Dictionary<string, AIProvider> providers;
+
         lock (_syncLock)
         {
             providers = new Dictionary<string, AIProvider>(_providers, StringComparer.OrdinalIgnoreCase);

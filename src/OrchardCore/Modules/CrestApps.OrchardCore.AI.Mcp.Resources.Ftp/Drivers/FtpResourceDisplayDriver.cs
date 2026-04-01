@@ -14,6 +14,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public FtpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer)
@@ -32,6 +33,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
         return Initialize<FtpConnectionViewModel>("FtpResourceConnection_Edit", model =>
         {
             var metadata = resource.As<OrchardFtpConnectionMetadata>();
+
             model.Host = metadata?.Host;
             model.Port = metadata?.Port;
             model.Username = metadata?.Username;
@@ -53,6 +55,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
         }
 
         var model = new FtpConnectionViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.Host))
@@ -61,6 +64,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
         }
 
         var metadata = resource.As<OrchardFtpConnectionMetadata>();
+
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
 
         if (!hasNewPassword && string.IsNullOrWhiteSpace(metadata?.Password))
@@ -71,6 +75,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
         if (hasNewPassword)
         {
             var protector = _dataProtectionProvider.CreateProtector(FtpResourceConstants.DataProtectionPurpose);
+
             metadata ??= new OrchardFtpConnectionMetadata();
             metadata.Password = protector.Protect(model.Password);
         }

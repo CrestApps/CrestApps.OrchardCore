@@ -9,6 +9,7 @@ public sealed class ArticleIndexingHandler : CatalogEntryHandlerBase<Article>
 {
     private readonly ArticleIndexingService _indexingService;
     private readonly ILogger<ArticleIndexingHandler> _logger;
+
     public ArticleIndexingHandler(
         ArticleIndexingService indexingService,
         ILogger<ArticleIndexingHandler> logger)

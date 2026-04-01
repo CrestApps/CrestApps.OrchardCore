@@ -22,6 +22,7 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
     private readonly IContentManager _contentManager;
     private readonly DocumentJsonSerializerOptions _jsonOptions;
     private readonly ILogger _logger;
+
     public ContentByIdResourceTypeHandler(
         IContentManager contentManager,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,

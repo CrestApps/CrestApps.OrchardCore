@@ -16,6 +16,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
+
     public OpenAIProviderConnectionSettingsHandler(
         IDataProtectionProvider dataProtectionProvider,
         IStringLocalizer<OpenAIProviderConnectionHandler> stringLocalizer)
@@ -26,8 +27,10 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
 
     public override Task InitializingAsync(InitializingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task UpdatingAsync(UpdatingContext<AIProviderConnection> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task ValidatingAsync(ValidatingContext<AIProviderConnection> context)
     {
         if (!string.Equals(context.Model.Source, OpenAIConstants.ClientName, StringComparison.Ordinal))
@@ -65,6 +68,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
         }
 
         var metadata = connection.As<OpenAIConnectionMetadata>();
+
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 
         if (!string.IsNullOrEmpty(endpoint) && Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
@@ -77,6 +81,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
             var protector = _dataProtectionProvider.CreateProtector(AIConstants.ConnectionProtectorName);
+
             metadata.ApiKey = protector.Protect(apiKey);
         }
 

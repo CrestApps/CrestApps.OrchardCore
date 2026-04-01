@@ -17,6 +17,7 @@ public sealed class RecipeStepSchemaResourceTypeHandler : McpResourceTypeHandler
 
     private readonly RecipeSchemaService _recipeSchemaService;
     private readonly ILogger _logger;
+
     public RecipeStepSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeStepSchemaResourceTypeHandler> logger)

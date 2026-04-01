@@ -15,7 +15,9 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISiteService _siteService;
+
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
+
     public ChatInteractionMemorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -46,6 +48,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
 
         var model = new ChatInteractionMemorySettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         settings.EnableUserMemory = model.EnableUserMemory;
 
         return Edit(site, settings, context);

@@ -183,6 +183,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         var privateKey = Unprotect(protector, metadata.OAuth2PrivateKey);
         var assertion = CreateClientAssertion(
             metadata.OAuth2TokenEndpoint, metadata.OAuth2ClientId, privateKey, metadata.OAuth2KeyId);
+
         try
         {
             var token = await AcquireTokenAsync(
@@ -226,6 +227,7 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         var certPassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword)
         ? Unprotect(protector, metadata.OAuth2ClientCertificatePassword)
         : null;
+
         try
         {
             var parameters = new Dictionary<string, string>

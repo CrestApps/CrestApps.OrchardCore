@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.Tests.ChatNotifications;
 public sealed class ExternalChatRelayConnectionManagerTests
 {
     private readonly ExternalChatRelayConnectionManager _manager;
+
     public ExternalChatRelayConnectionManagerTests()
     {
         _manager = new ExternalChatRelayConnectionManager(
@@ -18,6 +19,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     // ───────────────────────────────────────────────────────────────
     // GetOrCreateAsync
     // ───────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task GetOrCreateAsync_CreatesAndConnectsRelay()
     {
@@ -26,8 +28,11 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
         var context = CreateContext("session-1");
+
         var result = await _manager.GetOrCreateAsync("session-1", context, () => relayMock.Object, TestContext.Current.CancellationToken);
+
         Assert.Same(relayMock.Object, result);
         relayMock.Verify(r => r.ConnectAsync(context, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -40,9 +45,12 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
         var context = CreateContext("session-1");
+
         var first = await _manager.GetOrCreateAsync("session-1", context, () => relayMock.Object, TestContext.Current.CancellationToken);
         var second = await _manager.GetOrCreateAsync("session-1", context, () => throw new InvalidOperationException("Should not be called"), TestContext.Current.CancellationToken);
+
         Assert.Same(first, second);
     }
 
@@ -56,9 +64,12 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.DisposeAsync())
             .Returns(ValueTask.CompletedTask);
+
         var context = CreateContext("session-1");
+
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => _manager.GetOrCreateAsync("session-1", context, () => relayMock.Object, TestContext.Current.CancellationToken));
+
         relayMock.Verify(r => r.DisposeAsync(), Times.Once);
     }
 
@@ -86,6 +97,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     // ───────────────────────────────────────────────────────────────
     // Get
     // ───────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task Get_ReturnsRelayWhenExists()
     {
@@ -94,8 +106,11 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
         await _manager.GetOrCreateAsync("session-1", CreateContext("session-1"), () => relayMock.Object, TestContext.Current.CancellationToken);
+
         var result = _manager.Get("session-1");
+
         Assert.Same(relayMock.Object, result);
     }
 
@@ -103,6 +118,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     public void Get_ReturnsNullWhenNotExists()
     {
         var result = _manager.Get("nonexistent");
+
         Assert.Null(result);
     }
 
@@ -115,6 +131,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     // ───────────────────────────────────────────────────────────────
     // CloseAsync
     // ───────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task CloseAsync_DisconnectsAndDisposesRelay()
     {
@@ -129,8 +146,10 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.DisposeAsync())
             .Returns(ValueTask.CompletedTask);
+
         await _manager.GetOrCreateAsync("session-1", CreateContext("session-1"), () => relayMock.Object, TestContext.Current.CancellationToken);
         await _manager.CloseAsync("session-1", TestContext.Current.CancellationToken);
+
         relayMock.Verify(r => r.DisconnectAsync(It.IsAny<CancellationToken>()), Times.Once);
         relayMock.Verify(r => r.DisposeAsync(), Times.Once);
         Assert.Null(_manager.Get("session-1"));
@@ -162,8 +181,10 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relayMock
             .Setup(r => r.DisposeAsync())
             .Returns(ValueTask.CompletedTask);
+
         await _manager.GetOrCreateAsync("session-1", CreateContext("session-1"), () => relayMock.Object, TestContext.Current.CancellationToken);
         await _manager.CloseAsync("session-1", TestContext.Current.CancellationToken);
+
         // The relay should still be disposed even when disconnect throws.
         relayMock.Verify(r => r.DisposeAsync(), Times.Once);
         Assert.Null(_manager.Get("session-1"));
@@ -172,6 +193,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     // ───────────────────────────────────────────────────────────────
     // DisposeAsync
     // ───────────────────────────────────────────────────────────────
+
     [Fact]
     public async Task DisposeAsync_DisconnectsAndDisposesAllRelays()
     {
@@ -180,14 +202,18 @@ public sealed class ExternalChatRelayConnectionManagerTests
         relay1.Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay1.Setup(r => r.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay1.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
         var relay2 = new Mock<IExternalChatRelay>();
         relay2.Setup(r => r.IsConnectedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
         relay2.Setup(r => r.ConnectAsync(It.IsAny<ExternalChatRelayContext>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay2.Setup(r => r.DisconnectAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         relay2.Setup(r => r.DisposeAsync()).Returns(ValueTask.CompletedTask);
+
         await _manager.GetOrCreateAsync("s1", CreateContext("s1"), () => relay1.Object, TestContext.Current.CancellationToken);
         await _manager.GetOrCreateAsync("s2", CreateContext("s2"), () => relay2.Object, TestContext.Current.CancellationToken);
+
         await _manager.DisposeAsync();
+
         relay1.Verify(r => r.DisconnectAsync(It.IsAny<CancellationToken>()), Times.Once);
         relay1.Verify(r => r.DisposeAsync(), Times.Once);
         relay2.Verify(r => r.DisconnectAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -197,6 +223,7 @@ public sealed class ExternalChatRelayConnectionManagerTests
     // ───────────────────────────────────────────────────────────────
     // Helpers
     // ───────────────────────────────────────────────────────────────
+
     private static ExternalChatRelayContext CreateContext(string sessionId)
     {
         return new ExternalChatRelayContext

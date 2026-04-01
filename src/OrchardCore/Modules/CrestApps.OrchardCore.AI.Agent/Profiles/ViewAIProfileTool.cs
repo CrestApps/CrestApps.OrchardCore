@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 public sealed class ViewAIProfileTool : AIFunction
 {
     public const string TheName = "viewAIProfile";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -29,12 +30,16 @@ public sealed class ViewAIProfileTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description =>
         "Retrieves detailed information about a specific AI profile by its ID or technical name. " +
         "Returns the full profile configuration including type, deployments, welcome message, " +
         "analytics settings, data extraction settings, and post-session processing settings.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -53,6 +58,7 @@ public sealed class ViewAIProfileTool : AIFunction
         }
 
         var profileManager = arguments.Services.GetRequiredService<IAIProfileManager>();
+
         AIProfile profile = null;
 
         if (arguments.TryGetFirstString("profileId", out var profileId) && !string.IsNullOrWhiteSpace(profileId))
@@ -74,6 +80,7 @@ public sealed class ViewAIProfileTool : AIFunction
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
+
         var result = new JsonObject
         {
             ["id"] = profile.ItemId,

@@ -32,6 +32,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions;
 public sealed class Startup : StartupBase
 {
     private readonly IShellConfiguration _configuration;
+
     public Startup(IShellConfiguration configuration)
     {
         _configuration = configuration;
@@ -45,14 +46,18 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
             .AddIndexProvider<ChatInteractionPromptIndexProvider>()
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
+
         // Register framework-level chat interaction handlers.
         services.AddChatInteractionHandlers();
+
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
+
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
+
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
@@ -60,19 +65,24 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
+
         services
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+
         // Chat Interaction notification transport.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
+
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
+
         services.Configure<HubOptions<ChatInteractionHub>>(options =>
         {
             // Allow long-running operations (e.g., multi-step MCP tool calls)
             // without the server dropping the connection prematurely.
             options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
             // Allow larger messages for audio transcription payloads.
             options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
         });

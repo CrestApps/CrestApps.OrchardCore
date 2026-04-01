@@ -18,6 +18,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<CopilotOptionsConfiguration> _logger;
+
     public CopilotOptionsConfiguration(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
@@ -34,6 +35,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
         // Use GetAwaiter().GetResult() as this runs once during options resolution.
         var settings = _siteService.GetSettingsAsync<CopilotSettings>()
             .GetAwaiter().GetResult();
+
         options.AuthenticationType = settings.AuthenticationType;
         options.ClientId = settings.ClientId;
         options.Scopes = settings.Scopes;
@@ -42,6 +44,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
         options.WireApi = settings.WireApi;
         options.DefaultModel = settings.DefaultModel;
         options.AzureApiVersion = settings.AzureApiVersion;
+
         // Unprotect encrypted secrets.
         var protector = _dataProtectionProvider.CreateProtector(SettingsProtectorPurpose);
 

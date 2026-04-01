@@ -17,6 +17,7 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
     private readonly ISourceCatalog<McpConnection> _store;
 
     internal readonly IStringLocalizer S;
+
     public McpConnectionDeploymentStepDisplayDriver(
         ISourceCatalog<McpConnection> store,
         IStringLocalizer<McpConnectionDeploymentStepDisplayDriver> stringLocalizer)
@@ -63,6 +64,7 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
     public override async Task<IDisplayResult> UpdateAsync(McpConnectionDeploymentStep step, UpdateEditorContext context)
     {
         var model = new McpConnectionStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.Connections);

@@ -16,11 +16,13 @@ namespace CrestApps.OrchardCore.Users.Drivers;
 public sealed class PermissionDefinedEditorDriver : ContentPartDisplayDriver<CommonPart>
 {
     public static string PermissionDefinedEditor => "PermissionDefinedEditor";
+
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly UserManager<USR.IUser> _userManager;
 
     internal readonly IStringLocalizer S;
+
     public PermissionDefinedEditorDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,

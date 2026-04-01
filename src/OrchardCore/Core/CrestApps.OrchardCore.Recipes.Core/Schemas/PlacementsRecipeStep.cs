@@ -9,6 +9,7 @@ public sealed class PlacementsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "Placements";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

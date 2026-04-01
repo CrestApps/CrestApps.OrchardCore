@@ -5,12 +5,14 @@ using CrestApps.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
+
 namespace CrestApps.OrchardCore.AI.Services;
 
 internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProviderOptions>
 {
     private readonly IShellConfiguration _shellConfiguration;
     private readonly ILogger _logger;
+
     public AIProviderOptionsConfiguration(
         IShellConfiguration shellConfiguration,
         ILogger<AIProviderOptionsConfiguration> logger)
@@ -18,58 +20,80 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
         _shellConfiguration = shellConfiguration;
         _logger = logger;
     }
+
     public void Configure(AIProviderOptions options)
     {
         var providerSettings = _shellConfiguration.GetSection("CrestApps_AI:Providers");
+
         if (providerSettings is null)
         {
             _logger.LogWarning("The 'providers' in 'CrestApps_AI:Providers' is not defined in the settings.");
+
             return;
         }
+
         try
         {
             var providerSettingsElements = JsonSerializer.Deserialize<JsonElement>(providerSettings.AsJsonNode());
+
             var providerSettingsObject = JsonObject.Create(providerSettingsElements);
+
             if (providerSettingsObject is null)
             {
                 _logger.LogWarning("The 'providers' in 'CrestApps_AI:Providers' is invalid.");
+
                 return;
             }
+
             foreach (var providerPair in providerSettingsObject)
             {
                 var providerName = providerPair.Key;
                 var providerNode = providerPair.Value;
+
                 var connectionsNode = providerNode["Connections"];
+
                 if (connectionsNode is null)
                 {
                     _logger.LogWarning("The provider with the name '{Name}' has no connections. This provider will be ignore and not used.", providerName);
+
                     continue;
                 }
+
                 var collectionsElement = JsonSerializer.Deserialize<JsonElement>(connectionsNode);
+
                 var connectionsObject = JsonObject.Create(collectionsElement);
+
                 if (connectionsObject is null || connectionsObject.Count == 0)
                 {
                     _logger.LogWarning("The provider with the name '{Name}' has no connection. This provider will be ignore and not used.", providerName);
+
                     continue;
                 }
+
                 var connections = new Dictionary<string, AIProviderConnectionEntry>(StringComparer.OrdinalIgnoreCase);
+
                 foreach (var connectionPair in connectionsObject)
                 {
                     connections.Add(connectionPair.Key, connectionPair.Value.Deserialize<AIProviderConnectionEntry>());
                 }
+
                 if (connections.Count == 0)
                 {
                     _logger.LogWarning("The provider with the name '{Name}' has no valid connections. This provider will be ignore and not used.", providerName);
+
                     continue;
                 }
+
                 var provider = new AIProvider()
                 {
                     Connections = connections,
                 };
+
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
                 var defaultDeploymentName = providerNode["ChatDeploymentName"]?.GetValue<string>()
                 ?? providerNode["DefaultChatDeploymentName"]?.GetValue<string>()
                 ?? providerNode["DefaultDeploymentName"]?.GetValue<string>();
+
                 if (!string.IsNullOrEmpty(defaultDeploymentName))
                 {
                     provider.DefaultChatDeploymentName = defaultDeploymentName;
@@ -78,25 +102,32 @@ internal sealed class AIProviderOptionsConfiguration : IConfigureOptions<AIProvi
                 {
                     provider.DefaultChatDeploymentName = connections.FirstOrDefault().Value?.GetChatDeploymentOrDefaultName(false);
                 }
+
                 var defaultEmbeddingDeploymentName = providerNode["EmbeddingDeploymentName"]?.GetValue<string>()
                 ?? providerNode["DefaultEmbeddingDeploymentName"]?.GetValue<string>();
+
                 if (!string.IsNullOrEmpty(defaultEmbeddingDeploymentName))
                 {
                     provider.DefaultEmbeddingDeploymentName = defaultEmbeddingDeploymentName;
                 }
+
                 var defaultImagesDeploymentName = providerNode["ImagesDeploymentName"]?.GetValue<string>()
                 ?? providerNode["DefaultImagesDeploymentName"]?.GetValue<string>();
+
                 if (!string.IsNullOrEmpty(defaultImagesDeploymentName))
                 {
                     provider.DefaultImagesDeploymentName = defaultImagesDeploymentName;
                 }
+
                 var defaultUtilityDeploymentName = providerNode["UtilityDeploymentName"]?.GetValue<string>()
                 ?? providerNode["DefaultUtilityDeploymentName"]?.GetValue<string>();
+
                 if (!string.IsNullOrEmpty(defaultUtilityDeploymentName))
                 {
                     provider.DefaultUtilityDeploymentName = defaultUtilityDeploymentName;
                 }
 #pragma warning restore CS0618
+
                 options.Providers.Add(providerName, provider);
             }
         }

@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Services;
 public sealed class YesSqlAIDocumentChunkStore : IAIDocumentChunkStore
 {
     private readonly ISession _session;
+
     public YesSqlAIDocumentChunkStore(ISession session)
     {
         _session = session;

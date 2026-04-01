@@ -48,6 +48,7 @@ public sealed class DefaultOrchestrationContextBuilder : IOrchestrationContextBu
         }
 
         configure?.Invoke(context);
+
         var built = new OrchestrationContextBuiltContext(resource, context);
 
         foreach (var handler in _handlers)

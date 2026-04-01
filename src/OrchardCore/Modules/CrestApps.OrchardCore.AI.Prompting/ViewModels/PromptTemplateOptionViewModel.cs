@@ -12,6 +12,7 @@ public class PromptTemplateOptionViewModel
     public string Description { get; set; }
 
     public string Category { get; set; }
+
     [BindNever]
     public IList<TemplateParameterDescriptor> Parameters { get; set; } = [];
 }

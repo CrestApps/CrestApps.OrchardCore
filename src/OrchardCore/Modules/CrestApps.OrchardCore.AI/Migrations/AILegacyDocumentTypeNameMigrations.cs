@@ -20,6 +20,7 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
     private const string LegacyAssemblyName = "CrestApps.OrchardCore.AI.Abstractions";
     private const string CurrentNamespacePrefix = "CrestApps.AI.Models.";
     private const string CurrentAssemblyName = "CrestApps.AI.Abstractions";
+
     public static int Create()
     {
         ShellScope.AddDeferredTask(async scope =>
@@ -27,15 +28,19 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AILegacyDocumentTypeNameMigrations>>();
+
             var dialect = store.Configuration.SqlDialect;
             var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
             var table = $"{store.Configuration.TablePrefix}{documentTableName}";
             var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
             var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
+
             var whereClause =
                 $"{quotedTypeColumnName} LIKE '{LegacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {LegacyAssemblyName}%'";
+
             await using var connection = dbConnectionAccessor.CreateConnection();
             await connection.OpenAsync();
+
             var count = await connection.ExecuteScalarAsync<int>(
                 $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
 

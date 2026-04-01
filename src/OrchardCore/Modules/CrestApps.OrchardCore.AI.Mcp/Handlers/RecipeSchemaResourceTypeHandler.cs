@@ -17,6 +17,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
 
     private readonly RecipeSchemaService _recipeSchemaService;
     private readonly ILogger _logger;
+
     public RecipeSchemaResourceTypeHandler(
         RecipeSchemaService recipeSchemaService,
         ILogger<RecipeSchemaResourceTypeHandler> logger)
@@ -29,6 +30,7 @@ public sealed class RecipeSchemaResourceTypeHandler : McpResourceTypeHandlerBase
     protected override async Task<ReadResourceResult> GetResultAsync(McpResource resource, IReadOnlyDictionary<string, string> variables, CancellationToken cancellationToken)
     {
         _logger.LogDebug("Returning full recipe schema.");
+
         var recipeSchema = await _recipeSchemaService.GetRecipeSchemaAsync();
 
         return new ReadResourceResult

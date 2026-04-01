@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Agent.Recipes;
 public sealed class ListNonStartupRecipesTool : AIFunction
 {
     public const string TheName = "listNonStartupRecipes";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -20,9 +21,13 @@ public sealed class ListNonStartupRecipesTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Retrieves a list of predefined recipes that can be executed manually and are not designated to run at application startup.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -42,6 +47,7 @@ public sealed class ListNonStartupRecipesTool : AIFunction
 
         var recipeHarvesters = arguments.Services.GetRequiredService<IEnumerable<IRecipeHarvester>>();
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
+
         var features = await shellFeaturesManager.GetAvailableFeaturesAsync();
         var recipes = await GetRecipesAsync(recipeHarvesters, features);
 

@@ -12,6 +12,7 @@ internal sealed class MvcCopilotOptionsConfiguration : IConfigureOptions<Copilot
     private readonly AppDataSettingsService<CopilotSettings> _settingsService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger<MvcCopilotOptionsConfiguration> _logger;
+
     public MvcCopilotOptionsConfiguration(
         AppDataSettingsService<CopilotSettings> settingsService,
         IDataProtectionProvider dataProtectionProvider,
@@ -39,6 +40,7 @@ internal sealed class MvcCopilotOptionsConfiguration : IConfigureOptions<Copilot
         options.WireApi = settings.WireApi ?? "completions";
         options.DefaultModel = settings.DefaultModel;
         options.AzureApiVersion = settings.AzureApiVersion;
+
         var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
 
         if (!string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))

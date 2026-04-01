@@ -11,9 +11,12 @@ public sealed class DataSourceVectorSearchFilterTests
         var serviceType = Type.GetType(
             "CrestApps.Azure.AISearch.Services.AzureAISearchDataSourceContentManager, CrestApps.Azure.AISearch",
             throwOnError: true);
+
         var method = serviceType!.GetMethod("BuildODataFilter", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
+
         var result = (string)method!.Invoke(null, ["ds1", null])!;
+
         Assert.Equal("dataSourceId eq 'ds1'", result);
     }
 
@@ -23,9 +26,12 @@ public sealed class DataSourceVectorSearchFilterTests
         var serviceType = Type.GetType(
             "CrestApps.Azure.AISearch.Services.AzureAISearchDataSourceContentManager, CrestApps.Azure.AISearch",
             throwOnError: true);
+
         var method = serviceType!.GetMethod("BuildODataFilter", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
+
         var result = (string)method!.Invoke(null, ["ds1", "(myField eq 'x')"])!;
+
         Assert.Equal("(dataSourceId eq 'ds1') and ((myField eq 'x'))", result);
     }
 
@@ -35,11 +41,15 @@ public sealed class DataSourceVectorSearchFilterTests
         var serviceType = Type.GetType(
             "CrestApps.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.Elasticsearch",
             throwOnError: true);
+
         var method = serviceType.GetMethod("BuildMustQueryDebug", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
+
         var list = (System.Collections.IEnumerable)method.Invoke(null, ["ds1", null])!;
+
         var items = list.Cast<object>().ToList();
         Assert.Single(items);
+
         Assert.Equal("term", items[0].GetType().GetField("Item1").GetValue(items[0]));
         Assert.Equal("ds1", items[0].GetType().GetField("Item2").GetValue(items[0]));
     }
@@ -50,17 +60,25 @@ public sealed class DataSourceVectorSearchFilterTests
         var serviceType = Type.GetType(
             "CrestApps.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.Elasticsearch",
             throwOnError: true);
+
         var method = serviceType.GetMethod("BuildMustQueryDebug", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
+
         const string filter = "{\"term\":{\"filters.category\":\"books\"}}";
+
         var list = (System.Collections.IEnumerable)method.Invoke(null, ["ds1", filter])!;
         var items = list.Cast<object>().ToList();
+
         Assert.Equal(2, items.Count);
+
         Assert.Equal("term", items[0].GetType().GetField("Item1").GetValue(items[0]));
         Assert.Equal("ds1", items[0].GetType().GetField("Item2").GetValue(items[0]));
+
         Assert.Equal("wrapper", items[1].GetType().GetField("Item1").GetValue(items[1]));
+
         var base64 = (string)items[1].GetType().GetField("Item2").GetValue(items[1])!;
         var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
+
         Assert.Equal(filter, decoded);
     }
 }

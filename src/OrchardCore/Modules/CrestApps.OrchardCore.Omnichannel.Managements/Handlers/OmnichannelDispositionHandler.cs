@@ -16,6 +16,7 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
+
     public OmnichannelDispositionHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
@@ -28,8 +29,10 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
 
     public override Task InitializingAsync(InitializingContext<OmnichannelDisposition> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task UpdatingAsync(UpdatingContext<OmnichannelDisposition> context)
         => PopulateAsync(context.Model, context.Data);
+
     public override Task ValidatingAsync(ValidatingContext<OmnichannelDisposition> context)
     {
         if (string.IsNullOrWhiteSpace(context.Model.DisplayText))
@@ -43,6 +46,7 @@ internal sealed class OmnichannelDispositionHandler : CatalogEntryHandlerBase<Om
     public override Task InitializedAsync(InitializedContext<OmnichannelDisposition> context)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
+
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user != null)

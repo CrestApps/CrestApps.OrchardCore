@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 public sealed class DefaultMcpFileProviderResolver : IMcpFileProviderResolver
 {
     private readonly IWebHostEnvironment _webHostEnvironment;
+
     public DefaultMcpFileProviderResolver(IWebHostEnvironment webHostEnvironment)
     {
         _webHostEnvironment = webHostEnvironment;

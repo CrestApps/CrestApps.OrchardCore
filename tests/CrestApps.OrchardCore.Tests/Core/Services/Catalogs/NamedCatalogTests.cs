@@ -12,7 +12,9 @@ public sealed class NamedCatalogTests
         var records = new List<TestNamedCatalogEntry> { entry };
 
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
+
         var result = await catalog.FindByNameAsync("Test");
+
         Assert.Equal(entry, result);
     }
 
@@ -21,7 +23,9 @@ public sealed class NamedCatalogTests
     {
         var records = new List<TestNamedCatalogEntry>();
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out _);
+
         var result = await catalog.FindByNameAsync("NotFound");
+
         Assert.Null(result);
     }
 
@@ -43,6 +47,7 @@ public sealed class NamedCatalogTests
         var records = new List<TestNamedCatalogEntry> { entry1 };
 
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
+
         await catalog.CreateAsync(entry1);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.CreateAsync(entry2));
     }
@@ -62,6 +67,7 @@ public sealed class NamedCatalogTests
 
         var catalog = FakeDocumentManager.CreateNamedCatalog(records, out var fakeManager);
         entry1.Name = entry2.Name;
+
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await catalog.UpdateAsync(entry1));
     }
 }

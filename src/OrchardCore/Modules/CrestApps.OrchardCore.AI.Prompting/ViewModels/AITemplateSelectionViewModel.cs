@@ -7,8 +7,10 @@ namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;
 public class AITemplateSelectionViewModel
 {
     public List<PromptTemplateSelectionItemViewModel> PromptTemplates { get; set; } = [];
+
     [BindNever]
     public IList<PromptTemplateOptionViewModel> AvailablePrompts { get; set; } = [];
+
     public string SelectedPromptId
     {
         get => PromptTemplates.Count > 0 ? PromptTemplates[0].TemplateId : null;
@@ -42,11 +44,13 @@ public class AITemplateSelectionViewModel
         => AvailablePrompts
         .Where(p => !string.IsNullOrEmpty(p.TemplateId))
         .ToDictionary(p => p.TemplateId, p => p.Description ?? string.Empty);
+
     [BindNever]
     public Dictionary<string, IList<TemplateParameterDescriptor>> PromptParameterDescriptors
         => AvailablePrompts
         .Where(p => !string.IsNullOrEmpty(p.TemplateId))
         .ToDictionary(p => p.TemplateId, p => p.Parameters);
+
     [BindNever]
     public IEnumerable<SelectListItem> AvailablePromptItems
         => AvailablePrompts.Select(p => new SelectListItem(p.Title, p.TemplateId));

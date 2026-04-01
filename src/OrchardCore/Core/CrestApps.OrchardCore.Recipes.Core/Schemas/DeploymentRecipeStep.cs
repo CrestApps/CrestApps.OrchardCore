@@ -9,6 +9,7 @@ public sealed class DeploymentRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
     public string Name => "deployment";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

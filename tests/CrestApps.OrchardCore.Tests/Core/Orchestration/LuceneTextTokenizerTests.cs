@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 public sealed class LuceneTextTokenizerTests
 {
     private readonly LuceneTextTokenizer _tokenizer = new();
+
     [Fact]
     public void Tokenize_NullOrWhitespace_ReturnsEmpty()
     {
@@ -17,6 +18,7 @@ public sealed class LuceneTextTokenizerTests
     public void Tokenize_SplitsCamelCase()
     {
         var tokens = _tokenizer.Tokenize("createJiraTicket");
+
         Assert.Contains("creat", tokens);  // stem of "create"
         Assert.Contains("jira", tokens);
         Assert.Contains("ticket", tokens);
@@ -26,6 +28,7 @@ public sealed class LuceneTextTokenizerTests
     public void Tokenize_SplitsConsecutiveUppercase()
     {
         var tokens = _tokenizer.Tokenize("JSONSchema");
+
         Assert.Contains("json", tokens);
         Assert.Contains("schema", tokens);
     }
@@ -35,6 +38,7 @@ public sealed class LuceneTextTokenizerTests
     {
         var tokensA = _tokenizer.Tokenize("recipes");
         var tokensB = _tokenizer.Tokenize("recipe");
+
         Assert.True(tokensA.Overlaps(tokensB),
         $"Expected overlap between [{string.Join(", ", tokensA)}] and [{string.Join(", ", tokensB)}]");
     }
@@ -43,6 +47,7 @@ public sealed class LuceneTextTokenizerTests
     public void Tokenize_RemovesStopWords()
     {
         var tokens = _tokenizer.Tokenize("the schema for this recipe");
+
         Assert.DoesNotContain("the", tokens);
         Assert.DoesNotContain("for", tokens);
         Assert.DoesNotContain("this", tokens);
@@ -54,6 +59,7 @@ public sealed class LuceneTextTokenizerTests
     public void Tokenize_HandlesToolNames()
     {
         var tokens = _tokenizer.Tokenize("sendSlackMessage: Send a message to a Slack channel");
+
         Assert.Contains("send", tokens);
         Assert.Contains("slack", tokens);
         Assert.Contains("messag", tokens); // stem of "message"
@@ -64,6 +70,7 @@ public sealed class LuceneTextTokenizerTests
     public void Tokenize_HandlesHyphenatedText()
     {
         var tokens = _tokenizer.Tokenize("recipe-schema: Returns JSON definition");
+
         Assert.Contains("recip", tokens);
         Assert.Contains("schema", tokens);
         Assert.Contains("json", tokens);

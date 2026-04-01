@@ -12,6 +12,7 @@ public sealed class ContentRecipeStep : IRecipeStep
 
     private JsonSchema _cached;
     public string Name => "content";
+
     public ContentRecipeStep(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
@@ -26,7 +27,9 @@ public sealed class ContentRecipeStep : IRecipeStep
 
         var definitions = await _contentDefinitionManager.ListTypeDefinitionsAsync();
         var contentTypes = definitions.Select(definition => definition.Name).ToArray();
+
         var contentItemSchema = ContentCommonSchemas.CreateContentItemSchema(contentTypes);
+
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(

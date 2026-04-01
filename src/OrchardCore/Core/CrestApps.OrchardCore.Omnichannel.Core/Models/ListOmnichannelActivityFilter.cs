@@ -17,6 +17,7 @@ public sealed class ListOmnichannelActivityFilter : Entity
     public DateTime? ScheduledFrom { get; set; }
 
     public DateTime? ScheduledTo { get; set; }
+
     [BindNever]
     public RouteValueDictionary RouteValues { get; set; } = [];
 }

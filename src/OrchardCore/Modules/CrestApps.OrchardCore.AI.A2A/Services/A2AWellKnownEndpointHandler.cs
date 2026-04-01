@@ -21,7 +21,9 @@ internal static class A2AWellKnownEndpointHandler
         var options = context.RequestServices.GetRequiredService<IOptions<A2AHostOptions>>().Value;
         var profileManager = context.RequestServices.GetRequiredService<IAIProfileManager>();
         var profiles = await profileManager.GetAsync(AIProfileType.Agent);
+
         var baseUrl = $"{context.Request.Scheme}://{context.Request.Host}";
+
         context.Response.ContentType = "application/json";
 
         if (options.ExposeAgentsAsSkill)
@@ -56,7 +58,6 @@ internal static class A2AWellKnownEndpointHandler
 
         return cards;
     }
-
     /// <summary>
     /// Populates the <see cref="AgentCard.SecuritySchemes"/> and <see cref="AgentCard.Security"/>
     /// fields based on the configured authentication type so clients know how to authenticate.
@@ -79,6 +80,7 @@ internal static class A2AWellKnownEndpointHandler
                     new Dictionary<string, string[]> { ["apiKey"] = [] },
                 ];
                 break;
+
             case A2AHostAuthenticationType.OpenId:
                 card.SecuritySchemes = new Dictionary<string, SecurityScheme>
                 {
@@ -92,6 +94,7 @@ internal static class A2AWellKnownEndpointHandler
                     new Dictionary<string, string[]> { ["openId"] = [] },
                 ];
                 break;
+
                 // AuthenticationType.None — no security schemes needed.
         }
     }

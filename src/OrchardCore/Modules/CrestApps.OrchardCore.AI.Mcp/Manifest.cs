@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Model Context Protocol (MCP) Client",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = McpPermissions.Feature.Area,
     Name = "Model Context Protocol (MCP) Client",
@@ -19,6 +21,7 @@ using OrchardCore.Modules.Manifest;
     "CrestApps.OrchardCore.Resources",
     ]
     )]
+
 [assembly: Feature(
     Id = McpPermissions.Feature.Stdio,
     Name = "Model Context Protocol (MCP) Local Client",
@@ -29,6 +32,7 @@ using OrchardCore.Modules.Manifest;
     McpPermissions.Feature.Area,
     ]
     )]
+
 [assembly: Feature(
     Id = McpPermissions.Feature.Server,
     Name = "Model Context Protocol (MCP) Server",

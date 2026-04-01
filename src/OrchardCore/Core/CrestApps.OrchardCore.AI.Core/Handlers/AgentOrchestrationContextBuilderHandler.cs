@@ -22,6 +22,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
     private readonly IAIProfileManager _profileManager;
     private readonly ITemplateService _templateService;
     private readonly ILogger _logger;
+
     public AgentOrchestrationContextBuilderHandler(
         IAIProfileManager profileManager,
         ITemplateService templateService,
@@ -34,6 +35,7 @@ internal sealed class AgentOrchestrationContextBuilderHandler : IOrchestrationCo
 
     public Task BuildingAsync(OrchestrationContextBuildingContext context)
         => Task.CompletedTask;
+
     public async Task BuiltAsync(OrchestrationContextBuiltContext context)
     {
         var completionContext = context.OrchestrationContext.CompletionContext;

@@ -34,6 +34,7 @@ internal sealed class DefaultExternalChatRelayEventHandler : IExternalChatRelayE
     private readonly IExternalChatRelayNotificationHandler _notificationHandler;
     private readonly IStringLocalizer T;
     private readonly ILogger _logger;
+
     public DefaultExternalChatRelayEventHandler(
         IServiceProvider serviceProvider,
         IExternalChatRelayNotificationHandler notificationHandler,

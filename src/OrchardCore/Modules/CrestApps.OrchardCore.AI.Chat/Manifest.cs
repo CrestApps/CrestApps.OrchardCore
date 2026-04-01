@@ -1,12 +1,14 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Artificial Intelligence",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.Chat,
     Name = "AI Chat",
@@ -21,6 +23,7 @@ using OrchardCore.Modules.Manifest;
     AIConstants.Feature.Area,
     ]
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.ChatAdminWidget,
     Name = "AI Chat Admin Widget",
@@ -32,6 +35,7 @@ using OrchardCore.Modules.Manifest;
     AIConstants.Feature.OrchardCoreAIAgent,
     ]
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.ChatAnalytics,
     Name = "AI Chat Session Analytics",

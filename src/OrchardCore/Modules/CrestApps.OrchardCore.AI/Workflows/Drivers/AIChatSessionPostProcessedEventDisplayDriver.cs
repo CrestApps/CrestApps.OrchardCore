@@ -12,6 +12,7 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 public sealed class AIChatSessionPostProcessedEventDisplayDriver : ActivityDisplayDriver<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventViewModel>
 {
     private readonly IAIProfileStore _profileStore;
+
     public AIChatSessionPostProcessedEventDisplayDriver(
         IAIProfileStore profileStore)
     {
@@ -29,6 +30,7 @@ public sealed class AIChatSessionPostProcessedEventDisplayDriver : ActivityDispl
     {
         var model = new AIChatSessionPostProcessedEventViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         activity.ProfileId = model.ProfileId;
 
         return Edit(activity, context);

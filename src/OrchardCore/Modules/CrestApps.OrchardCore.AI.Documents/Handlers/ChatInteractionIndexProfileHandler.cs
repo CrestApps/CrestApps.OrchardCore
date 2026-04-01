@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 public sealed class ChatInteractionIndexProfileHandler : IndexProfileHandlerBase
 {
     private readonly AIDocumentsIndexingService _indexingService;
+
     public ChatInteractionIndexProfileHandler(AIDocumentsIndexingService indexingService)
     {
         _indexingService = indexingService;

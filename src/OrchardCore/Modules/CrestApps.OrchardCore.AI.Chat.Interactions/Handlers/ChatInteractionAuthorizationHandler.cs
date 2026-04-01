@@ -12,6 +12,7 @@ internal sealed class ChatInteractionAuthorizationHandler : AuthorizationHandler
     private readonly IServiceProvider _serviceProvider;
 
     private IAuthorizationService _authorizationService;
+
     public ChatInteractionAuthorizationHandler(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;

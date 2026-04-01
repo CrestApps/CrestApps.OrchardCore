@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class OrchardCoreAIToolAccessEvaluator : IAIToolAccessEvaluator
 {
     private readonly IAuthorizationService _authorizationService;
+
     public OrchardCoreAIToolAccessEvaluator(IAuthorizationService authorizationService)
     {
         _authorizationService = authorizationService;

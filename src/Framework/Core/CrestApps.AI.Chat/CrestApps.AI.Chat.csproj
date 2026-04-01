@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <RootNamespace>CrestApps.AI.Chat</RootNamespace>
     <Title>CrestApps AI Chat Core</Title>
@@ -10,17 +11,22 @@
 		</Description>
     <PackageTags>$(PackageTags) AI Chat SignalR</PackageTags>
   </PropertyGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Templates\Prompts\**\*" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="PdfPig" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../CrestApps.AI/CrestApps.AI.csproj" />
   </ItemGroup>
+
 </Project>

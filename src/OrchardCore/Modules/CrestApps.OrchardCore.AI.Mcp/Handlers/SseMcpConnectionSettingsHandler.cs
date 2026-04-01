@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 internal sealed class SseMcpConnectionSettingsHandler : CatalogEntryHandlerBase<McpConnection>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+
     public SseMcpConnectionSettingsHandler(IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtectionProvider = dataProtectionProvider;
@@ -17,8 +18,10 @@ internal sealed class SseMcpConnectionSettingsHandler : CatalogEntryHandlerBase<
 
     public override Task InitializingAsync(InitializingContext<McpConnection> context)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
+
     public override Task UpdatingAsync(UpdatingContext<McpConnection> context)
         => ProtectSensitiveFieldsAsync(context.Model, context.Data);
+
     private Task ProtectSensitiveFieldsAsync(McpConnection connection, JsonNode data)
     {
         if (!string.Equals(connection.Source, McpConstants.TransportTypes.Sse, StringComparison.Ordinal))
@@ -35,6 +38,7 @@ internal sealed class SseMcpConnectionSettingsHandler : CatalogEntryHandlerBase<
 
         var protector = _dataProtectionProvider.CreateProtector(McpConstants.DataProtectionPurpose);
         var metadata = connection.As<SseMcpConnectionMetadata>();
+
         ProtectField(protector, metadataNode, nameof(SseMcpConnectionMetadata.ApiKey), val =>
         {
             metadata.ApiKey = val;

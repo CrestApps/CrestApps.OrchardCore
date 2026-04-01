@@ -15,9 +15,12 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCopilotOrchestrator(this IServiceCollection services)
     {
         services.AddHttpClient();
+
         services.AddOrchestrator<CopilotOrchestrator>(CopilotOrchestrator.OrchestratorName)
             .WithTitle("GitHub Copilot Orchestrator");
+
         services.TryAddScoped<GitHubOAuthService>();
+
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, CopilotChatInteractionSettingsHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CopilotOrchestrationContextHandler>());
 

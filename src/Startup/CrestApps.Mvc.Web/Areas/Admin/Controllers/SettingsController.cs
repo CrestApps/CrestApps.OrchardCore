@@ -29,6 +29,7 @@ public sealed class SettingsController : Controller
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+
     public SettingsController(
         AppDataSettingsService<GeneralAISettings> settingsService,
         AppDataSettingsService<DefaultAIDeploymentSettings> deploymentDefaultsService,
@@ -65,13 +66,16 @@ public sealed class SettingsController : Controller
         var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
         var copilotSettings = await _copilotSettingsService.GetAsync();
         var paginationSettings = await _paginationSettingsService.GetAsync();
+
         var model = new SettingsViewModel
         {
             EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
             EnableDistributedCaching = settings.EnableDistributedCaching,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
+
             ChatInteractionEnableUserMemory = chatInteractionSettings.EnableUserMemory,
+
             DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
             DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
             DefaultEmbeddingDeploymentName = deploymentDefaults.DefaultEmbeddingDeploymentName,
@@ -79,6 +83,7 @@ public sealed class SettingsController : Controller
             DefaultSpeechToTextDeploymentName = deploymentDefaults.DefaultSpeechToTextDeploymentName,
             DefaultTextToSpeechDeploymentName = deploymentDefaults.DefaultTextToSpeechDeploymentName,
             DefaultTextToSpeechVoiceId = deploymentDefaults.DefaultTextToSpeechVoiceId,
+
             DocumentIndexProfileName = documentSettings.IndexProfileName,
             DocumentTopN = documentSettings.TopN,
             DataSourceDefaultStrictness = dataSourceSettings.DefaultStrictness,
@@ -86,6 +91,7 @@ public sealed class SettingsController : Controller
             McpServerAuthenticationType = mcpServerSettings.AuthenticationType,
             McpServerApiKey = mcpServerSettings.ApiKey,
             McpServerRequireAccessPermission = mcpServerSettings.RequireAccessPermission,
+
             CopilotAuthenticationType = copilotSettings.AuthenticationType,
             CopilotClientId = copilotSettings.ClientId,
             CopilotHasSecret = !string.IsNullOrWhiteSpace(copilotSettings.ProtectedClientSecret),
@@ -149,11 +155,14 @@ public sealed class SettingsController : Controller
 
         // Save general AI settings.
         var settings = await _settingsService.GetAsync();
+
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.MaximumIterationsPerRequest = model.MaximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
+
         await _settingsService.SaveAsync(settings);
+
         // Save default deployment settings.
         var deploymentDefaults = new DefaultAIDeploymentSettings
         {
@@ -167,6 +176,7 @@ public sealed class SettingsController : Controller
         };
 
         await _deploymentDefaultsService.SaveAsync(deploymentDefaults);
+
         await _interactionDocumentSettingsService.SaveAsync(new InteractionDocumentSettings
         {
             IndexProfileName = model.DocumentIndexProfileName?.Trim(),
@@ -194,6 +204,7 @@ public sealed class SettingsController : Controller
         // Save Copilot settings.
         var existingCopilot = await _copilotSettingsService.GetAsync();
         var protector = _dataProtectionProvider.CreateProtector(CopilotProtectorPurpose);
+
         var copilotSettings = new CopilotSettings
         {
             AuthenticationType = model.CopilotAuthenticationType,
@@ -218,6 +229,7 @@ public sealed class SettingsController : Controller
         }
 
         await _copilotSettingsService.SaveAsync(copilotSettings);
+
         // Save pagination settings.
         await _paginationSettingsService.SaveAsync(new PaginationSettings
         {
@@ -233,16 +245,22 @@ public sealed class SettingsController : Controller
     {
         model.ChatDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+
         model.UtilityDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+
         model.EmbeddingDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding));
+
         model.ImageDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.Image));
+
         model.SpeechToTextDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText));
+
         model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
+
         model.DocumentIndexProfiles = [new SelectListItem("— None —", "")];
         model.DocumentIndexProfiles = model.DocumentIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)

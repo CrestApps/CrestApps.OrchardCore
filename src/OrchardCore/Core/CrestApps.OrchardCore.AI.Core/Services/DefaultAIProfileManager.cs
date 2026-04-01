@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIProfileManager : NamedCatalogManager<AIProfile>, IAIProfileManager
 {
     private readonly IAIProfileStore _profileStore;
+
     public DefaultAIProfileManager(
         IAIProfileStore profileStore,
         IEnumerable<ICatalogEntryHandler<AIProfile>> handlers,

@@ -16,9 +16,11 @@ internal static class RecipeStepSchemaBuilders
         };
 
         allProperties.AddRange(properties);
+
         var builder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(allProperties.ToDictionary(property => property.Name, property => property.Schema));
+
         var required = requiredProperties?.Prepend("name").ToArray() ?? ["name"];
 
         return builder
@@ -43,10 +45,13 @@ internal static class RecipeStepSchemaBuilders
 
     public static JsonSchemaBuilder Boolean()
         => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
+
     public static JsonSchemaBuilder Integer()
         => new JsonSchemaBuilder().Type(SchemaValueType.Integer);
+
     public static JsonSchemaBuilder Number()
         => new JsonSchemaBuilder().Type(SchemaValueType.Number);
+
     public static JsonSchemaBuilder Object(
         IEnumerable<(string Name, JsonSchemaBuilder Schema)> properties = null,
         IEnumerable<string> requiredProperties = null,
@@ -70,6 +75,7 @@ internal static class RecipeStepSchemaBuilders
 
     public static JsonSchemaBuilder String()
         => new JsonSchemaBuilder().Type(SchemaValueType.String);
+
     public static JsonSchemaBuilder StringArray(int? minItems = null)
         => Array(String(), minItems);
 }

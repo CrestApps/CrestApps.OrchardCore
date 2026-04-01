@@ -13,12 +13,16 @@ public sealed class ListOmnichannelActivity : ShapeViewModel
     }
 
     public ContentItem ContactContentItem { get; set; }
+
     [BindNever]
     public List<IShape> ScheduledContainers { get; set; }
+
     [BindNever]
     public IShape ScheduledPager { get; set; }
+
     [BindNever]
     public List<IShape> CompletedContainers { get; set; }
+
     [BindNever]
     public IShape CompletedPager { get; set; }
 }

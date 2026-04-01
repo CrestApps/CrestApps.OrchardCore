@@ -14,6 +14,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchSearchIndexManager> _logger;
+
     public ElasticsearchSearchIndexManager(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchSearchIndexManager> logger)
@@ -85,6 +86,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating Elasticsearch index '{IndexName}'.", profile.IndexFullName);
+
             throw;
         }
     }
@@ -106,6 +108,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting Elasticsearch index '{IndexName}'.", indexFullName);
+
             throw;
         }
     }

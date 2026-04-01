@@ -16,6 +16,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
     private readonly ICatalog<AIDataSource> _dataSourceStore;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileDataSourceDisplayDriver(
         ISiteService siteService,
         IODataValidator oDataValidator,
@@ -34,6 +35,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         {
             await PopulateViewModelAsync(profile, model);
         }).Location("Content:4%General;1");
+
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(profile, model);
@@ -45,7 +47,9 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
         var model = new EditProfileDataSourcesViewModel();
+
         var metadata = profile.As<DataSourceMetadata>();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (!string.IsNullOrEmpty(model.DataSourceId))
@@ -65,8 +69,10 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
         var strictness = dataSourceSettings.GetStrictness(model.Strictness);
         var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
+
 
         if (strictness != model.Strictness)
         {
@@ -86,6 +92,7 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         }
 
         profile.Put(metadata);
+
         profile.Alter<AIDataSourceRagMetadata>(t =>
         {
             t.Filter = model.Filter;
@@ -100,11 +107,14 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
     private async Task PopulateViewModelAsync(AIProfile profile, EditProfileDataSourcesViewModel model)
     {
         var ragMetadata = profile.As<AIDataSourceRagMetadata>();
+
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
         model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
         model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
         model.IsInScope = ragMetadata.IsInScope;
         model.Filter = ragMetadata.Filter;
+
         var metadata = profile.As<DataSourceMetadata>();
         model.DataSourceId = metadata.DataSourceId;
         model.DataSources = await _dataSourceStore.GetAllAsync();

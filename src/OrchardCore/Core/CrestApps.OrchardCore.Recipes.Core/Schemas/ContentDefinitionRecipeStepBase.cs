@@ -12,7 +12,9 @@ public abstract class ContentDefinitionRecipeStepBase(
     private JsonSchema _cached;
 
     public abstract string Name { get; }
+
     protected virtual IReadOnlyList<string> RequiredProperties => ["name"];
+
     public async ValueTask<JsonSchema> GetSchemaAsync()
     {
         if (_cached is not null)
@@ -22,8 +24,10 @@ public abstract class ContentDefinitionRecipeStepBase(
 
         var partNames = await _contentSchemaProvider.GetPartNamesAsync();
         var fieldTypeNames = await _contentSchemaProvider.GetFieldTypeNamesAsync();
+
         var partsItem = await CreatePartsItemAsync(partNames);
         var fieldsItem = await CreateFieldsItemAsync(fieldTypeNames);
+
         _cached = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
@@ -111,6 +115,7 @@ public abstract class ContentDefinitionRecipeStepBase(
         ("Settings", GenericSubSettings("ContentTypePartSettings")))
             .Required("PartName", "Name", "Settings")
             .AdditionalProperties(true);
+
         var fragments = await GatherFragmentsAsync(ContentDefinitionSchemaType.Part);
 
         if (fragments.Count > 0)
@@ -136,6 +141,7 @@ public abstract class ContentDefinitionRecipeStepBase(
         ("Settings", GenericSubSettings("ContentPartFieldSettings")))
             .Required("FieldName", "Name", "Settings")
             .AdditionalProperties(true);
+
         var fragments = await GatherFragmentsAsync(ContentDefinitionSchemaType.Field);
 
         if (fragments.Count > 0)

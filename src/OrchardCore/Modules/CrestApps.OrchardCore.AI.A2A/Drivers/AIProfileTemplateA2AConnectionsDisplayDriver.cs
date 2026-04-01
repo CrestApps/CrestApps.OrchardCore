@@ -14,6 +14,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
     private readonly ICatalog<A2AConnection> _store;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileTemplateA2AConnectionsDisplayDriver(
         ICatalog<A2AConnection> store,
         IStringLocalizer<AIProfileTemplateA2AConnectionsDisplayDriver> stringLocalizer)
@@ -34,6 +35,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
         return Initialize<EditProfileA2AConnectionsViewModel>("EditProfileA2AConnection_Edit", model =>
         {
             var a2aMetadata = template.As<AIProfileA2AMetadata>();
+
             model.Connections = connections
             .Select(entry => new ToolEntry
             {
@@ -42,6 +44,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
+
         }).Location("Content:4#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -61,8 +64,11 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
         }
 
         var model = new EditProfileA2AConnectionsViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var ids = model.Connections?.Where(x => x.IsSelected).Select(x => x.ItemId).ToArray();
+
         var metadata = new AIProfileA2AMetadata();
 
         if (ids is null || ids.Length == 0)

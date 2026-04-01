@@ -16,13 +16,16 @@ public sealed class AIChatAnalyticsUserSegmentDisplayDriver : DisplayDriver<AICh
         return Initialize<ChatAnalyticsUserSegmentViewModel>("ChatAnalyticsUserSegment", model =>
         {
             var events = context.Events;
+
             model.AuthenticatedSessions = events.Count(e => e.IsAuthenticated);
             model.AnonymousSessions = events.Count(e => !e.IsAuthenticated);
+
             model.UniqueAuthenticatedUsers = events
             .Where(e => e.IsAuthenticated && !string.IsNullOrEmpty(e.UserId))
             .Select(e => e.UserId)
             .Distinct()
             .Count();
+
             model.UniqueAnonymousVisitors = events
             .Where(e => !e.IsAuthenticated && !string.IsNullOrEmpty(e.VisitorId))
             .Select(e => e.VisitorId)

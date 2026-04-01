@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 internal sealed class McpAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public McpAdminMenu(IStringLocalizer<McpAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;
@@ -27,6 +28,7 @@ internal sealed class McpAdminMenu : AdminNavigationProvider
             .LocalNav()
         )
         )
+
         );
 
         return ValueTask.CompletedTask;

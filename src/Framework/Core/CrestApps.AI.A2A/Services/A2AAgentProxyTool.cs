@@ -48,10 +48,12 @@ internal sealed class A2AAgentProxyTool : AIFunction
           },
           "required": ["message"]
         }
+
         """);
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
+
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(
@@ -59,6 +61,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<A2AAgentProxyTool>>();
@@ -66,6 +69,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
         if (!TryGetString(arguments, "message", out var message) || string.IsNullOrWhiteSpace(message))
         {
             return "No message was provided to the agent.";
+
         }
 
         TryGetString(arguments, "contextId", out var contextId);
@@ -73,12 +77,14 @@ internal sealed class A2AAgentProxyTool : AIFunction
         try
         {
             var httpClientFactory = arguments.Services.GetRequiredService<IHttpClientFactory>();
+
             var httpClient = httpClientFactory.CreateClient();
 
             var authService = arguments.Services.GetService<IA2AConnectionAuthService>();
             if (authService is not null)
             {
                 var connectionStore = arguments.Services.GetRequiredService<ICatalog<A2AConnection>>();
+
                 var connection = await connectionStore.FindByIdAsync(_connectionId);
 
                 if (connection is not null)
@@ -86,6 +92,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
                     var metadata = connection.As<A2AConnectionMetadata>();
                     await authService.ConfigureHttpClientAsync(httpClient, metadata, cancellationToken);
                 }
+
             }
 
             var client = new A2AClient(new Uri(_endpoint), httpClient);
@@ -100,11 +107,13 @@ internal sealed class A2AAgentProxyTool : AIFunction
                 {
                     ["agentName"] = JsonSerializer.SerializeToElement(_agentName),
                 },
+
             };
 
             var sendParams = new MessageSendParams
             {
                 Message = agentMessage,
+
             };
 
             var response = await client.SendMessageAsync(sendParams, cancellationToken);
@@ -119,14 +128,17 @@ internal sealed class A2AAgentProxyTool : AIFunction
         }
         catch (Exception ex)
         {
+
             logger.LogError(ex, "Failed to communicate with remote A2A agent '{AgentName}' at '{Endpoint}'.", _agentName, _endpoint);
 
             return $"An error occurred while communicating with remote agent '{_agentName}'.";
         }
+
     }
 
     private static bool TryGetString(AIFunctionArguments arguments, string key, out string value)
     {
+
         value = null;
 
         if (arguments.TryGetValue(key, out var obj))
@@ -135,6 +147,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
             {
                 value = str;
                 return true;
+
             }
 
             if (obj is JsonElement element && element.ValueKind == JsonValueKind.String)
@@ -142,15 +155,18 @@ internal sealed class A2AAgentProxyTool : AIFunction
                 value = element.GetString();
                 return true;
             }
+
         }
 
         return false;
+
     }
 
     private static string ExtractTextFromResponse(A2AResponse response)
     {
         if (response is AgentMessage message)
         {
+
             var texts = message.Parts?.OfType<TextPart>().Select(p => p.Text);
 
             if (texts?.Any() == true)
@@ -164,6 +180,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
             {
                 var artifactTexts = task.Artifacts
                     .SelectMany(a => a.Parts?.OfType<TextPart>() ?? [])
+
                     .Select(p => p.Text);
 
                 var combined = string.Join(string.Empty, artifactTexts);
@@ -172,10 +189,12 @@ internal sealed class A2AAgentProxyTool : AIFunction
                 {
                     return combined;
                 }
+
             }
 
             if (task.Status.Message?.Parts is not null)
             {
+
                 var statusTexts = task.Status.Message.Parts.OfType<TextPart>().Select(p => p.Text);
 
                 var combined = string.Join(string.Empty, statusTexts);
@@ -185,6 +204,7 @@ internal sealed class A2AAgentProxyTool : AIFunction
                     return combined;
                 }
             }
+
         }
 
         return null;

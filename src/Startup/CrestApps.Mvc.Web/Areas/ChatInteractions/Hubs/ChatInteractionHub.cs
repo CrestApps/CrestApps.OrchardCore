@@ -11,6 +11,7 @@ namespace CrestApps.Mvc.Web.Hubs;
 public sealed class ChatInteractionHub : ChatInteractionHubBase
 {
     private readonly YesSql.ISession _session;
+
     public ChatInteractionHub(
         ICatalogManager<ChatInteraction> interactionManager,
         IChatInteractionPromptStore promptStore,

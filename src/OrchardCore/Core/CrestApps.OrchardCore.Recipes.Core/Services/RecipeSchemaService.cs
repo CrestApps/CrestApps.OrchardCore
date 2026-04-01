@@ -14,6 +14,7 @@ public sealed class RecipeSchemaService
     private const string _stepNamesCacheKey = "RecipeStepNames";
 
     private string[] _names = null;
+
     public RecipeSchemaService(
         IEnumerable<IRecipeStepHandler> handlers,
         IEnumerable<IRecipeStep> recipeSteps,
@@ -99,6 +100,7 @@ public sealed class RecipeSchemaService
             .Distinct()
             .Order()
             .ToArray() ?? [];
+
         _memoryCache.Set(_stepNamesCacheKey, _names, TimeSpan.FromHours(1));
 
         return _names;

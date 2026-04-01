@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 public class OmnichannelActivityBatchViewModel
 {
     public string DisplayText { get; set; }
+
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? ScheduleAt { get; set; }
 
@@ -30,22 +31,30 @@ public class OmnichannelActivityBatchViewModel
     public bool PreventDuplicates { get; set; }
 
     public ActivityUrgencyLevel UrgencyLevel { get; set; }
+
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? LeadCreatedFrom { get; set; }
+
     [DisplayFormat(DataFormatString = "{0:yyyy-MM-ddTHH:mm}", ApplyFormatInEditMode = true)]
     public DateTime? LeadCreatedTo { get; set; }
 
     public bool OnlyPublishedLeads { get; set; }
+
     [BindNever]
     public OmnichannelActivityBatchStatus Status { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> SubjectContentTypes { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> ContactContentTypes { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Users { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> UrgencyLevels { get; set; }
 }

@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.AI.Agent.ContentTypes;
 public sealed class ListContentFieldsTool : AIFunction
 {
     public const string TheName = "listContentFieldDefinitions";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -17,9 +18,13 @@ public sealed class ListContentFieldsTool : AIFunction
       "additionalProperties": false
     }
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Retrieves the available content fields which can be used to create content parts.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
@@ -38,7 +43,9 @@ public sealed class ListContentFieldsTool : AIFunction
         }
 
         var contentMetadataService = arguments.Services.GetRequiredService<ContentMetadataService>();
+
         var fieldTypes = await contentMetadataService.GetFieldsAsync();
+
         var result = JsonSerializer.Serialize(fieldTypes.Select(fieldType => fieldType.Name));
 
         if (logger.IsEnabled(LogLevel.Debug))

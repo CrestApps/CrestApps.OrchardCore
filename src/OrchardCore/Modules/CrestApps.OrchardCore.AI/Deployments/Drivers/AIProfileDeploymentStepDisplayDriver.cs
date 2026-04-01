@@ -14,6 +14,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
     private readonly IAIProfileStore _profileStore;
 
     internal readonly IStringLocalizer S;
+
     public AIProfileDeploymentStepDisplayDriver(
         IAIProfileStore profileStore,
         IStringLocalizer<AIProfileDeploymentStepDisplayDriver> stringLocalizer)
@@ -44,6 +45,7 @@ internal sealed class AIProfileDeploymentStepDisplayDriver : DisplayDriver<Deplo
     public override async Task<IDisplayResult> UpdateAsync(AIProfileDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIProfileDeploymentStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.ProfileNames);

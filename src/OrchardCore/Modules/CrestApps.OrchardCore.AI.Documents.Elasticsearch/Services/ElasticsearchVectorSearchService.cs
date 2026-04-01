@@ -15,6 +15,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
 {
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<ElasticsearchVectorSearchService> _logger;
+
     public ElasticsearchVectorSearchService(
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchVectorSearchService> logger)
@@ -22,7 +23,6 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
         _elasticClient = elasticClient;
         _logger = logger;
     }
-
     /// <inheritdoc />
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
         IIndexProfileInfo indexProfile,
@@ -77,8 +77,10 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
             }
 
             var results = new List<DocumentChunkSearchResult>();
+
             var documents = response.Documents.GetEnumerator();
             var hits = response.Hits.GetEnumerator();
+
             while (documents.MoveNext() && hits.MoveNext())
             {
                 var hit = hits.Current;
@@ -92,6 +94,7 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                 var chunkText = document.TryGetPropertyValue(AIConstants.ColumnNames.Content, out var textNode)
                 ? textNode?.GetValue<string>()
                 : null;
+
                 var chunkIndex = 0;
 
                 if (document.TryGetPropertyValue(AIConstants.ColumnNames.ChunkIndex, out var indexNode) && indexNode != null)
@@ -104,9 +107,11 @@ public sealed class ElasticsearchVectorSearchService : IVectorSearchService
                     var documentKey = document.TryGetPropertyValue(AIConstants.ColumnNames.DocumentId, out var docIdNode)
                     ? docIdNode?.GetValue<string>()
                     : null;
+
                     var fileName = document.TryGetPropertyValue(AIConstants.ColumnNames.FileName, out var fileNameNode)
                     ? fileNameNode?.GetValue<string>()
                     : null;
+
                     results.Add(new DocumentChunkSearchResult
                     {
                         Chunk = new ChatInteractionDocumentChunk

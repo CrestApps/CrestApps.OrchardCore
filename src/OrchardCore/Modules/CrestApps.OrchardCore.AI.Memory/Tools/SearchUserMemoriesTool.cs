@@ -10,6 +10,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Tools;
 public sealed class SearchUserMemoriesTool : AIFunction
 {
     public const string TheName = "search_user_memories";
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -28,14 +29,21 @@ public sealed class SearchUserMemoriesTool : AIFunction
         "query"
       ],
       "additionalProperties": false
+
     }
+
     """);
+
     public override string Name => TheName;
+
     public override string Description => "Searches the current authenticated user's private memories for relevant preferences, projects, recurring topics, interests, and other durable details.";
+
     public override JsonElement JsonSchema => _jsonSchema;
+
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
         new Dictionary<string, object>()
         {
+
             ["Strict"] = false,
         };
 
@@ -48,6 +56,7 @@ public sealed class SearchUserMemoriesTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
 
             return "Unable to find a 'query' argument in the arguments parameter.";
+
         }
 
         var userId = AIMemoryToolHelpers.GetCurrentUserId(arguments.Services);
@@ -63,11 +72,13 @@ public sealed class SearchUserMemoriesTool : AIFunction
         var results = await memorySearchService.SearchAsync(
             userId,
             query,
+
             arguments.GetFirstValueOrDefault<int?>("top_n", null),
         cancellationToken);
 
         if (!results.Any())
         {
+
             return "No relevant user memories were found for this query.";
         }
 

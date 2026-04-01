@@ -3,7 +3,9 @@ using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
+
 /// <summary>
 /// In-memory cache for MCP capability embedding vectors.
 /// Embeddings are computed once per connection and cached until the
@@ -13,10 +15,12 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
 {
     private readonly ConcurrentDictionary<string, McpCapabilityEmbeddingEntry[]> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger _logger;
+
     public InMemoryMcpCapabilityEmbeddingCacheProvider(ILogger<InMemoryMcpCapabilityEmbeddingCacheProvider> logger)
     {
         _logger = logger;
     }
+
     public async Task<IReadOnlyList<McpCapabilityEmbeddingEntry>> GetOrCreateEmbeddingsAsync(
         IReadOnlyList<McpServerCapabilities> capabilities,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
@@ -24,44 +28,58 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
     {
         ArgumentNullException.ThrowIfNull(capabilities);
         ArgumentNullException.ThrowIfNull(embeddingGenerator);
+
         var allEntries = new List<McpCapabilityEmbeddingEntry>();
+
         foreach (var server in capabilities)
         {
             if (string.IsNullOrEmpty(server.ConnectionId))
             {
                 continue;
             }
+
             if (_cache.TryGetValue(server.ConnectionId, out var cached))
             {
                 allEntries.AddRange(cached);
+
                 continue;
             }
+
             // Build text representations for all capabilities of this connection.
             var pendingTexts = new List<string>();
             var pendingMeta = new List<(string Name, string Description, McpCapabilityType Type)>();
+
             AddCapabilities(server.Tools, McpCapabilityType.Tool, pendingTexts, pendingMeta);
             AddCapabilities(server.Prompts, McpCapabilityType.Prompt, pendingTexts, pendingMeta);
             AddCapabilities(server.Resources, McpCapabilityType.Resource, pendingTexts, pendingMeta);
             AddCapabilities(server.ResourceTemplates, McpCapabilityType.ResourceTemplate, pendingTexts, pendingMeta);
+
             if (pendingTexts.Count == 0)
             {
                 _cache[server.ConnectionId] = [];
+
                 continue;
             }
+
             try
             {
                 var embeddings = await embeddingGenerator.GenerateAsync(pendingTexts, cancellationToken: cancellationToken);
+
                 if (embeddings is null || embeddings.Count != pendingTexts.Count)
                 {
                     _logger.LogWarning(
                         "Embedding generation returned unexpected count for MCP connection '{ConnectionId}'. Expected {Expected}, got {Actual}.",
                         server.ConnectionId, pendingTexts.Count, embeddings?.Count ?? 0);
+
                     continue;
                 }
+
                 var entries = new McpCapabilityEmbeddingEntry[pendingTexts.Count];
+
                 for (var i = 0; i < pendingTexts.Count; i++)
                 {
                     var vector = embeddings[i].Vector;
+
                     entries[i] = new McpCapabilityEmbeddingEntry
                     {
                         ConnectionId = server.ConnectionId,
@@ -72,6 +90,7 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
                         Embedding = NormalizeL2(vector.ToArray()),
                     };
                 }
+
                 _cache[server.ConnectionId] = entries;
                 allEntries.AddRange(entries);
             }
@@ -83,13 +102,17 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
                     server.ConnectionId);
             }
         }
+
         return allEntries;
     }
+
     public void Invalidate(string connectionId)
     {
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
+
         _cache.TryRemove(connectionId, out _);
     }
+
     private static void AddCapabilities(
         IReadOnlyList<McpServerCapability> items,
         McpCapabilityType type,
@@ -100,16 +123,19 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
         {
             return;
         }
+
         foreach (var item in items)
         {
             if (string.IsNullOrWhiteSpace(item.Name))
             {
                 continue;
             }
+
             // Build a text representation combining name and description for embedding.
             var text = string.IsNullOrWhiteSpace(item.Description)
             ? item.Name
             : $"{item.Name}: {item.Description}";
+
             texts.Add(text);
             meta.Add((item.Name, item.Description ?? string.Empty, type));
         }
@@ -121,20 +147,26 @@ internal sealed class InMemoryMcpCapabilityEmbeddingCacheProvider : IMcpCapabili
     private static float[] NormalizeL2(float[] vector)
     {
         var sumOfSquares = 0f;
+
         for (var i = 0; i < vector.Length; i++)
         {
             sumOfSquares += vector[i] * vector[i];
         }
+
         var magnitude = MathF.Sqrt(sumOfSquares);
+
         if (magnitude == 0f)
         {
             return vector;
         }
+
         var normalized = new float[vector.Length];
+
         for (var i = 0; i < vector.Length; i++)
         {
             normalized[i] = vector[i] / magnitude;
         }
+
         return normalized;
     }
 }

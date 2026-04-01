@@ -143,6 +143,11 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             {
                 _logger.LogDebug("[STT:{TraceId}] +{Elapsed}ms NoMatch from {TotalBytes} bytes.",
                 traceId, sw.ElapsedMilliseconds, totalBytes);
+
+
+
+
+
             }
         }
         else if (result.Reason == ResultReason.Canceled)
@@ -545,7 +550,6 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             _tokenLock.Release();
         }
     }
-
     /// <summary>
     /// Attempts to extract the Azure region from a well-known Speech / Cognitive Services endpoint URL.
     /// Supports patterns such as:
@@ -575,7 +579,6 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         return null;
     }
-
     /// <summary>
     /// Reads an optional <c>audioFormat</c> value from <see cref="SpeechToTextOptions.AdditionalProperties"/>
     /// and maps it to an <see cref="AudioStreamContainerFormat"/>. Falls back to
@@ -603,7 +606,6 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         return AudioStreamContainerFormat.ANY;
     }
-
     /// <summary>
     /// Maps a MIME-type or short name to an <see cref="AudioStreamContainerFormat"/> value.
     /// Returns <see cref="AudioStreamContainerFormat.ANY"/> for unrecognized values.
@@ -642,7 +644,6 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
             _ => AudioStreamContainerFormat.ANY,
         };
     }
-
     /// <summary>
     /// Creates a <see cref="SpeechRecognizer"/> and wraps the constructor to provide a clear error
     /// message when GStreamer is missing (required for compressed audio formats on all platforms).
@@ -663,7 +664,6 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
                 ex);
         }
     }
-
     /// <summary>
     /// Checks whether an exception is the GStreamer-not-found error (SPXERR_GSTREAMER_NOT_FOUND_ERROR = 0x29).
     /// </summary>

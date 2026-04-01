@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.AI.Mcp.Services;
 internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServerOptions>
 {
     private readonly IShellConfiguration _shellConfiguration;
+
     public McpServerOptionsConfiguration(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;

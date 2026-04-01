@@ -7,17 +7,22 @@ using CrestApps.AI.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
 using CrestApps.Services;
+
 using Cysharp.Text;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 namespace CrestApps.AI.Tooling;
+
 /// <summary>
 /// Performs vector search against the configured data source knowledge base and returns relevant chunks with citations.
 /// </summary>
 public sealed class DataSourceSearchTool : AIFunction
 {
     public const string TheName = SystemToolNames.SearchDataSources;
+
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
     """
     {
@@ -40,9 +45,11 @@ public sealed class DataSourceSearchTool : AIFunction
     public override JsonElement JsonSchema => _jsonSchema;
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } =
+
         new Dictionary<string, object>
         {
             ["Strict"] = false,
+
         };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -50,6 +57,7 @@ public sealed class DataSourceSearchTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<DataSourceSearchTool>>();
 
         if (!arguments.TryGetFirstString("query", out var query))
+
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'query'.", Name);
             return "Unable to find a 'query' argument in the arguments parameter.";
@@ -61,7 +69,9 @@ public sealed class DataSourceSearchTool : AIFunction
             var executionContext = invocationContext?.ToolExecutionContext;
 
             if (executionContext == null)
+
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: no active AI execution context.", Name);
                 return "Data source search requires an active AI execution context.";
             }
@@ -69,8 +79,10 @@ public sealed class DataSourceSearchTool : AIFunction
             var dataSourceId = invocationContext.DataSourceId;
 
             if (string.IsNullOrEmpty(dataSourceId))
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no data source configured for this profile.", Name);
+
                 return "No data source is configured for this profile.";
             }
 
@@ -78,14 +90,17 @@ public sealed class DataSourceSearchTool : AIFunction
             var dataSource = await dataSourceStore.FindByIdAsync(dataSourceId);
 
             if (dataSource == null)
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: data source '{DataSourceId}' was not found.", Name, dataSourceId);
                 return $"Data source '{dataSourceId}' was not found.";
             }
 
             if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no knowledge base index configured for data source '{DataSourceId}'.", Name, dataSourceId);
+
                 return "No knowledge base index is configured for this data source. Please configure a knowledge base index in the data source settings.";
             }
 
@@ -93,7 +108,9 @@ public sealed class DataSourceSearchTool : AIFunction
             var masterIndexProfile = await indexProfileStore.FindByNameAsync(dataSource.AIKnowledgeBaseIndexProfileName);
 
             if (masterIndexProfile == null)
+
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: knowledge base index '{IndexProfileName}' was not found.", Name, dataSource.AIKnowledgeBaseIndexProfileName);
                 return $"Knowledge base index '{dataSource.AIKnowledgeBaseIndexProfileName}' was not found.";
             }
@@ -101,8 +118,10 @@ public sealed class DataSourceSearchTool : AIFunction
             var contentManager = arguments.Services.GetKeyedService<IDataSourceContentManager>(masterIndexProfile.ProviderName);
 
             if (contentManager == null)
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: no vector search service for provider '{ProviderName}'.", Name, masterIndexProfile.ProviderName);
+
                 return $"No vector search service is available for provider '{masterIndexProfile.ProviderName}'.";
             }
 
@@ -113,19 +132,23 @@ public sealed class DataSourceSearchTool : AIFunction
             if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
                 string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
                     string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: embedding configuration is missing for the knowledge base index.", Name);
                 return "Embedding configuration is missing for the knowledge base index.";
             }
 
             var embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
+
                 profileMetadata.EmbeddingProviderName,
                 profileMetadata.EmbeddingConnectionName,
                 profileMetadata.EmbeddingDeploymentName);
 #pragma warning restore CS0618
 
             if (embeddingGenerator == null)
+
             {
+
                 logger.LogWarning("AI tool '{ToolName}' failed: could not create embedding generator.", Name);
                 return "Failed to create embedding generator for data source search.";
             }
@@ -133,9 +156,12 @@ public sealed class DataSourceSearchTool : AIFunction
             var embeddings = await embeddingGenerator.GenerateAsync([query], cancellationToken: cancellationToken);
 
             if (embeddings == null || embeddings.Count == 0 || embeddings[0]?.Vector == null)
+
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: could not generate embedding for query.", Name);
+
                 return "Failed to generate embedding for the search query.";
+
             }
 
             var ragMetadata = GetRagMetadata(executionContext);
@@ -152,6 +178,7 @@ public sealed class DataSourceSearchTool : AIFunction
                     providerFilter = filterTranslator.Translate(ragMetadata.Filter);
                 }
                 else
+
                 {
                     logger.LogWarning("No OData filter translator available for provider '{ProviderName}'. Filter will be ignored.", masterIndexProfile.ProviderName);
                 }
@@ -160,6 +187,7 @@ public sealed class DataSourceSearchTool : AIFunction
             var results = await contentManager.SearchAsync(
                 masterIndexProfile,
                 embeddings[0].Vector.ToArray(),
+
             dataSourceId,
             siteSettings.GetTopNDocuments(ragMetadata?.TopNDocuments),
             providerFilter,
@@ -167,7 +195,9 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (results == null || !results.Any())
             {
+
                 return ragMetadata?.IsInScope == true
+
                 ? "No relevant content was found in the data source for this query. The answer is not available in the configured data source."
                 : "No relevant content was found in the data source for this query. Answer using your general knowledge instead.";
             }
@@ -182,9 +212,12 @@ public sealed class DataSourceSearchTool : AIFunction
                 if (!results.Any())
                 {
                     return ragMetadata?.IsInScope == true
+
                     ? "No results met the strictness threshold. The answer is not available in the configured data source."
                     : "No results met the strictness threshold. Answer using your general knowledge instead.";
+
                 }
+
             }
 
             var builder = ZString.CreateStringBuilder();
@@ -194,6 +227,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             foreach (var result in results)
             {
+
                 if (string.IsNullOrWhiteSpace(result.Content))
                 {
                     continue;
@@ -202,6 +236,7 @@ public sealed class DataSourceSearchTool : AIFunction
                 if (!string.IsNullOrEmpty(result.ReferenceId) && !seenReferences.ContainsKey(result.ReferenceId))
                 {
                     seenReferences[result.ReferenceId] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.Title), result.ReferenceType);
+
                 }
 
                 var refLabel = !string.IsNullOrEmpty(result.ReferenceId) && seenReferences.TryGetValue(result.ReferenceId, out var entry)
@@ -212,6 +247,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
                 if (!string.IsNullOrWhiteSpace(result.Title))
                 {
+
                     builder.Append(refLabel);
                     builder.Append(" Title: ");
                     builder.AppendLine(result.Title);
@@ -230,6 +266,7 @@ public sealed class DataSourceSearchTool : AIFunction
                 foreach (var kvp in seenReferences)
                 {
                     builder.Append("[doc:");
+
                     builder.Append(kvp.Value.Index);
                     builder.Append("] = ");
                     builder.AppendLine(kvp.Key);
@@ -244,6 +281,7 @@ public sealed class DataSourceSearchTool : AIFunction
                         Title = kvp.Value.Title,
                         Index = kvp.Value.Index,
                         ReferenceId = kvp.Key,
+
                         ReferenceType = kvp.Value.ReferenceType,
                     });
                 }
@@ -253,6 +291,7 @@ public sealed class DataSourceSearchTool : AIFunction
         }
         catch (Exception ex)
         {
+
             logger.LogError(ex, "Error during data source search.");
             return "An error occurred while searching the data source.";
         }
@@ -260,6 +299,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
     private static AIDataSourceRagMetadata GetRagMetadata(AIToolExecutionContext executionContext)
     {
+
         if (executionContext.Resource is AIProfile profile && profile.TryGet<AIDataSourceRagMetadata>(out var ragMetadata))
         {
             return ragMetadata;

@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <RootNamespace>CrestApps.AI</RootNamespace>
     <Title>CrestApps AI Core</Title>
@@ -10,12 +11,15 @@
 		</Description>
     <PackageTags>$(PackageTags) AI Core</PackageTags>
   </PropertyGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Templates\Prompts\**\*" />
   </ItemGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Lucene.Net.Analysis.Common" />
     <PackageReference Include="Markdig" />
@@ -25,10 +29,12 @@
     <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="ZString" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
     <ProjectReference Include="../CrestApps.Core/CrestApps.Core.csproj" />
     <ProjectReference Include="../CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
     <ProjectReference Include="../CrestApps.Templates/CrestApps.Templates.csproj" />
+
   </ItemGroup>
 </Project>

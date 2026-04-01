@@ -34,7 +34,9 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
         }
 
         var model = new AIProfileMenuViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
         var settings = template.As<AIChatProfileSettings>();
         settings.IsOnAdminMenu = model.IsOnAdminMenu;
         template.Put(settings);

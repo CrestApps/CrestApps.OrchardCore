@@ -2,12 +2,14 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Prompting;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "Artificial Intelligence",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.Area,
     Name = "AI Services",
@@ -19,6 +21,7 @@ using OrchardCore.Modules.Manifest;
     "CrestApps.OrchardCore.Resources",
     ]
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
     Name = "AI Chat Services",
@@ -33,6 +36,7 @@ using OrchardCore.Modules.Manifest;
     AIConstants.Feature.Area,
     ]
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.ChatApi,
     Name = "AI Chat WebAPI",
@@ -43,6 +47,7 @@ using OrchardCore.Modules.Manifest;
     AIConstants.Feature.ChatCore,
     ]
     )]
+
 [assembly: Feature(
     Id = AIConstants.Feature.ConnectionManagement,
     Name = "AI Connection Management",

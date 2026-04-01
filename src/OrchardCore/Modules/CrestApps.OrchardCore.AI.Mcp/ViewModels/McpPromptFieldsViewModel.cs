@@ -9,7 +9,9 @@ public class McpPromptFieldsViewModel
     public string Title { get; set; }
 
     public string Description { get; set; }
+
     public List<McpPromptArgumentViewModel> Arguments { get; set; } = [];
+
     [BindNever]
     public bool IsNew { get; set; }
 }

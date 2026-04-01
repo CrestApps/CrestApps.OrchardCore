@@ -8,7 +8,9 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class DeleteAIDeploymentsRecipeStep : IRecipeStep
 {
     private JsonSchema _cached;
+
     public string Name => "DeleteAIDeployments";
+
     public ValueTask<JsonSchema> GetSchemaAsync()
     {
         _cached ??= CreateSchema();

@@ -6,9 +6,11 @@ public static class DictionaryExtensions
 {
     public static string GetApiKey(this IDictionary<string, object> entry, bool throwException = true)
         => entry.GetStringValue("ApiKey", throwException);
+
     public static Uri GetEndpoint(this IDictionary<string, object> entry, bool throwException = true)
     {
         var endpoint = entry.GetStringValue("Endpoint", throwException);
+
         Uri uri = null;
 
         if (throwException)

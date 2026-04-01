@@ -18,6 +18,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IChatInteractionPromptStore _promptStore;
     private readonly OrchestratorOptions _orchestratorOptions;
+
     public ChatInteractionDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
@@ -46,18 +47,21 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
         var prompts = await _promptStore.GetPromptsAsync(interaction.ItemId);
+
         var headerResult = Initialize<ChatInteractionCapsuleViewModel>("ChatInteractionHeader", model =>
         {
             model.Interaction = interaction;
             model.Prompts = prompts;
             model.IsNew = context.IsNew;
         }).Location("Header");
+
         var contentResult = Initialize<ChatInteractionCapsuleViewModel>("ChatInteractionChat", model =>
         {
             model.Interaction = interaction;
             model.Prompts = prompts;
             model.IsNew = context.IsNew;
         }).Location("Content");
+
         // Title is placed first in Settings tab.
         var titleResult = Initialize<EditChatInteractionTitleViewModel>("ChatInteractionTitle_Edit", model =>
         {
@@ -65,6 +69,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.Title = interaction.Title;
             model.IsNew = context.IsNew;
         }).Location("Parameters:1#Settings;1");
+
         // Orchestrator selection comes after title.
         var orchestratorResult = Initialize<OrchestratorViewModel>("OrchestratorSelection_Edit", model =>
         {
@@ -79,9 +84,11 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
                 .ToArray();
             }
         }).Location("Parameters:2#Settings;1");
+
         // Connection/Deployment at position 3 - handled by ChatInteractionConnectionDisplayDriver.
         // Copilot config at position 4 - handled by ChatInteractionCopilotDisplayDriver.
         // Data source at position 5 - handled by ChatInteractionDataSourceDisplayDriver.
+
         var systemInstructionsResult = Initialize<EditChatInteractionViewModel>("ChatInteractionSystemInstructions_Edit", model =>
         {
             model.ItemId = interaction.ItemId;
@@ -91,6 +98,7 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
             model.SystemMessage = interaction.SystemMessage;
             model.IsNew = context.IsNew;
         }).Location("Parameters:8#Settings;1");
+
         // General parameters come after system instructions and prompt templates in the Settings tab.
         var parametersResult = Initialize<EditChatInteractionViewModel>("ChatInteractionParameters_Edit", model =>
         {

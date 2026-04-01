@@ -12,6 +12,7 @@ namespace CrestApps.Templates.Tags;
 public static class IncludeTemplateFilter
 {
     public const string FilterName = "include_prompt";
+
     public static ValueTask<FluidValue> IncludePromptAsync(
         FluidValue input,
         FilterArguments arguments,

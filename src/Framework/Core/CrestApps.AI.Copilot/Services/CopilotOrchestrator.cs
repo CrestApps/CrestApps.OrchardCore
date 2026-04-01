@@ -57,6 +57,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
     }
 
     public string Name => OrchestratorName;
+
     public async IAsyncEnumerable<ChatResponseUpdate> ExecuteStreamingAsync(
         OrchestrationContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -169,9 +170,12 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         // Configure MCP servers so Copilot can manage MCP tools natively.
         await ConfigureMcpServersAsync(context, sessionConfig);
+
         // Build client options with authentication and CLI flags.
         var clientOptions = await BuildClientOptionsAsync(context, metadata, settings);
+
         string responseText;
+
         try
         {
             responseText = await RunCopilotSessionAsync(clientOptions, sessionConfig, context, cancellationToken);
@@ -193,7 +197,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
             Contents = [new TextContent(responseText)],
         };
     }
-
     /// <summary>
     /// Builds client options from the metadata and context, using the SDK's
     /// <c>GithubToken</c> property for GitHub OAuth or <c>UseLoggedInUser = false</c>
@@ -322,7 +325,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
             Kind = PermissionRequestResultKind.DeniedCouldNotRequestFromUser,
         });
     }
-
     /// <summary>
     /// Configures the BYOK provider on the session config using the options.
     /// </summary>
@@ -371,7 +373,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 providerConfig.Type, providerConfig.BaseUrl, sessionConfig.Model);
         }
     }
-
     /// <summary>
     /// Runs a Copilot session and returns the complete response text.
     /// Isolated into its own method so the caller can wrap with error handling.
@@ -384,9 +385,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
     {
         await using var client = new CopilotClient(clientOptions);
         await using var session = await client.CreateSessionAsync(sessionConfig, cancellationToken);
+
         var responseBuilder = new StringBuilder();
         var completionSource = new TaskCompletionSource<bool>();
         string errorMessage = null;
+
         using var subscription = session.On(ev =>
         {
             if (ev is AssistantMessageDeltaEvent deltaEvent)
@@ -400,9 +403,11 @@ public sealed class CopilotOrchestrator : IOrchestrator
             else if (ev is SessionErrorEvent errorEvent)
             {
                 var data = errorEvent.Data;
+
                 _logger.LogError(
                     "CopilotOrchestrator: Session error - {ErrorType}: {Message} (StatusCode: {StatusCode})",
                     data?.ErrorType, data?.Message, data?.StatusCode);
+
                 errorMessage = BuildErrorMessage(data);
                 completionSource.TrySetResult(false);
             }
@@ -412,10 +417,12 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // Since each request creates a new stateless session, include conversation
         // history in the prompt so Copilot has multi-turn awareness.
         var prompt = BuildPromptWithHistory(context);
+
         await session.SendAsync(new MessageOptions
         {
             Prompt = prompt,
         }, cancellationToken);
+
         await completionSource.Task.WaitAsync(cancellationToken);
 
         if (!string.IsNullOrEmpty(errorMessage))
@@ -432,7 +439,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         return responseText;
     }
-
     /// <summary>
     /// Builds a user-facing error message from the Copilot session error data.
     /// </summary>
@@ -448,6 +454,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         if (data.StatusCode.HasValue)
         {
             var statusCode = (int)data.StatusCode.Value;
+
             sb.Append(statusCode switch
             {
                 401 => "**Copilot Authentication failed.** The API key may be invalid or expired. Please verify your API key in the Copilot settings.",
@@ -471,7 +478,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         return sb.ToString();
     }
-
     /// <summary>
     /// Combines conversation history with the current user message so Copilot
     /// has full multi-turn context within a single stateless session.
@@ -515,7 +521,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
 
         return sb.ToString();
     }
-
     /// <summary>
     /// Retrieves MCP connection metadata from the connection store and configures
     /// them on the Copilot session so that Copilot can manage MCP tools natively.
@@ -610,7 +615,6 @@ public sealed class CopilotOrchestrator : IOrchestrator
                 string.Join(", ", connections.Select(c => c.DisplayText ?? c.ItemId)));
         }
     }
-
     /// <summary>
     /// A thin wrapper around an <see cref="AIFunction"/> that ensures
     /// <see cref="AIFunctionArguments.Services"/> is always set before the
@@ -621,6 +625,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
     {
         private readonly AIFunction _inner;
         private readonly IServiceProvider _services;
+
         public ServiceInjectedAIFunction(AIFunction inner, IServiceProvider services)
         {
             _inner = inner;
@@ -628,15 +633,22 @@ public sealed class CopilotOrchestrator : IOrchestrator
         }
 
         public override string Name => _inner.Name;
+
         public override string Description => _inner.Description;
+
         public override JsonElement JsonSchema => _inner.JsonSchema;
+
         public override JsonElement? ReturnJsonSchema => _inner.ReturnJsonSchema;
+
         public override IReadOnlyDictionary<string, object> AdditionalProperties
             => _inner.AdditionalProperties;
+
         public override JsonSerializerOptions JsonSerializerOptions
             => _inner.JsonSerializerOptions;
+
         public override MethodInfo UnderlyingMethod
             => _inner.UnderlyingMethod;
+
         protected override ValueTask<object> InvokeCoreAsync(
             AIFunctionArguments arguments,
             CancellationToken cancellationToken)

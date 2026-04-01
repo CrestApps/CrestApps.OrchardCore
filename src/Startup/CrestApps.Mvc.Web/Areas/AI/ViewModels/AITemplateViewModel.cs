@@ -21,8 +21,10 @@ public sealed class AITemplateViewModel
     public string Category { get; set; }
     public bool IsListable { get; set; } = true;
     public string Source { get; set; } = AITemplateSources.SystemPrompt;
+
     // SystemPrompt source fields.
     public string SystemMessage { get; set; }
+
     // Profile source fields.
     public AIProfileType? ProfileType { get; set; }
 
@@ -55,43 +57,54 @@ public sealed class AITemplateViewModel
     public bool AddInitialPrompt { get; set; }
 
     public string InitialPrompt { get; set; }
+
     // Tool selection for Profile templates.
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
     public string[] SelectedA2AConnectionIds { get; set; } = [];
     public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+
     // Agents.
     public string[] SelectedAgentNames { get; set; } = [];
     public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
+
     // MCP Connections.
     public string[] SelectedMcpConnectionIds { get; set; } = [];
     public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+
     // Documents.
     public bool AllowSessionDocuments { get; set; }
 
     public int? DocumentTopN { get; set; }
+
     // Data Extraction.
     public bool EnableDataExtraction { get; set; }
     public int ExtractionCheckInterval { get; set; } = 1;
     public int SessionInactivityTimeoutInMinutes { get; set; } = 30;
     public List<DataExtractionEntryItem> DataExtractionEntries { get; set; } = [];
+
     // Analytics.
     public bool EnableSessionMetrics { get; set; }
     public bool EnableAIResolutionDetection { get; set; } = true;
     public bool EnableConversionMetrics { get; set; }
     public List<ConversionGoalItem> ConversionGoals { get; set; } = [];
+
     // Post Session Processing.
     public bool EnablePostSessionProcessing { get; set; }
     public List<PostSessionTaskItem> PostSessionTasks { get; set; } = [];
+
     // Memory.
     public bool EnableUserMemory { get; set; }
+
     // Settings.
     public bool IsRemovable { get; set; } = true;
     public bool LockSystemMessage { get; set; }
+
     // Dropdowns for Profile templates.
     public List<SelectListItem> ChatDeployments { get; set; } = [];
     public List<SelectListItem> UtilityDeployments { get; set; } = [];
     public List<SelectListItem> Orchestrators { get; set; } = [];
+
     // Copilot.
     public string CopilotModel { get; set; }
 
@@ -105,6 +118,7 @@ public sealed class AITemplateViewModel
 
     public CopilotAuthenticationType CopilotAuthenticationType { get; set; }
     public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
     public static AITemplateViewModel FromTemplate(AIProfileTemplate template)
     {
         var model = new AITemplateViewModel
@@ -281,6 +295,7 @@ public sealed class AITemplateViewModel
         {
             var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
             var agentNames = SelectedAgentNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+
             template.Put(new ProfileTemplateMetadata
             {
                 ProfileType = ProfileType,

@@ -17,6 +17,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
 {
     private readonly SearchIndexClient _searchIndexClient;
     private readonly ILogger<AzureAISearchDocumentManager> _logger;
+
     public AzureAISearchDocumentManager(
         SearchIndexClient searchIndexClient,
         ILogger<AzureAISearchDocumentManager> logger)
@@ -41,6 +42,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(profile.IndexFullName);
+
             var azureDocs = new List<AzureSearchDocument>();
 
             foreach (var document in documents)
@@ -56,6 +58,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
             }
 
             var batch = IndexDocumentsBatch.MergeOrUpload(azureDocs);
+
             await searchClient.IndexDocumentsAsync(batch, cancellationToken: cancellationToken);
 
             return true;
@@ -93,9 +96,12 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         try
         {
             var searchClient = _searchIndexClient.GetSearchClient(profile.IndexFullName);
+
             // Determine the key field name from an existing document or default.
             var keyFieldName = await GetKeyFieldNameAsync(profile.IndexFullName, cancellationToken);
+
             var batch = IndexDocumentsBatch.Delete(keyFieldName, ids);
+
             await searchClient.IndexDocumentsAsync(batch, cancellationToken: cancellationToken);
         }
         catch (RequestFailedException ex)
@@ -119,6 +125,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         {
             var searchClient = _searchIndexClient.GetSearchClient(profile.IndexFullName);
             var keyFieldName = await GetKeyFieldNameAsync(profile.IndexFullName, cancellationToken);
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 var searchOptions = new SearchOptions
@@ -131,7 +138,9 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
                     searchText: "*",
                     searchOptions,
                     cancellationToken);
+
                 var keysToDelete = new List<string>();
+
                 await foreach (var result in response.Value.GetResultsAsync())
                 {
                     if (result.Document.TryGetValue(keyFieldName, out var keyObj)
@@ -148,6 +157,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
                 }
 
                 var batch = IndexDocumentsBatch.Delete(keyFieldName, keysToDelete);
+
                 await searchClient.IndexDocumentsAsync(batch, cancellationToken: cancellationToken);
 
                 if (keysToDelete.Count < 1000)
@@ -172,6 +182,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         try
         {
             var index = await _searchIndexClient.GetIndexAsync(indexFullName, cancellationToken);
+
             var keyField = index.Value.Fields.FirstOrDefault(f => f.IsKey == true);
 
             if (keyField != null)

@@ -12,6 +12,7 @@ internal sealed class CopilotOrchestratorAvailabilityProvider : IOrchestratorAva
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
+
     public CopilotOrchestratorAvailabilityProvider(
         ISiteService siteService,
         IStringLocalizer<CopilotOrchestratorAvailabilityProvider> stringLocalizer)
@@ -21,6 +22,7 @@ internal sealed class CopilotOrchestratorAvailabilityProvider : IOrchestratorAva
     }
 
     public string OrchestratorName => CopilotOrchestrator.OrchestratorName;
+
     public async Task<OrchestratorAvailability> GetAvailabilityAsync(CancellationToken cancellationToken = default)
     {
         var settings = await _siteService.GetSettingsAsync<CopilotSettings>();

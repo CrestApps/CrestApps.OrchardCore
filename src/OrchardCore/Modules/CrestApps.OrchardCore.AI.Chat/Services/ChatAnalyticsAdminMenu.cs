@@ -7,6 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 public sealed class ChatAnalyticsAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;
+
     public ChatAnalyticsAdminMenu(IStringLocalizer<ChatAnalyticsAdminMenu> stringLocalizer)
     {
         S = stringLocalizer;

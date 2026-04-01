@@ -15,7 +15,9 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 {
     private readonly IPhoneFormatValidator _phoneFormatValidator;
     private readonly IEmailAddressValidator _emailAddressValidator;
+
     private readonly IStringLocalizer S;
+
     public OmnichannelChannelEndpointDisplayDriver(
         IPhoneFormatValidator phoneFormatValidator,
         IEmailAddressValidator emailAddressValidator,
@@ -58,6 +60,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)
     {
         var model = new OmnichannelChannelEndpointViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         if (string.IsNullOrWhiteSpace(model.DisplayText))

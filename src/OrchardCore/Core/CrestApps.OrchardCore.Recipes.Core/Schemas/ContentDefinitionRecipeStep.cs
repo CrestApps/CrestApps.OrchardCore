@@ -11,5 +11,6 @@ public sealed class ContentDefinitionRecipeStep(
 : ContentDefinitionRecipeStepBase(schemaDefinitions, contentSchemaProvider)
 {
     public override string Name => "ContentDefinition";
+
     protected override IReadOnlyList<string> RequiredProperties => ["name", "ContentTypes"];
 }

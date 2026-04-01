@@ -26,21 +26,27 @@ public sealed class ChatInteractionChatViewModel
     public int? MaxTokens { get; set; }
 
     public int? PastMessagesCount { get; set; }
+
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
     public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+
     // MCP Connections
     public string[] SelectedMcpConnectionIds { get; set; } = [];
     public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+
     // AI Tools
     public string[] SelectedToolNames { get; set; } = [];
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
+
     // AI Agents
     public string[] SelectedAgentNames { get; set; } = [];
     public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
+
     // Prompt Templates
     public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
     public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+
     // Documents
     public int? DocumentTopN { get; set; }
 
@@ -48,12 +54,15 @@ public sealed class ChatInteractionChatViewModel
 
     public string DocumentIndexProfileName { get; set; }
     public List<ChatDocumentInfo> Documents { get; set; } = [];
+
     // Data Sources
     public string DataSourceId { get; set; }
     public List<SelectListItem> DataSources { get; set; } = [];
+
     // Dropdowns
     public List<SelectListItem> Deployments { get; set; } = [];
     public List<SelectListItem> Orchestrators { get; set; } = [];
+
     // Copilot
     public string CopilotModel { get; set; }
 
@@ -67,6 +76,7 @@ public sealed class ChatInteractionChatViewModel
 
     public int CopilotAuthenticationType { get; set; }
     public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
     // Existing messages for the chat
     public object[] ExistingMessages { get; set; } = [];
 }

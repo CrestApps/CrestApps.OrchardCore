@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
+
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()

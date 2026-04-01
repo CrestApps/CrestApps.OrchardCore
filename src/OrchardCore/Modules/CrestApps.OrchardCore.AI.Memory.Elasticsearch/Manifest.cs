@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Memory;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "AI Memory indexing using Elasticsearch",
     Description = "Provides services to index AI memory in Elasticsearch indexes.",

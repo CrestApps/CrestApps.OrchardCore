@@ -19,10 +19,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 {
     private const int _batchSize = 100;
+
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var processors = serviceProvider.GetService<IEnumerable<IOmnichannelProcessor>>()
             .ToDictionary(x => x.Channel, StringComparer.OrdinalIgnoreCase);
+
         var logger = serviceProvider.GetRequiredService<ILogger<AutomatedActivitiesProcessorBackgroundTask>>();
 
         if (processors.Count == 0)
@@ -34,9 +36,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
         var session = serviceProvider.GetRequiredService<ISession>();
         var clock = serviceProvider.GetRequiredService<IClock>();
+
         var now = clock.UtcNow;
         long documentId = 0;
         var iterationCount = 0;
+
         while (true)
         {
             var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
@@ -58,9 +62,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             foreach (var activity in activities)
             {
                 documentId = activity.Id;
+
                 try
                 {
                     var processor = processors[activity.Channel];
+
                     await processor.StartAsync(activity, cancellationToken);
                 }
                 catch (Exception ex)

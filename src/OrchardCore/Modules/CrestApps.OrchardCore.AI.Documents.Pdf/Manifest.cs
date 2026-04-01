@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
+
 [assembly: Module(
     Name = "AI Documents (PDF)",
     Author = CrestAppsManifestConstants.Author,

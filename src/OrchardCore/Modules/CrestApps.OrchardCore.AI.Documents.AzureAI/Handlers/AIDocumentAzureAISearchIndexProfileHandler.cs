@@ -20,10 +20,13 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
 
     public override Task InitializingAsync(InitializingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task UpdatingAsync(UpdatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     public override Task CreatingAsync(CreatingContext<IndexProfile> context)
         => SetMappingAsync(context.Model);
+
     private async Task SetMappingAsync(IndexProfile indexProfile)
     {
         if (!CanHandle(indexProfile))
@@ -34,6 +37,7 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
         var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
+
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {
             AzureFieldKey = AIConstants.ColumnNames.ChunkId,

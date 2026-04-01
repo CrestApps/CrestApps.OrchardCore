@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class UsersRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "Users";
+
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(
             Name,

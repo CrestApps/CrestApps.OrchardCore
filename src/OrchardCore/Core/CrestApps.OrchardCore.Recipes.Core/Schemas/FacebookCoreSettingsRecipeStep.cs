@@ -5,6 +5,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class FacebookCoreSettingsRecipeStep : RecipeStepSchemaBase
 {
     public override string Name => "FacebookCoreSettings";
+
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
     [

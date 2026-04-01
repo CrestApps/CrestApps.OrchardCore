@@ -9,6 +9,7 @@ public sealed class SettingsRecipeStepTests
     public async Task Name_ReturnsSettings()
     {
         var step = new SettingsRecipeStep();
+
         Assert.Equal("Settings", step.Name);
     }
 
@@ -17,8 +18,11 @@ public sealed class SettingsRecipeStepTests
     {
         var step = new SettingsRecipeStep();
         var schema = await step.GetSchemaAsync();
+
         Assert.NotNull(schema);
+
         var json = JsonSerializer.Serialize(schema);
+
         Assert.Contains("\"const\":\"settings\"", json);
     }
 
@@ -28,6 +32,7 @@ public sealed class SettingsRecipeStepTests
         var step = new SettingsRecipeStep();
         var first = await step.GetSchemaAsync();
         var second = await step.GetSchemaAsync();
+
         Assert.Same(first, second);
     }
 }

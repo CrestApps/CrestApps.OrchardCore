@@ -28,6 +28,7 @@ public sealed class SftpMcpResourceHandler : IMcpResourceHandler
         metadataNode[nameof(SftpConnectionMetadata.PrivateKey)] = string.Empty;
         metadataNode[nameof(SftpConnectionMetadata.Passphrase)] = string.Empty;
         metadataNode[nameof(SftpConnectionMetadata.ProxyPassword)] = string.Empty;
+
         context.ExportData["Properties"][nameof(SftpConnectionMetadata)] = metadataNode;
     }
 }

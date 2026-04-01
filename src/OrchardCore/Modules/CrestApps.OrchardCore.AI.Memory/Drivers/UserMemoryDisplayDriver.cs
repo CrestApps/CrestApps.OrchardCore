@@ -22,6 +22,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
+
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         ICatalogManager<AIMemoryEntry> memoryManager,

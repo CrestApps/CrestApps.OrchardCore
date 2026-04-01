@@ -21,11 +21,16 @@ internal sealed class CatalogItemMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var storeCollectionOptions = scope.ServiceProvider.GetRequiredService<IOptions<StoreCollectionOptions>>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
+
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<CatalogItemMigrations>>();
             var dialect = store.Configuration.SqlDialect;
+
             var collections = storeCollectionOptions.Value.Collections.ToHashSet();
+
             collections.Add("");
+
             await using var connection = dbConnectionAccessor.CreateConnection();
+
             await connection.OpenAsync();
 
             foreach (var collection in collections)
@@ -33,15 +38,18 @@ internal sealed class CatalogItemMigrations : DataMigration
                 var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(collection);
                 var table = $"{store.Configuration.TablePrefix}{documentTableName}";
                 var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
+
                 var quotedIdColumnName = dialect.QuoteForColumnName(nameof(Document.Id));
                 var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
                 var quotedContentColumnName = dialect.QuoteForColumnName(nameof(Document.Content));
+
                 var sqlBuilder = new SqlBuilder(store.Configuration.TablePrefix, store.Configuration.SqlDialect);
                 sqlBuilder.AddSelector(quotedIdColumnName);
                 sqlBuilder.AddSelector("," + quotedTypeColumnName);
                 sqlBuilder.AddSelector("," + quotedContentColumnName);
                 sqlBuilder.From(quotedTableName);
                 sqlBuilder.WhereAnd($" {quotedTypeColumnName} LIKE 'CrestApps.OrchardCore.Models.DictionaryDocument`1[[%' ");
+
                 try
                 {
                     var documents = await connection.QueryAsync<Document>(sqlBuilder.ToSqlString());
@@ -78,6 +86,7 @@ internal sealed class CatalogItemMigrations : DataMigration
                         if (modified)
                         {
                             var content = store.Configuration.ContentSerializer.Serialize(jsonObject);
+
                             await connection.ExecuteAsync(
                                 $"update {quotedTableName} set Content = @content where {quotedIdColumnName} = @id",
                                 new
@@ -93,6 +102,7 @@ internal sealed class CatalogItemMigrations : DataMigration
                 catch (Exception e)
                 {
                     logger.LogError(e, "An error occurred while updating indexing tasks Category to Content.");
+
                     throw;
                 }
             }

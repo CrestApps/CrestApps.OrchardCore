@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStore
 {
     private readonly UserManager<IUser> _userManager;
+
     public OrchardCoreCopilotCredentialStore(UserManager<IUser> userManager)
     {
         _userManager = userManager;

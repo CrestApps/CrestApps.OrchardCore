@@ -16,6 +16,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
     private readonly IOptions<AIToolDefinitionOptions> _toolDefinitions;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+
     public LocalToolRegistryProvider(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAuthorizationService authorizationService,
@@ -64,6 +65,7 @@ internal sealed class LocalToolRegistryProvider : IToolRegistryProvider
             }
 
             var name = toolName;
+
             entries.Add(new ToolRegistryEntry
             {
                 Id = name,

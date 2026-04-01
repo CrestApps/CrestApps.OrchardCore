@@ -8,13 +8,16 @@ namespace CrestApps.OrchardCore.Samples.McpClient.Pages;
 public sealed class PromptsModel : PageModel
 {
     private readonly McpClientFactory _clientFactory;
+
     public PromptsModel(McpClientFactory clientFactory)
     {
         _clientFactory = clientFactory;
     }
 
     public IList<McpClientPrompt> Prompts { get; private set; } = [];
+
     public string ErrorMessage { get; private set; }
+
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadPromptsAsync(cancellationToken);
@@ -37,11 +40,13 @@ public sealed class PromptsModel : PageModel
         try
         {
             var client = await _clientFactory.CreateAsync(cancellationToken);
+
             var result = await client.GetPromptAsync(
                 promptName,
                 new Dictionary<string, object>(),
             options: null,
             cancellationToken);
+
             var messages = new List<object>();
 
             if (result.Messages?.Count > 0)

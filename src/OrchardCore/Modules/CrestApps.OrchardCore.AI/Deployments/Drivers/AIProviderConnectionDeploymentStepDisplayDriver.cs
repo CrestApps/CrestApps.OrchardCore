@@ -15,6 +15,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
     private readonly INamedCatalog<AIProviderConnection> _connectionsCatalog;
 
     internal readonly IStringLocalizer S;
+
     public AIProviderConnectionDeploymentStepDisplayDriver(
         INamedCatalog<AIProviderConnection> connectionsCatalog,
         IStringLocalizer<AIProviderConnectionDeploymentStepDisplayDriver> stringLocalizer)
@@ -50,6 +51,7 @@ internal sealed class AIProviderConnectionDeploymentStepDisplayDriver : DisplayD
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnectionDeploymentStep step, UpdateEditorContext context)
     {
         var model = new AIProviderConnectionDeploymentStepViewModel();
+
         await context.Updater.TryUpdateModelAsync(model, Prefix,
         p => p.IncludeAll,
         p => p.Connections);

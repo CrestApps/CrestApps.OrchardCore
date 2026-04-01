@@ -5,10 +5,13 @@ namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 public sealed class McpResourceViewModel
 {
     public string ItemId { get; set; }
+
     [Required]
     public string DisplayText { get; set; }
+
     [Required]
     public string Source { get; set; } = "ftp";
+
     [Required]
     public string Name { get; set; }
 

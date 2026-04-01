@@ -9,6 +9,7 @@ public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
     where T : CatalogItem, ISourceAwareModel
 {
     private readonly IDocumentManager<DictionaryDocument<T>> _documentManager;
+
     public SourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
     : base(documentManager)
     {

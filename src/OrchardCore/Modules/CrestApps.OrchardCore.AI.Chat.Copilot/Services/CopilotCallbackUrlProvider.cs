@@ -11,6 +11,7 @@ public sealed class CopilotCallbackUrlProvider
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
     private readonly ILogger<CopilotCallbackUrlProvider> _logger;
+
     public CopilotCallbackUrlProvider(
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
@@ -27,6 +28,7 @@ public sealed class CopilotCallbackUrlProvider
     {
         var httpContext = _httpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("An active HttpContext is required to build the Copilot OAuth callback URL.");
+
         var requestCallbackUrl = _linkGenerator.GetUriByAction(httpContext, "OAuthCallback", "CopilotAuth", new
         {
             area = "CrestApps.OrchardCore.AI.Chat.Copilot",

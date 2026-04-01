@@ -51,6 +51,7 @@ public sealed class NamedCatalogManagerTests
         var logger = Mock.Of<ILogger<NamedCatalogManager<TestNamedCatalogEntry>>>();
         var callOrder = new Queue<string>();
         var existsInCatalogDuringLoaded = false;
+
         var handler = new TestCatalogEntryHandler<TestNamedCatalogEntry>
         {
             OnLoadedAsync = async ctx =>
@@ -62,6 +63,7 @@ public sealed class NamedCatalogManagerTests
 
         var manager = new NamedCatalogManager<TestNamedCatalogEntry>(catalog, [handler], logger);
         await manager.FindByNameAsync("Test");
+
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
         Assert.True(existsInCatalogDuringLoaded);
