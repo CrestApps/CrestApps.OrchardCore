@@ -3,7 +3,6 @@ using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Models;
-using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,20 +15,23 @@ namespace CrestApps.Mvc.Web.Areas.Indexing.Controllers;
 [Authorize(Policy = "Admin")]
 public sealed class IndexProfileController : Controller
 {
-    private readonly ISearchIndexProfileStore _store;
+    private readonly ISearchIndexProfileManager _indexProfileManager;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
-    private readonly IEnumerable<IIndexProfileHandler> _handlers;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<IndexProfileController> _logger;
     private readonly IReadOnlyList<IndexProfileSourceDescriptor> _sources;
 
     public IndexProfileController(
-        ISearchIndexProfileStore store,
+        ISearchIndexProfileManager indexProfileManager,
         ICatalog<AIDeployment> deploymentCatalog,
-        IEnumerable<IIndexProfileHandler> handlers,
-        IOptions<IndexProfileSourceOptions> sourceOptions)
+        IServiceProvider serviceProvider,
+        IOptions<IndexProfileSourceOptions> sourceOptions,
+        ILogger<IndexProfileController> logger)
     {
-        _store = store;
+        _indexProfileManager = indexProfileManager;
         _deploymentCatalog = deploymentCatalog;
-        _handlers = handlers;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
         _sources = sourceOptions.Value.Sources
             .OrderBy(source => source.ProviderDisplayName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(source => source.DisplayName, StringComparer.OrdinalIgnoreCase)
@@ -38,7 +40,7 @@ public sealed class IndexProfileController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var profiles = await _store.GetAllAsync();
+        var profiles = await _indexProfileManager.GetAllAsync();
 
         return View(profiles);
     }
@@ -73,17 +75,98 @@ public sealed class IndexProfileController : Controller
 
         var profile = new SearchIndexProfile();
         model.ApplyTo(profile);
+        var indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(profile.ProviderName);
 
-        await _store.CreateAsync(profile);
-        await _store.SaveChangesAsync();
-        await NotifySynchronizedAsync(profile);
+        if (indexManager == null)
+        {
+            ModelState.AddModelError(nameof(model.ProviderName), "The selected search provider is not configured for remote index provisioning.");
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        profile.IndexFullName = indexManager.ComposeIndexFullName(profile);
+
+        await ValidateHandlersAsync(profile);
+
+        if (!ModelState.IsValid)
+        {
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        IReadOnlyCollection<SearchIndexField> fields;
+        try
+        {
+            fields = await _indexProfileManager.GetFieldsAsync(profile, HttpContext.RequestAborted);
+        }
+        catch (InvalidOperationException ex)
+        {
+            ModelState.AddModelError(nameof(model.EmbeddingDeploymentId), ex.Message);
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        if (fields == null)
+        {
+            ModelState.AddModelError(nameof(model.Type), $"The index type '{profile.Type}' is not supported for remote provisioning.");
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        try
+        {
+            if (await indexManager.ExistsAsync(profile, HttpContext.RequestAborted))
+            {
+                ModelState.AddModelError(nameof(model.IndexName), $"The remote index '{profile.IndexFullName}' already exists.");
+                await PopulateDropdownsAsync(model);
+
+                return View(model);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to validate remote index '{IndexName}' for provider '{ProviderName}'.", profile.IndexFullName, profile.ProviderName);
+            ModelState.AddModelError(nameof(model.IndexName), $"Unable to validate whether the remote index '{profile.IndexFullName}' already exists.");
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        try
+        {
+            await indexManager.CreateAsync(profile, fields, HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create remote index '{IndexName}' for provider '{ProviderName}'.", profile.IndexFullName, profile.ProviderName);
+            ModelState.AddModelError(nameof(model.IndexName), $"Unable to create the remote index '{profile.IndexFullName}'.");
+            await PopulateDropdownsAsync(model);
+
+            return View(model);
+        }
+
+        try
+        {
+            await _indexProfileManager.CreateAsync(profile);
+        }
+        catch
+        {
+            await indexManager.DeleteAsync(profile, HttpContext.RequestAborted);
+            throw;
+        }
+
+        await _indexProfileManager.SynchronizeAsync(profile, HttpContext.RequestAborted);
 
         return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> Edit(string id)
     {
-        var profile = await _store.FindByIdAsync(id);
+        var profile = await _indexProfileManager.FindByIdAsync(id);
 
         if (profile == null)
         {
@@ -100,14 +183,14 @@ public sealed class IndexProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(IndexProfileViewModel model)
     {
-        var profile = await _store.FindByIdAsync(model.ItemId);
+        var profile = await _indexProfileManager.FindByIdAsync(model.ItemId);
 
         if (profile == null)
         {
             return NotFound();
         }
 
-        await ValidateAsync(model, profile.ItemId);
+        await ValidateAsync(model, profile, profile.ItemId);
 
         if (!ModelState.IsValid)
         {
@@ -116,11 +199,10 @@ public sealed class IndexProfileController : Controller
             return View(model);
         }
 
-        model.ApplyTo(profile);
+        profile.DisplayText = model.DisplayText;
 
-        await _store.UpdateAsync(profile);
-        await _store.SaveChangesAsync();
-        await NotifySynchronizedAsync(profile);
+        await _indexProfileManager.UpdateAsync(profile);
+        await _indexProfileManager.SynchronizeAsync(profile, HttpContext.RequestAborted);
 
         return RedirectToAction(nameof(Index));
     }
@@ -129,26 +211,45 @@ public sealed class IndexProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
-        var profile = await _store.FindByIdAsync(id);
+        var profile = await _indexProfileManager.FindByIdAsync(id);
 
         if (profile != null)
         {
-            await _store.DeleteAsync(profile);
-            await _store.SaveChangesAsync();
+            var indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(profile.ProviderName);
+            if (indexManager != null)
+            {
+                var remoteIndexExists = await indexManager.ExistsAsync(profile, HttpContext.RequestAborted);
+                if (remoteIndexExists)
+                {
+                    try
+                    {
+                        await indexManager.DeleteAsync(profile, HttpContext.RequestAborted);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete remote index '{IndexName}' for provider '{ProviderName}'. The local index profile was not removed.", profile.IndexFullName, profile.ProviderName);
+                        TempData["ErrorMessage"] = $"Unable to delete the remote index '{profile.IndexFullName}'. The index profile was not removed.";
+
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Skipping remote delete for index profile '{IndexProfileId}' because provider '{ProviderName}' is not configured.", profile.ItemId, profile.ProviderName);
+            }
+
+            await _indexProfileManager.DeleteAsync(profile);
         }
 
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task ValidateAsync(IndexProfileViewModel model, string excludeItemId = null)
+    private async Task ValidateAsync(IndexProfileViewModel model, SearchIndexProfile profile = null, string excludeItemId = null)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
+        if (!string.IsNullOrWhiteSpace(model.Name))
         {
-            ModelState.AddModelError(nameof(model.Name), "Name is required.");
-        }
-        else
-        {
-            var existing = await _store.FindByNameAsync(model.Name.Trim());
+            var existing = await _indexProfileManager.FindByNameAsync(model.Name.Trim());
 
             if (existing != null && existing.ItemId != excludeItemId)
             {
@@ -156,25 +257,37 @@ public sealed class IndexProfileController : Controller
             }
         }
 
-        if (string.IsNullOrWhiteSpace(model.IndexName))
-        {
-            ModelState.AddModelError(nameof(model.IndexName), "Index name is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(model.ProviderName))
-        {
-            ModelState.AddModelError(nameof(model.ProviderName), "Provider is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Type))
-        {
-            ModelState.AddModelError(nameof(model.Type), "Type is required.");
-        }
-        else if (!_sources.Any(source =>
-        string.Equals(source.ProviderName, model.ProviderName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(source.Type, model.Type, StringComparison.OrdinalIgnoreCase)))
+        if (!string.IsNullOrWhiteSpace(model.ProviderName) &&
+            !string.IsNullOrWhiteSpace(model.Type) &&
+            !_sources.Any(source =>
+                string.Equals(source.ProviderName, model.ProviderName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(source.Type, model.Type, StringComparison.OrdinalIgnoreCase)))
         {
             ModelState.AddModelError(nameof(model.Type), "The selected provider does not support this index type.");
+        }
+
+        if (profile == null)
+        {
+            return;
+        }
+
+        await ValidateHandlersAsync(profile);
+    }
+
+    private async Task ValidateHandlersAsync(SearchIndexProfile profile)
+    {
+        var validationResult = await _indexProfileManager.ValidateAsync(profile);
+
+        foreach (var error in validationResult.Errors)
+        {
+            var memberNames = error.MemberNames?.Any() == true
+                ? error.MemberNames
+                : [string.Empty];
+
+            foreach (var memberName in memberNames)
+            {
+                ModelState.AddModelError(memberName, error.ErrorMessage);
+            }
         }
     }
 
@@ -201,11 +314,4 @@ public sealed class IndexProfileController : Controller
                 .Select(d => new SelectListItem(d.Name, d.ItemId)));
     }
 
-    private async Task NotifySynchronizedAsync(SearchIndexProfile profile)
-    {
-        foreach (var handler in _handlers)
-        {
-            await handler.SynchronizedAsync(profile);
-        }
-    }
 }

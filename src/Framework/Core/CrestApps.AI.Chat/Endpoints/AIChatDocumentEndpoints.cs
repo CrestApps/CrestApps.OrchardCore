@@ -1,4 +1,3 @@
-using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
@@ -13,7 +12,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.Endpoints;
+namespace CrestApps.AI.Chat.Endpoints;
 
 /// <summary>
 /// Registers reusable minimal API endpoints for uploading and removing documents

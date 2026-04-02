@@ -22,4 +22,9 @@ public sealed class ElasticsearchConnectionOptions
     /// Optional certificate fingerprint for TLS verification.
     /// </summary>
     public string CertificateFingerprint { get; set; }
+
+    /// <summary>
+    /// Optional prefix applied to MVC-managed remote index names.
+    /// </summary>
+    public string IndexPrefix { get; set; }
 }

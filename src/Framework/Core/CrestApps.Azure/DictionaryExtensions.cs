@@ -1,7 +1,7 @@
 using System.Text.Json;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 
-namespace CrestApps.Azure.Core;
+namespace CrestApps.Azure;
 
 public static class DictionaryExtensions
 {

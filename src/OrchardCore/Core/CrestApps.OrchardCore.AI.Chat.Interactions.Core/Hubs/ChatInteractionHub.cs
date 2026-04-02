@@ -564,7 +564,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
             }
 
-            var builder = ZString.CreateStringBuilder();
+            using var builder = ZString.CreateStringBuilder();
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
@@ -1037,7 +1037,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
         var ttsTask = StreamSentencesAsSpeechAsync(textToSpeechClient, () => itemId, sentenceChannel.Reader, voiceName, cancellationToken);
 
-        var sentenceBuffer = ZString.CreateStringBuilder();
+        using var sentenceBuffer = ZString.CreateStringBuilder();
 
         try
         {
@@ -1076,8 +1076,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                         }
 
                         await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
-                        sentenceBuffer.Dispose();
-                        sentenceBuffer = ZString.CreateStringBuilder();
+                        sentenceBuffer.Clear();
                     }
 
                 }
@@ -1089,7 +1088,6 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             // Flush any remaining text as the final sentence.
 
             var remaining = sentenceBuffer.ToString().Trim();
-            sentenceBuffer.Dispose();
 
             if (!string.IsNullOrEmpty(remaining))
             {

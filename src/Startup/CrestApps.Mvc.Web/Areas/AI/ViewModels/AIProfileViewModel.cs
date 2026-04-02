@@ -4,7 +4,6 @@ using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -540,3 +539,4 @@ public sealed class ConversionGoalItem
     public int MinScore { get; set; }
     public int MaxScore { get; set; } = 10;
 }
+

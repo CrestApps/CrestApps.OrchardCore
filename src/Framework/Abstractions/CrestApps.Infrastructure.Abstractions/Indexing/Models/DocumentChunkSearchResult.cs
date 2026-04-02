@@ -1,5 +1,3 @@
-using CrestApps.Infrastructure.Indexing.Models;
-
 namespace CrestApps.Infrastructure.Indexing.Models;
 
 /// <summary>

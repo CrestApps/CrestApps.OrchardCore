@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-
 namespace CrestApps.AI.Models;
 
 public sealed class PromptTemplateMetadata

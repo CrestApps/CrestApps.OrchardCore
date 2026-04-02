@@ -5,8 +5,8 @@ using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Elasticsearch;
 
@@ -19,6 +19,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfigurationSection configuration)
     {
+        services.Configure<ElasticsearchConnectionOptions>(configuration);
+
         var options = new ElasticsearchConnectionOptions();
 
         configuration.Bind(options);
@@ -71,6 +73,7 @@ public static class ServiceCollectionExtensions
             ProviderName,
             (sp, _) => new ElasticsearchSearchIndexManager(
             sp.GetRequiredService<ElasticsearchClient>(),
+            sp.GetRequiredService<IOptions<ElasticsearchConnectionOptions>>(),
 
         sp.GetRequiredService<ILogger<ElasticsearchSearchIndexManager>>()));
         services.TryAddKeyedScoped<ISearchDocumentManager>(

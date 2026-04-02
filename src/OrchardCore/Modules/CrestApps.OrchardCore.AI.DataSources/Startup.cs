@@ -3,6 +3,7 @@ using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
+using CrestApps.AI.Tools;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
@@ -93,3 +94,4 @@ public sealed class DataSourcesOCDeploymentStartup : StartupBase
         services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
     }
 }
+

@@ -1,4 +1,4 @@
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Models;
 

@@ -1,7 +1,7 @@
 using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
-using CrestApps.Azure.Core;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure;
+using CrestApps.Azure.Models;
 using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;

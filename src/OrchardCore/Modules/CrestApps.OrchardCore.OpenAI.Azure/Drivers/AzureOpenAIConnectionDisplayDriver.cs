@@ -1,7 +1,7 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.OpenAI.Azure.Models;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
@@ -100,3 +100,4 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         return Edit(connection, context);
     }
 }
+

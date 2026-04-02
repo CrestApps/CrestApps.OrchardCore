@@ -1,6 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
-using CrestApps.AI.Endpoints;
+using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
@@ -112,3 +112,4 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
             .AddRemoveChatSessionDocumentEndpoint();
     }
 }
+

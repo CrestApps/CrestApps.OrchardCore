@@ -1,6 +1,5 @@
 using System.Text.Json;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using CrestApps.Templates.Models;
@@ -190,3 +189,4 @@ internal static class PromptTemplateSelectionEditorHelper
     private static string BuildFieldName(string prefix, int index, string propertyName)
         => $"{prefix}.{nameof(AITemplateSelectionViewModel.PromptTemplates)}[{index}].{propertyName}";
 }
+

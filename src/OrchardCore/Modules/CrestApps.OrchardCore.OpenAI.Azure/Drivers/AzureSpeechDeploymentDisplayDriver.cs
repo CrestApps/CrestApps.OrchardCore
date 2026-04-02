@@ -1,5 +1,5 @@
 using CrestApps.AI.Models;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
@@ -110,3 +110,4 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         return null;
     }
 }
+

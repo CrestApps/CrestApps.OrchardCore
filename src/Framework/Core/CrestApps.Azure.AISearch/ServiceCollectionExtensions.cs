@@ -7,8 +7,8 @@ using CrestApps.Infrastructure.Indexing.DataSources;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Azure.AISearch;
 
@@ -21,6 +21,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfigurationSection configuration)
     {
+        services.Configure<AzureAISearchConnectionOptions>(configuration);
+
         var options = new AzureAISearchConnectionOptions();
 
         configuration.Bind(options);
@@ -68,6 +70,7 @@ public static class ServiceCollectionExtensions
             ProviderName,
             (sp, _) => new AzureAISearchIndexManager(
             sp.GetRequiredService<SearchIndexClient>(),
+            sp.GetRequiredService<IOptions<AzureAISearchConnectionOptions>>(),
 
                 sp.GetRequiredService<ILogger<AzureAISearchIndexManager>>()));
 

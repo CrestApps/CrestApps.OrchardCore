@@ -410,9 +410,6 @@
         <!-- Input area -->
         <div class="border-top p-3 bg-white">
             <div class="d-flex gap-2">
-                <button type="button" id="attach-document-btn" class="btn btn-outline-secondary" title="Attach documents">
-                    <i class="bi bi-paperclip"></i>
-                </button>
                 <textarea id="chat-input"
                           class="form-control"
                           rows="1"
@@ -699,7 +696,6 @@
             // --- Send message ---
             var inputEl = document.getElementById('chat-input');
             var sendBtn = document.getElementById('send-btn');
-            var attachDocumentBtn = document.getElementById('attach-document-btn');
             var documentUploadInput = document.getElementById('chat-doc-upload');
             var placeholder = document.getElementById('chat-placeholder');
 
@@ -748,11 +744,7 @@
             }
 
             sendBtn.addEventListener('click', sendMessage);
-            if (attachDocumentBtn && documentUploadInput) {
-                attachDocumentBtn.addEventListener('click', function () {
-                    documentUploadInput.click();
-                });
-
+            if (documentUploadInput) {
                 documentUploadInput.addEventListener('change', function () {
                     uploadDocuments(documentUploadInput.files).finally(function () {
                         documentUploadInput.value = '';

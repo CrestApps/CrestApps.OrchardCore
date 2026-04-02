@@ -129,13 +129,18 @@ builder.Services
     .AddElasticsearchServices(
 
         builder.Configuration.GetSection("CrestApps:Elasticsearch"))
-    .AddElasticsearchDataSource(IndexProfileTypes.AIDocuments, ...)
-    .AddElasticsearchDataSource(IndexProfileTypes.DataSource, ...)
-    .AddElasticsearchDataSource(IndexProfileTypes.AIMemory, ...)
-
-    .AddElasticsearchDataSource(IndexProfileTypes.Articles, ...);
+    .AddElasticsearchAIDocumentSource()
+    .AddElasticsearchAIDataSource()
+    .AddElasticsearchAIMemorySource()
+    .AddElasticsearchArticleSource();
 
 ```
+
+When users create MVC index profiles, `AI Documents`, `AI Memory`, and `Data Source` profiles must select an embedding deployment, while `Articles` hides that selector entirely. That validation now runs through source-specific `IIndexProfileHandler` implementations registered by extensions such as `AddElasticsearchAIDocumentSource()` and `AddAzureAISearchAIMemorySource()`, so each source owns its own embedding requirements and field schema.
+
+The MVC sample provisions the remote index during profile creation by resolving the keyed `ISearchIndexManager` for the selected provider, composing `IndexFullName` from the provider's configured `IndexPrefix` plus the user-entered index name, rejecting the create when that remote index already exists, and only persisting the local profile after the remote index is created successfully.
+
+After creation, the MVC admin keeps the index name, provider, type, and embedding deployment immutable so the remote index contract cannot drift from the saved profile.
 
 ### Section 8 — Azure AI Search Services
 
@@ -148,12 +153,15 @@ builder.Services
 
         builder.Configuration.GetSection("CrestApps:AzureAISearch"))
 
-    .AddAzureAISearchDataSource(IndexProfileTypes.AIDocuments, ...)
-
-    .AddAzureAISearchDataSource(IndexProfileTypes.DataSource, ...)
-    .AddAzureAISearchDataSource(IndexProfileTypes.AIMemory, ...)
-    .AddAzureAISearchDataSource(IndexProfileTypes.Articles, ...);
+    .AddAzureAISearchAIDocumentSource()
+    .AddAzureAISearchAIDataSource()
+    .AddAzureAISearchAIMemorySource()
+    .AddAzureAISearchArticleSource();
 ```
+
+Deleting an MVC index profile now also deletes the remote Elasticsearch or Azure AI Search index through the keyed `ISearchIndexManager` registered for that provider, preventing orphaned indexes from lingering after the profile is removed. The same handler pipeline is reused for synchronization and type-specific validation so the controller stays focused on the Orchard-style CRUD flow.
+
+If an administrator already deleted the remote index directly in Elasticsearch or Azure AI Search, the MVC app now still allows deleting the local index profile. The delete flow only blocks local removal when the remote index still exists and the provider fails to delete it.
 
 ### Section 9 — Model Context Protocol (MCP)
 
@@ -194,6 +202,10 @@ Configures YesSql with SQLite for persistent storage:
 - Sets up manager and store implementations
 
 This entire section is replaceable with Entity Framework Core or another persistence layer.
+
+## Validation Feedback
+
+The shared MVC layout now renders a Bootstrap validation summary whenever a request returns with invalid `ModelState`, so CRUD pages consistently show server-side validation errors even when the controller adds them dynamically. The same shared layout also surfaces `TempData["ErrorMessage"]` as a top-level alert for redirected error flows such as a failed remote index delete.
 
 ## Area Layout
 

@@ -11,10 +11,17 @@ public interface ISearchIndexManager
     /// <summary>
     /// Checks whether the specified index exists.
     /// </summary>
-    /// <param name="indexFullName">The fully qualified index name.</param>
+    /// <param name="profile">The index profile.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns><see langword="true"/> if the index exists; otherwise, <see langword="false"/>.</returns>
-    Task<bool> ExistsAsync(string indexFullName, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Composes the full remote index name for the supplied profile.
+    /// </summary>
+    /// <param name="profile">The index profile.</param>
+    /// <returns>The fully qualified index name.</returns>
+    string ComposeIndexFullName(IIndexProfileInfo profile);
 
     /// <summary>
     /// Creates a new search index with the specified fields.
@@ -27,7 +34,7 @@ public interface ISearchIndexManager
     /// <summary>
     /// Deletes the specified search index.
     /// </summary>
-    /// <param name="indexFullName">The fully qualified index name.</param>
+    /// <param name="profile">The index profile.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
-    Task DeleteAsync(string indexFullName, CancellationToken cancellationToken = default);
+    Task DeleteAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default);
 }

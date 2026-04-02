@@ -52,6 +52,5 @@ public sealed class IndexProfileViewModel
         profile.ProviderName = ProviderName;
         profile.Type = Type;
         profile.EmbeddingDeploymentId = EmbeddingDeploymentId;
-        profile.IndexFullName = IndexName?.Trim();
     }
 }

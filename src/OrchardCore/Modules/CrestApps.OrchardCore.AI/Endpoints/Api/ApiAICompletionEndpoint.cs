@@ -226,7 +226,7 @@ internal static class ApiAICompletionEndpoint
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
 
-            var builder = ZString.CreateStringBuilder();
+            using var builder = ZString.CreateStringBuilder();
 
             // Collect preemptive RAG references.
             citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);

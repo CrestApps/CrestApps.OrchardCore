@@ -72,7 +72,7 @@ public sealed class MvcAIDocumentIndexingService
             return;
         }
 
-        if (!await indexManager.ExistsAsync(indexProfile.IndexFullName, cancellationToken))
+        if (!await indexManager.ExistsAsync(indexProfile, cancellationToken))
         {
             var dimensions = indexedChunks[0].Embedding!.Length;
 

@@ -3,6 +3,7 @@ using CrestApps.Infrastructure.Indexing.Models;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Mapping;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Elasticsearch.Services;
 
@@ -13,18 +14,39 @@ namespace CrestApps.Elasticsearch.Services;
 internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
 {
     private readonly ElasticsearchClient _elasticClient;
+    private readonly ElasticsearchConnectionOptions _options;
     private readonly ILogger<ElasticsearchSearchIndexManager> _logger;
 
     public ElasticsearchSearchIndexManager(
         ElasticsearchClient elasticClient,
+        IOptions<ElasticsearchConnectionOptions> options,
         ILogger<ElasticsearchSearchIndexManager> logger)
     {
         _elasticClient = elasticClient;
+        _options = options.Value;
         _logger = logger;
     }
 
-    public async Task<bool> ExistsAsync(string indexFullName, CancellationToken cancellationToken = default)
+    public string ComposeIndexFullName(IIndexProfileInfo profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var normalizedIndexName = profile.IndexName?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIndexName))
+        {
+            return normalizedIndexName;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.IndexPrefix)
+            ? normalizedIndexName
+            : string.Concat(_options.IndexPrefix.Trim(), normalizedIndexName);
+    }
+
+    public async Task<bool> ExistsAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var indexFullName = profile.IndexFullName ?? ComposeIndexFullName(profile);
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFullName);
 
         try
@@ -37,7 +59,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         {
             _logger.LogError(ex, "Error checking existence of Elasticsearch index '{IndexName}'.", indexFullName);
 
-            return false;
+            throw;
         }
     }
 
@@ -81,6 +103,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
             {
                 _logger.LogWarning("Failed to create Elasticsearch index '{IndexName}': {Error}",
                 profile.IndexFullName, response.DebugInformation);
+                throw new InvalidOperationException($"Failed to create Elasticsearch index '{profile.IndexFullName}'.");
             }
         }
         catch (Exception ex)
@@ -91,8 +114,14 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         }
     }
 
-    public async Task DeleteAsync(string indexFullName, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var indexFullName = !string.IsNullOrWhiteSpace(profile.IndexFullName)
+            ? profile.IndexFullName
+            : ComposeIndexFullName(profile);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFullName);
 
         try

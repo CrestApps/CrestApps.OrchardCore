@@ -4,6 +4,7 @@ using Azure.Search.Documents.Indexes.Models;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Azure.AISearch.Services;
 
@@ -14,18 +15,40 @@ namespace CrestApps.Azure.AISearch.Services;
 internal sealed class AzureAISearchIndexManager : ISearchIndexManager
 {
     private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAISearchConnectionOptions _options;
     private readonly ILogger<AzureAISearchIndexManager> _logger;
 
     public AzureAISearchIndexManager(
         SearchIndexClient searchIndexClient,
+        IOptions<AzureAISearchConnectionOptions> options,
         ILogger<AzureAISearchIndexManager> logger)
     {
         _searchIndexClient = searchIndexClient;
+        _options = options.Value;
         _logger = logger;
     }
 
-    public async Task<bool> ExistsAsync(string indexFullName, CancellationToken cancellationToken = default)
+    public string ComposeIndexFullName(IIndexProfileInfo profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var normalizedIndexName = profile.IndexName?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedIndexName))
+        {
+            return normalizedIndexName;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.IndexPrefix)
+            ? normalizedIndexName
+            : string.Concat(_options.IndexPrefix.Trim(), normalizedIndexName);
+    }
+
+    public async Task<bool> ExistsAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var indexFullName = profile.IndexFullName ?? ComposeIndexFullName(profile);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFullName);
 
         try
@@ -42,7 +65,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         {
             _logger.LogError(ex, "Error checking existence of Azure AI Search index '{IndexName}'.", indexFullName);
 
-            return false;
+            throw;
         }
     }
 
@@ -56,7 +79,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
 
         try
         {
-            var azureFields = new List<global::Azure.Search.Documents.Indexes.Models.SearchField>();
+            var azureFields = new List<SearchField>();
 
             foreach (var field in fields)
             {
@@ -119,8 +142,14 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
     }
 
-    public async Task DeleteAsync(string indexFullName, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var indexFullName = !string.IsNullOrWhiteSpace(profile.IndexFullName)
+            ? profile.IndexFullName
+            : ComposeIndexFullName(profile);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(indexFullName);
 
         try

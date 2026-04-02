@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.AzureAIInference;
+namespace CrestApps.AI.AzureAIInference.Services;
 
 public sealed class AzureAIInferenceCompletionClient : NamedAICompletionClient
 {

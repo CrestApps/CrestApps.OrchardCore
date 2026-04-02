@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.OpenAI;
+namespace CrestApps.AI.OpenAI.Services;
 
 public sealed class OpenAICompletionClient : NamedAICompletionClient
 {

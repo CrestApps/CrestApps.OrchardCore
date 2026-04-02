@@ -793,12 +793,12 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 }
 
 #pragma warning disable MEAI001
-                var sttClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
+                using var speechToTextClient = await clientFactory.CreateSpeechToTextClientAsync(deployment);
 #pragma warning restore MEAI001
 
                 var speechLanguage = !string.IsNullOrWhiteSpace(language) ? language : "en-US";
 
-                await StreamTranscriptionAsync(sttClient, sessionId ?? string.Empty, audioChunks, audioFormat, speechLanguage, cancellationToken);
+                await StreamTranscriptionAsync(speechToTextClient, sessionId ?? string.Empty, audioChunks, audioFormat, speechLanguage, cancellationToken);
             });
         }
         catch (Exception ex)
@@ -1146,7 +1146,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
         }
 
-        var builder = ZString.CreateStringBuilder();
+        using var builder = ZString.CreateStringBuilder();
         var contentItemIds = new HashSet<string>();
         var references = new Dictionary<string, AICompletionReference>();
 
@@ -1263,7 +1263,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
             ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
-        var builder = ZString.CreateStringBuilder();
+        using var builder = ZString.CreateStringBuilder();
 
         var contentItemIds = new HashSet<string>();
 
@@ -1422,7 +1422,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
 #pragma warning disable MEAI001
     protected async Task StreamSpeechAsync(
-    ITextToSpeechClient ttsClient,
+    ITextToSpeechClient textToSpeechClient,
     string identifier,
     string text,
     string voiceName,
@@ -1446,7 +1446,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             return;
         }
 
-        await foreach (var update in ttsClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+        await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
         {
 
             var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
@@ -1531,8 +1531,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     IAsyncEnumerable<string> audioChunks,
     string audioFormat,
     string speechLanguage,
-    ISpeechToTextClient sttClient,
-    ITextToSpeechClient ttsClient,
+    ISpeechToTextClient speechToTextClient,
+    ITextToSpeechClient textToSpeechClient,
     string voiceName,
     IServiceProvider services,
     CancellationToken cancellationToken)
@@ -1544,7 +1544,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         var transcriptionTask = TranscribeConversationAsync(
 
         pipe.Reader, profile, sessionId, audioFormat, speechLanguage,
-        sttClient, ttsClient, voiceName, services, errorCts, cancellationToken);
+        speechToTextClient, textToSpeechClient, voiceName, services, errorCts, cancellationToken);
 
         try
 
@@ -1579,8 +1579,8 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     string sessionId,
     string audioFormat,
     string speechLanguage,
-    ISpeechToTextClient sttClient,
-    ITextToSpeechClient ttsClient,
+    ISpeechToTextClient speechToTextClient,
+    ITextToSpeechClient textToSpeechClient,
     string voiceName,
     IServiceProvider services,
     CancellationTokenSource errorCts,
@@ -1616,7 +1616,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 Logger.LogDebug("TranscribeConversationAsync: Starting STT stream. Language={Language}, Format={Format}.", speechLanguage, audioFormat);
             }
 
-            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            await foreach (var update in speechToTextClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
 
             {
                 if (string.IsNullOrEmpty(update.Text))
@@ -1686,7 +1686,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
                     currentResponseTask = ProcessConversationPromptAsync(
                     profile, effectiveSessionId, fullText,
-                    ttsClient, voiceName, services, currentResponseCts.Token);
+                    textToSpeechClient, voiceName, services, currentResponseCts.Token);
                 }
             }
 
@@ -1722,7 +1722,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 {
                     await ProcessConversationPromptAsync(
                     profile, effectiveSessionId, remainingText,
-                    ttsClient, voiceName, services, cancellationToken);
+                    textToSpeechClient, voiceName, services, cancellationToken);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
@@ -1742,7 +1742,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     AIProfile profile,
     string sessionId,
     string prompt,
-    ITextToSpeechClient ttsClient,
+    ITextToSpeechClient textToSpeechClient,
     string voiceName,
     IServiceProvider services,
     CancellationToken cancellationToken)
@@ -1762,9 +1762,9 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         string messageId = null;
         string responseId = null;
 
-        var ttsTask = StreamSentencesAsSpeechAsync(ttsClient, () => effectiveSessionId, sentenceChannel.Reader, voiceName, cancellationToken);
+        var ttsTask = StreamSentencesAsSpeechAsync(textToSpeechClient, () => effectiveSessionId, sentenceChannel.Reader, voiceName, cancellationToken);
 
-        var sentenceBuffer = ZString.CreateStringBuilder();
+        using var sentenceBuffer = ZString.CreateStringBuilder();
 
         try
 
@@ -1802,9 +1802,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                             }
 
                             await sentenceChannel.Writer.WriteAsync(sentence, cancellationToken);
-
-                            sentenceBuffer.Dispose();
-                            sentenceBuffer = ZString.CreateStringBuilder();
+                            sentenceBuffer.Clear();
                         }
                     }
                 }
@@ -1813,8 +1811,6 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             await handleTask;
 
             var remaining = sentenceBuffer.ToString().Trim();
-
-            sentenceBuffer.Dispose();
 
             if (!string.IsNullOrEmpty(remaining))
 
@@ -1912,7 +1908,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     System.IO.Pipelines.Pipe pipe,
     string audioFormat,
     string speechLanguage,
-    ISpeechToTextClient sttClient,
+    ISpeechToTextClient speechToTextClient,
     CancellationTokenSource errorCts,
     CancellationToken cancellationToken)
     {
@@ -1934,7 +1930,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
                 sttOptions.AdditionalProperties["audioFormat"] = audioFormat;
             }
 
-            await foreach (var update in sttClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
+            await foreach (var update in speechToTextClient.GetStreamingTextAsync(readerStream, sttOptions, cancellationToken))
 
             {
                 if (string.IsNullOrEmpty(update.Text))

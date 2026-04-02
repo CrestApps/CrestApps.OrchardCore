@@ -214,7 +214,7 @@ public sealed class SearchDocumentsTool : AIFunction
                 : "No relevant background knowledge content was found for this query. Answer using your general knowledge instead.";
             }
 
-            var builder = ZString.CreateStringBuilder();
+            using var builder = ZString.CreateStringBuilder();
             builder.AppendLine(showUserDocumentAwareness
             ? "Relevant content from uploaded documents:"
             : "Relevant background knowledge content:");

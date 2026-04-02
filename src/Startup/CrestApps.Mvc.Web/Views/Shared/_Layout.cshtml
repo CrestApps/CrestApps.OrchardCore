@@ -147,6 +147,21 @@
         }
 
         <main class="flex-grow-1 p-4 app-content">
+            @if (TempData["ErrorMessage"] is string errorMessage)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+                </div>
+            }
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    @Html.ValidationSummary(excludePropertyErrors: false, message: "Please correct the following errors:", htmlAttributes: new { @class = "mb-0" })
+                </div>
+            }
+
             @RenderBody()
         </main>
     </div>

@@ -3,8 +3,8 @@ using Azure.AI.Inference;
 using Azure.Identity;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
-using CrestApps.Azure.Core;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure;
+using CrestApps.Azure.Models;
 using CrestApps.Infrastructure;
 using Microsoft.Extensions.AI;
 

@@ -4,9 +4,10 @@ using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
 using CrestApps.AI.DataSources;
-using CrestApps.AI.Endpoints;
+using CrestApps.AI.Indexing;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;
@@ -17,6 +18,7 @@ using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Tooling;
+using CrestApps.AI.Tools;
 using CrestApps.Azure.AISearch;
 using CrestApps.Data.YesSql;
 using CrestApps.Elasticsearch;
@@ -37,7 +39,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using NLog.Web;
@@ -210,28 +211,10 @@ builder.Services
 // Register the Elasticsearch client and keyed search/indexing services.
 .AddElasticsearchServices(builder.Configuration.GetSection("CrestApps:Elasticsearch"))
 // Register the MVC-managed index profile types that can be provisioned in Elasticsearch.
-.AddElasticsearchDataSource(IndexProfileTypes.AIDocuments, o =>
-{
-    o.DisplayName = "AI Documents";
-    o.Description = "Create an Elasticsearch index for uploaded and embedded AI document chunks.";
-})
-.AddElasticsearchDataSource(IndexProfileTypes.DataSource, o =>
-
-{
-    o.DisplayName = "Data Source";
-    o.Description = "Create an Elasticsearch index for AI knowledge base data source documents.";
-})
-
-.AddElasticsearchDataSource(IndexProfileTypes.AIMemory, o =>
-{
-    o.DisplayName = "AI Memory";
-    o.Description = "Create an Elasticsearch index for user and system memory records.";
-})
-.AddElasticsearchDataSource(IndexProfileTypes.Articles, o =>
-{
-    o.DisplayName = "Articles";
-    o.Description = "Create an Elasticsearch index for sample article records managed in the MVC app.";
-});
+.AddElasticsearchAIDocumentSource()
+.AddElasticsearchAIDataSource()
+.AddElasticsearchAIMemorySource()
+.AddElasticsearchArticleSource();
 
 // =============================================================================
 // 8. AZURE AI SEARCH SERVICES
@@ -244,27 +227,10 @@ builder.Services
 // Register the Azure AI Search client and keyed search/indexing services.
 .AddAzureAISearchServices(builder.Configuration.GetSection("CrestApps:AzureAISearch"))
 // Register the MVC-managed index profile types that can be provisioned in Azure AI Search.
-.AddAzureAISearchDataSource(IndexProfileTypes.AIDocuments, o =>
-{
-    o.DisplayName = "AI Documents";
-    o.Description = "Create an Azure AI Search index for uploaded and embedded AI document chunks.";
-})
-.AddAzureAISearchDataSource(IndexProfileTypes.DataSource, o =>
-{
-    o.DisplayName = "Data Source";
-    o.Description = "Create an Azure AI Search index for AI knowledge base data source documents.";
-})
-
-.AddAzureAISearchDataSource(IndexProfileTypes.AIMemory, o =>
-{
-    o.DisplayName = "AI Memory";
-    o.Description = "Create an Azure AI Search index for user and system memory records.";
-})
-.AddAzureAISearchDataSource(IndexProfileTypes.Articles, o =>
-{
-    o.DisplayName = "Articles";
-    o.Description = "Create an Azure AI Search index for sample article records managed in the MVC app.";
-});
+.AddAzureAISearchAIDocumentSource()
+.AddAzureAISearchAIDataSource()
+.AddAzureAISearchAIMemorySource()
+.AddAzureAISearchArticleSource();
 
 // =============================================================================
 // 9. MCP — MODEL CONTEXT PROTOCOL
@@ -491,6 +457,7 @@ builder.Services
     .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
     .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
     .AddScoped<MvcAIDocumentIndexingService>()
+    .AddScoped<ISearchIndexProfileManager, SearchIndexProfileManager>()
 
     .AddScoped<IAIChatDocumentAuthorizationService, MvcAIChatDocumentAuthorizationService>()
     .AddScoped<IAIChatDocumentEventHandler, MvcAIChatDocumentEventHandler>()
@@ -501,8 +468,7 @@ builder.Services
     .AddDocumentCatalog<Article, ArticleIndex>()
     .AddScoped<ICatalogManager<Article>, CatalogManager<Article>>()
     .AddScoped<ICatalogEntryHandler<Article>, ArticleIndexingHandler>()
-    .AddScoped<ArticleIndexingService>()
-    .AddIndexProfileHandler<ArticleIndexProfileHandler>();
+    .AddScoped<ArticleIndexingService>();
 
 // Local file store for uploaded documents.
 builder.Services.AddSingleton(new FileSystemFileStore(

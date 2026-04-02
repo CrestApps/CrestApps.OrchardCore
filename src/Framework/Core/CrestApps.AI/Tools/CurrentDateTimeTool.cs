@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 
-namespace CrestApps.AI.Tooling;
+namespace CrestApps.AI.Tools;
 
 /// <summary>
 /// A sample selectable AI tool that returns the current date and time.

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.AI.Core.Models;
+namespace CrestApps.AI.Models;
 
 public sealed class PromptTemplateSelectionEntry
 {

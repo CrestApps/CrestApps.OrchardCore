@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Models;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -84,3 +84,4 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         return Task.CompletedTask;
     }
 }
+

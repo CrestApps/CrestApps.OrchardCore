@@ -58,7 +58,7 @@ public sealed class ArticleIndexingService
             return;
         }
 
-        if (!await indexManager.ExistsAsync(indexProfile.IndexFullName, cancellationToken))
+        if (!await indexManager.ExistsAsync(indexProfile, cancellationToken))
         {
             await indexManager.CreateAsync(indexProfile, BuildFields(), cancellationToken);
         }
@@ -117,7 +117,7 @@ public sealed class ArticleIndexingService
             return;
         }
 
-        if (!await indexManager.ExistsAsync(indexProfile.IndexFullName, cancellationToken))
+        if (!await indexManager.ExistsAsync(indexProfile, cancellationToken))
         {
             await indexManager.CreateAsync(indexProfile, BuildFields(), cancellationToken);
         }

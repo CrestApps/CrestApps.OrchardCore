@@ -15,4 +15,9 @@ public sealed class AzureAISearchConnectionOptions
     /// When empty, <c>DefaultAzureCredential</c> is used instead.
     /// </summary>
     public string ApiKey { get; set; }
+
+    /// <summary>
+    /// Optional prefix applied to MVC-managed remote index names.
+    /// </summary>
+    public string IndexPrefix { get; set; }
 }

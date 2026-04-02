@@ -1,6 +1,6 @@
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Models;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.AzureAIInference.ViewModels;
@@ -97,3 +97,4 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         return Edit(connection, context);
     }
 }
+

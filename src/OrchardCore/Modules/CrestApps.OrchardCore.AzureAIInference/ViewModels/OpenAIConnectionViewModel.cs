@@ -1,4 +1,4 @@
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -20,3 +20,4 @@ public class AzureAIInferenceConnectionViewModel
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
 }
+

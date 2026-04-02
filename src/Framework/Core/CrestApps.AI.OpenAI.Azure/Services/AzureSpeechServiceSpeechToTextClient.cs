@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Azure.Core;
 using Azure.Identity;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Extensions.AI;

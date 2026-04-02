@@ -214,7 +214,7 @@ public sealed class TabularBatchProcessor : ITabularBatchProcessor
             return string.Empty;
         }
 
-        var builder = ZString.CreateStringBuilder();
+        using var builder = ZString.CreateStringBuilder();
         var sortedResults = results.OrderBy(r => r.BatchIndex).ToList();
 
         var hasSuccessfulResults = false;

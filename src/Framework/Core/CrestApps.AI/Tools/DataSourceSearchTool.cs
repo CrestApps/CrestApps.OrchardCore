@@ -4,6 +4,7 @@ using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
+using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
 using CrestApps.Services;
@@ -14,7 +15,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.AI.Tooling;
+namespace CrestApps.AI.Tools;
 
 /// <summary>
 /// Performs vector search against the configured data source knowledge base and returns relevant chunks with citations.
@@ -220,7 +221,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             }
 
-            var builder = ZString.CreateStringBuilder();
+            using var builder = ZString.CreateStringBuilder();
             builder.AppendLine("Relevant content from data source:");
 
             var seenReferences = new Dictionary<string, (int Index, string Title, string ReferenceType)>(StringComparer.OrdinalIgnoreCase);

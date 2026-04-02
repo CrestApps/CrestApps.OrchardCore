@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.Ollama;
+namespace CrestApps.AI.Ollama.Services;
 
 public sealed class OllamaCompletionClient : NamedAICompletionClient
 {

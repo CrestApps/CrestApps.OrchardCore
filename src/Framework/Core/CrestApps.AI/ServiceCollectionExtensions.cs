@@ -9,6 +9,7 @@ using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
 using CrestApps.AI.Tooling;
+using CrestApps.AI.Tools;
 using CrestApps.Templates;
 
 using CrestApps.Templates.Extensions;

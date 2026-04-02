@@ -4,12 +4,13 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.AI.Tooling;
+namespace CrestApps.AI.Tools;
 
 /// <summary>
 /// System tool that generates images from text descriptions using DALL-E or compatible image generation models.

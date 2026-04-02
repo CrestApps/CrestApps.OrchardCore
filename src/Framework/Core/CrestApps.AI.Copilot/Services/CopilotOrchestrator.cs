@@ -449,7 +449,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return "The Copilot service encountered an error. Please try again.";
         }
 
-        var sb = ZString.CreateStringBuilder();
+        using var sb = ZString.CreateStringBuilder();
 
         if (data.StatusCode.HasValue)
         {
@@ -489,7 +489,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
             return context.UserMessage;
         }
 
-        var sb = ZString.CreateStringBuilder();
+        using var sb = ZString.CreateStringBuilder();
         sb.AppendLine("[Conversation History]");
 
         foreach (var message in context.ConversationHistory)
@@ -558,7 +558,7 @@ public sealed class CopilotOrchestrator : IOrchestrator
         // TODO: When the Copilot SDK adds native McpServers support on SessionConfig,
         // configure each connection directly. For now, describe available MCP servers
         // in the system message so Copilot is aware of them.
-        var mcpDescription = ZString.CreateStringBuilder();
+        using var mcpDescription = ZString.CreateStringBuilder();
         mcpDescription.AppendLine();
         mcpDescription.AppendLine("[Available MCP Servers]");
 

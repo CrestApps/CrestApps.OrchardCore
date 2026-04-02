@@ -344,7 +344,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var chatDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: completionContext.ChatDeploymentName)
         ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
-        var builder = ZString.CreateStringBuilder();
+        using var builder = ZString.CreateStringBuilder();
         var references = new Dictionary<string, AICompletionReference>();
 
         await foreach (var chunk in completionService.CompleteStreamingAsync(chatDeployment, [new ChatMessage(ChatRole.User, generatedPrompt)], completionContext, cancellationToken))

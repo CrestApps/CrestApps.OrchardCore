@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.OpenAI.Azure.Models;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Azure.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -92,3 +92,4 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         return Task.CompletedTask;
     }
 }
+

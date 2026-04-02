@@ -3,12 +3,13 @@ using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.AI.Tooling;
+namespace CrestApps.AI.Tools;
 
 /// <summary>
 /// System tool that generates Chart.js configuration JSON from a data description.
