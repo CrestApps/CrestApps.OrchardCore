@@ -61,23 +61,43 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         // Set to "None" so the sample MCP and A2A clients can connect without tokens.
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__McpServer__AuthenticationType", "None");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__AuthenticationType", "None");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__ExposeAgentsAsSkill", "true");
+        options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__ExposeAgentsAsSkill", "false");
     });
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("OrchardCoreMcpClientSample")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
     .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
 
-builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("OrchardCoreA2AClientSample")
     .WithReference(orchardCore)
     .WaitFor(orchardCore)
     .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
     .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
 
-builder.AddProject<Projects.CrestApps_Mvc_Web>("MvcWeb")
-    .WithHttpsEndpoint(5004, name: "HttpsMvcWeb");
+var mvcWeb = builder.AddProject<Projects.CrestApps_Mvc_Web>("MvcWeb")
+    .WithHttpsEndpoint(5004, name: "HttpsMvcWeb")
+    .WithEnvironment((options) =>
+    {
+        // Configure authentication for sample projects.
+        // Set to "None" so the sample MCP and A2A clients can connect without tokens.
+        options.EnvironmentVariables.Add("CrestApps__MvcApp__MCP__Server__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("CrestApps__MvcApp__A2A__Host__AuthenticationType", "None");
+        options.EnvironmentVariables.Add("CrestApps__MvcApp__A2A__Host__ExposeAgentsAsSkill", "true");
+    });
+
+builder.AddProject<Projects.CrestApps_Mvc_Samples_McpClient>("MvcMcpClientSample")
+    .WithReference(mvcWeb)
+    .WaitFor(mvcWeb)
+    .WithHttpsEndpoint(5005, name: "HttpsMvcMcpClient")
+    .WithEnvironment("Mcp__Endpoint", "https://localhost:5004/mcp/sse");
+
+builder.AddProject<Projects.CrestApps_Mvc_Samples_A2AClient>("MvcA2AClientSample")
+    .WithReference(mvcWeb)
+    .WaitFor(mvcWeb)
+    .WithHttpsEndpoint(5006, name: "HttpsMvcA2AClient")
+    .WithEnvironment("A2A__Endpoint", "https://localhost:5004");
 
 var app = builder.Build();
 

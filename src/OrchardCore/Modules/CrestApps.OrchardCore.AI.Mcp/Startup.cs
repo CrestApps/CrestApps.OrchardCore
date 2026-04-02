@@ -20,20 +20,15 @@ using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol;
-using ModelContextProtocol.Protocol;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using McpServerTool = ModelContextProtocol.Server.McpServerTool;
 using OrchardDefaultMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerPromptService;
 using OrchardDefaultMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerResourceService;
 using OrchardDefaultOAuth2TokenService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultOAuth2TokenService;
@@ -160,6 +155,13 @@ public sealed class McpServerStartup : StartupBase
         services.AddOrchardCoreAgentSkillServices();
         services.AddScoped<OrchardMcpServerPromptService, OrchardDefaultMcpServerPromptService>();
         services.AddScoped<OrchardMcpServerResourceService, OrchardDefaultMcpServerResourceService>();
+
+        // Also register OC implementations under the framework interfaces
+        // so the shared WithCrestAppsHandlers() can resolve them.
+        services.AddScoped<CrestApps.AI.Mcp.Services.IMcpServerPromptService>(sp =>
+            sp.GetRequiredService<OrchardMcpServerPromptService>());
+        services.AddScoped<CrestApps.AI.Mcp.Services.IMcpServerResourceService>(sp =>
+            sp.GetRequiredService<OrchardMcpServerResourceService>());
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
 
@@ -206,141 +208,7 @@ public sealed class McpServerStartup : StartupBase
 
         })
         .WithHttpTransport()
-        .WithListToolsHandler((request, cancellationToken) =>
-        {
-            var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
-            ILogger logger = null;
-            var tools = new List<Tool>();
-
-            foreach (var (name, definition) in toolDefinitions.Tools)
-            {
-                try
-                {
-                    if (request.Services.GetKeyedService<AITool>(name) is AIFunction aiFunction)
-                    {
-                        tools.Add(new Tool
-                        {
-                            Name = aiFunction.Name,
-                            Description = aiFunction.Description,
-                            InputSchema = aiFunction.JsonSchema,
-                        });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    logger ??= request.Services.GetRequiredService<ILogger<McpServerStartup>>();
-
-                    logger.LogError(ex, "Error creating tool instance for '{ToolName}'", name);
-                }
-            }
-
-            // Include tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
-            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
-
-            if (sdkTools is not null)
-            {
-                foreach (var sdkTool in sdkTools)
-                {
-                    if (!tools.Any(t => t.Name == sdkTool.ProtocolTool.Name))
-                    {
-                        tools.Add(sdkTool.ProtocolTool);
-                    }
-                }
-            }
-
-            return ValueTask.FromResult(new ListToolsResult { Tools = tools });
-
-        })
-        .WithCallToolHandler(async (request, cancellationToken) =>
-        {
-            var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
-
-            if (toolDefinitions.Tools.ContainsKey(request.Params.Name))
-            {
-                if (request.Services.GetKeyedService<AITool>(request.Params.Name) is not AIFunction aiFunction)
-                {
-                    throw new McpException($"Failed to create tool '{request.Params.Name}'.");
-                }
-
-                // Convert IDictionary<string, JsonElement> to AIFunctionArguments
-                var arguments = new AIFunctionArguments()
-                {
-                    Services = request.Services,
-                    Context = new Dictionary<object, object>()
-                    {
-                        ["mcpRequest"] = request,
-                    },
-                };
-
-                if (request.Params.Arguments is not null)
-                {
-                    foreach (var kvp in request.Params.Arguments)
-                    {
-                        arguments[kvp.Key] = kvp.Value;
-                    }
-                }
-
-                var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
-
-                return new CallToolResult
-                {
-                    Content = [new TextContentBlock { Text = result?.ToString() ?? string.Empty }]
-                };
-            }
-
-            // Try tools registered via the MCP C# SDK (e.g., via [McpServerToolType] attribute).
-            var sdkTools = request.Services.GetService<IEnumerable<McpServerTool>>();
-            var sdkTool = sdkTools?.FirstOrDefault(t => t.ProtocolTool.Name == request.Params.Name);
-
-            if (sdkTool is not null)
-            {
-                return await sdkTool.InvokeAsync(request, cancellationToken);
-            }
-
-            throw new McpException($"Tool '{request.Params.Name}' not found.");
-        })
-        .WithListPromptsHandler(async (request, cancellationToken) =>
-        {
-            var promptService = request.Services.GetRequiredService<OrchardMcpServerPromptService>();
-
-            return new ListPromptsResult
-            {
-                Prompts = await promptService.ListAsync(),
-            };
-
-        })
-        .WithGetPromptHandler(async (request, cancellationToken) =>
-        {
-            var promptService = request.Services.GetRequiredService<OrchardMcpServerPromptService>();
-
-            return await promptService.GetAsync(request, cancellationToken);
-        })
-        .WithListResourcesHandler(async (request, cancellationToken) =>
-        {
-            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
-
-            return new ListResourcesResult
-            {
-                Resources = await resourceService.ListAsync(),
-            };
-
-        })
-        .WithListResourceTemplatesHandler(async (request, cancellationToken) =>
-        {
-            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
-
-            return new ListResourceTemplatesResult
-            {
-                ResourceTemplates = await resourceService.ListTemplatesAsync(),
-            };
-
-        })
-        .WithReadResourceHandler(async (request, cancellationToken) =>
-        {
-            var resourceService = request.Services.GetRequiredService<OrchardMcpServerResourceService>();
-
-            return await resourceService.ReadAsync(request, cancellationToken);
-        });
+        .WithCrestAppsHandlers();
 
         // Configure authorization policy.
         // The actual authorization logic is handled by McpServerAuthorizationHandler which reads the options at runtime.

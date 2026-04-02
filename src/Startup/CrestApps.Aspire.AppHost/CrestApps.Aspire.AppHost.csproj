@@ -21,6 +21,8 @@
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
     <ProjectReference Include="../CrestApps.Mvc.Web/CrestApps.Mvc.Web.csproj" />
+    <ProjectReference Include="../CrestApps.Mvc.Samples.A2AClient/CrestApps.Mvc.Samples.A2AClient.csproj" />
+    <ProjectReference Include="../CrestApps.Mvc.Samples.McpClient/CrestApps.Mvc.Samples.McpClient.csproj" />
   </ItemGroup>
 
 </Project>
