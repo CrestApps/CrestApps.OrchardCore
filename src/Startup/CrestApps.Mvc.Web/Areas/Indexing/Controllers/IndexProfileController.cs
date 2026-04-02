@@ -3,6 +3,7 @@ using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Mvc.Web.Areas.Indexing.ViewModels;
 using CrestApps.Services;
+using CrestApps.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -128,7 +129,11 @@ public sealed class IndexProfileController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to validate remote index '{IndexName}' for provider '{ProviderName}'.", profile.IndexFullName, profile.ProviderName);
+            _logger.LogError(
+                ex,
+                "Failed to validate remote index '{IndexName}' for provider '{ProviderName}'.",
+                profile.IndexFullName.SanitizeLogValue(),
+                profile.ProviderName.SanitizeLogValue());
             ModelState.AddModelError(nameof(model.IndexName), $"Unable to validate whether the remote index '{profile.IndexFullName}' already exists.");
             await PopulateDropdownsAsync(model);
 
@@ -141,7 +146,11 @@ public sealed class IndexProfileController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create remote index '{IndexName}' for provider '{ProviderName}'.", profile.IndexFullName, profile.ProviderName);
+            _logger.LogError(
+                ex,
+                "Failed to create remote index '{IndexName}' for provider '{ProviderName}'.",
+                profile.IndexFullName.SanitizeLogValue(),
+                profile.ProviderName.SanitizeLogValue());
             ModelState.AddModelError(nameof(model.IndexName), $"Unable to create the remote index '{profile.IndexFullName}'.");
             await PopulateDropdownsAsync(model);
 
@@ -221,7 +230,10 @@ public sealed class IndexProfileController : Controller
 
         if (indexManager == null)
         {
-            _logger.LogWarning("Skipping remote delete for index profile '{IndexProfileId}' because provider '{ProviderName}' is not registered.", profile.ItemId, profile.ProviderName);
+            _logger.LogWarning(
+                "Skipping remote delete for index profile '{IndexProfileId}' because provider '{ProviderName}' is not registered.",
+                profile.ItemId.SanitizeLogValue(),
+                profile.ProviderName.SanitizeLogValue());
             await _indexProfileManager.DeleteAsync(profile);
 
             return RedirectToAction(nameof(Index));
@@ -236,7 +248,11 @@ public sealed class IndexProfileController : Controller
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Skipping remote delete for index profile '{IndexProfileId}' because the resolved remote index name '{IndexName}' is invalid.", profile.ItemId, profile.IndexFullName);
+            _logger.LogWarning(
+                ex,
+                "Skipping remote delete for index profile '{IndexProfileId}' because the resolved remote index name '{IndexName}' is invalid.",
+                profile.ItemId.SanitizeLogValue(),
+                profile.IndexFullName.SanitizeLogValue());
             remoteIndexExists = false;
         }
 
@@ -248,7 +264,11 @@ public sealed class IndexProfileController : Controller
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete remote index '{IndexName}' for provider '{ProviderName}'. The local index profile was not removed.", profile.IndexFullName, profile.ProviderName);
+                _logger.LogError(
+                    ex,
+                    "Failed to delete remote index '{IndexName}' for provider '{ProviderName}'. The local index profile was not removed.",
+                    profile.IndexFullName.SanitizeLogValue(),
+                    profile.ProviderName.SanitizeLogValue());
                 TempData["ErrorMessage"] = $"Unable to delete the remote index '{profile.IndexFullName}'. The index profile was not removed.";
 
                 return RedirectToAction(nameof(Index));

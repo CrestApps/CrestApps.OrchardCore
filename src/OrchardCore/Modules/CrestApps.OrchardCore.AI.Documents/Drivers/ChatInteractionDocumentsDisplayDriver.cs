@@ -37,8 +37,6 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        // Show documents tab for all providers - documents are embedded and used for RAG
-
         return Initialize<ChatInteractionDocumentsViewModel>("ChatInteractionDocuments_Edit", async model =>
         {
             model.ItemId = interaction.ItemId;
@@ -62,7 +60,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Parameters:3#Documents;3");
+        }).Location("Parameters:5#Knowledge;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

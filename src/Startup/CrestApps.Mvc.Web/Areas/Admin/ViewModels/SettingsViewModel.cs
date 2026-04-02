@@ -8,17 +8,19 @@ namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 
 public sealed class SettingsViewModel
 {
-    // General AI settings.
-    public bool EnablePreemptiveMemoryRetrieval { get; set; } = true;
-
-    // Chat interaction settings.
-    public bool ChatInteractionEnableUserMemory { get; set; } = true;
-
     public int MaximumIterationsPerRequest { get; set; } = 10;
 
     public bool EnableDistributedCaching { get; set; } = true;
 
     public bool EnableOpenTelemetry { get; set; }
+
+    public bool DefaultOrchestratorEnablePreemptiveRag { get; set; } = true;
+
+    public string MemoryIndexProfileName { get; set; }
+
+    public int MemoryTopN { get; set; } = 5;
+
+    public bool ChatInteractionEnableUserMemory { get; set; } = true;
 
     public string DocumentIndexProfileName { get; set; }
 
@@ -99,4 +101,7 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> MemoryIndexProfiles { get; set; } = [];
 }

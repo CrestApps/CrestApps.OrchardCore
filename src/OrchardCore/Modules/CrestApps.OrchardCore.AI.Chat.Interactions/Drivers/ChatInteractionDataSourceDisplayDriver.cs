@@ -49,7 +49,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Parameters:5#Settings;1");
+        }).Location("Parameters:5#Knowledge;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -64,16 +64,15 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
             if (dataSource != null)
             {
-                interaction.Put(new DataSourceMetadata
+                interaction.Alter<DataSourceMetadata>(metadata =>
                 {
-                    DataSourceId = dataSource.ItemId,
+                    metadata.DataSourceId = dataSource.ItemId;
                 });
             }
         }
         else
         {
-            // Clear the metadata if no data source is selected
-            interaction.Put(new DataSourceMetadata());
+            interaction.Alter<DataSourceMetadata>(metadata => metadata.DataSourceId = null);
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
@@ -98,12 +97,12 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
         }
 
-        interaction.Put(new AIDataSourceRagMetadata
+        interaction.Alter<AIDataSourceRagMetadata>(metadata =>
         {
-            Strictness = strictness,
-            TopNDocuments = topN,
-            IsInScope = model.IsInScope,
-            Filter = model.Filter,
+            metadata.Strictness = strictness;
+            metadata.TopNDocuments = topN;
+            metadata.IsInScope = model.IsInScope;
+            metadata.Filter = model.Filter;
         });
 
         return Edit(interaction, context);

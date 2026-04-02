@@ -381,7 +381,12 @@
                 <!-- Knowledge Base Tab -->
                 <div class="tab-pane fade" id="kb" role="tabpanel">
                     <div class="mb-3">
-                        <label asp-for="DataSourceId" class="form-label">Data source</label>
+                        <label asp-for="DataSourceId" class="form-label">
+                            Data source
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="The data source used to retrieve background knowledge for this interaction.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <select asp-for="DataSourceId" class="form-select" asp-items="Model.DataSources">
                             <option value="">— None —</option>
                         </select>
@@ -390,14 +395,24 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="DataSourceStrictness" class="form-label">Strictness</label>
+                                <label asp-for="DataSourceStrictness" class="form-label">
+                                    Strictness
+                                    <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how strictly retrieved data source matches must align with the user request.">
+                                        <i class="bi bi-question-circle"></i>
+                                    </span>
+                                </label>
                                 <input asp-for="DataSourceStrictness" type="number" class="form-control" min="1" max="5" placeholder="Default provider setting" />
                                 <div class="form-text">Controls how strictly the AI should follow retrieved data-source matches.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="DataSourceTopNDocuments" class="form-label">Retrieved documents</label>
+                                <label asp-for="DataSourceTopNDocuments" class="form-label">
+                                    Retrieved documents
+                                    <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many data source documents are retrieved for retrieval-augmented generation.">
+                                        <i class="bi bi-question-circle"></i>
+                                    </span>
+                                </label>
                                 <input asp-for="DataSourceTopNDocuments" type="number" class="form-control" min="1" max="20" placeholder="Default provider setting" />
                                 <div class="form-text">How many data-source documents to retrieve for RAG.</div>
                             </div>
@@ -406,11 +421,21 @@
                     <div class="mb-3">
                         <div class="form-check form-switch">
                             <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
-                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">
+                                Restrict answers to retrieved data only
+                                <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
+                                    <i class="bi bi-question-circle"></i>
+                                </span>
+                            </label>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                        <label asp-for="DataSourceFilter" class="form-label">
+                            Filter
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
                         <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
                     </div>
@@ -431,7 +456,12 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
+                                <label asp-for="DocumentTopN" class="form-label">
+                                    Document Top N
+                                    <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many matching uploaded document chunks are added as context for the AI.">
+                                        <i class="bi bi-question-circle"></i>
+                                    </span>
+                                </label>
                                 <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
                                 <div class="form-text">Number of top matching document chunks to include as AI context.</div>
                             </div>

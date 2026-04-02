@@ -2,19 +2,25 @@ namespace CrestApps.Mvc.Web.Services;
 
 public static class AppDataConfigurationSections
 {
-    public const string GeneralAISettings = "CrestApps:AI:Settings";
+    public const string GeneralAISettings = "CrestApps:MvcApp:GeneralSettings";
 
-    public const string DefaultDeployments = "CrestApps:AI:DefaultDeployments";
+    public const string DefaultOrchestrator = "CrestApps:MvcApp:DefaultOrchestrator";
 
-    public const string InteractionDocuments = "CrestApps:AI:InteractionDocuments";
+    public const string DefaultDeployments = "CrestApps:MvcApp:DefaultDeployments";
 
-    public const string AIDataSources = "CrestApps:AI:DataSources";
+    public const string AIMemory = "CrestApps:MvcApp:Memory";
 
-    public const string ChatInteraction = "CrestApps:AI:ChatInteraction";
+    public const string InteractionDocuments = "CrestApps:MvcApp:InteractionDocuments";
 
-    public const string Copilot = "CrestApps:AI:Copilot";
+    public const string AIDataSources = "CrestApps:MvcApp:DataSources";
 
-    public const string McpServer = "CrestApps:MCP:Server";
+    public const string ChatInteraction = "CrestApps:MvcApp:ChatInteraction";
 
-    public const string Pagination = "CrestApps:Admin:Pagination";
+    public const string ChatInteractionMemory = "CrestApps:MvcApp:ChatInteractionMemory";
+
+    public const string Copilot = "CrestApps:MvcApp:Copilot";
+
+    public const string McpServer = "CrestApps:MvcApp:MCP:Server";
+
+    public const string Pagination = "CrestApps:MvcApp:Admin:Pagination";
 }

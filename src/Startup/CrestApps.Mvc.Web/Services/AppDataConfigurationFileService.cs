@@ -74,30 +74,6 @@ public sealed class AppDataConfigurationFileService
         return JsonNode.Parse(json) as JsonObject ?? [];
     }
 
-    private static JsonNode GetSectionNode(JsonObject root, string sectionPath)
-    {
-        JsonNode current = root;
-
-        foreach (var segment in GetSegments(sectionPath))
-        {
-            if (current is not JsonObject currentObject)
-            {
-
-                return null;
-            }
-
-            if (!TryGetPropertyName(currentObject, segment, out var propertyName))
-            {
-
-                return null;
-            }
-
-            current = currentObject[propertyName];
-        }
-
-        return current;
-    }
-
     private static void SetSectionNode(JsonObject root, string sectionPath, JsonNode value)
     {
         var segments = GetSegments(sectionPath);

@@ -28,6 +28,9 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         _logger = logger;
     }
 
+    private static string SanitizeLogValue(string value)
+        => value?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? string.Empty;
+
     public string ComposeIndexFullName(IIndexProfileInfo profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -62,13 +65,13 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogError(ex, "Error checking existence of Azure AI Search index '{IndexName}'.", indexFullName);
+            _logger.LogDebug(ex, "Azure AI Search index '{IndexName}' was not found.", SanitizeLogValue(indexFullName));
 
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking existence of Azure AI Search index '{IndexName}'.", indexFullName);
+            _logger.LogError(ex, "Error checking existence of Azure AI Search index '{IndexName}'.", SanitizeLogValue(indexFullName));
 
             throw;
         }
@@ -141,7 +144,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating Azure AI Search index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error creating Azure AI Search index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
 
             throw;
         }
@@ -167,7 +170,7 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting Azure AI Search index '{IndexName}'.", indexFullName);
+            _logger.LogError(ex, "Error deleting Azure AI Search index '{IndexName}'.", SanitizeLogValue(indexFullName));
 
             throw;
         }

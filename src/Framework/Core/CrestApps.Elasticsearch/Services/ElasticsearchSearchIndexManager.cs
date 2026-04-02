@@ -27,6 +27,9 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         _logger = logger;
     }
 
+    private static string SanitizeLogValue(string value)
+        => value?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? string.Empty;
+
     public string ComposeIndexFullName(IIndexProfileInfo profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
@@ -57,7 +60,7 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking existence of Elasticsearch index '{IndexName}'.", indexFullName);
+            _logger.LogError(ex, "Error checking existence of Elasticsearch index '{IndexName}'.", SanitizeLogValue(indexFullName));
 
             throw;
         }
@@ -101,14 +104,14 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
 
             if (!response.IsValidResponse)
             {
-                _logger.LogWarning("Failed to create Elasticsearch index '{IndexName}': {Error}",
-                profile.IndexFullName, response.DebugInformation);
+                _logger.LogWarning("Failed to create Elasticsearch index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
                 throw new InvalidOperationException($"Failed to create Elasticsearch index '{profile.IndexFullName}'.");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating Elasticsearch index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error creating Elasticsearch index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
 
             throw;
         }
@@ -130,13 +133,13 @@ internal sealed class ElasticsearchSearchIndexManager : ISearchIndexManager
 
             if (!response.IsValidResponse)
             {
-                _logger.LogWarning("Failed to delete Elasticsearch index '{IndexName}': {Error}",
-                indexFullName, response.DebugInformation);
+                _logger.LogWarning("Failed to delete Elasticsearch index '{IndexName}'.",
+                SanitizeLogValue(indexFullName));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting Elasticsearch index '{IndexName}'.", indexFullName);
+            _logger.LogError(ex, "Error deleting Elasticsearch index '{IndexName}'.", SanitizeLogValue(indexFullName));
 
             throw;
         }

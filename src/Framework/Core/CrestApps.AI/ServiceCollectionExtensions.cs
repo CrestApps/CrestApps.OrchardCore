@@ -12,9 +12,7 @@ using CrestApps.AI.Speech;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
 using CrestApps.Templates;
-
 using CrestApps.Templates.Extensions;
-
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
@@ -240,7 +238,6 @@ public static class ServiceCollectionExtensions
     {
         // Register embedded templates from this assembly so they are available
         // regardless of the host (OrchardCore, MVC, or any ASP.NET Core app).
-
         services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
 
         services.TryAddSingleton(TimeProvider.System);
@@ -258,10 +255,7 @@ public static class ServiceCollectionExtensions
 
         // can replace this with their own implementation (e.g., reading from ISiteService).
         services.TryAddScoped(sp =>
-
         {
-
-
             var snapshot = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>();
             var settings = sp.GetRequiredService<IOptionsSnapshot<GeneralAISettings>>();
 

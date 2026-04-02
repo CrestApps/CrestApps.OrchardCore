@@ -2,6 +2,7 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;
+using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Models;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
@@ -19,13 +20,17 @@ namespace CrestApps.Mvc.Web.Areas.Admin.Controllers;
 public sealed class SettingsController : Controller
 {
     private const string CopilotProtectorPurpose = "CrestApps.Mvc.Web.CopilotSettings";
+    private const string MemoryIndexProfileType = "AIMemory";
 
     private readonly AppDataSettingsService<GeneralAISettings> _settingsService;
+    private readonly AppDataSettingsService<DefaultOrchestratorSettings> _defaultOrchestratorSettingsService;
     private readonly AppDataSettingsService<DefaultAIDeploymentSettings> _deploymentDefaultsService;
+    private readonly AppDataSettingsService<AIMemorySettings> _memorySettingsService;
     private readonly AppDataSettingsService<InteractionDocumentSettings> _interactionDocumentSettingsService;
     private readonly AppDataSettingsService<AIDataSourceSettings> _aiDataSourceSettingsService;
     private readonly AppDataSettingsService<McpServerOptions> _mcpServerSettingsService;
     private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
+    private readonly AppDataSettingsService<ChatInteractionMemorySettings> _chatInteractionMemorySettingsService;
     private readonly AppDataSettingsService<CopilotSettings> _copilotSettingsService;
     private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
@@ -34,11 +39,14 @@ public sealed class SettingsController : Controller
 
     public SettingsController(
         AppDataSettingsService<GeneralAISettings> settingsService,
+        AppDataSettingsService<DefaultOrchestratorSettings> defaultOrchestratorSettingsService,
         AppDataSettingsService<DefaultAIDeploymentSettings> deploymentDefaultsService,
+        AppDataSettingsService<AIMemorySettings> memorySettingsService,
         AppDataSettingsService<InteractionDocumentSettings> interactionDocumentSettingsService,
         AppDataSettingsService<AIDataSourceSettings> aiDataSourceSettingsService,
         AppDataSettingsService<McpServerOptions> mcpServerSettingsService,
         AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
+        AppDataSettingsService<ChatInteractionMemorySettings> chatInteractionMemorySettingsService,
         AppDataSettingsService<CopilotSettings> copilotSettingsService,
         AppDataSettingsService<PaginationSettings> paginationSettingsService,
         IAIDeploymentManager deploymentManager,
@@ -46,11 +54,14 @@ public sealed class SettingsController : Controller
         IDataProtectionProvider dataProtectionProvider)
     {
         _settingsService = settingsService;
+        _defaultOrchestratorSettingsService = defaultOrchestratorSettingsService;
         _deploymentDefaultsService = deploymentDefaultsService;
+        _memorySettingsService = memorySettingsService;
         _interactionDocumentSettingsService = interactionDocumentSettingsService;
         _aiDataSourceSettingsService = aiDataSourceSettingsService;
         _mcpServerSettingsService = mcpServerSettingsService;
         _chatInteractionSettingsService = chatInteractionSettingsService;
+        _chatInteractionMemorySettingsService = chatInteractionMemorySettingsService;
         _copilotSettingsService = copilotSettingsService;
         _paginationSettingsService = paginationSettingsService;
         _deploymentManager = deploymentManager;
@@ -61,22 +72,26 @@ public sealed class SettingsController : Controller
     public async Task<IActionResult> Index()
     {
         var settings = await _settingsService.GetAsync();
+        var defaultOrchestratorSettings = await _defaultOrchestratorSettingsService.GetAsync();
         var deploymentDefaults = await _deploymentDefaultsService.GetAsync();
+        var memorySettings = await _memorySettingsService.GetAsync();
         var documentSettings = await _interactionDocumentSettingsService.GetAsync();
         var dataSourceSettings = await _aiDataSourceSettingsService.GetAsync();
         var mcpServerSettings = await _mcpServerSettingsService.GetAsync();
-        var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
+        var chatInteractionMemorySettings = await _chatInteractionMemorySettingsService.GetAsync();
         var copilotSettings = await _copilotSettingsService.GetAsync();
         var paginationSettings = await _paginationSettingsService.GetAsync();
 
         var model = new SettingsViewModel
         {
-            EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
             EnableDistributedCaching = settings.EnableDistributedCaching,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
+            DefaultOrchestratorEnablePreemptiveRag = defaultOrchestratorSettings.EnablePreemptiveRag,
+            MemoryIndexProfileName = memorySettings.IndexProfileName,
+            MemoryTopN = memorySettings.TopN,
 
-            ChatInteractionEnableUserMemory = chatInteractionSettings.EnableUserMemory,
+            ChatInteractionEnableUserMemory = chatInteractionMemorySettings.EnableUserMemory,
 
             DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
             DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
@@ -127,6 +142,11 @@ public sealed class SettingsController : Controller
             ModelState.AddModelError(nameof(model.DocumentTopN), "Must be at least 1.");
         }
 
+        if (model.MemoryTopN < 1 || model.MemoryTopN > 20)
+        {
+            ModelState.AddModelError(nameof(model.MemoryTopN), "Must be between 1 and 20.");
+        }
+
         if (model.DataSourceDefaultStrictness < AIDataSourceSettings.MinStrictness || model.DataSourceDefaultStrictness > AIDataSourceSettings.MaxStrictness)
         {
             ModelState.AddModelError(nameof(model.DataSourceDefaultStrictness), $"Must be between {AIDataSourceSettings.MinStrictness} and {AIDataSourceSettings.MaxStrictness}.");
@@ -148,6 +168,16 @@ public sealed class SettingsController : Controller
             ModelState.AddModelError(nameof(model.AdminPageSize), "Page size must be between 1 and 200.");
         }
 
+        if (!string.IsNullOrWhiteSpace(model.MemoryIndexProfileName))
+        {
+            var indexProfile = await _indexProfileStore.FindByNameAsync(model.MemoryIndexProfileName);
+
+            if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryIndexProfileType, StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(model.MemoryIndexProfileName), "Invalid memory index profile.");
+            }
+        }
+
         if (!ModelState.IsValid)
         {
             await PopulateDeploymentDropdownsAsync(model);
@@ -158,12 +188,16 @@ public sealed class SettingsController : Controller
         // Save general AI settings.
         var settings = await _settingsService.GetAsync();
 
-        settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.MaximumIterationsPerRequest = model.MaximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
 
         await _settingsService.SaveAsync(settings);
+
+        await _defaultOrchestratorSettingsService.SaveAsync(new DefaultOrchestratorSettings
+        {
+            EnablePreemptiveRag = model.DefaultOrchestratorEnablePreemptiveRag,
+        });
 
         // Save default deployment settings.
         var deploymentDefaults = new DefaultAIDeploymentSettings
@@ -178,6 +212,14 @@ public sealed class SettingsController : Controller
         };
 
         await _deploymentDefaultsService.SaveAsync(deploymentDefaults);
+
+        await _memorySettingsService.SaveAsync(new AIMemorySettings
+        {
+            IndexProfileName = string.IsNullOrWhiteSpace(model.MemoryIndexProfileName)
+                ? null
+                : model.MemoryIndexProfileName.Trim(),
+            TopN = model.MemoryTopN,
+        });
 
         await _interactionDocumentSettingsService.SaveAsync(new InteractionDocumentSettings
         {
@@ -199,6 +241,11 @@ public sealed class SettingsController : Controller
         });
 
         await _chatInteractionSettingsService.SaveAsync(new ChatInteractionSettings
+        {
+            EnableUserMemory = model.ChatInteractionEnableUserMemory,
+        });
+
+        await _chatInteractionMemorySettingsService.SaveAsync(new ChatInteractionMemorySettings
         {
             EnableUserMemory = model.ChatInteractionEnableUserMemory,
         });
@@ -265,6 +312,11 @@ public sealed class SettingsController : Controller
 
         model.DocumentIndexProfiles = [new SelectListItem("— None —", "")];
         model.DocumentIndexProfiles = model.DocumentIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name)));
+
+        model.MemoryIndexProfiles = [new SelectListItem("— None —", "")];
+        model.MemoryIndexProfiles = model.MemoryIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(MemoryIndexProfileType))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
             .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name)));
     }

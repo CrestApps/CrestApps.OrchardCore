@@ -24,6 +24,9 @@ internal sealed class ElasticsearchSearchDocumentManager : ISearchDocumentManage
         _logger = logger;
     }
 
+    private static string SanitizeLogValue(string value)
+        => value?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? string.Empty;
+
     public async Task<bool> AddOrUpdateAsync(
         IIndexProfileInfo profile,
         IReadOnlyCollection<IndexDocument> documents,
@@ -66,8 +69,8 @@ internal sealed class ElasticsearchSearchDocumentManager : ISearchDocumentManage
 
             if (!response.IsValidResponse)
             {
-                _logger.LogWarning("Elasticsearch bulk index failed for index '{IndexName}': {Error}",
-                profile.IndexFullName, response.DebugInformation);
+                _logger.LogWarning("Elasticsearch bulk index failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
 
                 return false;
             }
@@ -76,7 +79,7 @@ internal sealed class ElasticsearchSearchDocumentManager : ISearchDocumentManage
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error indexing documents in Elasticsearch index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error indexing documents in Elasticsearch index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
 
             return false;
         }
@@ -118,13 +121,13 @@ internal sealed class ElasticsearchSearchDocumentManager : ISearchDocumentManage
 
             if (!response.IsValidResponse)
             {
-                _logger.LogWarning("Elasticsearch bulk delete failed for index '{IndexName}': {Error}",
-                profile.IndexFullName, response.DebugInformation);
+                _logger.LogWarning("Elasticsearch bulk delete failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting documents from Elasticsearch index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error deleting documents from Elasticsearch index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
         }
     }
 
@@ -142,13 +145,13 @@ internal sealed class ElasticsearchSearchDocumentManager : ISearchDocumentManage
 
             if (!response.IsValidResponse)
             {
-                _logger.LogWarning("Elasticsearch delete all failed for index '{IndexName}': {Error}",
-                profile.IndexFullName, response.DebugInformation);
+                _logger.LogWarning("Elasticsearch delete all failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting all documents from Elasticsearch index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error deleting all documents from Elasticsearch index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
         }
     }
 }

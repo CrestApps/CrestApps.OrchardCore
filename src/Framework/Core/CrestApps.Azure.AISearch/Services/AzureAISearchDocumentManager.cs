@@ -26,6 +26,9 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         _logger = logger;
     }
 
+    private static string SanitizeLogValue(string value)
+        => value?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? string.Empty;
+
     public async Task<bool> AddOrUpdateAsync(
         IIndexProfileInfo profile,
         IReadOnlyCollection<IndexDocument> documents,
@@ -65,14 +68,14 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure AI Search index documents failed for index '{IndexName}': {Message}",
-                profile.IndexFullName, ex.Message);
+            _logger.LogError(ex, "Azure AI Search index documents failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
 
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error indexing documents in Azure AI Search index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error indexing documents in Azure AI Search index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
 
             return false;
         }
@@ -106,12 +109,12 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure AI Search delete failed for index '{IndexName}': {Message}",
-                profile.IndexFullName, ex.Message);
+            _logger.LogError(ex, "Azure AI Search delete failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting documents from Azure AI Search index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error deleting documents from Azure AI Search index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
         }
     }
 
@@ -168,12 +171,12 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure AI Search delete all failed for index '{IndexName}': {Message}",
-                profile.IndexFullName, ex.Message);
+            _logger.LogError(ex, "Azure AI Search delete all failed for index '{IndexName}'.",
+                SanitizeLogValue(profile.IndexFullName));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting all documents from Azure AI Search index '{IndexName}'.", profile.IndexFullName);
+            _logger.LogError(ex, "Error deleting all documents from Azure AI Search index '{IndexName}'.", SanitizeLogValue(profile.IndexFullName));
         }
     }
 
@@ -192,7 +195,7 @@ internal sealed class AzureAISearchDocumentManager : ISearchDocumentManager
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Unable to determine key field for index '{IndexName}', defaulting to 'id'.", indexFullName);
+            _logger.LogWarning(ex, "Unable to determine key field for index '{IndexName}', defaulting to 'id'.", SanitizeLogValue(indexFullName));
         }
 
         return "id";

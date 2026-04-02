@@ -23,58 +23,67 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
 
     public static int Create()
     {
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var store = scope.ServiceProvider.GetRequiredService<IStore>();
-            var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<AILegacyDocumentTypeNameMigrations>>();
-
-            var dialect = store.Configuration.SqlDialect;
-            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
-            var table = $"{store.Configuration.TablePrefix}{documentTableName}";
-            var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
-            var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
-
-            var whereClause =
-                $"{quotedTypeColumnName} LIKE '{LegacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {LegacyAssemblyName}%'";
-
-            await using var connection = dbConnectionAccessor.CreateConnection();
-            await connection.OpenAsync();
-
-            var count = await connection.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
-
-            if (count == 0)
-            {
-                return;
-            }
-
-            var updated = await connection.ExecuteAsync(
-                $"""
-
-                UPDATE {quotedTableName}
-
-                SET {quotedTypeColumnName} = REPLACE(
-
-                REPLACE({quotedTypeColumnName}, '{LegacyNamespacePrefix}', '{CurrentNamespacePrefix}'),
-
-                '{LegacyAssemblyName}',
-
-                '{CurrentAssemblyName}')
-
-                WHERE {whereClause}
-
-                """);
-
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation(
-                    "Updated {Count} legacy AI document type names in {TableName} from Orchard-layer assemblies to framework-layer assemblies.",
-                    updated,
-                    table);
-            }
-        });
+        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
 
         return 1;
+    }
+
+    public static int UpdateFrom1()
+    {
+        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
+
+        return 2;
+    }
+
+    private static async Task RewriteLegacyTypeNamesAsync(IServiceProvider scope)
+    {
+        var store = scope.GetRequiredService<IStore>();
+        var dbConnectionAccessor = scope.GetRequiredService<IDbConnectionAccessor>();
+        var logger = scope.GetRequiredService<ILogger<AILegacyDocumentTypeNameMigrations>>();
+
+        var dialect = store.Configuration.SqlDialect;
+        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+        var table = $"{store.Configuration.TablePrefix}{documentTableName}";
+        var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
+        var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
+
+        var whereClause =
+            $"{quotedTypeColumnName} LIKE '{LegacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {LegacyAssemblyName}%'";
+
+        await using var connection = dbConnectionAccessor.CreateConnection();
+        await connection.OpenAsync();
+
+        var count = await connection.ExecuteScalarAsync<int>(
+            $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
+
+        if (count == 0)
+        {
+            return;
+        }
+
+        var updated = await connection.ExecuteAsync(
+            $"""
+
+            UPDATE {quotedTableName}
+
+            SET {quotedTypeColumnName} = REPLACE(
+
+            REPLACE({quotedTypeColumnName}, '{LegacyNamespacePrefix}', '{CurrentNamespacePrefix}'),
+
+            '{LegacyAssemblyName}',
+
+            '{CurrentAssemblyName}')
+
+            WHERE {whereClause}
+
+            """);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Updated {Count} legacy AI document type names in {TableName} from Orchard-layer assemblies to framework-layer assemblies.",
+                updated,
+                table);
+        }
     }
 }

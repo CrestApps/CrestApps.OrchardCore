@@ -7,6 +7,7 @@ using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
 using CrestApps.AI.DataSources;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Indexing;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
@@ -17,6 +18,7 @@ using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
 using CrestApps.Azure.AISearch;
@@ -90,7 +92,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // =============================================================================
 // 1. LOGGING
-
 // =============================================================================
 // NLog writes daily log files to App_Data/logs/. Replace with your preferred
 
@@ -104,7 +105,6 @@ var appDataPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data");
 Directory.CreateDirectory(appDataPath);
 
 // =============================================================================
-
 // 2. APPLICATION CONFIGURATION
 // =============================================================================
 // Three-layer configuration: base → environment override → App_Data override.
@@ -119,15 +119,16 @@ Directory.CreateDirectory(appDataPath);
 // =============================================================================
 
 builder.Configuration
-.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-.AddJsonFile($"appsettings.{builder.Environment}.json", optional: true, reloadOnChange: true)
-.AddJsonFile("App_Data/appsettings.json", optional: true, reloadOnChange: true);
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("App_Data/appsettings.json", optional: true, reloadOnChange: true);
 
 // Persist settings into the same reloadable App_Data file that IConfiguration watches.
-
 builder.Services.AddSingleton(new AppDataConfigurationFileService(appDataPath));
+
 // Register typed wrappers over the App_Data-backed settings sections used by the MVC admin UI.
 builder.Services.AddMvcAppDataSettings(builder.Configuration);
+
 // =============================================================================
 // 3. ASP.NET CORE MVC SETUP
 // =============================================================================
@@ -136,11 +137,7 @@ builder.Services.AddMvcAppDataSettings(builder.Configuration);
 // =============================================================================
 builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews();
-builder.Services.AddSignalR()
-    .AddJsonProtocol(options =>
-    {
-        options.PayloadSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    });
+builder.Services.AddCrestAppsSignalR();
 
 // =============================================================================
 // 4. AUTHENTICATION & AUTHORIZATION
@@ -149,17 +146,16 @@ builder.Services.AddSignalR()
 // preferred auth scheme (JWT, OpenID Connect, etc.).
 // =============================================================================
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-.AddCookie(options =>
-{
-    options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/AccessDenied";
-});
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+    });
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Admin", policy => policy.RequireRole("Administrator"));
 
 // =============================================================================
-
 // 5. CRESTAPPS FOUNDATION + AI SERVICES
 // =============================================================================
 // These are the shared CrestApps service registrations that sit on top of the
@@ -167,38 +163,38 @@ builder.Services.AddAuthorizationBuilder()
 // minimum CrestApps foundation, then remove optional features as needed.
 // =============================================================================
 builder.Services
-// Foundation services shared across the framework (for example OData validation).
-.AddCrestAppsCoreServices()
+    // Foundation services shared across the framework (for example OData validation).
+    .AddCrestAppsCoreServices()
 
-// Core AI services: client factory, completion service, context builders, and AI options.
-.AddCrestAppsAI()
+    // Core AI services: client factory, completion service, context builders, and AI options.
+    .AddCrestAppsAI()
 
-// Orchestration pipeline: IOrchestrator, tool registry, response handlers, and RAG flow.
-.AddOrchestrationServices()
+    // Orchestration pipeline: IOrchestrator, tool registry, response handlers, and RAG flow.
+    .AddOrchestrationServices()
 
-// GitHub Copilot-based orchestrator implementation for teams that want that experience.
-.AddCopilotOrchestrator()
+    // GitHub Copilot-based orchestrator implementation for teams that want that experience.
+    .AddCopilotOrchestrator()
 
-// Ad-hoc chat session handling and interaction orchestration.
-.AddChatInteractionServices()
+    // Ad-hoc chat session handling and interaction orchestration.
+    .AddChatInteractionServices()
 
-// Configure standard hub timeouts and message sizes for the chat interaction hub.
-.ConfigureChatHubOptions<ChatInteractionHub>()
+    // Configure standard hub timeouts and message sizes for the chat interaction hub.
+    .ConfigureChatHubOptions<ChatInteractionHub>()
 
-// Shared document ingestion, extraction, tabular processing, and RAG over attachments.
-.AddDefaultDocumentProcessingServices()
+    // Shared document ingestion, extraction, tabular processing, and RAG over attachments.
+    .AddDefaultDocumentProcessingServices()
 
-// Agent-to-agent protocol support so remote agents can participate as tools.
-.AddCrestAppsA2AClient()
+    // Agent-to-agent protocol support so remote agents can participate as tools.
+    .AddCrestAppsA2AClient()
 
-// MCP client support for connecting to remote MCP servers.
-.AddCrestAppsMcpClient()
+    // MCP client support for connecting to remote MCP servers.
+    .AddCrestAppsMcpClient()
 
-// MCP server support for exposing prompts, tools, and resources from this app.
-.AddCrestAppsMcpServer()
+    // MCP server support for exposing prompts, tools, and resources from this app.
+    .AddCrestAppsMcpServer()
 
-// Real-time hub management for SignalR-based chat experiences.
-.AddCrestAppsSignalR();
+    // Real-time hub management for SignalR-based chat experiences.
+    .AddCrestAppsSignalR();
 
 // =============================================================================
 // 6. AI PROVIDERS
@@ -214,10 +210,10 @@ builder.Services
 //   AddAzureAIInferenceProvider()       — Azure AI Inference / GitHub Models
 // =============================================================================
 builder.Services
-.AddOpenAIProvider()
-.AddAzureOpenAIProvider()
-.AddOllamaProvider()
-.AddAzureAIInferenceProvider();
+    .AddOpenAIProvider()
+    .AddAzureOpenAIProvider()
+    .AddOllamaProvider()
+    .AddAzureAIInferenceProvider();
 
 // Application-specific provider options configuration.
 builder.Services.Configure<AIProviderOptions>(builder.Configuration.GetSection("CrestApps:AI:Providers"));
@@ -242,7 +238,6 @@ builder.Services
 // 8. AZURE AI SEARCH SERVICES
 // =============================================================================
 // This block mirrors the Elasticsearch group so each provider's registrations
-
 // stay together and are easy to remove independently.
 // =============================================================================
 builder.Services
@@ -270,7 +265,6 @@ builder.Services.Configure<IndexProfileSourceOptions>(options =>
 // =============================================================================
 // 9. MCP — MODEL CONTEXT PROTOCOL
 // =============================================================================
-
 // MCP server endpoint configuration (using the ModelContextProtocol SDK).
 // This wires the CrestApps tool registry, prompt service, and resource service
 // into the MCP protocol handlers served at the /mcp endpoint.
@@ -282,9 +276,7 @@ _ = builder.Services.AddMcpServer(options =>
         Name = "CrestApps MVC MCP Server",
         Version = "1.0",
     };
-
-})
-.WithHttpTransport()
+}).WithHttpTransport()
 .WithListToolsHandler((request, cancellationToken) =>
 {
     var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
@@ -321,10 +313,8 @@ _ = builder.Services.AddMcpServer(options =>
     }
 
     return ValueTask.FromResult(new ListToolsResult { Tools = tools });
-
 })
 .WithCallToolHandler(async (request, cancellationToken) =>
-
 {
     var toolDefinitions = request.Services.GetRequiredService<IOptions<AIToolDefinitionOptions>>().Value;
 
@@ -349,7 +339,6 @@ _ = builder.Services.AddMcpServer(options =>
             {
                 arguments[kvp.Key] = kvp.Value;
             }
-
         }
 
         var result = await aiFunction.InvokeAsync(arguments, cancellationToken);
@@ -407,7 +396,6 @@ _ = builder.Services.AddMcpServer(options =>
 
 // =============================================================================
 // 10. CUSTOM AI TOOLS
-
 // =============================================================================
 // Register application-specific AI tools using the fluent builder pattern.
 // Tools marked as Selectable() are visible in the UI for user assignment to
@@ -415,10 +403,10 @@ _ = builder.Services.AddMcpServer(options =>
 // orchestrator based on their Purpose.
 // =============================================================================
 builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
-.WithTitle("Calculator")
-.WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
-.WithCategory("Utilities")
-.Selectable();
+    .WithTitle("Calculator")
+    .WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
+    .WithCategory("Utilities")
+    .Selectable();
 
 builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
     .WithPurpose(AIToolPurposes.DataSourceSearch);
@@ -428,7 +416,6 @@ builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
 // =============================================================================
 // The framework does not impose a specific data store. You must provide
 // implementations of the store interfaces (IAIProfileManager,
-
 // IAIChatSessionManager, IAIChatSessionPromptStore, IAIDocumentStore, etc.).
 //
 // This example uses YesSql with SQLite. To use Entity Framework Core or another
@@ -479,6 +466,9 @@ builder.Services
     .AddSourceDocumentCatalog<McpResource, McpResourceIndex>()
     .AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>()
     .AddNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>()
+    .AddScoped<DefaultAIDeploymentManager>()
+    .AddScoped<IAIDeploymentManager>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
+    .AddScoped<INamedSourceCatalogManager<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
     .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
     .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
     .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
@@ -518,15 +508,12 @@ builder.Services.ConfigureOptions<MvcCopilotOptionsConfiguration>();
 // =============================================================================
 
 builder.Services.AddHostedService<AIChatSessionCloseBackgroundService>();
-
 builder.Services.AddHostedService<DataSourceSyncBackgroundService>();
 builder.Services.AddHostedService<DataSourceAlignmentBackgroundService>();
-
 
 var app = builder.Build();
 
 // YesSql schema initialization — creates tables on first run.
-
 await InitializeYesSqlSchemaAsync(app.Services);
 
 // Seed sample articles on first run.
@@ -534,7 +521,6 @@ await SeedArticlesAsync(app.Services);
 
 using (var scope = app.Services.CreateScope())
 {
-
     var providerConnections = await scope.ServiceProvider
         .GetRequiredService<ICatalog<AIProviderConnection>>()
         .GetAllAsync();
@@ -542,7 +528,6 @@ using (var scope = app.Services.CreateScope())
     app.Services.GetRequiredService<MvcAIProviderOptionsStore>()
         .Replace(providerConnections);
 }
-
 
 app.Services.GetRequiredService<IOptionsMonitorCache<AIProviderOptions>>()
     .TryRemove(Options.DefaultName);
@@ -554,28 +539,24 @@ _ = app.Services.GetRequiredService<IOptions<AIProviderOptions>>().Value;
 
 if (!app.Environment.IsDevelopment())
 {
-
     app.UseExceptionHandler("/Home/Error")
         .UseHsts();
 }
 
 app.UseHttpsRedirection()
     .UseStaticFiles()
-
     .UseRouting()
     .UseAuthentication()
     .UseAuthorization();
 
 app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =>
 {
-
     branch.Use(async (context, next) =>
     {
         var settings = await context.RequestServices.GetRequiredService<AppDataSettingsService<CrestApps.AI.Mcp.Models.McpServerOptions>>().GetAsync();
 
         if (settings.AuthenticationType == McpServerAuthenticationType.None)
         {
-
             await next();
 
             return;
@@ -593,7 +574,6 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 
             if (!string.IsNullOrEmpty(settings.ApiKey) && string.Equals(providedKey, settings.ApiKey, StringComparison.Ordinal))
             {
-
                 await next();
 
                 return;
@@ -606,7 +586,6 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 
         if (context.User.Identity?.IsAuthenticated != true)
         {
-
             await context.ChallengeAsync();
 
             return;
@@ -614,7 +593,6 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 
         if (settings.RequireAccessPermission && !context.User.IsInRole("Administrator"))
         {
-
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
             return;
@@ -622,7 +600,6 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
 
         await next();
     });
-
 });
 
 app.MapHub<AIChatHub>("/hubs/ai-chat");
@@ -630,7 +607,6 @@ app.MapHub<ChatInteractionHub>("/hubs/chat-interaction");
 app.MapMcp("mcp");
 app.AddChatApiEndpoints()
     .AddUploadChatInteractionDocumentEndpoint()
-
     .AddRemoveChatInteractionDocumentEndpoint()
     .AddUploadChatSessionDocumentEndpoint()
     .AddRemoveChatSessionDocumentEndpoint();

@@ -36,7 +36,7 @@ Profile-source AI Templates now follow the same top-level card grouping:
 - **Instructions** — prompt template text and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
-Additional advanced sections such as capabilities, response handling, analytics, and post-session processing continue to appear below these cards in their existing sections. In the **Knowledge** tab, AI Profiles now group the selected data source, the same data-source RAG controls used by chat interactions (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), uploaded profile documents, and session-document upload settings in one place.
+Additional advanced sections such as capabilities, response handling, analytics, and post-session processing continue to appear below these cards in their existing sections. In the **Knowledge** tab, AI Profiles now group the selected data source, the same data-source RAG controls used by chat interactions (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), uploaded profile documents, and session-document upload settings in one place. The model-parameter editors in both MVC and Orchard Core now also use consistent `(?)` hover help for Temperature, Top P, penalties, token limits, and past-message settings so profile editing matches the chat and template UX.
 
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 

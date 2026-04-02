@@ -2,6 +2,12 @@
 @model AIProfileViewModel
 @{
     ViewData["Title"] = "Edit AI Profile";
+    const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
+    const string temperatureHelp = "Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied.";
+    const string topPHelp = "Also called nucleus sampling. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values are more focused, while higher values are more diverse.";
+    const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
+    const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
+    const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
 }
 
 <h2><i class="bi bi-pencil"></i> Edit AI Profile</h2>
@@ -289,14 +295,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="Temperature" class="form-label">Temperature</label>
+                                <label asp-for="Temperature" class="form-label">Temperature <span class="text-muted" data-bs-toggle="tooltip" title="@temperatureHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="Temperature" type="number" class="form-control" step="0.01" min="0" max="2" placeholder="0.0 - 2.0" />
                                 <div class="form-text">Controls randomness. Lower = more focused, higher = more creative.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="TopP" class="form-label">Top P</label>
+                                <label asp-for="TopP" class="form-label">Top P <span class="text-muted" data-bs-toggle="tooltip" title="@topPHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="TopP" type="number" class="form-control" step="0.01" min="0" max="1" placeholder="0.0 - 1.0" />
                                 <div class="form-text">Nucleus sampling. Controls diversity of responses.</div>
                             </div>
@@ -305,14 +311,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty</label>
+                                <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty <span class="text-muted" data-bs-toggle="tooltip" title="@frequencyPenaltyHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="FrequencyPenalty" type="number" class="form-control" step="0.01" min="-2" max="2" placeholder="-2.0 - 2.0" />
                                 <div class="form-text">Penalizes repeated tokens. Higher = less repetition.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="PresencePenalty" class="form-label">Presence penalty</label>
+                                <label asp-for="PresencePenalty" class="form-label">Presence penalty <span class="text-muted" data-bs-toggle="tooltip" title="@presencePenaltyHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="PresencePenalty" type="number" class="form-control" step="0.01" min="-2" max="2" placeholder="-2.0 - 2.0" />
                                 <div class="form-text">Penalizes tokens already present. Higher = more topic variety.</div>
                             </div>
@@ -321,14 +327,14 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="MaxTokens" class="form-label">Max output tokens</label>
+                                <label asp-for="MaxTokens" class="form-label">Max output tokens <span class="text-muted" data-bs-toggle="tooltip" title="@maxTokensHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="MaxTokens" type="number" class="form-control" min="1" placeholder="Leave blank for model default" />
                                 <div class="form-text">Maximum number of tokens in the response.</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="PastMessagesCount" class="form-label">Past messages count</label>
+                                <label asp-for="PastMessagesCount" class="form-label">Past messages count <span class="text-muted" data-bs-toggle="tooltip" title="@pastMessagesHelp"><i class="bi bi-question-circle" aria-hidden="true"></i></span></label>
                                 <input asp-for="PastMessagesCount" type="number" class="form-control" min="0" placeholder="Leave blank for all" />
                                 <div class="form-text">Number of previous messages to include in context.</div>
                             </div>
@@ -816,6 +822,12 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                    window.bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+            }
+
             var profileTypeSelect = document.getElementById('profileTypeSelect');
             var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
             var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');

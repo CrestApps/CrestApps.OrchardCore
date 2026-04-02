@@ -24,6 +24,7 @@
     <ProjectReference Include="../CrestApps.AI/CrestApps.AI.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.Infrastructure.Abstractions/CrestApps.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="../CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Utilities\CrestApps.Support\CrestApps.Support.csproj" />
   </ItemGroup>
 
 </Project>

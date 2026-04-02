@@ -90,11 +90,17 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-input" type="checkbox" />
-                            <label asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-label">Enable preemptive memory retrieval</label>
-                        </div>
-                        <div class="form-text">When enabled, the system automatically retrieves relevant memories before processing user requests (RAG).</div>
+                        <label asp-for="MemoryIndexProfileName" class="form-label">Default memory index</label>
+                        <select asp-for="MemoryIndexProfileName" asp-items="Model.MemoryIndexProfiles" class="form-select"></select>
+                        <span asp-validation-for="MemoryIndexProfileName" class="text-danger"></span>
+                        <div class="form-text">Choose the AI Memory index profile used to store and retrieve user memories.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="MemoryTopN" class="form-label">Default memory Top N</label>
+                        <input asp-for="MemoryTopN" class="form-control" type="number" min="1" max="20" style="max-width: 200px;" />
+                        <span asp-validation-for="MemoryTopN" class="text-danger"></span>
+                        <div class="form-text">The default number of memory entries retrieved when memory is enabled.</div>
                     </div>
                 </div>
             </div>
@@ -170,6 +176,14 @@
                     <h5 class="card-title mb-0">Orchestration</h5>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-input" type="checkbox" />
+                            <label asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-label">Enable preemptive retrieval-augmented generation (RAG)</label>
+                        </div>
+                        <div class="form-text">When enabled, the default orchestrator retrieves relevant context from connected knowledge sources before the main AI call.</div>
+                    </div>
+
                     <div class="mb-3">
                         <label asp-for="MaximumIterationsPerRequest" class="form-label">Maximum iterations per request</label>
                         <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="100" style="max-width: 200px;" />

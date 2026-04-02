@@ -1,7 +1,10 @@
+using System.Text.RegularExpressions;
+
 namespace CrestApps.Mvc.Web.Services;
 
 public sealed class FileSystemFileStore
 {
+    private static readonly Regex _safePathSegmentExpression = new("^[a-zA-Z0-9._-]+$", RegexOptions.Compiled);
     private readonly string _basePath;
 
     public FileSystemFileStore(string basePath)
@@ -78,7 +81,7 @@ public sealed class FileSystemFileStore
 
         foreach (var segment in segments)
         {
-            if (segment is "." or "..")
+            if (segment is "." or ".." || !_safePathSegmentExpression.IsMatch(segment))
             {
                 throw new ArgumentException("The file name contains an invalid path.");
             }

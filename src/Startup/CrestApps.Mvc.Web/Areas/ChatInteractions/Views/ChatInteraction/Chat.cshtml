@@ -383,7 +383,12 @@
                 <!-- Tab 3: Knowledge Base -->
                 <div class="tab-pane fade" id="pane-knowledge" role="tabpanel">
                     <div class="mb-2">
-                        <label class="form-label">Data source</label>
+                        <label class="form-label">
+                            Data source
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="The data source used to retrieve background knowledge for this interaction.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
                             <option value="">— None —</option>
                         </select>
@@ -393,14 +398,24 @@
                     <hr class="my-3" />
 
                     <div class="mb-2">
-                        <label class="form-label">Strictness</label>
+                        <label class="form-label">
+                            Strictness
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how strictly retrieved data source matches must align with the user request.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <input type="number" class="form-control setting-input" id="setting-strictness"
                                min="1" max="5" value="@Model.DataSourceStrictness" placeholder="Default provider setting" data-setting="strictness" />
                         <div class="form-text">Controls how strictly the AI should follow retrieved data-source matches.</div>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label">Retrieved documents</label>
+                        <label class="form-label">
+                            Retrieved documents
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many data source documents are retrieved for retrieval-augmented generation.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <input type="number" class="form-control setting-input" id="setting-topNDocuments"
                                min="1" max="20" value="@Model.DataSourceTopNDocuments" placeholder="Default provider setting" data-setting="topNDocuments" />
                         <div class="form-text">How many data-source documents to retrieve for RAG.</div>
@@ -409,11 +424,21 @@
                     <div class="form-check form-switch mb-2">
                         <input class="form-check-input setting-input" type="checkbox" id="setting-isInScope"
                                data-setting="isInScope" @(Model.DataSourceIsInScope ? "checked" : "") />
-                        <label class="form-check-label" for="setting-isInScope">Restrict answers to retrieved data only</label>
+                        <label class="form-check-label" for="setting-isInScope">
+                            Restrict answers to retrieved data only
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label">Filter</label>
+                        <label class="form-label">
+                            Filter
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <input type="text" class="form-control setting-input" id="setting-filter"
                                value="@Model.DataSourceFilter" placeholder="Optional provider-specific filter" data-setting="filter" />
                         <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
@@ -422,7 +447,12 @@
                     <hr class="my-3" />
 
                     <div class="mb-2">
-                        <label class="form-label">Document Top N</label>
+                        <label class="form-label">
+                            Document Top N
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many matching uploaded document chunks are added as context for the AI.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
                         <input type="number" class="form-control setting-input" id="setting-documentTopN"
                                min="1" max="20" value="@Model.DocumentTopN" placeholder="Default: 3" data-setting="documentTopN" />
                         <div class="form-text">Number of top matching document chunks to include as context.</div>

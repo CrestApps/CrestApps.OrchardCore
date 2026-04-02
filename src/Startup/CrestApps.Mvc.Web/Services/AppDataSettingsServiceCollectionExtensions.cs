@@ -1,5 +1,6 @@
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.AIChat.Models;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Models;
@@ -29,10 +30,13 @@ public static class AppDataSettingsServiceCollectionExtensions
 
         return services
             .AddAppDataSettings<GeneralAISettings>(configuration, AppDataConfigurationSections.GeneralAISettings)
+            .AddAppDataSettings<DefaultOrchestratorSettings>(configuration, AppDataConfigurationSections.DefaultOrchestrator)
             .AddAppDataSettings<DefaultAIDeploymentSettings>(configuration, AppDataConfigurationSections.DefaultDeployments)
+            .AddAppDataSettings<AIMemorySettings>(configuration, AppDataConfigurationSections.AIMemory)
             .AddAppDataSettings<InteractionDocumentSettings>(configuration, AppDataConfigurationSections.InteractionDocuments)
             .AddAppDataSettings<AIDataSourceSettings>(configuration, AppDataConfigurationSections.AIDataSources)
             .AddAppDataSettings<ChatInteractionSettings>(configuration, AppDataConfigurationSections.ChatInteraction)
+            .AddAppDataSettings<ChatInteractionMemorySettings>(configuration, AppDataConfigurationSections.ChatInteractionMemory)
             .AddAppDataSettings<CopilotSettings>(configuration, AppDataConfigurationSections.Copilot)
             .AddAppDataSettings<McpServerOptions>(configuration, AppDataConfigurationSections.McpServer)
             .AddAppDataSettings<PaginationSettings>(configuration, AppDataConfigurationSections.Pagination);

@@ -1,6 +1,7 @@
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
+using CrestApps.Support;
 using CrestApps.Services;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.Services;
@@ -139,7 +140,10 @@ public sealed class ArticleIndexingService
 
         if (!indexed)
         {
-            _logger.LogWarning("Article indexing reported failure for article '{ArticleId}' into index '{IndexName}'.", article.ItemId, indexProfile.IndexFullName);
+            _logger.LogWarning(
+                "Article indexing reported failure for article '{ArticleId}' into index '{IndexName}'.",
+                article.ItemId.SanitizeLogValue(),
+                indexProfile.IndexFullName.SanitizeLogValue());
         }
     }
 
@@ -155,7 +159,7 @@ public sealed class ArticleIndexingService
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Skipping article indexing because provider '{ProviderName}' is not fully configured for search indexing.", providerName);
+            _logger.LogWarning(ex, "Skipping article indexing because provider '{ProviderName}' is not fully configured for search indexing.", providerName.SanitizeLogValue());
             indexManager = null;
             documentManager = null;
 
@@ -164,7 +168,7 @@ public sealed class ArticleIndexingService
 
         if (indexManager == null || documentManager == null)
         {
-            _logger.LogWarning("Skipping article indexing because provider '{ProviderName}' is not configured for search indexing.", providerName);
+            _logger.LogWarning("Skipping article indexing because provider '{ProviderName}' is not configured for search indexing.", providerName.SanitizeLogValue());
 
             return false;
         }
