@@ -35,13 +35,13 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         var dataSourceResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:7%General;1")
+        }).Location("Content:1%Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(template, model);
-        }).Location("Content:10%Parameters;5")
+        }).Location("Content:5%Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         return Combine(dataSourceResult, parametersResult);

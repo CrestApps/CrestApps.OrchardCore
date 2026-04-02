@@ -65,7 +65,10 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
-            _logger.LogDebug(ex, "Azure AI Search index '{IndexName}' was not found.", SanitizeLogValue(indexFullName));
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(ex, "Azure AI Search index '{IndexName}' was not found.", SanitizeLogValue(indexFullName));
+            }
 
             return false;
         }

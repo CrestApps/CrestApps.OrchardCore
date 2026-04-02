@@ -127,7 +127,7 @@ The MVC Chat Interaction parameter editors now follow the Orchard Core-style UX 
 
 The knowledge panel also surfaces inline document-upload feedback so users can see overall upload progress, per-file status, when uploads finish, when individual files fail, and when the same document is rejected as a duplicate instead of being uploaded again.
 
-In both Orchard Core and the MVC sample, the Chat Interaction **Knowledge** tab now groups the selected data source, the RAG controls (`Strictness`, `Retrieved documents`, `Restrict answers to retrieved data only`, and `Filter`), and the uploaded-document `Document Top N` control together with the same `(?)` tooltip affordances used on the model-parameter editors.
+In both Orchard Core and the MVC sample, the Chat Interaction **Knowledge** tab now appears before **Capabilities** and groups the selected data source, the RAG controls (`Strictness`, `Retrieved documents`, `Restrict answers to retrieved data only`, and `Filter`), and the uploaded-document `Document Top N` control together with the same `(?)` tooltip affordances used on the model-parameter editors.
 
 The MVC sample's **Settings → AI Settings** page now also exposes the same high-level knobs used by the Orchard Core admin experience: AI Memory defaults (index profile and Top N), AI Data Source defaults (strictness and retrieved documents), default orchestrator preemptive RAG, and chat-interaction memory defaults.
 

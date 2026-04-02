@@ -193,6 +193,9 @@ builder.Services
     // MCP server support for exposing prompts, tools, and resources from this app.
     .AddCrestAppsMcpServer()
 
+    // A2A host support for exposing AI Agent profiles via Agent-to-Agent protocol.
+    .AddA2AHost()
+
     // Real-time hub management for SignalR-based chat experiences.
     .AddCrestAppsSignalR();
 
@@ -602,9 +605,63 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
     });
 });
 
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/a2a"), branch =>
+{
+    branch.Use(async (context, next) =>
+    {
+        var settings = await context.RequestServices.GetRequiredService<AppDataSettingsService<CrestApps.AI.A2A.Models.A2AHostOptions>>().GetAsync();
+
+        if (settings.AuthenticationType == A2AHostAuthenticationType.None)
+        {
+            await next();
+
+            return;
+        }
+
+        if (settings.AuthenticationType == A2AHostAuthenticationType.ApiKey)
+        {
+            var authorization = context.Request.Headers.Authorization.ToString();
+            var providedKey = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? authorization["Bearer ".Length..]
+
+            : authorization.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase)
+            ? authorization["ApiKey ".Length..]
+            : authorization;
+
+            if (!string.IsNullOrEmpty(settings.ApiKey) && string.Equals(providedKey, settings.ApiKey, StringComparison.Ordinal))
+            {
+                await next();
+
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+
+            return;
+        }
+
+        if (context.User.Identity?.IsAuthenticated != true)
+        {
+            await context.ChallengeAsync();
+
+            return;
+        }
+
+        if (settings.RequireAccessPermission && !context.User.IsInRole("Administrator"))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+            return;
+        }
+
+        await next();
+    });
+});
+
 app.MapHub<AIChatHub>("/hubs/ai-chat");
 app.MapHub<ChatInteractionHub>("/hubs/chat-interaction");
 app.MapMcp("mcp");
+app.MapA2AHost();
 app.AddChatApiEndpoints()
     .AddUploadChatInteractionDocumentEndpoint()
     .AddRemoveChatInteractionDocumentEndpoint()
@@ -775,7 +832,6 @@ async Task InitializeYesSqlSchemaAsync(IServiceProvider services)
 
 async Task TryCreateTableAsync(SchemaBuilder _, Func<Task> createTable)
 {
-
     try { await createTable(); }
     catch { /* Table already exists. */ }
 }

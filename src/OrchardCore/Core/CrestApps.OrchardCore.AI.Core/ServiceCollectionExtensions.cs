@@ -2,6 +2,7 @@ using CrestApps.AI;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Speech;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
@@ -20,6 +21,7 @@ public static class ServiceCollectionExtensions
             .AddCrestAppsAI()
             .AddCatalogs()
             .AddCatalogManagers()
+            .AddScoped<ISpeechVoiceResolver, DefaultSpeechVoiceResolver>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
             .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())

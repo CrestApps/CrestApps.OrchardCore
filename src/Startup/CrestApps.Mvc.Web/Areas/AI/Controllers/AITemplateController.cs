@@ -1,17 +1,23 @@
+using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
+using CrestApps.AI.DataSources;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
+using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Services;
+using CrestApps.Templates.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -28,7 +34,11 @@ public sealed class AITemplateController : Controller
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
     private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
+    private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIProfileManager _profileManager;
+    private readonly IInteractionDocumentSettingsProvider _interactionDocumentSettingsProvider;
+    private readonly ISearchIndexProfileStore _indexProfileStore;
+    private readonly ITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
     private readonly CopilotOptions _copilotOptions;
     private readonly GitHubOAuthService _oauthService;
@@ -40,7 +50,11 @@ public sealed class AITemplateController : Controller
         ICatalog<AIDeployment> deploymentCatalog,
         ICatalog<A2AConnection> a2aConnectionCatalog,
         ICatalog<McpConnection> mcpConnectionCatalog,
+        IAIDataSourceStore dataSourceStore,
         IAIProfileManager profileManager,
+        IInteractionDocumentSettingsProvider interactionDocumentSettingsProvider,
+        ISearchIndexProfileStore indexProfileStore,
+        ITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
         IOptions<CopilotOptions> copilotOptions,
         GitHubOAuthService oauthService,
@@ -50,7 +64,11 @@ public sealed class AITemplateController : Controller
         _deploymentCatalog = deploymentCatalog;
         _a2aConnectionCatalog = a2aConnectionCatalog;
         _mcpConnectionCatalog = mcpConnectionCatalog;
+        _dataSourceStore = dataSourceStore;
         _profileManager = profileManager;
+        _interactionDocumentSettingsProvider = interactionDocumentSettingsProvider;
+        _indexProfileStore = indexProfileStore;
+        _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
         _copilotOptions = copilotOptions.Value;
         _oauthService = oauthService;
@@ -288,6 +306,45 @@ public sealed class AITemplateController : Controller
             })
         .ToList();
 
+        var promptTemplates = await _aiTemplateService.ListAsync();
+        model.AvailablePromptTemplates = promptTemplates
+            .Where(t => t.Metadata.IsListable)
+            .OrderBy(t => t.Metadata.Category ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => t.Metadata.Title ?? t.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(t => new PromptTemplateOptionItem
+            {
+                TemplateId = t.Id,
+                Title = t.Metadata.Title ?? t.Id,
+                Description = t.Metadata.Description,
+                Category = t.Metadata.Category ?? "General",
+                Parameters = (t.Metadata.Parameters ?? []).Select(p => new PromptTemplateParameterItem
+                {
+                    Name = p.Name,
+                    Description = p.Description,
+                }).ToList(),
+            })
+            .ToList();
+
+        var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
+        model.DocumentIndexProfileName = documentSettings.IndexProfileName;
+
+        if (!string.IsNullOrWhiteSpace(documentSettings.IndexProfileName))
+        {
+            var documentIndexProfile = await _indexProfileStore.FindByNameAsync(documentSettings.IndexProfileName);
+            model.HasDocumentIndexConfiguration = documentIndexProfile != null &&
+                string.Equals(documentIndexProfile.Type, IndexProfileTypes.AIDocuments, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            model.HasDocumentIndexConfiguration = false;
+        }
+
+        var dataSources = await _dataSourceStore.GetAllAsync();
+        model.DataSources = new[] { new SelectListItem("— No data source —", "") }
+            .Concat(dataSources
+                .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
+                .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)))
+            .ToList();
     }
 
     private async Task<string[]> GetValidAgentNamesAsync(IEnumerable<string> selectedNames)

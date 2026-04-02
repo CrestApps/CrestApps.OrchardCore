@@ -110,6 +110,8 @@
     <Project Path="src/Startup/CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
     <Project Path="src/Startup/CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <Project Path="src/Startup/CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
+    <Project Path="src/Startup/CrestApps.Mvc.Samples.A2AClient/CrestApps.Mvc.Samples.A2AClient.csproj" />
+    <Project Path="src/Startup/CrestApps.Mvc.Samples.McpClient/CrestApps.Mvc.Samples.McpClient.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />

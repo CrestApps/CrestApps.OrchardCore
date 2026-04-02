@@ -49,7 +49,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Parameters:5#Knowledge;1");
+        }).Location("Parameters:4#Knowledge;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

@@ -82,7 +82,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Documents:5")
+        }).Location("Content:10%Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

@@ -22,5 +22,7 @@ public static class AppDataConfigurationSections
 
     public const string McpServer = "CrestApps:MvcApp:MCP:Server";
 
+    public const string A2AHost = "CrestApps:MvcApp:A2A:Host";
+
     public const string Pagination = "CrestApps:MvcApp:Admin:Pagination";
 }

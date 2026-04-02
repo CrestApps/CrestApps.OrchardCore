@@ -15,7 +15,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
             var metadata = template.As<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
             model.HasIndexProfile = true;
-        }).Location("Content:5#Documents:10")
+        }).Location("Content:15%Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

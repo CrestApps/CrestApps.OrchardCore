@@ -17,11 +17,13 @@ public sealed class AppDataSettingsService<T>
         _sectionResolver = sectionResolver;
     }
 
-    public Task<T> GetAsync()
+    public async Task<T> GetAsync()
     {
         var sectionKey = _sectionResolver.GetSectionKey<T>();
 
-        return Task.FromResult(_configuration.GetSection(sectionKey).Get<T>() ?? new T());
+        return await _configurationFileService.ReadSectionAsync<T>(sectionKey) ??
+            _configuration.GetSection(sectionKey).Get<T>() ??
+            new T();
     }
 
     public Task SaveAsync(T settings)

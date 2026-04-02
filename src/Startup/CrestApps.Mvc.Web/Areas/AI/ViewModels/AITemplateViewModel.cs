@@ -9,6 +9,7 @@ using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Text.Json;
 
 namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 
@@ -76,10 +77,23 @@ public sealed class AITemplateViewModel
     public string[] SelectedMcpConnectionIds { get; set; } = [];
     public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
 
+    // Data Source.
+    public string DataSourceId { get; set; }
+    public int? DataSourceStrictness { get; set; }
+    public int? DataSourceTopNDocuments { get; set; }
+    public bool DataSourceIsInScope { get; set; } = true;
+    public string DataSourceFilter { get; set; }
+
+    // Prompt Templates.
+    public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
+    public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+
     // Documents.
     public bool AllowSessionDocuments { get; set; }
 
     public int? DocumentTopN { get; set; }
+    public bool HasDocumentIndexConfiguration { get; set; }
+    public string DocumentIndexProfileName { get; set; }
 
     // Data Extraction.
     public bool EnableDataExtraction { get; set; }
@@ -128,6 +142,9 @@ public sealed class AITemplateViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> DataSources { get; set; } = [];
 
     public static AITemplateViewModel FromTemplate(AIProfileTemplate template)
     {
@@ -192,6 +209,28 @@ public sealed class AITemplateViewModel
                 model.AddInitialPrompt = !string.IsNullOrEmpty(aiMetadata.InitialPrompt);
                 model.InitialPrompt = aiMetadata.InitialPrompt;
             }
+
+            var promptMetadata = template.As<PromptTemplateMetadata>();
+
+            model.PromptTemplates = (promptMetadata?.Templates ?? [])
+                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                .Select(t => new PromptTemplateSelectionItem
+                {
+                    TemplateId = t.TemplateId,
+                    PromptParameters = t.Parameters is { Count: > 0 }
+                        ? JsonSerializer.Serialize(t.Parameters)
+                        : null,
+                })
+                .ToList();
+
+            var dataSourceMetadata = template.As<DataSourceMetadata>();
+            var ragMetadata = template.As<AIDataSourceRagMetadata>();
+
+            model.DataSourceId = dataSourceMetadata?.DataSourceId;
+            model.DataSourceStrictness = ragMetadata?.Strictness;
+            model.DataSourceTopNDocuments = ragMetadata?.TopNDocuments;
+            model.DataSourceIsInScope = ragMetadata?.IsInScope ?? true;
+            model.DataSourceFilter = ragMetadata?.Filter;
 
             var sessionDocMetadata = template.As<AIProfileSessionDocumentsMetadata>();
 
@@ -343,6 +382,59 @@ public sealed class AITemplateViewModel
             {
                 UseCaching = UseCaching,
                 InitialPrompt = AddInitialPrompt ? InitialPrompt?.Trim() : null,
+            });
+
+            template.Put(new DataSourceMetadata
+            {
+                DataSourceId = string.IsNullOrWhiteSpace(DataSourceId) ? null : DataSourceId.Trim(),
+            });
+
+            template.Put(new AIDataSourceRagMetadata
+            {
+                Strictness = DataSourceStrictness,
+                TopNDocuments = DataSourceTopNDocuments,
+                IsInScope = DataSourceIsInScope,
+                Filter = string.IsNullOrWhiteSpace(DataSourceFilter) ? null : DataSourceFilter.Trim(),
+            });
+
+            template.Put(new PromptTemplateMetadata
+            {
+                Templates = (PromptTemplates ?? [])
+                    .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                    .Select(t =>
+                    {
+                        var entry = new PromptTemplateSelectionEntry
+                        {
+                            TemplateId = t.TemplateId,
+                        };
+
+                        if (!string.IsNullOrWhiteSpace(t.PromptParameters))
+                        {
+                            try
+                            {
+                                using var doc = JsonDocument.Parse(t.PromptParameters);
+
+                                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                                {
+                                    entry.Parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+                                    foreach (var prop in doc.RootElement.EnumerateObject())
+                                    {
+                                        if (prop.Value.ValueKind == JsonValueKind.String)
+                                        {
+                                            entry.Parameters[prop.Name] = prop.Value.GetString();
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                            }
+                        }
+
+                        return entry;
+                    })
+                    .ToList(),
             });
 
             template.Put(new AIProfileSessionDocumentsMetadata

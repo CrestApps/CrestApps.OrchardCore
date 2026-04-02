@@ -88,7 +88,8 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 6. Configure **Capabilities** (Profile source only, when the relevant features are enabled):
    - **Tools** — Select which AI tools are available to the profile.
    - **MCP Connections** — Select which MCP connections are available.
-7. Configure **Data Sources**:
+7. Configure **Knowledge**:
+   - **Enable User Memory** — Persist per-user memory for profiles created from this template.
    - **Data Source** — Select a data source for retrieval-augmented generation.
    - **Strictness**, **Top N Documents**, **Is In Scope**, **Filter** — RAG parameters.
 8. Configure **Documents** (when the Documents feature is enabled):
@@ -103,7 +104,7 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 10. Click **Save** to store the template.
 
 :::note
-The template editor mirrors the AI Profile editor with the same tabbed layout (Capabilities, Documents, Data Processing & Metrics). External module features (tools, MCP connections, data sources, documents, analytics) add their own tabs and sections to the template editor when their features are enabled.
+The template editor mirrors the AI Profile editor more closely for **Profile** source templates: prompt templates live in the **Instructions** tab, **Enable User Memory** now lives in the **Knowledge** tab, and the Knowledge tab groups data-source RAG settings together with document-upload settings for consistent navigation across profiles, templates, and chat interactions.
 :::
 
 ### Editing and Deleting Templates

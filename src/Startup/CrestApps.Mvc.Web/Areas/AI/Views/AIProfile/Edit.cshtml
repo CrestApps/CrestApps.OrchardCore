@@ -129,14 +129,6 @@
                         { "CopilotModels", Model.CopilotAvailableModels },
                     })
 
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
-                            <label asp-for="EnableUserMemory" class="form-check-label">Enable user memory</label>
-                        </div>
-                        <div class="form-text">Store and recall user conversation history for personalized responses.</div>
-                    </div>
-
                     <!-- Chat-only: Prompt Subject -->
                     <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
                         <label asp-for="PromptSubject" class="form-label">Prompt subject</label>
@@ -475,6 +467,14 @@
 
                 <!-- Knowledge Base Tab -->
                 <div class="tab-pane fade" id="docs" role="tabpanel">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableUserMemory" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableUserMemory" class="form-check-label">Enable user memory</label>
+                        </div>
+                        <div class="form-text">Store and recall user conversation history for personalized responses.</div>
+                    </div>
+
                     <!-- Data Source Section -->
                     <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                     <div class="mb-3">

@@ -37,7 +37,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
 
-        }).Location("Parameters:5#Capabilities;5");
+        }).Location("Parameters:5#Capabilities;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

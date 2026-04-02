@@ -1,3 +1,4 @@
+using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
@@ -39,6 +40,7 @@ public static class AppDataSettingsServiceCollectionExtensions
             .AddAppDataSettings<ChatInteractionMemorySettings>(configuration, AppDataConfigurationSections.ChatInteractionMemory)
             .AddAppDataSettings<CopilotSettings>(configuration, AppDataConfigurationSections.Copilot)
             .AddAppDataSettings<McpServerOptions>(configuration, AppDataConfigurationSections.McpServer)
+            .AddAppDataSettings<A2AHostOptions>(configuration, AppDataConfigurationSections.A2AHost)
             .AddAppDataSettings<PaginationSettings>(configuration, AppDataConfigurationSections.Pagination);
     }
 }

@@ -28,7 +28,7 @@ else
                     <th>Source</th>
                     <th>Category</th>
                     <th>Listable</th>
-                    <th style="width: 150px;">Actions</th>
+                    <th style="min-width: 190px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,16 +57,18 @@ else
                                 <span class="badge bg-secondary">No</span>
                             }
                         </td>
-                        <td>
-                            <a asp-action="Edit" asp-route-id="@template.ItemId" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i> Edit
-                            </a>
-                            <form asp-action="Delete" asp-route-id="@template.ItemId" method="post" class="d-inline"
-                                  onsubmit="return confirm('Delete this template?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </form>
+                        <td class="text-nowrap">
+                            <div class="d-inline-flex flex-nowrap gap-2">
+                                <a asp-action="Edit" asp-route-id="@template.ItemId" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <form asp-action="Delete" asp-route-id="@template.ItemId" method="post" class="d-inline"
+                                      onsubmit="return confirm('Delete this template?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 }

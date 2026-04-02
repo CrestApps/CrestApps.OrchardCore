@@ -28,6 +28,14 @@ public sealed class AppDataConfigurationFileService
 
     public string FilePath { get; }
 
+    public async Task<T> ReadSectionAsync<T>(string sectionPath)
+    {
+        var root = await ReadRootAsync();
+        var node = GetSectionNode(root, sectionPath);
+
+        return node is null ? default : node.Deserialize<T>(_jsonOptions);
+    }
+
     public async Task SaveSectionAsync<T>(string sectionPath, T settings)
     {
 
@@ -106,6 +114,29 @@ public sealed class AppDataConfigurationFileService
         }
 
         current[lastSegment] = value;
+    }
+
+    private static JsonNode GetSectionNode(JsonObject root, string sectionPath)
+    {
+        JsonNode current = root;
+
+        foreach (var segment in GetSegments(sectionPath))
+        {
+            if (current is not JsonObject currentObject ||
+                !TryGetPropertyName(currentObject, segment, out var propertyName))
+            {
+                return null;
+            }
+
+            current = currentObject[propertyName];
+
+            if (current is null)
+            {
+                return null;
+            }
+        }
+
+        return current;
     }
 
     private static string[] GetSegments(string sectionPath) =>

@@ -131,7 +131,7 @@ The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core adm
 
 1. Go to **Tools** > **Features** in the admin menu.
 2. Search for **AI Chat Admin Widget** and enable it.
-3. The floating chat widget will appear in the bottom-right corner of the admin dashboard.
+3. The floating chat widget will appear in the bottom-right corner of the admin dashboard after it has been configured with a profile.
 
 #### Configuring the Admin Widget
 
@@ -140,6 +140,8 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 - **Profile**: Select the AI chat profile to use for the admin widget. 
 - **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).
 - **Primary Color**: Customize the widget's primary color (header, toggle button). Defaults to `#41b670` (Orchard Core green).
+
+If no profile is selected, the admin widget stays disabled and is not rendered.
 
 - :::tip Pro Tip
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.

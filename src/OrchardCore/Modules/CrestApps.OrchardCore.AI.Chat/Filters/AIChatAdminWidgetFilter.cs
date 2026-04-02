@@ -66,7 +66,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
 
         var settings = await _siteService.GetSettingsAsync<AIChatAdminWidgetSettings>();
 
-        if (string.IsNullOrEmpty(settings?.ProfileId))
+        if (settings is null || !settings.IsEnabled)
         {
             await next();
 
