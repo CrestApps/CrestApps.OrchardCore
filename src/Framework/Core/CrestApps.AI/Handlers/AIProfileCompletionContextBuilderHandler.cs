@@ -29,7 +29,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
         context.Context.ChatDeploymentName = profile.ChatDeploymentName;
         context.Context.UtilityDeploymentName = profile.UtilityDeploymentName;
 
-        var metadata = profile.GetSettings<AIProfileMetadata>();
+        var metadata = profile.As<AIProfileMetadata>();
 
         context.Context.SystemMessage = await ResolveSystemMessageAsync(profile, metadata);
         context.Context.Temperature = metadata.Temperature;
@@ -40,7 +40,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
         context.Context.PastMessagesCount = metadata.PastMessagesCount;
         context.Context.UseCaching = metadata.UseCaching;
 
-        if (profile.TryGetSettings<FunctionInvocationMetadata>(out var functionInvocationMetadata))
+        if (profile.TryGet<FunctionInvocationMetadata>(out var functionInvocationMetadata))
         {
             context.Context.ToolNames = functionInvocationMetadata.Names;
         }
@@ -56,7 +56,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
             }
         }
 
-        if (profile.TryGetSettings<AgentInvocationMetadata>(out var agentInvocationMetadata))
+        if (profile.TryGet<AgentInvocationMetadata>(out var agentInvocationMetadata))
         {
             context.Context.AgentNames = agentInvocationMetadata.Names;
         }
@@ -67,7 +67,7 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
 
     private async Task<string> ResolveSystemMessageAsync(AIProfile profile, AIProfileMetadata metadata)
     {
-        if (profile.TryGetSettings<PromptTemplateMetadata>(out var promptMetadata))
+        if (profile.TryGet<PromptTemplateMetadata>(out var promptMetadata))
         {
             var validTemplates = promptMetadata.Templates?
                 .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))

@@ -1,9 +1,10 @@
 using CrestApps.AI.Copilot.Models;
-using CrestApps.Mvc.Web.Models;
+using CrestApps.Mvc.Web.Areas.AIChat.Models;
+using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 internal sealed class MvcCopilotOptionsConfiguration : IConfigureOptions<CopilotOptions>
 {

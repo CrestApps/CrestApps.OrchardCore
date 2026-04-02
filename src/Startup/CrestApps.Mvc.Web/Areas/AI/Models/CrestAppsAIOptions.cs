@@ -1,4 +1,4 @@
-namespace CrestApps.Mvc.Web;
+namespace CrestApps.Mvc.Web.Areas.AI.Models;
 
 /// <summary>
 /// Options for configuring CrestApps AI services via appsettings.json.

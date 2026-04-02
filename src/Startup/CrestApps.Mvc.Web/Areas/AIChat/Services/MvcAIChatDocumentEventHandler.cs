@@ -1,6 +1,7 @@
 using CrestApps.AI;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public sealed class MvcAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {

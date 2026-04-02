@@ -405,7 +405,9 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         interaction.PresencePenalty = JsonHelper.GetFloat(settings, "presencePenalty");
         interaction.MaxTokens = JsonHelper.GetInt(settings, "maxTokens");
         interaction.PastMessagesCount = JsonHelper.GetInt(settings, "pastMessagesCount");
+        interaction.DocumentTopN = JsonHelper.GetInt(settings, "documentTopN");
         interaction.ToolNames = JsonHelper.GetStringArray(settings, "toolNames");
+        interaction.AgentNames = JsonHelper.GetStringArray(settings, "agentNames");
         interaction.McpConnectionIds = JsonHelper.GetStringArray(settings, "mcpConnectionIds");
         interaction.A2AConnectionIds = JsonHelper.GetStringArray(settings, "a2aConnectionIds");
     }

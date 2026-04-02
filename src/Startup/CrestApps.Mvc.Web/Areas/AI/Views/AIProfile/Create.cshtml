@@ -1,4 +1,5 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AIProfileViewModel
+@using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@model AIProfileViewModel
 @{
     ViewData["Title"] = "Create AI Profile";
 }
@@ -7,7 +8,7 @@
 <hr />
 
 <form asp-action="Create" method="post" enctype="multipart/form-data">
-    @if (Model.AvailableProfileTemplates.Count > 1)
+    @if (Model.AvailableProfileTemplates.Skip(1).Any())
     {
         <div class="card mb-3">
             <div class="card-header">
@@ -82,11 +83,13 @@
                                     {
                                         if (Model.Type == profileType)
                                         {
-                                            @:<option value="@profileType" selected>@profileType</option>
+                                            @:
+                                            <option value="@profileType" selected>@profileType</option>
                                         }
                                         else
                                         {
-                                            @:<option value="@profileType">@profileType</option>
+                                            @:
+                                            <option value="@profileType">@profileType</option>
                                         }
                                     }
                                 </select>
@@ -114,15 +117,15 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
-                                    <label asp-for="ChatDeploymentName" class="form-label">Chat deployment</label>
-                                    <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                <label asp-for="ChatDeploymentName" class="form-label">Chat deployment</label>
+                                <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments"></select>
                                 <div class="form-text">The chat model deployment to use.</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                    <label asp-for="UtilityDeploymentName" class="form-label">Utility deployment</label>
-                                    <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                <label asp-for="UtilityDeploymentName" class="form-label">Utility deployment</label>
+                                <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments"></select>
                                 <div class="form-text">Optional deployment for utility tasks (planning, summarization).</div>
                             </div>
                         </div>
@@ -251,7 +254,7 @@
                                     <div class="card mb-1 prompt-template-card" data-template-id="@selection.TemplateId">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
+                                                   data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
                                                 <i class="bi bi-chevron-right me-1"></i>
                                                 <span class="prompt-template-title fw-semibold">@title</span>
                                             </a>
@@ -383,12 +386,14 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedAgentNames" value="@agent.Name" id="agent_@agent.Name"
-                                       @(agent.IsSelected ? "checked" : "") />
+                                @(agent.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="agent_@agent.Name">
                                     <strong>@agent.DisplayText</strong>
                                     @if (!string.IsNullOrEmpty(agent.Description))
                                     {
-                                        <br /><small class="text-muted">@agent.Description</small>
+                                        <br />
+
+                                        <small class="text-muted">@agent.Description</small>
                                     }
                                 </label>
                             </div>
@@ -410,7 +415,7 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="a2a_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
+                                @(connection.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="a2a_@connection.ItemId">
                                     <strong>@connection.DisplayText</strong><br />
                                     <small class="text-muted">@connection.Endpoint</small>
@@ -434,12 +439,14 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="mcp_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
+                                @(connection.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="mcp_@connection.ItemId">
                                     <strong>@connection.DisplayText</strong>
                                     @if (!string.IsNullOrEmpty(connection.Source))
                                     {
-                                        <br /><small class="text-muted">@connection.Source</small>
+                                        <br />
+
+                                        <small class="text-muted">@connection.Source</small>
                                     }
                                 </label>
                             </div>
@@ -470,12 +477,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedToolNames" value="@tool.Name" id="tool_@tool.Name"
-                                           @(tool.IsSelected ? "checked" : "") />
+                                    @(tool.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="tool_@tool.Name">
                                         <strong>@tool.Title</strong>
                                         @if (!string.IsNullOrEmpty(tool.Description))
                                         {
-                                            <br /><small class="text-muted">@tool.Description</small>
+                                            <br />
+
+                                            <small class="text-muted">@tool.Description</small>
                                         }
                                     </label>
                                 </div>
@@ -492,6 +501,33 @@
                         <label asp-for="DataSourceId" class="form-label">RAG data source</label>
                         <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select"></select>
                         <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for this profile.</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceStrictness" class="form-label">Strictness</label>
+                                <input asp-for="DataSourceStrictness" type="number" class="form-control" min="1" max="5" placeholder="Default provider setting" />
+                                <div class="form-text">Controls how strictly the AI should follow retrieved data-source matches.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceTopNDocuments" class="form-label">Retrieved documents</label>
+                                <input asp-for="DataSourceTopNDocuments" type="number" class="form-control" min="1" max="20" placeholder="Default provider setting" />
+                                <div class="form-text">How many data-source documents to retrieve for RAG.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
                     </div>
 
                     @if (Model.HasDocumentIndexConfiguration)
@@ -571,7 +607,7 @@
                                 <div class="card mb-2 extraction-entry-card">
                                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                                         <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                           data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                                               data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
                                             <i class="bi bi-chevron-down me-1"></i>
                                             <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
                                         </a>
@@ -597,14 +633,14 @@
                                             <div class="form-check mb-2">
                                                 <input type="checkbox" class="form-check-input"
                                                        name="DataExtractionEntries[@i].AllowMultipleValues" value="true"
-                                                       @(entry.AllowMultipleValues ? "checked" : "") />
+                                                @(entry.AllowMultipleValues ? "checked" : "") />
                                                 <label class="form-check-label">Allow multiple values</label>
                                                 <span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span>
                                             </div>
                                             <div class="form-check mb-2">
                                                 <input type="checkbox" class="form-check-input"
                                                        name="DataExtractionEntries[@i].IsUpdatable" value="true"
-                                                       @(entry.IsUpdatable ? "checked" : "") />
+                                                @(entry.IsUpdatable ? "checked" : "") />
                                                 <label class="form-check-label">Updatable</label>
                                                 <span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span>
                                             </div>
@@ -671,7 +707,7 @@
                                 <div class="card mb-2 conversion-goal-card">
                                     <div class="card-header d-flex justify-content-between align-items-center py-2">
                                         <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                           data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
+                                               data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
                                             <i class="bi bi-chevron-down me-1"></i>
                                             <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New goal" : goal.Name)</span>
                                         </a>
@@ -877,10 +913,14 @@
                 if (!container) return;
 
                 var promptOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.AvailablePromptTemplates.Select(t => new {
-                        t.TemplateId, t.Title, t.Description, t.Category,
-                        Parameters = t.Parameters.Select(p => new { p.Name, p.Description })
-                    })));
+                                                                    Model.AvailablePromptTemplates.Select(t => new
+                                                                    {
+                                                                                t.TemplateId,
+                                                                                t.Title,
+                                                                                t.Description,
+                                                                                t.Category,
+                                                                                Parameters = t.Parameters.Select(p => new { p.Name, p.Description })
+                                                                    })));
 
                 function escapeH(v) {
                     return (v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');

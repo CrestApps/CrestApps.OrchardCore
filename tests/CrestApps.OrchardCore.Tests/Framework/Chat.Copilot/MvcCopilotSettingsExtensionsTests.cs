@@ -1,6 +1,6 @@
 using CrestApps.AI.Copilot.Models;
-using CrestApps.Mvc.Web.Models;
-using CrestApps.Mvc.Web.Services;
+using CrestApps.Mvc.Web.Areas.AIChat.Models;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Chat.Copilot;
 

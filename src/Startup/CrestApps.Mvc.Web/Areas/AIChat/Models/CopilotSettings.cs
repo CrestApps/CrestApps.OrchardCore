@@ -1,6 +1,6 @@
 using CrestApps.AI.Copilot.Models;
 
-namespace CrestApps.Mvc.Web.Models;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Models;
 
 public sealed class CopilotSettings
 {

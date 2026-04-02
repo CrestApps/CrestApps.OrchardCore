@@ -4,11 +4,9 @@ using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
 using CrestApps.AI.DataSources;
-using CrestApps.AI.Handlers;
 using CrestApps.AI.Indexing;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
@@ -25,14 +23,27 @@ using CrestApps.Azure.AISearch;
 using CrestApps.Data.YesSql;
 using CrestApps.Elasticsearch;
 using CrestApps.Infrastructure.Indexing;
+using CrestApps.Mvc.Web.Areas.A2A.Indexes;
 using CrestApps.Mvc.Web.Areas.Admin.Handlers;
 using CrestApps.Mvc.Web.Areas.Admin.Indexes;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Services;
-using CrestApps.Mvc.Web.BackgroundTasks;
-using CrestApps.Mvc.Web.Endpoints.Chat;
-using CrestApps.Mvc.Web.Hubs;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.AI.Indexes;
+using CrestApps.Mvc.Web.Areas.AI.Services;
+using CrestApps.Mvc.Web.Areas.AIChat.BackgroundServices;
+using CrestApps.Mvc.Web.Areas.AIChat.Endpoints;
+using CrestApps.Mvc.Web.Areas.AIChat.Hubs;
+using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Indexes;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Services;
+using CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
+using CrestApps.Mvc.Web.Areas.DataSources.Indexes;
+using CrestApps.Mvc.Web.Areas.DataSources.Services;
+using CrestApps.Mvc.Web.Areas.Indexing.Indexes;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
+using CrestApps.Mvc.Web.Areas.Mcp.Indexes;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Mvc.Web.Tools;
 using CrestApps.Services;
@@ -40,8 +51,8 @@ using CrestApps.SignalR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using NLog.Web;
@@ -158,24 +169,34 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services
 // Foundation services shared across the framework (for example OData validation).
 .AddCrestAppsCoreServices()
+
 // Core AI services: client factory, completion service, context builders, and AI options.
 .AddCrestAppsAI()
+
 // Orchestration pipeline: IOrchestrator, tool registry, response handlers, and RAG flow.
-
 .AddOrchestrationServices()
-// GitHub Copilot-based orchestrator implementation for teams that want that experience.
 
+// GitHub Copilot-based orchestrator implementation for teams that want that experience.
 .AddCopilotOrchestrator()
+
 // Ad-hoc chat session handling and interaction orchestration.
-.AddChatInteractionHandlers()
+.AddChatInteractionServices()
+
+// Configure standard hub timeouts and message sizes for the chat interaction hub.
+.ConfigureChatHubOptions<ChatInteractionHub>()
+
 // Shared document ingestion, extraction, tabular processing, and RAG over attachments.
 .AddDefaultDocumentProcessingServices()
+
 // Agent-to-agent protocol support so remote agents can participate as tools.
 .AddCrestAppsA2AClient()
+
 // MCP client support for connecting to remote MCP servers.
 .AddCrestAppsMcpClient()
+
 // MCP server support for exposing prompts, tools, and resources from this app.
 .AddCrestAppsMcpServer()
+
 // Real-time hub management for SignalR-based chat experiences.
 .AddCrestAppsSignalR();
 
@@ -211,12 +232,11 @@ builder.Services.AddTransient<IConfigureOptions<AIProviderOptions>, MvcAIProvide
 // to remove when the application does not use that provider.
 // =============================================================================
 builder.Services
-// Register the Elasticsearch client and keyed search/indexing services.
-.AddElasticsearchServices(builder.Configuration.GetSection("CrestApps:Elasticsearch"))
-// Register the MVC-managed index profile types that can be provisioned in Elasticsearch.
-.AddElasticsearchAIDocumentSource()
-.AddElasticsearchAIDataSource()
-.AddElasticsearchAIMemorySource();
+    // Register the Elasticsearch client and keyed search/indexing services.
+    .AddElasticsearchServices(builder.Configuration.GetSection("CrestApps:Elasticsearch"))
+    .AddElasticsearchAIDocumentSource()
+    .AddElasticsearchAIDataSource()
+    .AddElasticsearchAIMemorySource();
 
 // =============================================================================
 // 8. AZURE AI SEARCH SERVICES
@@ -226,13 +246,13 @@ builder.Services
 // stay together and are easy to remove independently.
 // =============================================================================
 builder.Services
-// Register the Azure AI Search client and keyed search/indexing services.
-.AddAzureAISearchServices(builder.Configuration.GetSection("CrestApps:AzureAISearch"))
-// Register the MVC-managed index profile types that can be provisioned in Azure AI Search.
-.AddAzureAISearchAIDocumentSource()
-.AddAzureAISearchAIDataSource()
-.AddAzureAISearchAIMemorySource();
+    // Register the Azure AI Search client and keyed search/indexing services.
+    .AddAzureAISearchServices(builder.Configuration.GetSection("CrestApps:AzureAISearch"))
+    .AddAzureAISearchAIDocumentSource()
+    .AddAzureAISearchAIDataSource()
+    .AddAzureAISearchAIMemorySource();
 
+// Add Articles support to show document support example.
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IIndexProfileHandler, ArticleIndexProfileHandler>());
 builder.Services.Configure<IndexProfileSourceOptions>(options =>
     options.AddOrUpdate(CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName, "Elasticsearch", IndexProfileTypes.Articles, descriptor =>
@@ -447,9 +467,7 @@ builder.Services.AddSingleton(sp =>
     store.RegisterIndexes<ArticleIndexProvider>();
 
     return store;
-});
-
-builder.Services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
+}).AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
 
 // YesSql-backed catalogs and managers.
 builder.Services
@@ -467,8 +485,8 @@ builder.Services
     .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>()
     .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>()
     .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
-    .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
 
+    .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
     .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
     .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
     .AddScoped<MvcAIDocumentIndexingService>()
@@ -486,9 +504,7 @@ builder.Services
     .AddScoped<ArticleIndexingService>();
 
 // Local file store for uploaded documents.
-builder.Services.AddSingleton(new FileSystemFileStore(
-
-    Path.Combine(appDataPath, "Documents")));
+builder.Services.AddSingleton(new FileSystemFileStore(Path.Combine(appDataPath, "Documents")));
 
 // Copilot orchestrator: credential store and options configuration.
 builder.Services.AddScoped<ICopilotCredentialStore, JsonFileCopilotCredentialStore>();

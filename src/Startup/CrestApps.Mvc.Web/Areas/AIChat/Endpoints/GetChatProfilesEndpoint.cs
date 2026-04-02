@@ -1,7 +1,7 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 
-namespace CrestApps.Mvc.Web.Endpoints.Chat;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Endpoints;
 
 internal static class GetChatProfilesEndpoint
 {

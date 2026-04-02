@@ -7,30 +7,64 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Tooling;
 using CrestApps.Services;
-
 using CrestApps.Templates.Extensions;
-
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CrestApps.AI.Chat;
 
 /// <summary>
-/// Extension methods for registering document processing services.
+/// Extension methods for registering chat and document processing services.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
+    /// Adds the default chat notification sender and built-in notification action handlers.
+    /// The sender dispatches notifications to keyed <see cref="IChatNotificationTransport"/>
+    /// implementations, which must be registered separately by each host (OrchardCore, MVC, etc.).
+    /// </summary>
+    public static IServiceCollection AddChatNotificationServices(this IServiceCollection services)
+    {
+        services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
+        services.TryAddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
+        services.TryAddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configures standard hub options (timeouts, message sizes) for a chat hub.
+    /// Call this for each concrete hub type that handles AI chat traffic.
+    /// </summary>
+    public static IServiceCollection ConfigureChatHubOptions<THub>(this IServiceCollection services) where THub : Hub
+    {
+        services.Configure<HubOptions<THub>>(options =>
+        {
+            // Allow long-running operations (e.g., multi-step MCP tool calls)
+            // without the server dropping the connection prematurely.
+            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
+            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+            // Allow larger messages for audio transcription payloads.
+            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds the default chat interaction handlers.
     /// </summary>
-    public static IServiceCollection AddChatInteractionHandlers(this IServiceCollection services)
+    public static IServiceCollection AddChatInteractionServices(this IServiceCollection services)
     {
-        // Register templates embedded in this assembly.
+        services.AddChatNotificationServices();
 
+        // Register templates embedded in this assembly.
         services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, ChatInteractionCompletionContextBuilderHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, DataSourceChatInteractionSettingsHandler>());
-
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, PromptTemplateChatInteractionSettingsHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>());
 
         return services;
@@ -56,15 +90,15 @@ public static class ServiceCollectionExtensions
         services.AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(
             ".txt",
             new ExtractorExtension(".csv", false),
-        ".md",
-        ".json",
-        ".xml",
-        ".html",
-        ".htm",
-        ".log",
-        ".yaml",
+            ".md",
+            ".json",
+            ".xml",
+            ".html",
+            ".htm",
+            ".log",
+            ".yaml",
 
-        ".yml");
+            ".yml");
         services.AddIngestionDocumentReader<OpenXmlIngestionDocumentReader>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
         services.AddIngestionDocumentReader<PdfIngestionDocumentReader>(".pdf");
 

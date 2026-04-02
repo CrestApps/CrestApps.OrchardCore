@@ -24,25 +24,9 @@ public static class ExtensibleEntityExtensions
 
         var key = typeof(T).Name;
 
-        if (entity.Properties.TryGetValue(key, out var value))
-        {
-            if (value is T typed)
-            {
-                return typed;
-            }
-
-            if (value is JsonElement jsonElement)
-            {
-                return jsonElement.Deserialize<T>(_jsonOptions) ?? new T();
-            }
-
-            if (value is JsonNode jsonNode)
-            {
-                return jsonNode.Deserialize<T>(_jsonOptions) ?? new T();
-            }
-        }
-
-        return new T();
+        return entity.Properties.TryGetValue(key, out var value)
+            ? DeserializeValue<T>(value) ?? new T()
+            : new T();
     }
 
     /// <summary>
@@ -53,25 +37,9 @@ public static class ExtensibleEntityExtensions
         ArgumentNullException.ThrowIfNull(entity);
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        if (entity.Properties.TryGetValue(name, out var value))
-        {
-            if (value is T typed)
-            {
-                return typed;
-            }
-
-            if (value is JsonElement jsonElement)
-            {
-                return jsonElement.Deserialize<T>(_jsonOptions);
-            }
-
-            if (value is JsonNode jsonNode)
-            {
-                return jsonNode.Deserialize<T>(_jsonOptions);
-            }
-        }
-
-        return default;
+        return entity.Properties.TryGetValue(name, out var value)
+            ? DeserializeValue<T>(value)
+            : default;
     }
 
     /// <summary>
@@ -113,27 +81,11 @@ public static class ExtensibleEntityExtensions
 
         if (entity.Properties.TryGetValue(key, out var value) && value is not null)
         {
-            if (value is T typed)
-            {
-                result = typed;
-                return true;
-            }
-
-            if (value is JsonElement jsonElement && jsonElement.ValueKind != JsonValueKind.Null)
-            {
-                result = jsonElement.Deserialize<T>(_jsonOptions);
-                return result is not null;
-            }
-
-            if (value is JsonNode jsonNode)
-            {
-                result = jsonNode.Deserialize<T>(_jsonOptions);
-                return result is not null;
-            }
+            result = DeserializeValue<T>(value);
+            return result is not null;
         }
 
         result = default;
-
         return false;
     }
 
@@ -174,5 +126,36 @@ public static class ExtensibleEntityExtensions
         entity.Properties.Remove(typeof(T).Name);
 
         return entity;
+    }
+
+    private static T DeserializeValue<T>(object value)
+    {
+        if (value is null)
+        {
+            return default;
+        }
+
+        if (value is T typed)
+        {
+            return typed;
+        }
+
+        if (value is JsonElement jsonElement)
+        {
+            if (jsonElement.ValueKind == JsonValueKind.Null)
+            {
+                return default;
+            }
+
+            return jsonElement.Deserialize<T>(_jsonOptions);
+        }
+
+        if (value is JsonNode jsonNode)
+        {
+            return jsonNode.Deserialize<T>(_jsonOptions);
+        }
+
+        var json = JsonSerializer.Serialize(value, _jsonOptions);
+        return JsonSerializer.Deserialize<T>(json, _jsonOptions);
     }
 }

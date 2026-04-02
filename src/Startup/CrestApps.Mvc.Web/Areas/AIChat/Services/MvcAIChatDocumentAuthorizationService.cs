@@ -2,7 +2,7 @@ using System.Security.Claims;
 using CrestApps.AI;
 using CrestApps.AI.Models;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public sealed class MvcAIChatDocumentAuthorizationService : IAIChatDocumentAuthorizationService
 {

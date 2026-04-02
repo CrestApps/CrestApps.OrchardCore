@@ -3,7 +3,7 @@ using CrestApps.Data.YesSql;
 using CrestApps.Data.YesSql.Indexes;
 using YesSql.Indexes;
 
-namespace CrestApps.Mvc.Web.Indexes;
+namespace CrestApps.Mvc.Web.Areas.Mcp.Indexes;
 
 public sealed class McpPromptIndex : CatalogItemIndex, INameAwareIndex
 {

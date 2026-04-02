@@ -46,10 +46,10 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
 
         }
 
-        if (interaction.TryGet<DataSourceMetadata>(out var dataSourceMetadata))
+        if (interaction.TryGet<DataSourceMetadata>(out var dataSourceMetadata) &&
+            !string.IsNullOrEmpty(dataSourceMetadata.DataSourceId))
         {
             context.Context.DataSourceId = dataSourceMetadata.DataSourceId;
-
         }
 
         if (interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata))
@@ -59,7 +59,6 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
             context.Context.AdditionalProperties["IsInScope"] = ragMetadata.IsInScope;
             context.Context.AdditionalProperties["Filter"] = ragMetadata.Filter;
         }
-
     }
 
     public Task BuiltAsync(AICompletionContextBuiltContext context)

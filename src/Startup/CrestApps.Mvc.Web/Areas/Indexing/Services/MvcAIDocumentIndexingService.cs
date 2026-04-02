@@ -6,7 +6,7 @@ using CrestApps.Infrastructure.Indexing;
 
 using CrestApps.Infrastructure.Indexing.Models;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 
 /// <summary>
 /// Indexes MVC-uploaded AI document chunks into the configured AI Documents search index.

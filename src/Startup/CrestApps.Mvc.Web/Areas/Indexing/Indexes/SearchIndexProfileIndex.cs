@@ -2,7 +2,7 @@ using CrestApps.Data.YesSql.Indexes;
 using CrestApps.Infrastructure.Indexing.Models;
 using YesSql.Indexes;
 
-namespace CrestApps.Mvc.Web.Indexes;
+namespace CrestApps.Mvc.Web.Areas.Indexing.Indexes;
 
 public sealed class SearchIndexProfileIndex : CatalogItemIndex
 {

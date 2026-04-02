@@ -3,7 +3,7 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CrestApps.Mvc.Web.Endpoints.Chat;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Endpoints;
 
 internal static class CreateChatSessionEndpoint
 {

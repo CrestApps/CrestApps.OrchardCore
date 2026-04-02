@@ -1,5 +1,5 @@
 using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -190,8 +190,9 @@ public sealed class AIDeploymentController : Controller
     private async Task PopulateDropdownsAsync(AIDeploymentViewModel model)
     {
         var connections = await _connectionCatalog.GetAllAsync();
-        model.Connections = [new SelectListItem("— No Connection (Standalone) —", "")];
-        model.Connections.AddRange(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)));
+        model.Connections = new[] { new SelectListItem("— No Connection (Standalone) —", "") }
+            .Concat(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)))
+            .ToList();
         model.Providers = _providers;
         model.AuthenticationTypes = _authTypes;
         model.Types = Enum.GetValues<AIDeploymentType>()

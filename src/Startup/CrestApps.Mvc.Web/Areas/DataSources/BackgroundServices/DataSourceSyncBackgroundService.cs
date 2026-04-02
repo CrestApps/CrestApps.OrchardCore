@@ -4,7 +4,8 @@ using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.BackgroundTasks;
+namespace CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
+
 
 /// <summary>
 /// Periodically synchronizes AI data source documents with their configured search indexes.

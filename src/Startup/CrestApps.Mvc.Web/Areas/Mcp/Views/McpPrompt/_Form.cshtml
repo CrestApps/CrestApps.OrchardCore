@@ -1,4 +1,5 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.McpPromptViewModel
+@using CrestApps.Mvc.Web.Areas.Mcp.ViewModels
+@model McpPromptViewModel
 
 <form asp-action="@(string.IsNullOrEmpty(Model.ItemId) ? "Create" : "Edit")" method="post">
     @if (!string.IsNullOrEmpty(Model.ItemId))

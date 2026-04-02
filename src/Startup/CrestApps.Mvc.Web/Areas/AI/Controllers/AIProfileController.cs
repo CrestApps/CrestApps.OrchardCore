@@ -11,7 +11,12 @@ using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using CrestApps.Templates.Services;
@@ -183,16 +188,13 @@ public sealed class AIProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AIProfileViewModel model)
     {
-
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
         if (!ModelState.IsValid)
-
         {
-
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -240,20 +242,22 @@ public sealed class AIProfileController : Controller
     {
         var allDeployments = await _deploymentCatalog.GetAllAsync();
 
-        model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
-        model.ChatDeployments.AddRange(allDeployments
-            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
-            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
+        model.ChatDeployments = new[] { new SelectListItem("— Default Chat Deployment —", "") }
+            .Concat(allDeployments
+                .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+            .ToList();
 
-        model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
-        model.UtilityDeployments.AddRange(allDeployments
-            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
-
-            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
+        model.UtilityDeployments = new[] { new SelectListItem("— Default Utility Deployment —", "") }
+            .Concat(allDeployments
+                .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+            .ToList();
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = [new SelectListItem("— Default orchestrator —", "")];
-        model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+        model.Orchestrators = new[] { new SelectListItem("— Default orchestrator —", "") }
+            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+            .ToList();
 
         // Copilot
         model.CopilotAuthenticationType = (int)_copilotOptions.AuthenticationType;
@@ -283,13 +287,15 @@ public sealed class AIProfileController : Controller
         }
 
         var templates = await _templateCatalog.GetAllAsync();
-        model.Templates = [new SelectListItem("— No Template —", "")];
-        model.Templates.AddRange(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
+        model.Templates = new[] { new SelectListItem("— No Template —", "") }
+            .Concat(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)))
+            .ToList();
 
-        model.AvailableProfileTemplates = [new SelectListItem("— Select a template to apply —", "")];
-        model.AvailableProfileTemplates.AddRange(templates
-            .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
-            .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)));
+        model.AvailableProfileTemplates = new[] { new SelectListItem("— Select a template to apply —", "") }
+            .Concat(templates
+                .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
+                .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)))
+            .ToList();
 
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
         model.AvailableTools = _toolOptions.Tools
@@ -352,11 +358,11 @@ public sealed class AIProfileController : Controller
 
         var allDataSources = await _dataSourceStore.GetAllAsync();
 
-        model.DataSources = [new SelectListItem("— No data source —", "")];
-        model.DataSources.AddRange(allDataSources
-
-            .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
-            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)));
+        model.DataSources = new[] { new SelectListItem("— No data source —", "") }
+            .Concat(allDataSources
+                .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
+                .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)))
+            .ToList();
 
         var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
@@ -466,12 +472,10 @@ public sealed class AIProfileController : Controller
 
             await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
 
-            profile.AlterSettings<DocumentsMetadata>(m =>
-            {
-
-                m.Documents ??= [];
-                m.Documents.Add(result.DocumentInfo);
-            });
+            var documentsMetadata = profile.As<DocumentsMetadata>();
+            documentsMetadata.Documents ??= [];
+            documentsMetadata.Documents.Add(result.DocumentInfo);
+            profile.Put(documentsMetadata);
 
         }
 
@@ -538,50 +542,48 @@ public sealed class AIProfileController : Controller
             });
         }
 
-        profile.AlterSettings<AIProfileMetadata>(m =>
+        var profileMetadata = profile.As<AIProfileMetadata>();
+
+        if (!string.IsNullOrWhiteSpace(metadata.SystemMessage))
         {
+            profileMetadata.SystemMessage = metadata.SystemMessage;
+        }
 
-            if (!string.IsNullOrWhiteSpace(metadata.SystemMessage))
-            {
-                m.SystemMessage = metadata.SystemMessage;
-            }
+        if (metadata.Temperature.HasValue)
+        {
+            profileMetadata.Temperature = metadata.Temperature;
+        }
 
-            if (metadata.Temperature.HasValue)
-            {
-                m.Temperature = metadata.Temperature;
-            }
+        if (metadata.TopP.HasValue)
+        {
+            profileMetadata.TopP = metadata.TopP;
+        }
 
-            if (metadata.TopP.HasValue)
-            {
-                m.TopP = metadata.TopP;
-            }
+        if (metadata.FrequencyPenalty.HasValue)
+        {
+            profileMetadata.FrequencyPenalty = metadata.FrequencyPenalty;
+        }
 
-            if (metadata.FrequencyPenalty.HasValue)
-            {
-                m.FrequencyPenalty = metadata.FrequencyPenalty;
-            }
+        if (metadata.PresencePenalty.HasValue)
+        {
+            profileMetadata.PresencePenalty = metadata.PresencePenalty;
+        }
 
-            if (metadata.PresencePenalty.HasValue)
-            {
-                m.PresencePenalty = metadata.PresencePenalty;
-            }
+        if (metadata.MaxOutputTokens.HasValue)
+        {
+            profileMetadata.MaxTokens = metadata.MaxOutputTokens;
+        }
 
-            if (metadata.MaxOutputTokens.HasValue)
-            {
-                m.MaxTokens = metadata.MaxOutputTokens;
-            }
+        if (metadata.PastMessagesCount.HasValue)
+        {
+            profileMetadata.PastMessagesCount = metadata.PastMessagesCount;
+        }
 
-            if (metadata.PastMessagesCount.HasValue)
-
-            {
-                m.PastMessagesCount = metadata.PastMessagesCount;
-            }
-        });
+        profile.Put(profileMetadata);
 
         if (metadata.ToolNames?.Length > 0)
         {
-            profile.WithSettings(new FunctionInvocationMetadata
-
+            profile.Put(new FunctionInvocationMetadata
             {
                 Names = metadata.ToolNames,
             });

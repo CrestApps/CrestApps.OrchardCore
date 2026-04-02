@@ -1,6 +1,10 @@
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 
 public sealed class ChatInteractionViewModel
 {
@@ -53,11 +57,10 @@ public sealed class ChatInteractionViewModel
 
     // Data Sources
     public string DataSourceId { get; set; }
-    public List<SelectListItem> DataSources { get; set; } = [];
-
-    // Dropdowns
-    public List<SelectListItem> Deployments { get; set; } = [];
-    public List<SelectListItem> Orchestrators { get; set; } = [];
+    public int? DataSourceStrictness { get; set; }
+    public int? DataSourceTopNDocuments { get; set; }
+    public bool DataSourceIsInScope { get; set; } = true;
+    public string DataSourceFilter { get; set; }
 
     // Copilot
     public string CopilotModel { get; set; }
@@ -71,7 +74,18 @@ public sealed class ChatInteractionViewModel
     public string CopilotGitHubUsername { get; set; }
 
     public int CopilotAuthenticationType { get; set; }
-    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> DataSources { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Deployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Orchestrators { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> CopilotAvailableModels { get; set; } = [];
 }
 
 public sealed class AgentSelectionItem

@@ -105,7 +105,6 @@ public sealed class ListAIProfilesTool : AIFunction
             ["name"] = p.Name,
             ["displayText"] = p.DisplayText,
             ["type"] = p.Type.ToString(),
-
             ["metricsEnabled"] = p.As<AnalyticsMetadata>().EnableSessionMetrics,
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,

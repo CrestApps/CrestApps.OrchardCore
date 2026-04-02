@@ -1,7 +1,7 @@
 using CrestApps.AI.Chat.Hubs;
 using Microsoft.AspNetCore.Authorization;
 
-namespace CrestApps.Mvc.Web.Hubs;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Hubs;
 
 /// <summary>
 /// MVC-specific AI chat hub. Inherits all behavior from <see cref="AIChatHubCore"/>.

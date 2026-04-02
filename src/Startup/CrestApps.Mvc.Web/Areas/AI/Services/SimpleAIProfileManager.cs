@@ -2,11 +2,11 @@ using System.Text.Json.Nodes;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.Models;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.AI.Indexes;
 using YesSql;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AI.Services;
 
 public sealed class SimpleAIProfileManager : IAIProfileManager
 {

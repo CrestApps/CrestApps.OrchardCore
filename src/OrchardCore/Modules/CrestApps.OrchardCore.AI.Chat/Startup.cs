@@ -14,9 +14,7 @@ using CrestApps.SignalR.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
@@ -49,22 +47,12 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
 
-        // Chat notification services.
-        services.TryAddScoped<IChatNotificationSender, DefaultChatNotificationSender>();
+        // Chat notification services and hub options.
+        // Action handlers and sender are registered by the framework (AddChatNotificationServices).
+        // Only the OC-specific transport is registered here.
+        services.AddChatNotificationServices();
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
-        services.AddKeyedScoped<IChatNotificationActionHandler, CancelTransferNotificationActionHandler>(ChatNotificationActionNames.CancelTransfer);
-        services.AddKeyedScoped<IChatNotificationActionHandler, EndSessionNotificationActionHandler>(ChatNotificationActionNames.EndSession);
-
-        services.Configure<HubOptions<AIChatHub>>(options =>
-        {
-            // Allow long-running operations (e.g., multi-step MCP tool calls)
-            // without the server dropping the connection prematurely.
-            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
-            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-
-            // Allow larger messages for audio transcription payloads.
-            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-        });
+        services.ConfigureChatHubOptions<AIChatHub>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

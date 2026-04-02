@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
         where TModel : CatalogItem
         where TIndex : CatalogItemIndex
     {
+        services.RemoveAll<ICatalog<TModel>>();
         services.AddScoped<ICatalog<TModel>>(sp =>
         {
             var session = sp.GetRequiredService<ISession>();
@@ -38,6 +39,9 @@ public static class ServiceCollectionExtensions
         where TModel : CatalogItem, INameAwareModel
         where TIndex : CatalogItemIndex, INameAwareIndex
     {
+        services.RemoveAll<ICatalog<TModel>>();
+        services.RemoveAll<INamedCatalog<TModel>>();
+
         services.AddScoped<ICatalog<TModel>>(sp =>
         {
             var session = sp.GetRequiredService<ISession>();
@@ -55,6 +59,9 @@ public static class ServiceCollectionExtensions
         where TModel : CatalogItem, ISourceAwareModel
         where TIndex : CatalogItemIndex, ISourceAwareIndex
     {
+        services.RemoveAll<ICatalog<TModel>>();
+        services.RemoveAll<ISourceCatalog<TModel>>();
+
         services.AddScoped<ICatalog<TModel>>(sp =>
         {
             var session = sp.GetRequiredService<ISession>();
@@ -72,6 +79,11 @@ public static class ServiceCollectionExtensions
         where TModel : CatalogItem, INameAwareModel, ISourceAwareModel
         where TIndex : CatalogItemIndex, INameAwareIndex, ISourceAwareIndex
     {
+        services.RemoveAll<ICatalog<TModel>>();
+        services.RemoveAll<INamedCatalog<TModel>>();
+        services.RemoveAll<ISourceCatalog<TModel>>();
+        services.RemoveAll<INamedSourceCatalog<TModel>>();
+
         services.AddScoped<ICatalog<TModel>>(sp =>
         {
             var session = sp.GetRequiredService<ISession>();

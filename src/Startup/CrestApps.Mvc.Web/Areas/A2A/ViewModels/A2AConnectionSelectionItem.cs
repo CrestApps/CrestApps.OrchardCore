@@ -1,4 +1,4 @@
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 
 public sealed class A2AConnectionSelectionItem
 {

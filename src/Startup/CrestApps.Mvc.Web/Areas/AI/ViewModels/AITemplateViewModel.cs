@@ -3,10 +3,14 @@ using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 
 public sealed class AITemplateViewModel
 {
@@ -100,11 +104,6 @@ public sealed class AITemplateViewModel
     public bool IsRemovable { get; set; } = true;
     public bool LockSystemMessage { get; set; }
 
-    // Dropdowns for Profile templates.
-    public List<SelectListItem> ChatDeployments { get; set; } = [];
-    public List<SelectListItem> UtilityDeployments { get; set; } = [];
-    public List<SelectListItem> Orchestrators { get; set; } = [];
-
     // Copilot.
     public string CopilotModel { get; set; }
 
@@ -117,7 +116,18 @@ public sealed class AITemplateViewModel
     public string CopilotGitHubUsername { get; set; }
 
     public CopilotAuthenticationType CopilotAuthenticationType { get; set; }
-    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Orchestrators { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> CopilotAvailableModels { get; set; } = [];
 
     public static AITemplateViewModel FromTemplate(AIProfileTemplate template)
     {

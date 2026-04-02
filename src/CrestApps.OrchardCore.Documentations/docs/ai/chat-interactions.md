@@ -123,6 +123,12 @@ When document indexing is configured, the Chat Interaction editor uploads and re
 
 AI chat sessions now follow the same pattern in the MVC sample: when an AI Profile enables **Allow session document uploads**, the chat UI exposes direct session document upload and removal so users can attach files as part of the conversation flow.
 
+The MVC sample now persists the full Chat Interaction sidebar state correctly, including the selected data source, data-source RAG settings (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), document top-N, selected agents, and prompt-template selections stored through the shared chat settings pipeline. The initial chat creation flow now applies the same metadata mapping as the live settings sidebar, so prompt templates, Copilot options, and knowledge-base settings persist consistently from the first save.
+
+The MVC Chat Interaction parameter editors now follow the Orchard Core-style UX more closely: each parameter stacks to a single row until extra-large layouts are available, and every tuning field exposes a hoverable help icon that explains what the setting does.
+
+The knowledge panel also surfaces inline document-upload feedback so users can see overall upload progress, per-file status, when uploads finish, when individual files fail, and when the same document is rejected as a duplicate instead of being uploaded again.
+
 ## Image and Chart Generation
 
 Image and chart generation are handled by AI tools that the orchestrator can invoke based on the user's request.

@@ -1,6 +1,13 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.ChatInteractionChatViewModel
+@using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels
+@model ChatInteractionChatViewModel
 @{
     ViewData["Title"] = "Chat - " + (Model.Title ?? "Untitled Chat");
+    const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
+    const string temperatureHelp = "Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied.";
+    const string topPHelp = "Also called nucleus sampling. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values are more focused, while higher values are more diverse.";
+    const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
+    const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
+    const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
@@ -64,6 +71,25 @@
         padding-top: 1rem;
         border-top: 1px solid var(--bs-border-color, #dee2e6);
     }
+    .parameter-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    @@media (min-width: 1200px) {
+        .parameter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    .parameter-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .parameter-help-icon {
+        color: var(--bs-secondary-color, #6c757d);
+        cursor: help;
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -116,7 +142,7 @@
                             <option value="">— Select deployment —</option>
                             @foreach (var d in Model.Deployments)
                             {
-                                <option value="@d.Value" selected="@(d.Value == Model.ChatDeploymentName)">@d.Text</option>
+                                <option value="@d.Value" selected="@(d.Value == Model.ChatDeploymentName ? "selected" : null)">@d.Text</option>
                             }
                         </select>
                     </div>
@@ -126,7 +152,7 @@
                         <select class="form-select setting-input" id="setting-orchestratorName" name="OrchestratorName" data-setting="orchestratorName">
                             @foreach (var o in Model.Orchestrators)
                             {
-                                <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName)">@o.Text</option>
+                                <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName ? "selected" : null)">@o.Text</option>
                             }
                         </select>
                     </div>
@@ -144,7 +170,7 @@
                     })
 
                     <!-- Prompt Templates -->
-                    @if (Model.AvailablePromptTemplates.Count > 0)
+                    @if (Model.AvailablePromptTemplates.Any())
                     {
                         <div class="mb-2">
                             <label class="form-label">Prompt templates</label>
@@ -184,51 +210,66 @@
                                   rows="3" placeholder="You are a helpful assistant..." data-setting="systemMessage">@Model.SystemMessage</textarea>
                     </div>
 
-                    <div class="row g-2">
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Temperature</label>
-                                <input type="number" class="form-control setting-input" id="setting-temperature"
-                                       step="0.1" min="0" max="2" value="@Model.Temperature" placeholder="0.7" data-setting="temperature" />
-                            </div>
+                    <div class="parameter-grid">
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-maxTokens">
+                                <span>Max tokens</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@maxTokensHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-maxTokens"
+                                   min="1" value="@Model.MaxTokens" placeholder="4096" data-setting="maxTokens" />
                         </div>
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Top P</label>
-                                <input type="number" class="form-control setting-input" id="setting-topP"
-                                       step="0.1" min="0" max="1" value="@Model.TopP" placeholder="1.0" data-setting="topP" />
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-temperature">
+                                <span>Temperature</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@temperatureHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-temperature"
+                                   step="0.1" min="0" max="2" value="@Model.Temperature" placeholder="0.7" data-setting="temperature" />
                         </div>
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Max tokens</label>
-                                <input type="number" class="form-control setting-input" id="setting-maxTokens"
-                                       min="1" value="@Model.MaxTokens" placeholder="4096" data-setting="maxTokens" />
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-topP">
+                                <span>Top P</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@topPHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-topP"
+                                   step="0.1" min="0" max="1" value="@Model.TopP" placeholder="1.0" data-setting="topP" />
                         </div>
-                    </div>
-
-                    <div class="row g-2">
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Freq. penalty</label>
-                                <input type="number" class="form-control setting-input" id="setting-frequencyPenalty"
-                                       step="0.1" min="-2" max="2" value="@Model.FrequencyPenalty" placeholder="0" data-setting="frequencyPenalty" />
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-frequencyPenalty">
+                                <span>Frequency penalty</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@frequencyPenaltyHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-frequencyPenalty"
+                                   step="0.1" min="-2" max="2" value="@Model.FrequencyPenalty" placeholder="0" data-setting="frequencyPenalty" />
                         </div>
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Pres. penalty</label>
-                                <input type="number" class="form-control setting-input" id="setting-presencePenalty"
-                                       step="0.1" min="-2" max="2" value="@Model.PresencePenalty" placeholder="0" data-setting="presencePenalty" />
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-presencePenalty">
+                                <span>Presence penalty</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@presencePenaltyHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-presencePenalty"
+                                   step="0.1" min="-2" max="2" value="@Model.PresencePenalty" placeholder="0" data-setting="presencePenalty" />
                         </div>
-                        <div class="col-4">
-                            <div class="mb-2">
-                                <label class="form-label">Past msgs</label>
-                                <input type="number" class="form-control setting-input" id="setting-pastMessagesCount"
-                                       min="0" value="@Model.PastMessagesCount" placeholder="10" data-setting="pastMessagesCount" />
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label parameter-label" for="setting-pastMessagesCount">
+                                <span>Past messages</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@pastMessagesHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input type="number" class="form-control setting-input" id="setting-pastMessagesCount"
+                                   min="0" value="@Model.PastMessagesCount" placeholder="10" data-setting="pastMessagesCount" />
                         </div>
                     </div>
                 </div>
@@ -288,7 +329,7 @@
                     }
 
                     <!-- A2A Connections -->
-                    @if (Model.AvailableA2AConnections.Count > 0)
+                    @if (Model.AvailableA2AConnections.Any())
                     {
                         <div class="capability-section">
                             <h6 class="small fw-bold mb-2"><i class="bi bi-diagram-3"></i> A2A Hosts</h6>
@@ -308,7 +349,7 @@
                     }
 
                     <!-- MCP Hosts -->
-                    @if (Model.AvailableMcpConnections.Count > 0)
+                    @if (Model.AvailableMcpConnections.Any())
                     {
                         <div class="capability-section">
                             <h6 class="small fw-bold mb-2"><i class="bi bi-plug"></i> MCP Hosts</h6>
@@ -331,7 +372,7 @@
                     }
 
                     @if (Model.AvailableAgents.Count == 0 && Model.AvailableTools.Count == 0
-                        && Model.AvailableA2AConnections.Count == 0 && Model.AvailableMcpConnections.Count == 0)
+                        && !Model.AvailableA2AConnections.Any() && !Model.AvailableMcpConnections.Any())
                     {
                         <div class="text-muted small text-center py-3">
                             <i class="bi bi-info-circle"></i> No capabilities are available to configure.
@@ -343,15 +384,42 @@
                 <div class="tab-pane fade" id="pane-knowledge" role="tabpanel">
                     <div class="mb-2">
                         <label class="form-label">Data source</label>
-                        <select class="form-select setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
+                        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
                             <option value="">— None —</option>
-                            @foreach (var ds in Model.DataSources)
-                            {
-                                <option value="@ds.Value" selected="@(ds.Value == Model.DataSourceId)">@ds.Text</option>
-                            }
                         </select>
                         <div class="form-text">External data source for AI context.</div>
                     </div>
+
+                    <hr class="my-3" />
+
+                    <div class="mb-2">
+                        <label class="form-label">Strictness</label>
+                        <input type="number" class="form-control setting-input" id="setting-strictness"
+                               min="1" max="5" value="@Model.DataSourceStrictness" placeholder="Default provider setting" data-setting="strictness" />
+                        <div class="form-text">Controls how strictly the AI should follow retrieved data-source matches.</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Retrieved documents</label>
+                        <input type="number" class="form-control setting-input" id="setting-topNDocuments"
+                               min="1" max="20" value="@Model.DataSourceTopNDocuments" placeholder="Default provider setting" data-setting="topNDocuments" />
+                        <div class="form-text">How many data-source documents to retrieve for RAG.</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input setting-input" type="checkbox" id="setting-isInScope"
+                               data-setting="isInScope" @(Model.DataSourceIsInScope ? "checked" : "") />
+                        <label class="form-check-label" for="setting-isInScope">Restrict answers to retrieved data only</label>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Filter</label>
+                        <input type="text" class="form-control setting-input" id="setting-filter"
+                               value="@Model.DataSourceFilter" placeholder="Optional provider-specific filter" data-setting="filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                    </div>
+
+                    <hr class="my-3" />
 
                     <div class="mb-2">
                         <label class="form-label">Document Top N</label>
@@ -367,17 +435,24 @@
                         </div>
                     }
                     else
-                    {
-                        <div class="alert alert-warning small py-2 mb-2">
-                            <i class="bi bi-exclamation-triangle"></i> Document indexing is not configured.
-                        </div>
-                    }
+                        {
+                            <div class="alert alert-warning small py-2 mb-2">
+                                <i class="bi bi-exclamation-triangle"></i> Document indexing is not configured.
+                            </div>
+                        }
+
+                    <hr class="my-3" />
 
                     <div class="mb-2">
                         <label class="form-label"><i class="bi bi-paperclip"></i> Upload documents</label>
                         <input type="file" class="form-control" id="chat-doc-upload" multiple
                                accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
                         <div class="form-text">Supported: Text, Markdown, JSON, XML, HTML, PDF, Office docs.</div>
+                        <div id="chat-doc-upload-status" class="small mt-2 d-none"></div>
+                        <div id="chat-doc-upload-progress" class="progress mt-2 d-none" role="progressbar" aria-label="Document upload progress" aria-valuemin="0" aria-valuemax="100">
+                            <div id="chat-doc-upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+                        </div>
+                        <div id="chat-doc-upload-queue" class="d-flex flex-column gap-2 mt-2"></div>
                     </div>
                     <div id="chat-documents-list" class="d-flex flex-column gap-2"></div>
                 </div>
@@ -431,6 +506,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                    window.bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+            }
+
             var itemId = '@Model.ItemId';
             var hubUrl = '/hubs/chat-interaction';
             var existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExistingMessages));
@@ -473,6 +554,31 @@
                 return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
             }
 
+            function normalizeDocumentInfo(doc) {
+                if (!doc) {
+                    return null;
+                }
+
+                return {
+                    documentId: doc.documentId || doc.DocumentId || null,
+                    fileName: doc.fileName || doc.FileName || 'Document',
+                    fileSize: doc.fileSize ?? doc.FileSize ?? 0,
+                    contentType: doc.contentType || doc.ContentType || null
+                };
+            }
+
+            function getDocumentKey(fileName, fileSize) {
+                return ((fileName || '').trim().toLowerCase()) + '::' + (fileSize || 0);
+            }
+
+            function isDuplicateFile(file, knownKeys) {
+                return knownKeys.has(getDocumentKey(file.name, file.size));
+            }
+
+            interactionDocuments = (Array.isArray(interactionDocuments) ? interactionDocuments : [])
+                .map(normalizeDocumentInfo)
+                .filter(function (doc) { return !!doc && !!doc.documentId; });
+
             function renderDocuments() {
                 var container = document.getElementById('chat-documents-list');
                 if (!container) {
@@ -508,41 +614,378 @@
                 });
             }
 
+            var uploadItems = [];
+            var isUploadingDocuments = false;
+
+            function showUploadStatus(message, cssClass) {
+                var status = document.getElementById('chat-doc-upload-status');
+                if (!status) {
+                    return;
+                }
+
+                if (!message) {
+                    status.textContent = '';
+                    status.className = 'small mt-2 d-none';
+                    return;
+                }
+
+                status.textContent = message;
+                status.className = 'small mt-2 ' + (cssClass || 'text-muted');
+            }
+
+            function getUploadStatePresentation(state) {
+                switch (state) {
+                    case 'uploaded':
+                        return { label: 'Uploaded', badgeClass: 'text-bg-success', progressClass: 'bg-success' };
+                    case 'failed':
+                        return { label: 'Failed', badgeClass: 'text-bg-danger', progressClass: 'bg-danger' };
+                    case 'uploading':
+                        return { label: 'Uploading', badgeClass: 'text-bg-warning', progressClass: 'bg-warning progress-bar-striped progress-bar-animated' };
+                    default:
+                        return { label: 'Queued', badgeClass: 'text-bg-secondary', progressClass: 'bg-secondary progress-bar-striped progress-bar-animated' };
+                }
+            }
+
+            function formatUploadMessage(item) {
+                if (item.status === 'failed' && item.error) {
+                    return item.error;
+                }
+
+                if (item.status === 'uploaded') {
+                    return 'Upload completed successfully.';
+                }
+
+                if (item.status === 'uploading') {
+                    return item.progress + '% uploaded';
+                }
+
+                return 'Waiting to upload...';
+            }
+
+            function renderUploadQueue() {
+                var container = document.getElementById('chat-doc-upload-queue');
+                if (!container) {
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                if (uploadItems.length === 0) {
+                    return;
+                }
+
+                uploadItems.forEach(function (item) {
+                    var presentation = getUploadStatePresentation(item.status);
+                    var card = document.createElement('div');
+                    card.className = 'border rounded px-2 py-2 bg-white';
+
+                    var header = document.createElement('div');
+                    header.className = 'd-flex justify-content-between align-items-start gap-2';
+
+                    var fileDetails = document.createElement('div');
+                    fileDetails.className = 'flex-grow-1';
+
+                    var fileName = document.createElement('div');
+                    fileName.className = 'fw-semibold small';
+                    fileName.textContent = item.fileName;
+
+                    var fileSize = document.createElement('div');
+                    fileSize.className = 'text-muted small';
+                    fileSize.textContent = formatFileSize(item.fileSize);
+
+                    fileDetails.appendChild(fileName);
+                    fileDetails.appendChild(fileSize);
+
+                    var badge = document.createElement('span');
+                    badge.className = 'badge ' + presentation.badgeClass;
+                    badge.textContent = presentation.label;
+
+                    header.appendChild(fileDetails);
+                    header.appendChild(badge);
+
+                    var progress = document.createElement('div');
+                    progress.className = 'progress mt-2';
+                    progress.setAttribute('role', 'progressbar');
+                    progress.setAttribute('aria-valuemin', '0');
+                    progress.setAttribute('aria-valuemax', '100');
+                    progress.setAttribute('aria-valuenow', item.progress.toString());
+
+                    var progressBar = document.createElement('div');
+                    progressBar.className = 'progress-bar ' + presentation.progressClass;
+                    progressBar.style.width = item.progress + '%';
+                    progressBar.textContent = item.progress + '%';
+                    progress.appendChild(progressBar);
+
+                    var message = document.createElement('div');
+                    message.className = item.status === 'failed' ? 'small text-danger mt-2' : 'small text-muted mt-2';
+                    message.textContent = formatUploadMessage(item);
+
+                    card.appendChild(header);
+                    card.appendChild(progress);
+                    card.appendChild(message);
+                    container.appendChild(card);
+                });
+            }
+
+            function updateUploadItem(itemId, updates) {
+                uploadItems = uploadItems.map(function (item) {
+                    if (item.id !== itemId) {
+                        return item;
+                    }
+
+                    return Object.assign({}, item, updates);
+                });
+
+                renderUploadQueue();
+            }
+
+            function removeUploadItems(predicate) {
+                uploadItems = uploadItems.filter(function (item) {
+                    return !predicate(item);
+                });
+
+                renderUploadQueue();
+            }
+
+            function showUploadProgress(progress, message, cssClass) {
+                var progressContainer = document.getElementById('chat-doc-upload-progress');
+                var progressBar = document.getElementById('chat-doc-upload-progress-bar');
+                if (!progressContainer || !progressBar) {
+                    return;
+                }
+
+                if (progress === null || progress === undefined) {
+                    progressContainer.className = 'progress mt-2 d-none';
+                    progressContainer.setAttribute('aria-valuenow', '0');
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+                    progressBar.style.width = '0%';
+                    progressBar.textContent = '0%';
+                    return;
+                }
+
+                var roundedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+                progressContainer.className = 'progress mt-2';
+                progressContainer.setAttribute('aria-valuenow', roundedProgress.toString());
+                progressBar.className = 'progress-bar ' + (cssClass || 'progress-bar-striped progress-bar-animated');
+                progressBar.style.width = roundedProgress + '%';
+                progressBar.textContent = message || (roundedProgress + '%');
+            }
+
+            function createUploadItem(file, index) {
+                return {
+                    id: file.name + '::' + file.size + '::' + file.lastModified + '::' + index + '::' + Date.now(),
+                    fileName: file.name,
+                    fileSize: file.size,
+                    status: 'queued',
+                    progress: 0,
+                    error: null
+                };
+            }
+
+            function uploadSingleDocument(file, itemIdToUpdate, fileIndex, totalFiles) {
+                return new Promise(function (resolve, reject) {
+                    var formData = new FormData();
+                    formData.append('chatInteractionId', itemId);
+                    formData.append('files', file);
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', uploadDocumentUrl, true);
+
+                    xhr.upload.addEventListener('progress', function (event) {
+                        if (!event.lengthComputable) {
+                            return;
+                        }
+
+                        var fileProgress = Math.round((event.loaded / event.total) * 100);
+                        updateUploadItem(itemIdToUpdate, {
+                            status: 'uploading',
+                            progress: fileProgress
+                        });
+
+                        var overallProgress = ((fileIndex + (event.loaded / event.total)) / totalFiles) * 100;
+                        showUploadProgress(overallProgress, 'Uploading ' + (fileIndex + 1) + ' of ' + totalFiles, 'progress-bar-striped progress-bar-animated');
+                    });
+
+                    xhr.addEventListener('load', function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            }
+                            catch (error) {
+                                reject(new Error('Upload failed: invalid server response.'));
+                            }
+
+                            return;
+                        }
+
+                        reject(new Error((xhr.responseText || 'Upload failed.').trim()));
+                    });
+
+                    xhr.addEventListener('error', function () {
+                        reject(new Error('Upload failed. Please check your connection and try again.'));
+                    });
+
+                    xhr.send(formData);
+                });
+            }
+
             async function uploadDocuments(files) {
                 if (!files || files.length === 0) {
                     return;
                 }
 
-                var formData = new FormData();
-                formData.append('chatInteractionId', itemId);
+                if (isUploadingDocuments) {
+                    showUploadStatus('A document upload is already in progress.', 'text-warning');
+                    return;
+                }
+
+                isUploadingDocuments = true;
+
+                var filesToUpload = [];
+                var duplicateItems = [];
+                var knownDocumentKeys = new Set(
+                    interactionDocuments.map(function (doc) {
+                        return getDocumentKey(doc.fileName, doc.fileSize);
+                    }));
 
                 Array.from(files).forEach(function (file) {
-                    formData.append('files', file);
-                });
-
-                try {
-                    var response = await fetch(uploadDocumentUrl, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (!response.ok) {
-                        console.error('Failed to upload documents:', await response.text());
+                    if (isDuplicateFile(file, knownDocumentKeys)) {
+                        duplicateItems.push(file);
                         return;
                     }
 
-                    var result = await response.json();
-                    if (Array.isArray(result.uploaded) && result.uploaded.length > 0) {
-                        interactionDocuments = interactionDocuments.concat(result.uploaded);
-                        renderDocuments();
+                    knownDocumentKeys.add(getDocumentKey(file.name, file.size));
+                    filesToUpload.push(file);
+                });
+
+                if (duplicateItems.length > 0) {
+                    uploadItems = uploadItems.concat(duplicateItems.map(function (file, index) {
+                        return Object.assign(createUploadItem(file, index), {
+                            status: 'failed',
+                            progress: 100,
+                            error: 'This document is already attached.',
+                        });
+                    }));
+                    renderUploadQueue();
+                }
+
+                if (filesToUpload.length === 0) {
+                    isUploadingDocuments = false;
+                    showUploadStatus(duplicateItems.map(function (file) {
+                        return file.name + ': This document is already attached.';
+                    }).join(' | '), 'text-warning');
+                    showUploadProgress(null);
+                    return;
+                }
+
+                var pendingItems = filesToUpload.map(createUploadItem);
+                uploadItems = uploadItems.concat(pendingItems);
+                renderUploadQueue();
+                showUploadProgress(0, 'Preparing upload...', 'progress-bar-striped progress-bar-animated');
+
+                if (documentUploadInput) {
+                    documentUploadInput.disabled = true;
+                }
+
+                try {
+                    var uploadedCount = 0;
+                    var failedUploads = duplicateItems.map(function (file) {
+                        return file.name + ': This document is already attached.';
+                    });
+
+                    for (var i = 0; i < filesToUpload.length; i++) {
+                        var file = filesToUpload[i];
+                        var pendingItem = pendingItems[i];
+
+                        updateUploadItem(pendingItem.id, {
+                            status: 'uploading',
+                            progress: 0,
+                            error: null
+                        });
+
+                        showUploadStatus('Uploading ' + (i + 1) + ' of ' + filesToUpload.length + ' document(s)...', 'text-warning');
+
+                        try {
+                            var result = await uploadSingleDocument(file, pendingItem.id, i, filesToUpload.length);
+                            var uploaded = (Array.isArray(result.uploaded) ? result.uploaded : [])
+                                .map(normalizeDocumentInfo)
+                                .filter(function (doc) { return !!doc && !!doc.documentId; });
+                            var failed = Array.isArray(result.failed) ? result.failed : [];
+
+                            if (uploaded.length > 0) {
+                                uploadedCount += uploaded.length;
+                                interactionDocuments = interactionDocuments.concat(uploaded);
+                                updateUploadItem(pendingItem.id, {
+                                    status: 'uploaded',
+                                    progress: 100,
+                                    error: null
+                                });
+                            }
+                            else {
+                                var missingUploadMessage = failed.length > 0
+                                    ? failed.map(function (entry) { return entry.fileName + ': ' + entry.error; }).join(' | ')
+                                    : 'The server did not confirm that the file was uploaded.';
+                                if (failed.length === 0) {
+                                    failedUploads.push(missingUploadMessage);
+                                }
+                                updateUploadItem(pendingItem.id, {
+                                    status: 'failed',
+                                    progress: 100,
+                                    error: missingUploadMessage
+                                });
+                            }
+
+                            if (failed.length > 0) {
+                                var failedMessage = failed.map(function (entry) { return entry.fileName + ': ' + entry.error; }).join(' | ');
+                                failedUploads.push(failedMessage);
+                                updateUploadItem(pendingItem.id, {
+                                    status: 'failed',
+                                    progress: 100,
+                                    error: failedMessage
+                                });
+                            }
+                        }
+                        catch (error) {
+                            console.error('Upload failed:', error);
+                            var errorMessage = error && error.message
+                                ? error.message
+                                : 'Upload failed. Please try again.';
+                            failedUploads.push(file.name + ': ' + errorMessage);
+                            updateUploadItem(pendingItem.id, {
+                                status: 'failed',
+                                progress: pendingItem.progress || 0,
+                                error: errorMessage
+                            });
+                        }
                     }
 
-                    if (Array.isArray(result.failed) && result.failed.length > 0) {
-                        alert(result.failed.map(function (entry) { return entry.fileName + ': ' + entry.error; }).join('\n'));
+                    renderDocuments();
+
+                    if (failedUploads.length > 0) {
+                        removeUploadItems(function (item) { return item.status === 'uploaded'; });
+                        showUploadStatus(
+                            (uploadedCount > 0 ? ('Uploaded ' + uploadedCount + ' document(s). ') : '') +
+                            failedUploads.join(' | '),
+                            uploadedCount > 0 ? 'text-warning' : 'text-danger');
+                        showUploadProgress(null);
+                        return;
                     }
+
+                    removeUploadItems(function () { return true; });
+                    showUploadStatus('Uploaded ' + uploadedCount + ' document(s).', 'text-success');
+                    showUploadProgress(null);
                 }
                 catch (error) {
                     console.error('Upload failed:', error);
+                    showUploadStatus('Upload failed. Please try again.', 'text-danger');
+                    showUploadProgress(null);
+                }
+                finally {
+                    isUploadingDocuments = false;
+
+                    if (documentUploadInput) {
+                        documentUploadInput.disabled = false;
+                    }
                 }
             }
 
@@ -667,11 +1110,32 @@
                 .build();
 
             var isSending = false;
+            var connectionStartPromise = null;
 
-            connection.start().then(function () {
-                console.log('Connected to ChatInteraction hub.');
-            }).catch(function (err) {
-                console.error('SignalR connection error:', err);
+            function ensureConnectionStarted() {
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    return Promise.resolve();
+                }
+
+                if (!connectionStartPromise) {
+                    connectionStartPromise = connection.start()
+                        .then(function () {
+                            console.log('Connected to ChatInteraction hub.');
+                        })
+                        .catch(function (err) {
+                            console.error('SignalR connection error:', err);
+                            throw err;
+                        })
+                        .finally(function () {
+                            connectionStartPromise = null;
+                        });
+                }
+
+                return connectionStartPromise;
+            }
+
+            ensureConnectionStarted().catch(function () {
+                showSaveIndicator('Connection failed', 'text-danger');
             });
 
             connection.on('ReceiveError', function (error) {
@@ -792,6 +1256,11 @@
                 document.querySelectorAll('.setting-input').forEach(function (el) {
                     var key = el.dataset.setting;
                     if (!key) return;
+                    if (el.type === 'checkbox') {
+                        settings[key] = el.checked;
+                        return;
+                    }
+
                     var val = el.value.trim();
                     if (el.type === 'number') {
                         settings[key] = val === '' ? null : parseFloat(val);
@@ -833,10 +1302,14 @@
                 showSaveIndicator('Saving...', 'text-warning');
                 debounceTimer = setTimeout(function () {
                     var settings = collectSettings();
-                    connection.invoke('SaveSettings', itemId, settings).catch(function (err) {
-                        console.error('Failed to save settings:', err);
-                        showSaveIndicator('Save failed', 'text-danger');
-                    });
+                    ensureConnectionStarted()
+                        .then(function () {
+                            return connection.invoke('SaveSettings', itemId, settings);
+                        })
+                        .catch(function (err) {
+                            console.error('Failed to save settings:', err);
+                            showSaveIndicator('Save failed', 'text-danger');
+                        });
                 }, 500);
             }
 

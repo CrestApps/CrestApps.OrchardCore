@@ -1,7 +1,8 @@
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AI.Services;
+
 
 /// <summary>
 /// Holds the MVC sample's runtime projection of stored AI provider connections.

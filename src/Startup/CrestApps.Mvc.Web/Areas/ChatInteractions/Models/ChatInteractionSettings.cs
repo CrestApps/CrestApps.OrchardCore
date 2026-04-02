@@ -1,4 +1,4 @@
-namespace CrestApps.Mvc.Web.Models;
+namespace CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 
 public sealed class ChatInteractionSettings
 {

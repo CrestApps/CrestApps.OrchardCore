@@ -12,7 +12,7 @@
 </div>
 
 <div class="@Orchard.GetWrapperClasses("data-source-dependent")">
-    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Total retrieved documents"]</label>
+    <label asp-for="TopNDocuments" class="@Orchard.GetLabelClasses()">@T["Retrieved documents"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="3" max="20">
         <span class="hint">@T["This specifies the number of top-scoring documents from your data index used to generate responses. You want to increase the value when you have short documents or want to provide more context. Leave it blank to use the default of 3."]</span>
@@ -32,7 +32,7 @@
         <div class="form-check">
             <input class="form-check-input" type="checkbox" asp-for="IsInScope" />
             <label class="form-check-label" asp-for="IsInScope">
-                @T["Limit responses to indexed data"]
+                @T["Restrict answers to retrieved data only"]
             </label>
             <span class="hint dashed">@T["When enabled, the model will only generate responses using your data source index. If disabled, the model may use its general knowledge in addition to your data."]</span>
         </div>

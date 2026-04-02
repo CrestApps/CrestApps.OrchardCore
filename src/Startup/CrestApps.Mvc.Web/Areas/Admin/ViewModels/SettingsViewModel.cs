@@ -72,12 +72,15 @@ public sealed class SettingsViewModel
 
     public string CopilotAzureApiVersion { get; set; }
 
+    // Pagination settings.
+    public int AdminPageSize { get; set; } = 25;
+
+    [BindNever]
+    public string CopilotCallbackUrl { get; set; }
+
     // Dropdown items — never bound from form data.
     [BindNever]
     public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
-
-    // Pagination settings.
-    public int AdminPageSize { get; set; } = 25;
 
     [BindNever]
     public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];
@@ -96,7 +99,4 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];
-
-    [BindNever]
-    public string CopilotCallbackUrl { get; set; }
 }

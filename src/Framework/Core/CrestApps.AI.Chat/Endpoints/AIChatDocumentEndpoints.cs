@@ -119,6 +119,16 @@ public static class AIChatDocumentEndpoints
 
         foreach (var file in files)
         {
+            if (IsDuplicateDocument(interaction.Documents, file))
+            {
+                failedFiles.Add(new
+                {
+                    fileName = file.FileName,
+                    error = S["This document is already attached. Remove the existing file before uploading it again."].Value,
+                });
+                continue;
+            }
+
             var result = await ProcessFileAsync(
                 file,
                 interaction.ItemId,
@@ -322,6 +332,16 @@ public static class AIChatDocumentEndpoints
 
         foreach (var file in files)
         {
+            if (IsDuplicateDocument(session.Documents, file))
+            {
+                failedFiles.Add(new
+                {
+                    fileName = file.FileName,
+                    error = S["This document is already attached. Remove the existing file before uploading it again."].Value,
+                });
+                continue;
+            }
+
             var result = await ProcessFileAsync(
                 file,
                 session.SessionId,
@@ -526,6 +546,19 @@ public static class AIChatDocumentEndpoints
         {
             await handler.UploadedAsync(context, cancellationToken);
         }
+    }
+
+    private static bool IsDuplicateDocument(ICollection<ChatDocumentInfo> documents, IFormFile file)
+    {
+        if (documents == null || file == null)
+        {
+            return false;
+        }
+
+        return documents.Any(document =>
+            document != null &&
+            string.Equals(document.FileName, file.FileName, StringComparison.OrdinalIgnoreCase) &&
+            document.FileSize == file.Length);
     }
 
     private static async Task InvokeRemovedHandlersAsync(IEnumerable<IAIChatDocumentEventHandler> eventHandlers, AIChatDocumentRemoveContext context, CancellationToken cancellationToken)

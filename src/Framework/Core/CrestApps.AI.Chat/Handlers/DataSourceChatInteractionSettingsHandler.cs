@@ -1,5 +1,4 @@
 using System.Text.Json;
-using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,8 +25,14 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
 
         if (string.IsNullOrWhiteSpace(dataSourceId))
         {
-            interaction.Put(new DataSourceMetadata());
-            interaction.Put(new AIDataSourceRagMetadata());
+            interaction.Alter<DataSourceMetadata>(metadata => metadata.DataSourceId = null);
+            interaction.Alter<AIDataSourceRagMetadata>(metadata =>
+            {
+                metadata.Strictness = null;
+                metadata.TopNDocuments = null;
+                metadata.IsInScope = true;
+                metadata.Filter = null;
+            });
             return;
         }
 
@@ -44,22 +49,28 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
         if (dataSource == null)
         {
             _logger.LogWarning("Chat interaction data source '{DataSourceId}' was not found while saving settings.", dataSourceId);
-            interaction.Put(new DataSourceMetadata());
-            interaction.Put(new AIDataSourceRagMetadata());
+            interaction.Alter<DataSourceMetadata>(metadata => metadata.DataSourceId = null);
+            interaction.Alter<AIDataSourceRagMetadata>(metadata =>
+            {
+                metadata.Strictness = null;
+                metadata.TopNDocuments = null;
+                metadata.IsInScope = true;
+                metadata.Filter = null;
+            });
             return;
         }
 
-        interaction.Put(new DataSourceMetadata
+        interaction.Alter<DataSourceMetadata>(metadata =>
         {
-            DataSourceId = dataSource.ItemId,
+            metadata.DataSourceId = dataSource.ItemId;
         });
 
-        interaction.Put(new AIDataSourceRagMetadata
+        interaction.Alter<AIDataSourceRagMetadata>(metadata =>
         {
-            Strictness = GetInt(settings, "strictness"),
-            TopNDocuments = GetInt(settings, "topNDocuments"),
-            IsInScope = GetBool(settings, "isInScope") ?? true,
-            Filter = GetString(settings, "filter"),
+            metadata.Strictness = GetInt(settings, "strictness");
+            metadata.TopNDocuments = GetInt(settings, "topNDocuments");
+            metadata.IsInScope = GetBool(settings, "isInScope") ?? true;
+            metadata.Filter = GetString(settings, "filter");
         });
     }
 

@@ -12,7 +12,7 @@
             name = p.Name,
             displayText = p.DisplayText ?? p.Name,
             welcomeMessage = p.WelcomeMessage,
-            allowSessionDocuments = p.GetSettings<AIProfileSessionDocumentsMetadata>()?.AllowSessionDocuments ?? false,
+            allowSessionDocuments = p.As<AIProfileSessionDocumentsMetadata>()?.AllowSessionDocuments ?? false,
         })
         .ToArray();
 }
@@ -32,24 +32,51 @@
 
     <style>
 
-        .ai-chat-messages { padding: 0.5rem; }
+        .ai-chat-messages {
+            padding: 0.5rem;
+        }
 
-        .ai-chat-message-item { margin-bottom: 0.75rem; }
+        .ai-chat-message-item {
+            margin-bottom: 0.75rem;
+        }
 
-        .ai-chat-msg-role { font-size: 0.7rem; font-weight: 600; margin-bottom: 2px; }
+        .ai-chat-msg-role {
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
 
-        .ai-chat-msg-role-user { color: #0d6efd; }
+        .ai-chat-msg-role-user {
+            color: #0d6efd;
+        }
 
-        .ai-chat-msg-role-assistant { color: #6f42c1; }
+        .ai-chat-msg-role-assistant {
+            color: #6f42c1;
+        }
 
-        .ai-chat-msg-role-assistant i.ai-streaming-icon { animation: pulse 1.5s infinite; }
+            .ai-chat-msg-role-assistant i.ai-streaming-icon {
+                animation: pulse 1.5s infinite;
+            }
 
-        .ai-chat-msg-role-assistant i.ai-bot-icon { color: #6f42c1; }
+            .ai-chat-msg-role-assistant i.ai-bot-icon {
+                color: #6f42c1;
+            }
 
-        .message-buttons-container { display: inline-flex; gap: 4px; margin-top: 4px; }
+        .message-buttons-container {
+            display: inline-flex;
+            gap: 4px;
+            margin-top: 4px;
+        }
 
-        @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @@keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
 
+            50% {
+                opacity: 0.4;
+            }
+        }
     </style>
 
 
@@ -126,11 +153,8 @@
         <div class="ai-chat-widget-input">
             <textarea id="widget-chat-input"
                       placeholder="Type a message..."
-
                       rows="1"
-
                       data-session-id=""
-
                       data-profile-id="@profiles[0].id"></textarea>
 
             <button type="button" id="widget-send-btn">
@@ -160,116 +184,116 @@
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
-            var profiles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profiles));
-            var panel = document.getElementById('widget-panel');
-            var toggle = document.getElementById('widget-toggle');
-            var closeBtn = document.getElementById('widget-close');
+        var profiles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profiles));
+        var panel = document.getElementById('widget-panel');
+        var toggle = document.getElementById('widget-toggle');
+        var closeBtn = document.getElementById('widget-close');
 
-            var newChatBtn = document.getElementById('widget-new-chat');
+        var newChatBtn = document.getElementById('widget-new-chat');
 
-            var profileSelect = document.getElementById('widget-profile-select');
+        var profileSelect = document.getElementById('widget-profile-select');
 
-            var chatInput = document.getElementById('widget-chat-input');
+        var chatInput = document.getElementById('widget-chat-input');
 
-            var isOpen = false;
+        var isOpen = false;
 
-            var initialized = false;
+        var initialized = false;
 
-            function initChat() {
-                var selectedProfileId = profileSelect ? profileSelect.value : '@profiles[0].id';
-                var selectedProfile = profiles.find(function (profile) {
-                    return profile.id === selectedProfileId;
-                }) || profiles[0];
-                var appEl = document.getElementById('widget-chat-app');
-                appEl.innerHTML = '';
-                chatInput.setAttribute('data-session-id', '');
-                chatInput.setAttribute('data-profile-id', selectedProfile.id);
+        function initChat() {
+        var selectedProfileId = profileSelect ? profileSelect.value : '@profiles[0].id';
+        var selectedProfile = profiles.find(function (profile) {
+        return profile.id === selectedProfileId;
+        }) || profiles[0];
+        var appEl = document.getElementById('widget-chat-app');
+        appEl.innerHTML = '';
+        chatInput.setAttribute('data-session-id', '');
+        chatInput.setAttribute('data-profile-id', selectedProfile.id);
 
-                var placeholder = document.getElementById('widget-placeholder');
-                if (placeholder) {
-                    placeholder.style.display = '';
-                }
-
-
-                window.openAIChatManager.initialize({
-
-                    signalRHubUrl: '/hubs/ai-chat',
-
-                    appElementSelector: '#widget-chat-app',
-
-                    chatContainerElementSelector: '#widget-chat-container',
-
-                    inputElementSelector: '#widget-chat-input',
-
-                    sendButtonElementSelector: '#widget-send-btn',
-                    placeholderElementSelector: '#widget-placeholder',
-                    messages: [],
-                    metricsEnabled: false,
-                    sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
-                    existingDocuments: [],
-                    documentBarSelector: '#widget-chat-document-bar',
-                    uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
-                    removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
-                    allowedExtensions: '.txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx'
-                });
-
-                initialized = true;
-            }
+        var placeholder = document.getElementById('widget-placeholder');
+        if (placeholder) {
+        placeholder.style.display = '';
+        }
 
 
+        window.openAIChatManager.initialize({
 
-            toggle.addEventListener('click', function () {
+        signalRHubUrl: '/hubs/ai-chat',
 
-                isOpen = !isOpen;
+        appElementSelector: '#widget-chat-app',
 
-                panel.classList.toggle('open', isOpen);
+        chatContainerElementSelector: '#widget-chat-container',
 
-                toggle.innerHTML = isOpen
+        inputElementSelector: '#widget-chat-input',
 
-                    ? '<i class="bi bi-x-lg"></i>'
+        sendButtonElementSelector: '#widget-send-btn',
+        placeholderElementSelector: '#widget-placeholder',
+        messages: [],
+        metricsEnabled: false,
+        sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
+        existingDocuments: [],
+        documentBarSelector: '#widget-chat-document-bar',
+        uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
+        removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
+        allowedExtensions: '.txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx'
+        });
 
-                    : '<i class="bi bi-chat-dots-fill"></i>';
+        initialized = true;
+        }
 
 
 
-                if (isOpen && !initialized) {
+        toggle.addEventListener('click', function () {
 
-                    initChat();
+        isOpen = !isOpen;
 
-                }
+        panel.classList.toggle('open', isOpen);
 
-            });
+        toggle.innerHTML = isOpen
 
+        ? '<i class="bi bi-x-lg"></i>'
 
-
-            closeBtn.addEventListener('click', function () {
-
-                isOpen = false;
-
-                panel.classList.remove('open');
-
-                toggle.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
-
-            });
+        : '<i class="bi bi-chat-dots-fill"></i>';
 
 
 
-            newChatBtn.addEventListener('click', function () {
+        if (isOpen && !initialized) {
 
-                initialized = false;
+        initChat();
 
-                initChat();
+        }
 
-            });
+        });
 
 
 
-            if (profileSelect) {
-                profileSelect.addEventListener('change', function () {
-                    initialized = false;
-                    initChat();
-                });
-            }
+        closeBtn.addEventListener('click', function () {
+
+        isOpen = false;
+
+        panel.classList.remove('open');
+
+        toggle.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
+
+        });
+
+
+
+        newChatBtn.addEventListener('click', function () {
+
+        initialized = false;
+
+        initChat();
+
+        });
+
+
+
+        if (profileSelect) {
+        profileSelect.addEventListener('change', function () {
+        initialized = false;
+        initChat();
+        });
+        }
         });
     </script>
 

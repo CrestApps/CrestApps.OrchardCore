@@ -172,8 +172,8 @@ public sealed class AIProfile : SourceCatalogEntry, INameAwareModel, IDisplayTex
             CreatedUtc = CreatedUtc,
             OwnerId = OwnerId,
             Author = Author,
-            Properties = Properties.Clone(),
-            Settings = Settings.Clone(),
+            Properties = Properties?.Clone(),
+            Settings = Settings?.Clone(),
         };
     }
 

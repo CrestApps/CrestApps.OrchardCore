@@ -1,17 +1,15 @@
-using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.AI.Chat.Services;
+namespace CrestApps.AI.Chat.Services;
 
 /// <summary>
 /// Handles the "end-session" notification action.
 /// Closes the chat session and sends a "session ended" notification to the UI.
 /// </summary>
-internal sealed class EndSessionNotificationActionHandler : IChatNotificationActionHandler
+public sealed class EndSessionNotificationActionHandler : IChatNotificationActionHandler
 {
     public async Task HandleAsync(ChatNotificationActionContext context, CancellationToken cancellationToken)
     {
@@ -31,10 +29,10 @@ internal sealed class EndSessionNotificationActionHandler : IChatNotificationAct
                 return;
             }
 
-            var clock = context.Services.GetRequiredService<IClock>();
+            var timeProvider = context.Services.GetService<TimeProvider>() ?? TimeProvider.System;
 
             session.Status = ChatSessionStatus.Closed;
-            session.ClosedAtUtc = clock.UtcNow;
+            session.ClosedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
             await sessionManager.SaveAsync(session);
 
             if (logger.IsEnabled(LogLevel.Debug))

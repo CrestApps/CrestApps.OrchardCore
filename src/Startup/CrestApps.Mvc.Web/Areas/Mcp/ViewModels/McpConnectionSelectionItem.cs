@@ -1,4 +1,4 @@
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 
 public sealed class McpConnectionSelectionItem
 {

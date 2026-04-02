@@ -14,18 +14,21 @@ internal sealed class CopilotChatInteractionSettingsHandler : IChatInteractionSe
 {
     public Task UpdatingAsync(ChatInteraction interaction, JsonElement settings)
     {
-        if (!string.Equals(interaction.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        var orchestratorName = GetString(settings, "orchestratorName") ?? interaction.OrchestratorName;
+
+        if (!string.Equals(orchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
+            interaction.Remove<CopilotSessionMetadata>();
             return Task.CompletedTask;
         }
 
         var copilotModel = GetString(settings, "copilotModel");
         var isAllowAll = GetBool(settings, "isAllowAll");
 
-        interaction.Put(new CopilotSessionMetadata
+        interaction.Alter<CopilotSessionMetadata>(metadata =>
         {
-            CopilotModel = copilotModel,
-            IsAllowAll = isAllowAll,
+            metadata.CopilotModel = copilotModel;
+            metadata.IsAllowAll = isAllowAll;
         });
 
         return Task.CompletedTask;

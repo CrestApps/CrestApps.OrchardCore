@@ -1,10 +1,10 @@
 using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
 using YesSql;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
 {

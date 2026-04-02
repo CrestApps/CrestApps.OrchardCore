@@ -1,10 +1,11 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
 using YesSql;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.BackgroundTasks;
+namespace CrestApps.Mvc.Web.Areas.AIChat.BackgroundServices;
+
 
 /// <summary>
 /// Periodically closes inactive AI chat sessions and marks them for post-session processing.
@@ -74,7 +75,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 break;
             }
 
-            var settings = profile.As<AIProfileDataExtractionSettings>();
+            var settings = profile.GetSettings<AIProfileDataExtractionSettings>();
             var timeout = settings?.SessionInactivityTimeoutInMinutes > 0
                 ? TimeSpan.FromMinutes(settings.SessionInactivityTimeoutInMinutes)
                 : _defaultInactivityTimeout;
@@ -184,7 +185,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
     /// </summary>
     private static bool NeedsPostSessionProcessing(AIProfile profile)
     {
-        var extractionSettings = profile.As<AIProfileDataExtractionSettings>();
+        var extractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
 
         if (extractionSettings?.EnableDataExtraction == true)
         {

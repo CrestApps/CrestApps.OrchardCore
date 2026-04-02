@@ -1,7 +1,7 @@
 using CrestApps.AI.Copilot.Models;
-using CrestApps.Mvc.Web.Models;
+using CrestApps.Mvc.Web.Areas.AIChat.Models;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public static class CopilotSettingsExtensions
 {

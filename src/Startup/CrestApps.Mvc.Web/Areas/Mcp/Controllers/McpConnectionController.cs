@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;

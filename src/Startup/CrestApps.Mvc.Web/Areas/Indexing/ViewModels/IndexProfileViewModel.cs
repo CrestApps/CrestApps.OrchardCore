@@ -3,7 +3,7 @@ using CrestApps.Infrastructure.Indexing.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.Indexing.ViewModels;
 
 public sealed class IndexProfileViewModel
 {
@@ -22,6 +22,9 @@ public sealed class IndexProfileViewModel
     public string EmbeddingDeploymentId { get; set; }
 
     [BindNever]
+    public IReadOnlyList<IndexProfileSourceDescriptor> Sources { get; set; } = [];
+
+    [BindNever]
     public IEnumerable<SelectListItem> Providers { get; set; } = [];
 
     [BindNever]
@@ -29,9 +32,6 @@ public sealed class IndexProfileViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> EmbeddingDeployments { get; set; } = [];
-
-    [BindNever]
-    public IReadOnlyList<IndexProfileSourceDescriptor> Sources { get; set; } = [];
 
     public static IndexProfileViewModel FromProfile(SearchIndexProfile profile)
     {

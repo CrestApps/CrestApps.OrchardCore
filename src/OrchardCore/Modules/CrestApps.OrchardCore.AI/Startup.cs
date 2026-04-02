@@ -1,9 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
@@ -32,7 +29,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -94,7 +90,6 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services
-            .AddScoped<IAIToolsService, DefaultAIToolsService>()
             .AddTransient<IConfigureOptions<AIProviderOptions>, AIProviderOptionsConfiguration>()
             .AddAIDeploymentServices()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
@@ -111,7 +106,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
             .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
-            .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -147,27 +141,12 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
 
-        // Register template sources.
-        services
-            .AddAITemplateSource(AITemplateSources.Profile, entry =>
-            {
-                entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
-                entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
-            })
-
-            .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
-            {
-                entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
-                entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
-            });
-
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-
             .AddGetDeploymentsEndpoint()
             .AddGetConnectionsEndpoint()
             .AddGetVoicesEndpoint();
@@ -227,7 +206,6 @@ public sealed class ChatCoreStartup : StartupBase
     {
 
         services
-
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
             .AddIndexProvider<AIChatSessionIndexProvider>()
@@ -236,7 +214,6 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 
         // Register the AI chat session prompt store.
-
         services.AddScoped<DefaultAIChatSessionPromptStore>()
             .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
             .AddIndexProvider<AIChatSessionPromptIndexProvider>()
@@ -245,7 +222,6 @@ public sealed class ChatCoreStartup : StartupBase
             .AddDataMigration<AIChatSessionPromptDataMigrations>();
 
         // Register the data extraction service.
-
         services.AddScoped<DataExtractionService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
 
@@ -257,7 +233,6 @@ public sealed class ChatCoreStartup : StartupBase
         // Register orchestration services for AI Profile chat
         services.AddOrchestrationServices();
         services.AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIToolExecutionContextOrchestrationHandler>());
 
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
@@ -271,9 +246,7 @@ public sealed class ApiChatStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-
             .AddApiAIChatSessionEndpoint()
-
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
             .AddApiAICompletionEndpoint<ApiChatStartup>();
     }
@@ -299,7 +272,6 @@ public sealed class ConnectionManagementStartup : StartupBase
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class ConnectionManagementRecipesStartup : StartupBase
 {
-
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIProviderConnectionsStep>();

@@ -2,6 +2,7 @@ using CrestApps.AI;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -83,11 +84,10 @@ public sealed class AIDocumentController : Controller
         await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
 
         // Update the profile's document metadata.
-        profile.AlterSettings<DocumentsMetadata>(m =>
-        {
-            m.Documents ??= [];
-            m.Documents.Add(result.DocumentInfo);
-        });
+        var documentsMetadata = profile.As<DocumentsMetadata>();
+        documentsMetadata.Documents ??= [];
+        documentsMetadata.Documents.Add(result.DocumentInfo);
+        profile.Put(documentsMetadata);
 
         await _profileManager.UpdateAsync(profile);
         await _documentStore.SaveChangesAsync();
@@ -123,11 +123,10 @@ public sealed class AIDocumentController : Controller
         }
 
         // Remove from profile metadata.
-        profile.AlterSettings<DocumentsMetadata>(m =>
-        {
-            m.Documents ??= [];
-            m.Documents = m.Documents.Where(d => d.DocumentId != documentId).ToList();
-        });
+        var documentsMetadata = profile.As<DocumentsMetadata>();
+        documentsMetadata.Documents ??= [];
+        documentsMetadata.Documents = documentsMetadata.Documents.Where(d => d.DocumentId != documentId).ToList();
+        profile.Put(documentsMetadata);
 
         await _profileManager.UpdateAsync(profile);
         await _documentStore.SaveChangesAsync();

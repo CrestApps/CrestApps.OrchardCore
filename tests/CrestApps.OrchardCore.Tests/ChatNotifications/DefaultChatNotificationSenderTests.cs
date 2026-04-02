@@ -1,6 +1,6 @@
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Chat.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 

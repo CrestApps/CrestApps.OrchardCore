@@ -1,12 +1,12 @@
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Models;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.Indexing.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 
 public sealed class YesSqlSearchIndexProfileStore : ISearchIndexProfileStore
 {

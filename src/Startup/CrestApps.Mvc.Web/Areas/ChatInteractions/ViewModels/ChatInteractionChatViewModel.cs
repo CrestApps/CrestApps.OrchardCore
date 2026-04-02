@@ -1,7 +1,11 @@
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 
 internal sealed class ChatInteractionChatViewModel
 {
@@ -29,11 +33,11 @@ internal sealed class ChatInteractionChatViewModel
 
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
-    public List<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
+    public IEnumerable<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
 
     // MCP Connections
     public string[] SelectedMcpConnectionIds { get; set; } = [];
-    public List<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
+    public IEnumerable<McpConnectionSelectionItem> AvailableMcpConnections { get; set; } = [];
 
     // AI Tools
     public string[] SelectedToolNames { get; set; } = [];
@@ -44,8 +48,8 @@ internal sealed class ChatInteractionChatViewModel
     public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
 
     // Prompt Templates
-    public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
-    public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
+    public IEnumerable<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
+    public IEnumerable<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
 
     // Documents
     public int? DocumentTopN { get; set; }
@@ -53,15 +57,14 @@ internal sealed class ChatInteractionChatViewModel
     public bool HasDocumentIndexConfiguration { get; set; }
 
     public string DocumentIndexProfileName { get; set; }
-    public List<ChatDocumentInfo> Documents { get; set; } = [];
+    public IEnumerable<ChatDocumentInfo> Documents { get; set; } = [];
 
     // Data Sources
     public string DataSourceId { get; set; }
-    public List<SelectListItem> DataSources { get; set; } = [];
-
-    // Dropdowns
-    public List<SelectListItem> Deployments { get; set; } = [];
-    public List<SelectListItem> Orchestrators { get; set; } = [];
+    public int? DataSourceStrictness { get; set; }
+    public int? DataSourceTopNDocuments { get; set; }
+    public bool DataSourceIsInScope { get; set; } = true;
+    public string DataSourceFilter { get; set; }
 
     // Copilot
     public string CopilotModel { get; set; }
@@ -75,8 +78,19 @@ internal sealed class ChatInteractionChatViewModel
     public string CopilotGitHubUsername { get; set; }
 
     public int CopilotAuthenticationType { get; set; }
-    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
 
     // Existing messages for the chat
     public object[] ExistingMessages { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> DataSources { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Deployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Orchestrators { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> CopilotAvailableModels { get; set; } = [];
 }

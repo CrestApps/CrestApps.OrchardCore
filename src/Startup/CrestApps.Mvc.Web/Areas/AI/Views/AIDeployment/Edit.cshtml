@@ -1,4 +1,5 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AIDeploymentViewModel
+@using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@model AIDeploymentViewModel
 @{
     ViewData["Title"] = "Edit AI Deployment";
 }
@@ -40,7 +41,7 @@
                                type="checkbox"
                                value="@type.Value"
                                class="form-check-input"
-                               @(isChecked ? "checked" : "") />
+                        @(isChecked ? "checked" : "") />
                         <label class="form-check-label" for="SelectedTypes_@type.Value">@type.Text</label>
                     </div>
                 }

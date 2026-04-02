@@ -1,7 +1,8 @@
 using CrestApps.AI.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.DataSources.ViewModels;
 
 public sealed class AIDataSourceViewModel
 {
@@ -19,9 +20,11 @@ public sealed class AIDataSourceViewModel
 
     public string ContentFieldName { get; set; }
 
-    public List<SelectListItem> SourceIndexProfiles { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> SourceIndexProfiles { get; set; } = [];
 
-    public List<SelectListItem> KnowledgeBaseIndexProfiles { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> KnowledgeBaseIndexProfiles { get; set; } = [];
 
     public static AIDataSourceViewModel FromDataSource(AIDataSource ds)
     {

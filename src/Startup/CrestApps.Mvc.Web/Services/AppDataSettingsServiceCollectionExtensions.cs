@@ -1,5 +1,7 @@
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Areas.AIChat.Models;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

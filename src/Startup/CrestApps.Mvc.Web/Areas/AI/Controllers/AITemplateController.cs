@@ -6,8 +6,11 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Tooling;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
-using CrestApps.Mvc.Web.Services;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -205,22 +208,22 @@ public sealed class AITemplateController : Controller
 
         var allDeployments = await _deploymentCatalog.GetAllAsync();
 
-        model.ChatDeployments = [new SelectListItem("— Default Chat Deployment —", "")];
-        model.ChatDeployments.AddRange(allDeployments
-            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+        model.ChatDeployments = new[] { new SelectListItem("— Default Chat Deployment —", "") }
+            .Concat(allDeployments
+                .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+            .ToList();
 
-            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
-
-        model.UtilityDeployments = [new SelectListItem("— Default Utility Deployment —", "")];
-        model.UtilityDeployments.AddRange(allDeployments
-            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
-
-            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)));
+        model.UtilityDeployments = new[] { new SelectListItem("— Default Utility Deployment —", "") }
+            .Concat(allDeployments
+                .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+            .ToList();
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = [new SelectListItem("— Default Orchestrator —", "")];
-
-        model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+        model.Orchestrators = new[] { new SelectListItem("— Default Orchestrator —", "") }
+            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+            .ToList();
 
         model.CopilotAuthenticationType = _copilotOptions.AuthenticationType;
         model.CopilotIsConfigured = IsCopilotConfigured();

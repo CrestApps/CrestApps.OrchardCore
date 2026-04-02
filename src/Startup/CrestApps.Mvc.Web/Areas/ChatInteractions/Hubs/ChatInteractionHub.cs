@@ -5,7 +5,7 @@ using CrestApps.AI.Orchestration;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 
-namespace CrestApps.Mvc.Web.Hubs;
+namespace CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
 
 [Authorize]
 public sealed class ChatInteractionHub : ChatInteractionHubBase

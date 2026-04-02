@@ -1,6 +1,6 @@
 using CrestApps.Infrastructure.Indexing;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 
 public static class IndexProfileTypeRules
 {

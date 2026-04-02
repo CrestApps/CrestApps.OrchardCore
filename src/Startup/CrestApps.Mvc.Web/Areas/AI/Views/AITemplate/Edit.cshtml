@@ -1,4 +1,5 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AITemplateViewModel
+@using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@model AITemplateViewModel
 @{
     ViewData["Title"] = "Edit AI Template";
 }
@@ -265,12 +266,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedAgentNames" value="@agent.Name" id="template_agent_@agent.Name"
-                                           @(agent.IsSelected ? "checked" : "") />
+                                    @(agent.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_agent_@agent.Name">
                                         <strong>@agent.DisplayText</strong>
                                         @if (!string.IsNullOrEmpty(agent.Description))
                                         {
-                                            <br /><small class="text-muted">@agent.Description</small>
+                                            <br />
+
+                                            <small class="text-muted">@agent.Description</small>
                                         }
                                     </label>
                                 </div>
@@ -292,7 +295,7 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="template_a2a_@connection.ItemId"
-                                           @(connection.IsSelected ? "checked" : "") />
+                                    @(connection.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_a2a_@connection.ItemId">
                                         <strong>@connection.DisplayText</strong><br />
                                         <small class="text-muted">@connection.Endpoint</small>
@@ -316,12 +319,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="template_mcp_@connection.ItemId"
-                                           @(connection.IsSelected ? "checked" : "") />
+                                    @(connection.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_mcp_@connection.ItemId">
                                         <strong>@connection.DisplayText</strong>
                                         @if (!string.IsNullOrEmpty(connection.Source))
                                         {
-                                            <br /><small class="text-muted">@connection.Source</small>
+                                            <br />
+
+                                            <small class="text-muted">@connection.Source</small>
                                         }
                                     </label>
                                 </div>
@@ -352,12 +357,14 @@
                                 {
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="SelectedToolNames" value="@tool.Name" id="tool_@tool.Name"
-                                               @(tool.IsSelected ? "checked" : "") />
+                                        @(tool.IsSelected ? "checked" : "") />
                                         <label class="form-check-label" for="tool_@tool.Name">
                                             <strong>@tool.Title</strong>
                                             @if (!string.IsNullOrEmpty(tool.Description))
                                             {
-                                                <br /><small class="text-muted">@tool.Description</small>
+                                                <br />
+
+                                                <small class="text-muted">@tool.Description</small>
                                             }
                                         </label>
                                     </div>
@@ -422,7 +429,7 @@
                                     <div class="card mb-2 extraction-entry-card">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                                                   data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
                                                 <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
                                             </a>
@@ -448,14 +455,14 @@
                                                 <div class="form-check mb-2">
                                                     <input type="checkbox" class="form-check-input"
                                                            name="DataExtractionEntries[@i].AllowMultipleValues" value="true"
-                                                           @(entry.AllowMultipleValues ? "checked" : "") />
+                                                    @(entry.AllowMultipleValues ? "checked" : "") />
                                                     <label class="form-check-label">Allow multiple values</label>
                                                     <span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span>
                                                 </div>
                                                 <div class="form-check mb-2">
                                                     <input type="checkbox" class="form-check-input"
                                                            name="DataExtractionEntries[@i].IsUpdatable" value="true"
-                                                           @(entry.IsUpdatable ? "checked" : "") />
+                                                    @(entry.IsUpdatable ? "checked" : "") />
                                                     <label class="form-check-label">Updatable</label>
                                                     <span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span>
                                                 </div>
@@ -526,8 +533,8 @@
                                                             @{
                                                                 var isSemanticType = task.Type.ToString() == "Semantic";
                                                             }
-                                                            <option value="Semantic" selected="@isSemanticType">Semantic (free text)</option>
-                                                            <option value="PredefinedOptions" selected="@(!isSemanticType)">Predefined Options</option>
+                                                            <option value="Semantic" selected="@(isSemanticType ? "selected" : null)">Semantic (free text)</option>
+                                                            <option value="PredefinedOptions" selected="@(!isSemanticType ? "selected" : null)">Predefined Options</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -573,7 +580,7 @@
                                     <div class="card mb-2 conversion-goal-card">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
+                                                   data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
                                                 <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New Goal" : goal.Name)</span>
                                             </a>

@@ -2,7 +2,8 @@ using CrestApps.AI.DataSources;
 using CrestApps.AI.Models;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.BackgroundTasks;
+namespace CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
+
 
 /// <summary>
 /// Daily alignment task that ensures AI data source indexes are fully consistent.

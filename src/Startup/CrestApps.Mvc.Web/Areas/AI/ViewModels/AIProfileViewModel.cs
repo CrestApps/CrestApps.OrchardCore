@@ -1,12 +1,17 @@
+using System.Text.Json;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 
 public sealed class AIProfileViewModel
 {
@@ -73,7 +78,10 @@ public sealed class AIProfileViewModel
 
     // Data Source
     public string DataSourceId { get; set; }
-    public List<SelectListItem> DataSources { get; set; } = [];
+    public int? DataSourceStrictness { get; set; }
+    public int? DataSourceTopNDocuments { get; set; }
+    public bool DataSourceIsInScope { get; set; } = true;
+    public string DataSourceFilter { get; set; }
 
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
@@ -113,17 +121,8 @@ public sealed class AIProfileViewModel
     public bool EnablePostSessionProcessing { get; set; }
     public List<PostSessionTaskItem> PostSessionTasks { get; set; } = [];
 
-    // Dropdowns
-    public List<SelectListItem> Orchestrators { get; set; } = [];
-    public List<SelectListItem> ChatDeployments { get; set; } = [];
-    public List<SelectListItem> UtilityDeployments { get; set; } = [];
-    public List<SelectListItem> Templates { get; set; } = [];
-
     // Template
     public string SelectedTemplateId { get; set; }
-
-    // Apply Template (templates with source "Profile" for pre-filling)
-    public List<SelectListItem> AvailableProfileTemplates { get; set; } = [];
 
     // Memory
     public bool EnableUserMemory { get; set; }
@@ -140,15 +139,35 @@ public sealed class AIProfileViewModel
     public string CopilotGitHubUsername { get; set; }
 
     public int CopilotAuthenticationType { get; set; }
-    public List<SelectListItem> CopilotAvailableModels { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> DataSources { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Orchestrators { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> ChatDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Templates { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> AvailableProfileTemplates { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> CopilotAvailableModels { get; set; } = [];
 
     public static AIProfileViewModel FromProfile(AIProfile profile)
     {
-        var metadata = profile.GetSettings<AIProfileMetadata>();
+        var metadata = profile.As<AIProfileMetadata>();
         var settings = profile.GetSettings<AIProfileSettings>();
-        var toolMetadata = profile.GetSettings<FunctionInvocationMetadata>();
-        var docMetadata = profile.GetSettings<DocumentsMetadata>();
-        var sessionDocMetadata = profile.GetSettings<AIProfileSessionDocumentsMetadata>();
+        var toolMetadata = profile.As<FunctionInvocationMetadata>();
+        var docMetadata = profile.As<DocumentsMetadata>();
+        var sessionDocMetadata = profile.As<AIProfileSessionDocumentsMetadata>();
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
@@ -156,6 +175,7 @@ public sealed class AIProfileViewModel
         var a2aMetadata = profile.As<AIProfileA2AMetadata>();
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
         var promptMetadata = profile.As<PromptTemplateMetadata>();
+        var dataSourceRagMetadata = profile.As<AIDataSourceRagMetadata>();
 
         var vm = new AIProfileViewModel
         {
@@ -190,8 +210,12 @@ public sealed class AIProfileViewModel
             IsRemovable = settings.IsRemovable,
 
             SelectedToolNames = toolMetadata?.Names ?? [],
-            SelectedAgentNames = profile.As<AgentInvocationMetadata>()?.Names ?? [],
-            DataSourceId = profile.As<DataSourceMetadata>()?.DataSourceId,
+            SelectedAgentNames = profile.As<AgentInvocationMetadata>().Names ?? [],
+            DataSourceId = profile.As<DataSourceMetadata>().DataSourceId,
+            DataSourceStrictness = dataSourceRagMetadata.Strictness,
+            DataSourceTopNDocuments = dataSourceRagMetadata.TopNDocuments,
+            DataSourceIsInScope = dataSourceRagMetadata.IsInScope,
+            DataSourceFilter = dataSourceRagMetadata.Filter,
             SelectedA2AConnectionIds = a2aMetadata?.ConnectionIds ?? [],
             SelectedMcpConnectionIds = mcpMetadata?.ConnectionIds ?? [],
 
@@ -256,7 +280,6 @@ public sealed class AIProfileViewModel
         };
 
         // Load Copilot metadata if present
-
         if (profile.TryGet<CopilotSessionMetadata>(out var copilotMeta))
         {
             vm.CopilotModel = copilotMeta.CopilotModel;
@@ -283,7 +306,7 @@ public sealed class AIProfileViewModel
         // Welcome message is only used when initial prompt is not enabled.
         profile.WelcomeMessage = AddInitialPrompt ? null : WelcomeMessage;
 
-        profile.AlterSettings<AIProfileMetadata>(m =>
+        profile.Alter<AIProfileMetadata>(m =>
         {
             m.SystemMessage = SystemMessage;
             m.InitialPrompt = AddInitialPrompt ? InitialPrompt?.Trim() : null;
@@ -305,80 +328,90 @@ public sealed class AIProfileViewModel
 
         var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
 
-        profile.WithSettings(new FunctionInvocationMetadata
+        profile.Alter<FunctionInvocationMetadata>(x =>
         {
-            Names = toolNames?.Length > 0 ? toolNames : null,
+            x.Names = toolNames?.Length > 0 ? toolNames : null;
         });
 
-        profile.Put(new AIProfileA2AMetadata
+        profile.Alter<AIProfileA2AMetadata>(a =>
         {
-            ConnectionIds = SelectedA2AConnectionIds?
+            a.ConnectionIds = SelectedA2AConnectionIds?
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.Ordinal)
-                .ToArray() ?? [],
+                .ToArray() ?? [];
         });
 
-        profile.Put(new AIProfileMcpMetadata
+        profile.Alter<AIProfileMcpMetadata>(x =>
         {
-            ConnectionIds = SelectedMcpConnectionIds?
+            x.ConnectionIds = SelectedMcpConnectionIds?
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.Ordinal)
-                .ToArray() ?? [],
+                .ToArray() ?? [];
         });
 
-        var agentNames = SelectedAgentNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
-        profile.Put(new AgentInvocationMetadata
+        profile.Alter<AgentInvocationMetadata>(a =>
         {
-            Names = agentNames?.Length > 0 ? agentNames : [],
+            var agentNames = SelectedAgentNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();
+
+            a.Names = agentNames?.Length > 0 ? agentNames : [];
         });
 
-        profile.Put(new DataSourceMetadata
+        profile.Alter<DataSourceMetadata>(c =>
         {
-            DataSourceId = string.IsNullOrWhiteSpace(DataSourceId) ? null : DataSourceId,
+            c.DataSourceId = DataSourceId;
         });
 
-        var promptTemplateMetadata = new PromptTemplateMetadata();
-        promptTemplateMetadata.SetSelections(
-            (PromptTemplates ?? [])
-                .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
-                .Select(t =>
-                {
-                    var entry = new PromptTemplateSelectionEntry { TemplateId = t.TemplateId };
+        profile.Alter<AIDataSourceRagMetadata>(x =>
+        {
+            x.Strictness = DataSourceStrictness;
+            x.TopNDocuments = DataSourceTopNDocuments;
+            x.IsInScope = DataSourceIsInScope;
+            x.Filter = DataSourceFilter;
+        });
 
-                    if (!string.IsNullOrWhiteSpace(t.PromptParameters))
+        profile.Alter<PromptTemplateMetadata>(metadata =>
+        {
+            metadata.SetSelections(
+                (PromptTemplates ?? [])
+                    .Where(t => !string.IsNullOrWhiteSpace(t.TemplateId))
+                    .Select(t =>
                     {
-                        try
+                        var entry = new PromptTemplateSelectionEntry { TemplateId = t.TemplateId };
+
+                        if (!string.IsNullOrWhiteSpace(t.PromptParameters))
                         {
-                            using var doc = System.Text.Json.JsonDocument.Parse(t.PromptParameters);
-
-                            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                            try
                             {
-                                entry.Parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                                using var doc = JsonDocument.Parse(t.PromptParameters);
 
-                                foreach (var prop in doc.RootElement.EnumerateObject())
+                                if (doc.RootElement.ValueKind == JsonValueKind.Object)
                                 {
-                                    if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+                                    entry.Parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+                                    foreach (var prop in doc.RootElement.EnumerateObject())
                                     {
-                                        entry.Parameters[prop.Name] = prop.Value.GetString();
+                                        if (prop.Value.ValueKind == JsonValueKind.String)
+                                        {
+                                            entry.Parameters[prop.Name] = prop.Value.GetString();
+                                        }
                                     }
                                 }
                             }
+                            catch { }
                         }
-                        catch { }
-                    }
 
-                    return entry;
-                }));
-        profile.Put(promptTemplateMetadata);
-
-        profile.AlterSettings<DocumentsMetadata>(m =>
-        {
-            m.DocumentTopN = DocumentTopN;
+                        return entry;
+                    }));
         });
 
-        profile.AlterSettings<AIProfileSessionDocumentsMetadata>(m =>
+        profile.Alter<DocumentsMetadata>(metadata =>
         {
-            m.AllowSessionDocuments = AllowSessionDocuments;
+            metadata.DocumentTopN = DocumentTopN;
+        });
+
+        profile.Alter<AIProfileSessionDocumentsMetadata>(metadata =>
+        {
+            metadata.AllowSessionDocuments = AllowSessionDocuments;
         });
 
         profile.AlterSettings<AIProfileDataExtractionSettings>(s =>
@@ -398,12 +431,12 @@ public sealed class AIProfileViewModel
         .ToList();
         });
 
-        profile.Put(new AnalyticsMetadata
+        profile.Alter<AnalyticsMetadata>(metadata =>
         {
-            EnableSessionMetrics = EnableSessionMetrics,
-            EnableAIResolutionDetection = EnableAIResolutionDetection,
-            EnableConversionMetrics = EnableConversionMetrics,
-            ConversionGoals = (ConversionGoals ?? [])
+            metadata.EnableSessionMetrics = EnableSessionMetrics;
+            metadata.EnableAIResolutionDetection = EnableAIResolutionDetection;
+            metadata.EnableConversionMetrics = EnableConversionMetrics;
+            metadata.ConversionGoals = (ConversionGoals ?? [])
                 .Where(g => !string.IsNullOrWhiteSpace(g.Name))
                 .Select(g => new ConversionGoal
                 {
@@ -412,7 +445,7 @@ public sealed class AIProfileViewModel
                     MinScore = g.MinScore,
                     MaxScore = g.MaxScore > 0 ? g.MaxScore : 10,
                 })
-            .ToList(),
+            .ToList();
         });
 
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
@@ -439,14 +472,13 @@ public sealed class AIProfileViewModel
         });
 
         // Copilot metadata
-
         if (!string.IsNullOrEmpty(OrchestratorName) &&
             string.Equals(OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
-            profile.Put(new CopilotSessionMetadata
+            profile.Alter<CopilotSessionMetadata>(metadata =>
             {
-                CopilotModel = CopilotModel,
-                IsAllowAll = CopilotIsAllowAll,
+                metadata.CopilotModel = CopilotModel;
+                metadata.IsAllowAll = CopilotIsAllowAll;
             });
         }
         else
@@ -539,4 +571,3 @@ public sealed class ConversionGoalItem
     public int MinScore { get; set; }
     public int MaxScore { get; set; } = 10;
 }
-

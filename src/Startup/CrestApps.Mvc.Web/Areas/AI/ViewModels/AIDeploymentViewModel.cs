@@ -1,7 +1,8 @@
 using CrestApps.AI.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 
 public sealed class AIDeploymentViewModel
 {
@@ -22,10 +23,17 @@ public sealed class AIDeploymentViewModel
 
     public string ApiKey { get; set; }
 
-    public List<SelectListItem> Connections { get; set; } = [];
-    public List<SelectListItem> Providers { get; set; } = [];
-    public List<SelectListItem> AuthenticationTypes { get; set; } = [];
-    public List<SelectListItem> Types { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> Connections { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Providers { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> AuthenticationTypes { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> Types { get; set; } = [];
 
     public static AIDeploymentViewModel FromDeployment(AIDeployment deployment)
     {

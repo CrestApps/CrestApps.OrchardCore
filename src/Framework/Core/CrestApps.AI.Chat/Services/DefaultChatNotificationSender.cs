@@ -1,15 +1,14 @@
-using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CrestApps.OrchardCore.AI.Chat.Services;
+namespace CrestApps.AI.Chat.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IChatNotificationSender"/> that dispatches
 /// notifications to the appropriate <see cref="IChatNotificationTransport"/>
 /// resolved via keyed service lookup using <see cref="ChatContextType"/>.
 /// </summary>
-internal sealed class DefaultChatNotificationSender : IChatNotificationSender
+public sealed class DefaultChatNotificationSender : IChatNotificationSender
 {
     private readonly IServiceProvider _serviceProvider;
 
@@ -51,8 +50,8 @@ internal sealed class DefaultChatNotificationSender : IChatNotificationSender
     private IChatNotificationTransport GetTransport(ChatContextType chatType)
     {
         return _serviceProvider.GetKeyedService<IChatNotificationTransport>(chatType)
-        ?? throw new InvalidOperationException(
-            $"No {nameof(IChatNotificationTransport)} is registered for chat type '{chatType}'. " +
-            $"Ensure the module that provides this chat type is enabled and registers its transport.");
+            ?? throw new InvalidOperationException(
+                $"No {nameof(IChatNotificationTransport)} is registered for chat type '{chatType}'. " +
+                $"Ensure the module that provides this chat type is enabled and registers its transport.");
     }
 }

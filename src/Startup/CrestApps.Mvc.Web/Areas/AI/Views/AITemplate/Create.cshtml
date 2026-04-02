@@ -1,4 +1,5 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.AITemplateViewModel
+@using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@model AITemplateViewModel
 @{
     ViewData["Title"] = "Create AI Template";
 }
@@ -264,12 +265,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedAgentNames" value="@agent.Name" id="template_agent_@agent.Name"
-                                           @(agent.IsSelected ? "checked" : "") />
+                                    @(agent.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_agent_@agent.Name">
                                         <strong>@agent.DisplayText</strong>
                                         @if (!string.IsNullOrEmpty(agent.Description))
                                         {
-                                            <br /><small class="text-muted">@agent.Description</small>
+                                            <br />
+
+                                            <small class="text-muted">@agent.Description</small>
                                         }
                                     </label>
                                 </div>
@@ -291,7 +294,7 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="template_a2a_@connection.ItemId"
-                                           @(connection.IsSelected ? "checked" : "") />
+                                    @(connection.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_a2a_@connection.ItemId">
                                         <strong>@connection.DisplayText</strong><br />
                                         <small class="text-muted">@connection.Endpoint</small>
@@ -315,12 +318,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="template_mcp_@connection.ItemId"
-                                           @(connection.IsSelected ? "checked" : "") />
+                                    @(connection.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="template_mcp_@connection.ItemId">
                                         <strong>@connection.DisplayText</strong>
                                         @if (!string.IsNullOrEmpty(connection.Source))
                                         {
-                                            <br /><small class="text-muted">@connection.Source</small>
+                                            <br />
+
+                                            <small class="text-muted">@connection.Source</small>
                                         }
                                     </label>
                                 </div>
@@ -351,12 +356,14 @@
                                 {
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="SelectedToolNames" value="@tool.Name" id="tool_@tool.Name"
-                                               @(tool.IsSelected ? "checked" : "") />
+                                        @(tool.IsSelected ? "checked" : "") />
                                         <label class="form-check-label" for="tool_@tool.Name">
                                             <strong>@tool.Title</strong>
                                             @if (!string.IsNullOrEmpty(tool.Description))
                                             {
-                                                <br /><small class="text-muted">@tool.Description</small>
+                                                <br />
+
+                                                <small class="text-muted">@tool.Description</small>
                                             }
                                         </label>
                                     </div>
@@ -421,7 +428,7 @@
                                     <div class="card mb-2 extraction-entry-card">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
+                                                   data-bs-toggle="collapse" href="#entryCollapse_@i" role="button" aria-expanded="true">
                                                 <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="entry-name-display fw-semibold">@(string.IsNullOrWhiteSpace(entry.Name) ? "New Entry" : entry.Name)</span>
                                             </a>
@@ -447,14 +454,14 @@
                                                 <div class="form-check mb-2">
                                                     <input type="checkbox" class="form-check-input"
                                                            name="DataExtractionEntries[@i].AllowMultipleValues" value="true"
-                                                           @(entry.AllowMultipleValues ? "checked" : "") />
+                                                    @(entry.AllowMultipleValues ? "checked" : "") />
                                                     <label class="form-check-label">Allow multiple values</label>
                                                     <span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span>
                                                 </div>
                                                 <div class="form-check mb-2">
                                                     <input type="checkbox" class="form-check-input"
                                                            name="DataExtractionEntries[@i].IsUpdatable" value="true"
-                                                           @(entry.IsUpdatable ? "checked" : "") />
+                                                    @(entry.IsUpdatable ? "checked" : "") />
                                                     <label class="form-check-label">Updatable</label>
                                                     <span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span>
                                                 </div>
@@ -525,7 +532,7 @@
                                     <div class="card mb-2 conversion-goal-card">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
+                                                   data-bs-toggle="collapse" href="#goalCollapse_@i" role="button" aria-expanded="true">
                                                 <i class="bi bi-chevron-down me-1"></i>
                                                 <span class="goal-name-display fw-semibold">@(string.IsNullOrWhiteSpace(goal.Name) ? "New Goal" : goal.Name)</span>
                                             </a>
@@ -616,258 +623,258 @@
     <script>initAutoGenerateTechnicalName('templateTitle', 'templateTechName');</script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var sourceSelect = document.getElementById('sourceSelect');
-            var profileFields = document.getElementById('profileFields');
-            var systemPromptFields = document.getElementById('systemPromptFields');
+        var sourceSelect = document.getElementById('sourceSelect');
+        var profileFields = document.getElementById('profileFields');
+        var systemPromptFields = document.getElementById('systemPromptFields');
 
-            function updateVisibility() {
-                var isProfile = sourceSelect.value === 'Profile';
-                profileFields.style.display = isProfile ? '' : 'none';
-                systemPromptFields.style.display = isProfile ? 'none' : '';
-            }
+        function updateVisibility() {
+        var isProfile = sourceSelect.value === 'Profile';
+        profileFields.style.display = isProfile ? '' : 'none';
+        systemPromptFields.style.display = isProfile ? 'none' : '';
+        }
 
-            sourceSelect.addEventListener('change', updateVisibility);
-            updateVisibility();
+        sourceSelect.addEventListener('change', updateVisibility);
+        updateVisibility();
 
-            // --- Profile Type conditional visibility ---
-            var profileTypeSelect = document.getElementById('profileTypeSelect');
-            var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
-            var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
-            var initialPromptGroup = document.getElementById('initialPromptGroup');
+        // --- Profile Type conditional visibility ---
+        var profileTypeSelect = document.getElementById('profileTypeSelect');
+        var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
+        var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
+        var initialPromptGroup = document.getElementById('initialPromptGroup');
 
-            function convertToKebabCase(str) {
-                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-            }
+        function convertToKebabCase(str) {
+        return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+        }
 
-            function toggleProfileTypeFields() {
-                if (!profileTypeSelect) return;
-                var value = profileTypeSelect.value;
-                if (!value) {
-                    document.querySelectorAll('.profile-type').forEach(function (el) { el.classList.add('d-none'); });
-                    return;
-                }
-                var className = 'profile-type-' + convertToKebabCase(value);
-                document.querySelectorAll('.profile-type').forEach(function (el) {
-                    if (el.classList.contains(className)) {
-                        el.classList.remove('d-none');
-                    } else {
-                        el.classList.add('d-none');
-                    }
-                });
-                toggleInitialPromptFields();
-            }
+        function toggleProfileTypeFields() {
+        if (!profileTypeSelect) return;
+        var value = profileTypeSelect.value;
+        if (!value) {
+        document.querySelectorAll('.profile-type').forEach(function (el) { el.classList.add('d-none'); });
+        return;
+        }
+        var className = 'profile-type-' + convertToKebabCase(value);
+        document.querySelectorAll('.profile-type').forEach(function (el) {
+        if (el.classList.contains(className)) {
+        el.classList.remove('d-none');
+        } else {
+        el.classList.add('d-none');
+        }
+        });
+        toggleInitialPromptFields();
+        }
 
-            function toggleInitialPromptFields() {
-                if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
-                var isChatType = profileTypeSelect.value === 'Chat';
-                var showInitialPrompt = addInitialPromptCheck.checked;
-                welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
-                initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
-            }
+        function toggleInitialPromptFields() {
+        if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
+        var isChatType = profileTypeSelect.value === 'Chat';
+        var showInitialPrompt = addInitialPromptCheck.checked;
+        welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
+        initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
+        }
 
-            if (profileTypeSelect) {
-                profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
-                toggleProfileTypeFields();
-            }
+        if (profileTypeSelect) {
+        profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
+        toggleProfileTypeFields();
+        }
 
-            if (addInitialPromptCheck) {
-                addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
-            }
+        if (addInitialPromptCheck) {
+        addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
+        }
 
-            // --- Select All / Deselect All tools ---
-            var selectAllBtn = document.getElementById('select-all-tools');
-            var deselectAllBtn = document.getElementById('deselect-all-tools');
-            if (selectAllBtn) {
-                selectAllBtn.addEventListener('click', function () {
-                    document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = true; });
-                });
-            }
-            if (deselectAllBtn) {
-                deselectAllBtn.addEventListener('click', function () {
-                    document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = false; });
-                });
-            }
+        // --- Select All / Deselect All tools ---
+        var selectAllBtn = document.getElementById('select-all-tools');
+        var deselectAllBtn = document.getElementById('deselect-all-tools');
+        if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function () {
+        document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = true; });
+        });
+        }
+        if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function () {
+        document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = false; });
+        });
+        }
 
-            // --- Data Extraction conditional visibility ---
-            var enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');
-            var dataExtractionSettings = document.getElementById('dataExtractionSettings');
-            if (enableDataExtractionCheck && dataExtractionSettings) {
-                enableDataExtractionCheck.addEventListener('change', function () {
-                    dataExtractionSettings.classList.toggle('d-none', !this.checked);
-                });
-            }
+        // --- Data Extraction conditional visibility ---
+        var enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');
+        var dataExtractionSettings = document.getElementById('dataExtractionSettings');
+        if (enableDataExtractionCheck && dataExtractionSettings) {
+        enableDataExtractionCheck.addEventListener('change', function () {
+        dataExtractionSettings.classList.toggle('d-none', !this.checked);
+        });
+        }
 
-            // --- Data Extraction Entries ---
-            (function () {
-                var entriesContainer = document.getElementById('extractionEntriesContainer');
-                var addEntryBtn = document.getElementById('addExtractionEntry');
-                if (!entriesContainer || !addEntryBtn) return;
+        // --- Data Extraction Entries ---
+        (function () {
+        var entriesContainer = document.getElementById('extractionEntriesContainer');
+        var addEntryBtn = document.getElementById('addExtractionEntry');
+        if (!entriesContainer || !addEntryBtn) return;
 
-                addEntryBtn.addEventListener('click', function () {
-                    var index = entriesContainer.querySelectorAll('.extraction-entry-card').length;
-                    var card = document.createElement('div');
-                    card.className = 'card mb-2 extraction-entry-card';
-                    card.innerHTML =
-                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
-                            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#entryCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="bi bi-chevron-down me-1"></i>' +
-                                '<span class="entry-name-display fw-semibold">New Entry</span>' +
-                            '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
-                        '</div>' +
-                        '<div id="entryCollapse_' + index + '" class="collapse show">' +
-                            '<div class="card-body">' +
-                                '<div class="mb-3"><label class="form-label">Name</label>' +
-                                    '<input type="text" class="form-control entry-name-input" name="DataExtractionEntries[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" />' +
-                                    '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
-                                '<div class="mb-3"><label class="form-label">Description</label>' +
-                                    '<textarea class="form-control" name="DataExtractionEntries[' + index + '].Description" rows="3" placeholder="What to extract"></textarea>' +
-                                    '<span class="form-text">Describes what data to extract. The AI uses this to understand what to look for.</span></div>' +
-                                '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].AllowMultipleValues" value="true" />' +
-                                    '<label class="form-check-label">Allow multiple values</label>' +
-                                    '<span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span></div>' +
-                                '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].IsUpdatable" value="true" />' +
-                                    '<label class="form-check-label">Updatable</label>' +
-                                    '<span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span></div>' +
-                            '</div>' +
-                        '</div>';
-                    entriesContainer.appendChild(card);
-                });
+        addEntryBtn.addEventListener('click', function () {
+        var index = entriesContainer.querySelectorAll('.extraction-entry-card').length;
+        var card = document.createElement('div');
+        card.className = 'card mb-2 extraction-entry-card';
+        card.innerHTML =
+        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#entryCollapse_' + index + '" role="button" aria-expanded="true">' +
+        '<i class="bi bi-chevron-down me-1"></i>' +
+        '<span class="entry-name-display fw-semibold">New Entry</span>' +
+        '</a>' +
+        '<button type="button" class="btn btn-sm btn-danger remove-entry-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
+        '</div>' +
+        '<div id="entryCollapse_' + index + '" class="collapse show">' +
+        '<div class="card-body">' +
+        '<div class="mb-3"><label class="form-label">Name</label>' +
+        '<input type="text" class="form-control entry-name-input" name="DataExtractionEntries[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., customer_name" />' +
+        '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
+        '<div class="mb-3"><label class="form-label">Description</label>' +
+        '<textarea class="form-control" name="DataExtractionEntries[' + index + '].Description" rows="3" placeholder="What to extract"></textarea>' +
+        '<span class="form-text">Describes what data to extract. The AI uses this to understand what to look for.</span></div>' +
+        '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].AllowMultipleValues" value="true" />' +
+        '<label class="form-check-label">Allow multiple values</label>' +
+        '<span class="form-text d-block">When enabled, the field accumulates multiple values across messages.</span></div>' +
+        '<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="DataExtractionEntries[' + index + '].IsUpdatable" value="true" />' +
+        '<label class="form-check-label">Updatable</label>' +
+        '<span class="form-text d-block">When enabled, the value can be replaced if updated information is provided.</span></div>' +
+        '</div>' +
+        '</div>';
+        entriesContainer.appendChild(card);
+        });
 
-                document.addEventListener('click', function (e) {
-                    if (e.target.closest('.remove-entry-btn')) {
-                        var card = e.target.closest('.extraction-entry-card');
-                        if (card) card.remove();
-                    }
-                });
+        document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-entry-btn')) {
+        var card = e.target.closest('.extraction-entry-card');
+        if (card) card.remove();
+        }
+        });
 
-                document.addEventListener('input', function (e) {
-                    if (e.target.classList.contains('entry-name-input')) {
-                        var card = e.target.closest('.extraction-entry-card');
-                        if (card) {
-                            var display = card.querySelector('.entry-name-display');
-                            if (display) display.textContent = e.target.value || 'New Entry';
-                        }
-                    }
-                });
-            })();
+        document.addEventListener('input', function (e) {
+        if (e.target.classList.contains('entry-name-input')) {
+        var card = e.target.closest('.extraction-entry-card');
+        if (card) {
+        var display = card.querySelector('.entry-name-display');
+        if (display) display.textContent = e.target.value || 'New Entry';
+        }
+        }
+        });
+        })();
 
-            // --- Conversion Goals conditional visibility ---
-            var enableConversionMetricsCheck = document.getElementById('enableConversionMetricsCheck');
-            var conversionGoalsSection = document.getElementById('conversionGoalsSection');
-            if (enableConversionMetricsCheck && conversionGoalsSection) {
-                enableConversionMetricsCheck.addEventListener('change', function () {
-                    conversionGoalsSection.classList.toggle('d-none', !this.checked);
-                });
-            }
+        // --- Conversion Goals conditional visibility ---
+        var enableConversionMetricsCheck = document.getElementById('enableConversionMetricsCheck');
+        var conversionGoalsSection = document.getElementById('conversionGoalsSection');
+        if (enableConversionMetricsCheck && conversionGoalsSection) {
+        enableConversionMetricsCheck.addEventListener('change', function () {
+        conversionGoalsSection.classList.toggle('d-none', !this.checked);
+        });
+        }
 
-            // --- Conversion Goals Entries ---
-            (function () {
-                var goalsContainer = document.getElementById('conversionGoalsContainer');
-                var addGoalBtn = document.getElementById('addConversionGoal');
-                if (!goalsContainer || !addGoalBtn) return;
+        // --- Conversion Goals Entries ---
+        (function () {
+        var goalsContainer = document.getElementById('conversionGoalsContainer');
+        var addGoalBtn = document.getElementById('addConversionGoal');
+        if (!goalsContainer || !addGoalBtn) return;
 
-                addGoalBtn.addEventListener('click', function () {
-                    var index = goalsContainer.querySelectorAll('.conversion-goal-card').length;
-                    var card = document.createElement('div');
-                    card.className = 'card mb-2 conversion-goal-card';
-                    card.innerHTML =
-                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
-                            '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#goalCollapse_' + index + '" role="button" aria-expanded="true">' +
-                                '<i class="bi bi-chevron-down me-1"></i>' +
-                                '<span class="goal-name-display fw-semibold">New Goal</span>' +
-                            '</a>' +
-                            '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
-                        '</div>' +
-                        '<div id="goalCollapse_' + index + '" class="collapse show">' +
-                            '<div class="card-body">' +
-                                '<div class="mb-3"><label class="form-label">Name</label>' +
-                                    '<input type="text" class="form-control goal-name-input" name="ConversionGoals[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />' +
-                                    '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
-                                '<div class="mb-3"><label class="form-label">Description</label>' +
-                                    '<textarea class="form-control" name="ConversionGoals[' + index + '].Description" rows="3" placeholder="Describe what constitutes success for this goal"></textarea>' +
-                                    '<span class="form-text">Provided to the AI model as evaluation criteria.</span></div>' +
-                                '<div class="row">' +
-                                    '<div class="col-md-6"><div class="mb-3"><label class="form-label">Min score</label>' +
-                                        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MinScore" value="0" min="0" /></div></div>' +
-                                    '<div class="col-md-6"><div class="mb-3"><label class="form-label">Max score</label>' +
-                                        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MaxScore" value="10" min="1" /></div></div>' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>';
-                    goalsContainer.appendChild(card);
-                });
+        addGoalBtn.addEventListener('click', function () {
+        var index = goalsContainer.querySelectorAll('.conversion-goal-card').length;
+        var card = document.createElement('div');
+        card.className = 'card mb-2 conversion-goal-card';
+        card.innerHTML =
+        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0" data-bs-toggle="collapse" href="#goalCollapse_' + index + '" role="button" aria-expanded="true">' +
+        '<i class="bi bi-chevron-down me-1"></i>' +
+        '<span class="goal-name-display fw-semibold">New Goal</span>' +
+        '</a>' +
+        '<button type="button" class="btn btn-sm btn-danger remove-goal-btn" title="Remove"><i class="bi bi-trash"></i></button>' +
+        '</div>' +
+        '<div id="goalCollapse_' + index + '" class="collapse show">' +
+        '<div class="card-body">' +
+        '<div class="mb-3"><label class="form-label">Name</label>' +
+        '<input type="text" class="form-control goal-name-input" name="ConversionGoals[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="e.g., booking_completed" />' +
+        '<span class="form-text">A unique identifier. Only alphanumeric characters and underscores.</span></div>' +
+        '<div class="mb-3"><label class="form-label">Description</label>' +
+        '<textarea class="form-control" name="ConversionGoals[' + index + '].Description" rows="3" placeholder="Describe what constitutes success for this goal"></textarea>' +
+        '<span class="form-text">Provided to the AI model as evaluation criteria.</span></div>' +
+        '<div class="row">' +
+        '<div class="col-md-6"><div class="mb-3"><label class="form-label">Min score</label>' +
+        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MinScore" value="0" min="0" /></div></div>' +
+        '<div class="col-md-6"><div class="mb-3"><label class="form-label">Max score</label>' +
+        '<input type="number" class="form-control" name="ConversionGoals[' + index + '].MaxScore" value="10" min="1" /></div></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
+        goalsContainer.appendChild(card);
+        });
 
-                document.addEventListener('click', function (e) {
-                    if (e.target.closest('.remove-goal-btn')) {
-                        var card = e.target.closest('.conversion-goal-card');
-                        if (card) card.remove();
-                    }
-                });
+        document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-goal-btn')) {
+        var card = e.target.closest('.conversion-goal-card');
+        if (card) card.remove();
+        }
+        });
 
-                document.addEventListener('input', function (e) {
-                    if (e.target.classList.contains('goal-name-input')) {
-                        var card = e.target.closest('.conversion-goal-card');
-                        if (card) {
-                            var display = card.querySelector('.goal-name-display');
-                            if (display) display.textContent = e.target.value || 'New Goal';
-                        }
-                    }
-                });
-            })();
+        document.addEventListener('input', function (e) {
+        if (e.target.classList.contains('goal-name-input')) {
+        var card = e.target.closest('.conversion-goal-card');
+        if (card) {
+        var display = card.querySelector('.goal-name-display');
+        if (display) display.textContent = e.target.value || 'New Goal';
+        }
+        }
+        });
+        })();
 
-            // --- Post Session Processing conditional visibility ---
-            var enablePostSessionCheck = document.getElementById('enablePostSessionCheck');
-            var postSessionTasksSection = document.getElementById('postSessionTasksSection');
-            if (enablePostSessionCheck && postSessionTasksSection) {
-                enablePostSessionCheck.addEventListener('change', function () {
-                    postSessionTasksSection.classList.toggle('d-none', !this.checked);
-                });
-            }
+        // --- Post Session Processing conditional visibility ---
+        var enablePostSessionCheck = document.getElementById('enablePostSessionCheck');
+        var postSessionTasksSection = document.getElementById('postSessionTasksSection');
+        if (enablePostSessionCheck && postSessionTasksSection) {
+        enablePostSessionCheck.addEventListener('change', function () {
+        postSessionTasksSection.classList.toggle('d-none', !this.checked);
+        });
+        }
 
-            // --- Post Session Tasks ---
-            var tasksContainer = document.getElementById('post-session-tasks');
-            var addTaskBtn = document.getElementById('add-task-btn');
-            var taskIndex = 0;
+        // --- Post Session Tasks ---
+        var tasksContainer = document.getElementById('post-session-tasks');
+        var addTaskBtn = document.getElementById('add-task-btn');
+        var taskIndex = 0;
 
-            if (addTaskBtn) {
-                addTaskBtn.addEventListener('click', function () {
-                    var idx = taskIndex++;
-                    var card = document.createElement('div');
-                    card.className = 'card mb-3 post-session-task-card';
-                    card.innerHTML =
-                        '<div class="card-body">' +
-                            '<div class="d-flex justify-content-between align-items-start">' +
-                                '<h6 class="card-title mb-2">Task ' + (idx + 1) + '</h6>' +
-                                '<button type="button" class="btn btn-sm btn-outline-danger remove-task-btn"><i class="bi bi-trash"></i></button>' +
-                            '</div>' +
-                            '<div class="row">' +
-                                '<div class="col-md-6"><div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label>' +
-                                    '<input name="PostSessionTasks[' + idx + '].Name" class="form-control" placeholder="e.g., sentiment_analysis" required /></div></div>' +
-                                '<div class="col-md-6"><div class="mb-2"><label class="form-label">Type</label>' +
-                                    '<select name="PostSessionTasks[' + idx + '].Type" class="form-select">' +
-                                        '<option value="Semantic">Semantic (free text)</option>' +
-                                        '<option value="PredefinedOptions">Predefined Options</option>' +
-                                    '</select></div></div>' +
-                            '</div>' +
-                            '<div class="mb-2"><label class="form-label">Instructions</label>' +
-                                '<textarea name="PostSessionTasks[' + idx + '].Instructions" class="form-control" rows="2" placeholder="Instructions for the AI model..."></textarea></div>' +
-                            '<div class="mb-2"><div class="form-check">' +
-                                '<input name="PostSessionTasks[' + idx + '].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" />' +
-                                '<label class="form-check-label">Allow multiple values</label></div></div>' +
-                            '<div class="mb-0"><label class="form-label">Options (one per line, for Predefined Options type)</label>' +
-                                '<textarea name="PostSessionTasks[' + idx + '].Options" class="form-control" rows="3" placeholder="Option 1\nOption 2\nOption 3"></textarea></div>' +
-                        '</div>';
-                    tasksContainer.appendChild(card);
-                });
-            }
+        if (addTaskBtn) {
+        addTaskBtn.addEventListener('click', function () {
+        var idx = taskIndex++;
+        var card = document.createElement('div');
+        card.className = 'card mb-3 post-session-task-card';
+        card.innerHTML =
+        '<div class="card-body">' +
+        '<div class="d-flex justify-content-between align-items-start">' +
+        '<h6 class="card-title mb-2">Task ' + (idx + 1) + '</h6>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger remove-task-btn"><i class="bi bi-trash"></i></button>' +
+        '</div>' +
+        '<div class="row">' +
+        '<div class="col-md-6"><div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label>' +
+        '<input name="PostSessionTasks[' + idx + '].Name" class="form-control" placeholder="e.g., sentiment_analysis" required /></div></div>' +
+        '<div class="col-md-6"><div class="mb-2"><label class="form-label">Type</label>' +
+        '<select name="PostSessionTasks[' + idx + '].Type" class="form-select">' +
+        '<option value="Semantic">Semantic (free text)</option>' +
+        '<option value="PredefinedOptions">Predefined Options</option>' +
+        '</select></div></div>' +
+        '</div>' +
+        '<div class="mb-2"><label class="form-label">Instructions</label>' +
+        '<textarea name="PostSessionTasks[' + idx + '].Instructions" class="form-control" rows="2" placeholder="Instructions for the AI model..."></textarea></div>' +
+        '<div class="mb-2"><div class="form-check">' +
+        '<input name="PostSessionTasks[' + idx + '].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" />' +
+        '<label class="form-check-label">Allow multiple values</label></div></div>' +
+        '<div class="mb-0"><label class="form-label">Options (one per line, for Predefined Options type)</label>' +
+        '<textarea name="PostSessionTasks[' + idx + '].Options" class="form-control" rows="3" placeholder="Option 1\nOption 2\nOption 3"></textarea></div>' +
+        '</div>';
+        tasksContainer.appendChild(card);
+        });
+        }
 
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.remove-task-btn')) {
-                    var card = e.target.closest('.post-session-task-card');
-                    if (card) card.remove();
-                }
-            });
+        document.addEventListener('click', function (e) {
+        if (e.target.closest('.remove-task-btn')) {
+        var card = e.target.closest('.post-session-task-card');
+        if (card) card.remove();
+        }
+        });
         });
     </script>
 }

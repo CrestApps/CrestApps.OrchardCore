@@ -1,12 +1,12 @@
 using CrestApps.AI.DataSources;
 using CrestApps.AI.Models;
 using CrestApps.Models;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.DataSources.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.DataSources.Services;
 
 public sealed class YesSqlAIDataSourceStore : IAIDataSourceStore
 {

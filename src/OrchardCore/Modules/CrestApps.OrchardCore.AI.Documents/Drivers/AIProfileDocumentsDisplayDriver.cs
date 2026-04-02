@@ -82,7 +82,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:5#Documents:5");
+        }).Location("Content:5#Knowledge:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

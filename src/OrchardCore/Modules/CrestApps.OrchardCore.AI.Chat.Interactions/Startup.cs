@@ -17,7 +17,6 @@ using CrestApps.SignalR.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -48,7 +47,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
         // Register framework-level chat interaction handlers.
-        services.AddChatInteractionHandlers();
+        services.AddChatInteractionServices();
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
@@ -70,22 +69,12 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        // Chat Interaction notification transport.
-        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
-
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
 
-        services.Configure<HubOptions<ChatInteractionHub>>(options =>
-        {
-            // Allow long-running operations (e.g., multi-step MCP tool calls)
-            // without the server dropping the connection prematurely.
-            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
-            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-
-            // Allow larger messages for audio transcription payloads.
-            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-        });
+        // Chat Interaction notification transport and hub options.
+        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
+        services.ConfigureChatHubOptions<ChatInteractionHub>();
 
         services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }

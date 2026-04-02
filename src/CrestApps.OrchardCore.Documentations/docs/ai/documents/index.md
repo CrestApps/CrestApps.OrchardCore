@@ -130,7 +130,7 @@ Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embed
 
 Documents are managed directly through the AI Profile editor form. When you save a profile:
 
-1. **New files** selected in the Documents tab are uploaded, text-extracted, chunked, embedded, and stored
+1. **New files** selected in the Knowledge tab are uploaded, text-extracted, chunked, embedded, and stored
 2. **Removed documents** marked for deletion are removed from the store
 3. All changes are applied atomically when the profile is saved
 
@@ -140,7 +140,7 @@ There are no separate API endpoints for profile document management — everythi
 
 1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.
 2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-3. Use the **Documents** tab to upload text-based documents.
+3. Use the **Knowledge** tab to upload text-based documents.
 4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
 
 For MVC hosts that use the shared framework services, configure the default AI Documents index first so uploaded profile documents are embedded into the expected search backend instead of remaining as unindexed attachments only.

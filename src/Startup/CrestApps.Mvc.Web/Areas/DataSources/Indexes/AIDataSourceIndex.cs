@@ -2,7 +2,7 @@ using CrestApps.AI.Models;
 using CrestApps.Data.YesSql.Indexes;
 using YesSql.Indexes;
 
-namespace CrestApps.Mvc.Web.Indexes;
+namespace CrestApps.Mvc.Web.Areas.DataSources.Indexes;
 
 public sealed class AIDataSourceIndex : CatalogItemIndex
 {

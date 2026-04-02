@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;

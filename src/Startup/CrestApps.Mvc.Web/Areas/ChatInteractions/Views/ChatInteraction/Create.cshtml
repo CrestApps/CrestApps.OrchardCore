@@ -1,11 +1,43 @@
-@model CrestApps.Mvc.Web.Areas.Admin.ViewModels.ChatInteractionViewModel
+@using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels
+@model ChatInteractionViewModel
 @{
     ViewData["Title"] = "New Chat Interaction";
+    const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
+    const string temperatureHelp = "Controls the randomness of AI responses. Lower values (closer to 0) make responses more focused and deterministic. Higher values (up to 2) make responses more creative and varied.";
+    const string topPHelp = "Also called nucleus sampling. Controls diversity by limiting the AI to consider only the most probable tokens that sum to this value. Lower values are more focused, while higher values are more diverse.";
+    const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
+    const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
+    const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
 }
 
 <h2><i class="bi bi-plus-lg"></i> New Chat Interaction</h2>
 <hr />
 <p class="text-muted">Configure AI parameters and start chatting. Unlike AI Profile chat, you can fully customize the behavior here.</p>
+
+<style>
+    .parameter-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    @@media (min-width: 1200px) {
+        .parameter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .parameter-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .parameter-help-icon {
+        color: var(--bs-secondary-color, #6c757d);
+        cursor: help;
+    }
+</style>
 
 <form asp-action="Create" method="post" enctype="multipart/form-data">
     <div class="row">
@@ -111,7 +143,7 @@
                                     <div class="card mb-1 prompt-template-card" data-template-id="@selection.TemplateId">
                                         <div class="card-header d-flex justify-content-between align-items-center py-2">
                                             <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0"
-                                               data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
+                                                   data-bs-toggle="collapse" href="#promptCollapse_@i" role="button" aria-expanded="false">
                                                 <i class="bi bi-chevron-right me-1"></i>
                                                 <span class="prompt-template-title fw-semibold">@title</span>
                                             </a>
@@ -170,49 +202,60 @@
                         <div class="form-text">Instructions for the AI on how to behave.</div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="Temperature" class="form-label">Temperature</label>
-                                <input asp-for="Temperature" type="number" class="form-control" step="0.1" min="0" max="2" placeholder="0.7" />
-                                <div class="form-text">Controls randomness (0–2).</div>
-                            </div>
+                    <div class="parameter-grid">
+                        <div class="mb-3">
+                            <label asp-for="MaxTokens" class="form-label parameter-label">
+                                <span>Max tokens</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@maxTokensHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="MaxTokens" type="number" class="form-control" min="1" placeholder="4096" />
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="TopP" class="form-label">Top P</label>
-                                <input asp-for="TopP" type="number" class="form-control" step="0.1" min="0" max="1" placeholder="1.0" />
-                                <div class="form-text">Nucleus sampling (0–1).</div>
-                            </div>
+                        <div class="mb-3">
+                            <label asp-for="Temperature" class="form-label parameter-label">
+                                <span>Temperature</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@temperatureHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="Temperature" type="number" class="form-control" step="0.1" min="0" max="2" placeholder="0.7" />
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="MaxTokens" class="form-label">Max tokens</label>
-                                <input asp-for="MaxTokens" type="number" class="form-control" min="1" placeholder="4096" />
-                                <div class="form-text">Max response length.</div>
-                            </div>
+                        <div class="mb-3">
+                            <label asp-for="TopP" class="form-label parameter-label">
+                                <span>Top P</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@topPHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="TopP" type="number" class="form-control" step="0.1" min="0" max="1" placeholder="1.0" />
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="FrequencyPenalty" class="form-label">Frequency penalty</label>
-                                <input asp-for="FrequencyPenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
-                            </div>
+                        <div class="mb-3">
+                            <label asp-for="FrequencyPenalty" class="form-label parameter-label">
+                                <span>Frequency penalty</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@frequencyPenaltyHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="FrequencyPenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="PresencePenalty" class="form-label">Presence penalty</label>
-                                <input asp-for="PresencePenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
-                            </div>
+                        <div class="mb-3">
+                            <label asp-for="PresencePenalty" class="form-label parameter-label">
+                                <span>Presence penalty</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@presencePenaltyHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="PresencePenalty" type="number" class="form-control" step="0.1" min="-2" max="2" placeholder="0" />
                         </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label asp-for="PastMessagesCount" class="form-label">Past messages</label>
-                                <input asp-for="PastMessagesCount" type="number" class="form-control" min="0" placeholder="10" />
-                                <div class="form-text">Messages to include in context.</div>
-                            </div>
+                        <div class="mb-3">
+                            <label asp-for="PastMessagesCount" class="form-label parameter-label">
+                                <span>Past messages</span>
+                                <span class="parameter-help-icon" data-bs-toggle="tooltip" title="@pastMessagesHelp">
+                                    <i class="bi bi-question-circle" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <input asp-for="PastMessagesCount" type="number" class="form-control" min="0" placeholder="10" />
                         </div>
                     </div>
                 </div>
@@ -234,7 +277,7 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedAgentNames" value="@agent.Name" id="interaction_agent_@agent.Name"
-                                       @(agent.IsSelected ? "checked" : "") />
+                                @(agent.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="interaction_agent_@agent.Name">
                                     <strong>@agent.DisplayText</strong>
                                 </label>
@@ -266,12 +309,14 @@
                             {
                                 <div class="form-check mb-2">
                                     <input class="form-check-input tool-checkbox" type="checkbox" name="SelectedToolNames" value="@tool.Name" id="interaction_tool_@tool.Name"
-                                           @(tool.IsSelected ? "checked" : "") />
+                                    @(tool.IsSelected ? "checked" : "") />
                                     <label class="form-check-label" for="interaction_tool_@tool.Name">
                                         <strong>@tool.Title</strong>
                                         @if (!string.IsNullOrEmpty(tool.Description))
                                         {
-                                            <br /><small class="text-muted">@tool.Description</small>
+                                            <br />
+
+                                            <small class="text-muted">@tool.Description</small>
                                         }
                                     </label>
                                 </div>
@@ -294,7 +339,7 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedA2AConnectionIds" value="@connection.ItemId" id="interaction_a2a_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
+                                @(connection.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="interaction_a2a_@connection.ItemId">
                                     <strong>@connection.DisplayText</strong><br />
                                     <small class="text-muted">@connection.Endpoint</small>
@@ -318,12 +363,14 @@
                         {
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" name="SelectedMcpConnectionIds" value="@connection.ItemId" id="interaction_mcp_@connection.ItemId"
-                                       @(connection.IsSelected ? "checked" : "") />
+                                @(connection.IsSelected ? "checked" : "") />
                                 <label class="form-check-label" for="interaction_mcp_@connection.ItemId">
                                     <strong>@connection.DisplayText</strong>
                                     @if (!string.IsNullOrEmpty(connection.Source))
                                     {
-                                        <br /><small class="text-muted">@connection.Source</small>
+                                        <br />
+
+                                        <small class="text-muted">@connection.Source</small>
                                     }
                                 </label>
                             </div>
@@ -339,6 +386,33 @@
                             <option value="">— None —</option>
                         </select>
                         <div class="form-text">Select a RAG data source to provide background knowledge for this interaction.</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceStrictness" class="form-label">Strictness</label>
+                                <input asp-for="DataSourceStrictness" type="number" class="form-control" min="1" max="5" placeholder="Default provider setting" />
+                                <div class="form-text">Controls how strictly the AI should follow retrieved data-source matches.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceTopNDocuments" class="form-label">Retrieved documents</label>
+                                <input asp-for="DataSourceTopNDocuments" type="number" class="form-control" min="1" max="20" placeholder="Default provider setting" />
+                                <div class="form-text">How many data-source documents to retrieve for RAG.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
                     </div>
 
                     @if (Model.HasDocumentIndexConfiguration)
@@ -387,6 +461,12 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+                    window.bootstrap.Tooltip.getOrCreateInstance(element);
+                });
+            }
+
             // --- Tool Select All / Deselect All ---
             var selectAllBtn = document.getElementById('select-all-tools');
             var deselectAllBtn = document.getElementById('deselect-all-tools');
@@ -410,10 +490,14 @@
                 if (!container) return;
 
                 var promptOptions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                    Model.AvailablePromptTemplates.Select(t => new {
-                        t.TemplateId, t.Title, t.Description, t.Category,
-                        Parameters = t.Parameters.Select(p => new { p.Name, p.Description })
-                    })));
+                                    Model.AvailablePromptTemplates.Select(t => new
+                                    {
+                                            t.TemplateId,
+                                            t.Title,
+                                            t.Description,
+                                            t.Category,
+                                            Parameters = t.Parameters.Select(p => new { p.Name, p.Description })
+                                    })));
 
                 function escapeH(v) {
                     return (v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');

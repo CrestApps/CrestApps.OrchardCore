@@ -11,7 +11,12 @@ using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Indexing.Services;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using CrestApps.Templates.Services;
@@ -124,7 +129,6 @@ public sealed class ChatInteractionController : Controller
     {
         if (!ModelState.IsValid)
         {
-
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -147,33 +151,10 @@ public sealed class ChatInteractionController : Controller
         interaction.DocumentTopN = model.DocumentTopN;
         interaction.A2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         interaction.McpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
-
         interaction.ToolNames = GetValidToolNames(model.SelectedToolNames);
         interaction.AgentNames = await GetValidAgentNamesAsync(model.SelectedAgentNames);
         interaction.CreatedUtc = DateTime.UtcNow;
-
-        if (!string.IsNullOrEmpty(model.DataSourceId))
-        {
-            var dataSource = await _dataSourceCatalog.FindByIdAsync(model.DataSourceId);
-
-            if (dataSource != null)
-            {
-
-                interaction.Put(new DataSourceMetadata { DataSourceId = dataSource.ItemId });
-                interaction.Put(new AIDataSourceRagMetadata { IsInScope = true });
-            }
-        }
-
-        if (string.Equals(model.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
-        {
-            interaction.Put(new CopilotSessionMetadata
-            {
-                CopilotModel = model.CopilotModel,
-
-                IsAllowAll = model.CopilotIsAllowAll,
-
-            });
-        }
+        await ApplyMetadataAsync(interaction, model);
 
         await _interactionManager.CreateAsync(interaction);
 
@@ -190,25 +171,22 @@ public sealed class ChatInteractionController : Controller
     public async Task<IActionResult> Chat(string id)
     {
         if (string.IsNullOrEmpty(id))
-
         {
-
             return RedirectToAction(nameof(Index));
         }
 
         var interaction = await _interactionManager.FindByIdAsync(id);
 
         if (interaction == null)
-
         {
-
             return NotFound();
-
         }
 
         var prompts = await _promptStore.GetPromptsAsync(id);
 
-        var dataSourceMetadata = interaction.TryGet<DataSourceMetadata>(out var dsm) ? dsm : null;
+        var dataSourceMetadata = interaction.As<DataSourceMetadata>();
+        var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+        var promptMetadata = interaction.As<PromptTemplateMetadata>();
 
         var model = new ChatInteractionChatViewModel
         {
@@ -225,16 +203,28 @@ public sealed class ChatInteractionController : Controller
             PastMessagesCount = interaction.PastMessagesCount,
             DocumentTopN = interaction.DocumentTopN,
             Documents = interaction.Documents ?? [],
-            DataSourceId = dataSourceMetadata?.DataSourceId,
+            DataSourceId = string.IsNullOrWhiteSpace(dataSourceMetadata.DataSourceId) ? null : dataSourceMetadata.DataSourceId,
+            DataSourceStrictness = ragMetadata.Strictness,
+            DataSourceTopNDocuments = ragMetadata.TopNDocuments,
+            DataSourceIsInScope = ragMetadata.IsInScope,
+            DataSourceFilter = ragMetadata.Filter,
             SelectedA2AConnectionIds = interaction.A2AConnectionIds?.ToArray() ?? [],
             SelectedMcpConnectionIds = interaction.McpConnectionIds?.ToArray() ?? [],
             SelectedToolNames = interaction.ToolNames?.ToArray() ?? [],
             SelectedAgentNames = interaction.AgentNames?.ToArray() ?? [],
+            PromptTemplates = (promptMetadata.Templates ?? [])
+                .Where(template => !string.IsNullOrWhiteSpace(template.TemplateId))
+                .Select(template => new PromptTemplateSelectionItem
+                {
+                    TemplateId = template.TemplateId,
+                    PromptParameters = template.Parameters is { Count: > 0 }
+                        ? System.Text.Json.JsonSerializer.Serialize(template.Parameters)
+                        : null,
+                })
+                .ToList(),
             ExistingMessages = prompts
                 .Where(p => p.Role.Value is "user" or "assistant")
-
                 .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId })
-
                 .ToArray(),
         };
 
@@ -274,16 +264,13 @@ public sealed class ChatInteractionController : Controller
             .Select(d => new SelectListItem(
                 string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
         ? d.Name
-
         : $"{d.Name} ({d.ModelName})",
         d.Name))
             .ToList();
 
         // Orchestrators
-
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = [new SelectListItem("— Default orchestrator —", "")];
-        model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+        model.Orchestrators = orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)).ToList();
 
         // Copilot
 
@@ -394,7 +381,7 @@ public sealed class ChatInteractionController : Controller
         model.DataSources = dataSources
             .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
 
-            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
+            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId, string.Equals(ds.ItemId, model.DataSourceId, StringComparison.Ordinal)))
             .ToList();
     }
 
@@ -414,8 +401,9 @@ public sealed class ChatInteractionController : Controller
         // Orchestrators
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = [new SelectListItem("— Default orchestrator —", "")];
-        model.Orchestrators.AddRange(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)));
+        model.Orchestrators = new[] { new SelectListItem("— Default orchestrator —", "") }
+            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+            .ToList();
 
         // Copilot
 
@@ -526,8 +514,94 @@ public sealed class ChatInteractionController : Controller
         model.DataSources = dataSources
             .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
 
-            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
+            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId, string.Equals(ds.ItemId, model.DataSourceId, StringComparison.Ordinal)))
             .ToList();
+    }
+
+    private async Task ApplyMetadataAsync(ChatInteraction interaction, ChatInteractionViewModel model)
+    {
+        var dataSourceId = await ResolveDataSourceIdAsync(model.DataSourceId);
+
+        interaction.Alter<DataSourceMetadata>(metadata =>
+        {
+            metadata.DataSourceId = dataSourceId;
+        });
+
+        interaction.Alter<AIDataSourceRagMetadata>(metadata =>
+        {
+            metadata.Strictness = model.DataSourceStrictness;
+            metadata.TopNDocuments = model.DataSourceTopNDocuments;
+            metadata.IsInScope = model.DataSourceIsInScope;
+            metadata.Filter = string.IsNullOrWhiteSpace(model.DataSourceFilter) ? null : model.DataSourceFilter;
+        });
+
+        interaction.Alter<PromptTemplateMetadata>(metadata =>
+        {
+            metadata.SetSelections(BuildPromptTemplateSelections(model.PromptTemplates));
+        });
+
+        if (string.Equals(model.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        {
+            interaction.Alter<CopilotSessionMetadata>(metadata =>
+            {
+                metadata.CopilotModel = model.CopilotModel;
+                metadata.IsAllowAll = model.CopilotIsAllowAll;
+            });
+        }
+        else
+        {
+            interaction.Remove<CopilotSessionMetadata>();
+        }
+    }
+
+    private async Task<string> ResolveDataSourceIdAsync(string dataSourceId)
+    {
+        if (string.IsNullOrWhiteSpace(dataSourceId))
+        {
+            return null;
+        }
+
+        var dataSource = await _dataSourceCatalog.FindByIdAsync(dataSourceId);
+        return dataSource?.ItemId;
+    }
+
+    private static List<PromptTemplateSelectionEntry> BuildPromptTemplateSelections(IEnumerable<PromptTemplateSelectionItem> promptTemplates)
+    {
+        return (promptTemplates ?? [])
+            .Where(template => !string.IsNullOrWhiteSpace(template.TemplateId))
+            .Select(template => new PromptTemplateSelectionEntry
+            {
+                TemplateId = template.TemplateId,
+                Parameters = ParsePromptParameters(template.PromptParameters),
+            })
+            .ToList();
+    }
+
+    private static Dictionary<string, object> ParsePromptParameters(string promptParameters)
+    {
+        if (string.IsNullOrWhiteSpace(promptParameters))
+        {
+            return null;
+        }
+
+        using var document = System.Text.Json.JsonDocument.Parse(promptParameters);
+
+        if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var parameters = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                parameters[property.Name] = property.Value.GetString();
+            }
+        }
+
+        return parameters.Count > 0 ? parameters : null;
     }
 
     private async Task<List<string>> GetValidA2AConnectionIdsAsync(IEnumerable<string> selectedIds)

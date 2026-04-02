@@ -1,12 +1,12 @@
 using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.Models;
-using CrestApps.Mvc.Web.Indexes;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.ChatInteractions.Services;
 
 public sealed class YesSqlChatInteractionPromptStore : IChatInteractionPromptStore
 {

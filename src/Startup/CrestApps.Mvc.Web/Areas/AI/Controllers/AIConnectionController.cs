@@ -1,6 +1,6 @@
 using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
-using CrestApps.Mvc.Web.Services;
+using CrestApps.Mvc.Web.Areas.AI.Services;
+using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

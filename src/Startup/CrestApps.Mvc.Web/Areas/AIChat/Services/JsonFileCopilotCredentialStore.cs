@@ -1,7 +1,7 @@
 using System.Text.Json;
 using CrestApps.AI.Copilot;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 internal sealed class JsonFileCopilotCredentialStore : ICopilotCredentialStore
 {

@@ -1,10 +1,9 @@
-using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.AI.Chat.Services;
+namespace CrestApps.AI.Chat.Services;
 
 /// <summary>
 /// Handles the "cancel-transfer" notification action.
@@ -13,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Services;
 /// which causes subsequent prompts to be routed to the default AI handler.
 /// Also removes the transfer notification from the UI.
 /// </summary>
-internal sealed class CancelTransferNotificationActionHandler : IChatNotificationActionHandler
+public sealed class CancelTransferNotificationActionHandler : IChatNotificationActionHandler
 {
     public async Task HandleAsync(ChatNotificationActionContext context, CancellationToken cancellationToken)
     {

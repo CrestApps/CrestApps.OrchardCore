@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using CrestApps.AI.A2A.Models;
 
-namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
+namespace CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 
 public sealed class A2AConnectionViewModel
 {

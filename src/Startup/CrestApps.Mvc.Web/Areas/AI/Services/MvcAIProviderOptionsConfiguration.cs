@@ -1,7 +1,8 @@
 using CrestApps.AI.Models;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.Mvc.Web.Services;
+namespace CrestApps.Mvc.Web.Areas.AI.Services;
+
 
 /// <summary>
 /// Projects MVC-managed AI provider connections into <see cref="AIProviderOptions"/>
