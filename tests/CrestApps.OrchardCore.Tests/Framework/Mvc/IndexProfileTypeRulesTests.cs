@@ -86,6 +86,28 @@ public sealed class IndexProfileTypeRulesTests
     }
 
     [Fact]
+    public async Task Delete_ShouldDeleteLocalProfileWhenRemoteIndexNameCannotBeResolved()
+    {
+        var profile = new SearchIndexProfile
+        {
+            ItemId = "1",
+            ProviderName = Elasticsearch.ServiceCollectionExtensions.ProviderName,
+            IndexName = null,
+            IndexFullName = null,
+            Type = IndexProfileTypes.Articles,
+        };
+
+        var remoteManager = new TestRemoteSearchIndexManager();
+        var profileManager = new TestSearchIndexProfileManager(profile);
+        var controller = CreateController(profileManager, remoteManager);
+
+        await controller.Delete(profile.ItemId);
+
+        Assert.Null(remoteManager.DeletedIndexName);
+        Assert.True(profileManager.DeleteCalled);
+    }
+
+    [Fact]
     public async Task Delete_ShouldKeepLocalProfileWhenRemoteDeleteFailsAndIndexExists()
     {
         var profile = new SearchIndexProfile
@@ -169,10 +191,12 @@ public sealed class IndexProfileTypeRulesTests
 
         public Exception DeleteException { get; set; }
 
+        public string ComposedIndexName { get; set; }
+
         public string DeletedIndexName { get; private set; }
 
         public string ComposeIndexFullName(IIndexProfileInfo profile)
-            => profile.IndexName;
+            => ComposedIndexName ?? profile.IndexName;
 
         public Task<bool> ExistsAsync(IIndexProfileInfo profile, CancellationToken cancellationToken = default)
             => Task.FromResult(ExistsResult);

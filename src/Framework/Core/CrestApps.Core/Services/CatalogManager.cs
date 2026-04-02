@@ -45,6 +45,7 @@ public class CatalogManager<T> : ICatalogManager<T>
         }
 
         var removed = await Catalog.DeleteAsync(entry);
+        await Catalog.SaveChangesAsync();
 
         await DeletedAsync(entry);
 

@@ -160,6 +160,7 @@ public sealed class ChatInteractionController : Controller
             {
 
                 interaction.Put(new DataSourceMetadata { DataSourceId = dataSource.ItemId });
+                interaction.Put(new AIDataSourceRagMetadata { IsInScope = true });
             }
         }
 

@@ -49,7 +49,10 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
 
         var indexFullName = profile.IndexFullName ?? ComposeIndexFullName(profile);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(indexFullName);
+        if (string.IsNullOrEmpty(indexFullName))
+        {
+            return false;
+        }
 
         try
         {
@@ -59,6 +62,8 @@ internal sealed class AzureAISearchIndexManager : ISearchIndexManager
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
+            _logger.LogError(ex, "Error checking existence of Azure AI Search index '{IndexName}'.", indexFullName);
+
             return false;
         }
         catch (Exception ex)

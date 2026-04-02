@@ -2,7 +2,6 @@ using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
-using CrestApps.Mvc.Web.Models;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -213,34 +212,50 @@ public sealed class IndexProfileController : Controller
     {
         var profile = await _indexProfileManager.FindByIdAsync(id);
 
-        if (profile != null)
+        if (profile == null)
         {
-            var indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(profile.ProviderName);
-            if (indexManager != null)
-            {
-                var remoteIndexExists = await indexManager.ExistsAsync(profile, HttpContext.RequestAborted);
-                if (remoteIndexExists)
-                {
-                    try
-                    {
-                        await indexManager.DeleteAsync(profile, HttpContext.RequestAborted);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to delete remote index '{IndexName}' for provider '{ProviderName}'. The local index profile was not removed.", profile.IndexFullName, profile.ProviderName);
-                        TempData["ErrorMessage"] = $"Unable to delete the remote index '{profile.IndexFullName}'. The index profile was not removed.";
-
-                        return RedirectToAction(nameof(Index));
-                    }
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Skipping remote delete for index profile '{IndexProfileId}' because provider '{ProviderName}' is not configured.", profile.ItemId, profile.ProviderName);
-            }
-
-            await _indexProfileManager.DeleteAsync(profile);
+            return NotFound();
         }
+
+        var indexManager = _serviceProvider.GetKeyedService<ISearchIndexManager>(profile.ProviderName ?? string.Empty);
+
+        if (indexManager == null)
+        {
+            _logger.LogWarning("Skipping remote delete for index profile '{IndexProfileId}' because provider '{ProviderName}' is not registered.", profile.ItemId, profile.ProviderName);
+            await _indexProfileManager.DeleteAsync(profile);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        profile.IndexFullName ??= indexManager.ComposeIndexFullName(profile);
+
+        bool remoteIndexExists;
+        try
+        {
+            remoteIndexExists = await indexManager.ExistsAsync(profile, HttpContext.RequestAborted);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Skipping remote delete for index profile '{IndexProfileId}' because the resolved remote index name '{IndexName}' is invalid.", profile.ItemId, profile.IndexFullName);
+            remoteIndexExists = false;
+        }
+
+        if (remoteIndexExists)
+        {
+            try
+            {
+                await indexManager.DeleteAsync(profile, HttpContext.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete remote index '{IndexName}' for provider '{ProviderName}'. The local index profile was not removed.", profile.IndexFullName, profile.ProviderName);
+                TempData["ErrorMessage"] = $"Unable to delete the remote index '{profile.IndexFullName}'. The index profile was not removed.";
+
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        await _indexProfileManager.DeleteAsync(profile);
 
         return RedirectToAction(nameof(Index));
     }
@@ -307,11 +322,9 @@ public sealed class IndexProfileController : Controller
 
         var deployments = await _deploymentCatalog.GetAllAsync();
 
-        model.EmbeddingDeployments = [new SelectListItem("— None —", "")];
-        model.EmbeddingDeployments.AddRange(
-            deployments
+        model.EmbeddingDeployments = deployments
             .Where(d => d.Type == AIDeploymentType.Embedding)
-                .Select(d => new SelectListItem(d.Name, d.ItemId)));
+                .Select(d => new SelectListItem(d.Name, d.ItemId));
     }
 
 }

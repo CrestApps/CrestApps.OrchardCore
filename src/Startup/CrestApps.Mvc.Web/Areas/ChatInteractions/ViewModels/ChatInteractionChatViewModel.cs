@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 
-public sealed class ChatInteractionChatViewModel
+internal sealed class ChatInteractionChatViewModel
 {
     public string ItemId { get; set; }
 

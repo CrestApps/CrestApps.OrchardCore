@@ -1,3 +1,5 @@
+using CrestApps.AI;
+using CrestApps.AI.Indexing;
 using CrestApps.Elasticsearch.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
@@ -91,4 +93,44 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddElasticsearchDataSource(
+        this IServiceCollection services,
+        string type,
+        Action<IndexProfileSourceDescriptor> configure = null)
+    {
+        services.AddDefaultIndexProfileHandler();
+        services.Configure<IndexProfileSourceOptions>(options =>
+            options.AddOrUpdate(ProviderName, "Elasticsearch", type, configure));
+
+        return services;
+    }
+
+    public static IServiceCollection AddElasticsearchAIDocumentSource(this IServiceCollection services)
+        => services
+            .AddElasticsearchDataSource(IndexProfileTypes.AIDocuments, descriptor =>
+            {
+                descriptor.DisplayName = "AI Documents";
+                descriptor.Description = "Create an Elasticsearch index for uploaded and embedded AI document chunks.";
+            })
+            .AddAIDocumentIndexProfileHandler();
+
+    public static IServiceCollection AddElasticsearchAIDataSource(this IServiceCollection services)
+        => services
+            .AddElasticsearchDataSource(IndexProfileTypes.DataSource, descriptor =>
+            {
+                descriptor.DisplayName = "Data Source";
+                descriptor.Description = "Create an Elasticsearch index for AI knowledge base data source documents.";
+            })
+            .AddDataSourceRagServices()
+            .AddDataSourceIndexProfileHandler();
+
+    public static IServiceCollection AddElasticsearchAIMemorySource(this IServiceCollection services)
+        => services
+            .AddElasticsearchDataSource(IndexProfileTypes.AIMemory, descriptor =>
+            {
+                descriptor.DisplayName = "AI Memory";
+                descriptor.Description = "Create an Elasticsearch index for user and system memory records.";
+            })
+            .AddAIMemoryIndexProfileHandler();
 }

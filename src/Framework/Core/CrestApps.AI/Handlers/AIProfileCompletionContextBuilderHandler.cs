@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 using CrestApps.Templates.Services;
@@ -43,6 +44,22 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
         {
             context.Context.ToolNames = functionInvocationMetadata.Names;
         }
+
+        if (context.Context.ToolNames is not { Length: > 0 } &&
+            profile.Settings.TryGetPropertyValue("AIProfileFunctionInvocationMetadata", out var legacyNode))
+        {
+            var legacyMetadata = legacyNode.Deserialize<FunctionInvocationMetadata>();
+
+            if (legacyMetadata?.Names is { Length: > 0 })
+            {
+                context.Context.ToolNames = legacyMetadata.Names;
+            }
+        }
+
+        if (profile.TryGetSettings<AgentInvocationMetadata>(out var agentInvocationMetadata))
+        {
+            context.Context.AgentNames = agentInvocationMetadata.Names;
+        }
     }
 
     public Task BuiltAsync(AICompletionContextBuiltContext context)
@@ -63,6 +80,11 @@ internal sealed class AIProfileCompletionContextBuilderHandler : IAICompletionCo
                 foreach (var template in validTemplates)
                 {
                     rendered.Add(await _aiTemplateService.RenderAsync(template.TemplateId, template.Parameters));
+                }
+
+                if (!string.IsNullOrWhiteSpace(metadata.SystemMessage))
+                {
+                    rendered.Add(metadata.SystemMessage);
                 }
 
                 return string.Join("\n\n", rendered);

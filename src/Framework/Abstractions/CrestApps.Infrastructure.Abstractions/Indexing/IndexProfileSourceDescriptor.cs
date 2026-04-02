@@ -1,4 +1,4 @@
-namespace CrestApps.Mvc.Web.Models;
+namespace CrestApps.Infrastructure.Indexing;
 
 public sealed class IndexProfileSourceDescriptor
 {

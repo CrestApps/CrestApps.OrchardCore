@@ -41,9 +41,7 @@ using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-
 using OrchardCore.Recipes;
-
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -81,12 +79,9 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
-            .AddScoped<IAICompletionContextBuilderHandler, AIProfileCompletionContextBuilderHandler>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
-
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddScoped(sp =>
-
             {
                 var defaultOptions = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>().Value;
                 var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
@@ -105,7 +100,6 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
-
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
             .AddNavigationProvider<AIDeploymentAdminMenu>()
             .AddDataMigration<AIDeploymentTypeMigrations>()
@@ -114,11 +108,9 @@ public sealed class Startup : StartupBase
 
         // Add tools core functionality.
         services
-
             .AddDisplayDriver<AIProfile, AIProfileToolsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileAgentsDisplayDriver>()
-            .AddScoped<CrestApps.AI.Tooling.IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
-
+            .AddScoped<IAIToolAccessEvaluator, OrchardCoreAIToolAccessEvaluator>()
             .AddScoped<IAICompletionServiceHandler, FunctionInvocationAICompletionServiceHandler>()
             .AddPermissionProvider<AIToolPermissionProvider>();
 
@@ -149,7 +141,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, SystemPromptTemplateDisplayDriver>()
-
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAgentsDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
@@ -166,7 +157,6 @@ public sealed class Startup : StartupBase
 
             .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
             {
-
                 entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
                 entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
             });

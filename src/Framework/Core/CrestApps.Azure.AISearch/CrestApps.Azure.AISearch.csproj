@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../CrestApps.AI/CrestApps.AI.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.Infrastructure.Abstractions/CrestApps.Infrastructure.Abstractions.csproj" />
     <ProjectReference Include="../CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
   </ItemGroup>

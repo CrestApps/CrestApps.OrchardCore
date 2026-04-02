@@ -134,6 +134,27 @@ public sealed class CatalogManagerTests
     }
 
     [Fact]
+    public async Task DeleteAsync_SavesCatalogChanges()
+    {
+        var entry = new TestCatalogEntry { ItemId = "1" };
+        var catalogMock = new Mock<ICatalog<TestCatalogEntry>>();
+        catalogMock
+            .Setup(catalog => catalog.DeleteAsync(entry))
+            .ReturnsAsync(true);
+        catalogMock
+            .Setup(catalog => catalog.SaveChangesAsync())
+            .Returns(ValueTask.CompletedTask);
+
+        var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
+        var manager = new CatalogManager<TestCatalogEntry>(catalogMock.Object, [], logger);
+
+        await manager.DeleteAsync(entry);
+
+        catalogMock.Verify(catalog => catalog.DeleteAsync(entry), Times.Once);
+        catalogMock.Verify(catalog => catalog.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_InvokesHandlersInOrder()
     {
         var entry = new TestCatalogEntry { ItemId = "new" };

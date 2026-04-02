@@ -3,6 +3,7 @@ using CrestApps.AI.Clients;
 using CrestApps.AI.Completions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.ResponseHandling;
@@ -191,6 +192,13 @@ public static class ServiceCollectionExtensions
         {
             o.AddTemplateSource(sourceName, configure);
         });
+
+        return services;
+    }
+
+    public static IServiceCollection AddDataSourceRagServices(this IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>());
 
         return services;
     }

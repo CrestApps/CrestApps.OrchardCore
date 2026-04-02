@@ -4,9 +4,11 @@ using CrestApps.AI.A2A;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
 using CrestApps.AI.DataSources;
+using CrestApps.AI.Handlers;
 using CrestApps.AI.Indexing;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
@@ -39,6 +41,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using NLog.Web;
@@ -213,8 +216,7 @@ builder.Services
 // Register the MVC-managed index profile types that can be provisioned in Elasticsearch.
 .AddElasticsearchAIDocumentSource()
 .AddElasticsearchAIDataSource()
-.AddElasticsearchAIMemorySource()
-.AddElasticsearchArticleSource();
+.AddElasticsearchAIMemorySource();
 
 // =============================================================================
 // 8. AZURE AI SEARCH SERVICES
@@ -229,8 +231,21 @@ builder.Services
 // Register the MVC-managed index profile types that can be provisioned in Azure AI Search.
 .AddAzureAISearchAIDocumentSource()
 .AddAzureAISearchAIDataSource()
-.AddAzureAISearchAIMemorySource()
-.AddAzureAISearchArticleSource();
+.AddAzureAISearchAIMemorySource();
+
+builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IIndexProfileHandler, ArticleIndexProfileHandler>());
+builder.Services.Configure<IndexProfileSourceOptions>(options =>
+    options.AddOrUpdate(CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName, "Elasticsearch", IndexProfileTypes.Articles, descriptor =>
+    {
+        descriptor.DisplayName = "Articles";
+        descriptor.Description = "Create an Elasticsearch index for sample article records managed in the MVC app.";
+    }));
+builder.Services.Configure<IndexProfileSourceOptions>(options =>
+    options.AddOrUpdate(CrestApps.Azure.AISearch.ServiceCollectionExtensions.ProviderName, "Azure AI Search", IndexProfileTypes.Articles, descriptor =>
+    {
+        descriptor.DisplayName = "Articles";
+        descriptor.Description = "Create an Azure AI Search index for sample article records managed in the MVC app.";
+    }));
 
 // =============================================================================
 // 9. MCP — MODEL CONTEXT PROTOCOL

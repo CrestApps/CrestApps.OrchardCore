@@ -101,6 +101,8 @@ builder.Services
     .AddCrestAppsSignalR();
 ```
 
+`AddChatInteractionHandlers()` now registers the shared `DataSourceChatInteractionSettingsHandler`, so Chat Interactions persist the selected data source and RAG metadata through the framework settings pipeline instead of MVC-only wiring. The provider service blocks also pull in `AddDataSourceRagServices()`, which registers `DataSourcePreemptiveRagHandler` at the framework level so preemptive RAG stays aligned with the saved chat settings.
+
 ### Section 6 — AI Providers
 
 Registers all supported AI providers:
@@ -136,7 +138,7 @@ builder.Services
 
 ```
 
-When users create MVC index profiles, `AI Documents`, `AI Memory`, and `Data Source` profiles must select an embedding deployment, while `Articles` hides that selector entirely. That validation now runs through source-specific `IIndexProfileHandler` implementations registered by extensions such as `AddElasticsearchAIDocumentSource()` and `AddAzureAISearchAIMemorySource()`, so each source owns its own embedding requirements and field schema.
+When users create MVC index profiles, `AI Documents`, `AI Memory`, and `Data Source` profiles must select an embedding deployment, while `Articles` hides that selector entirely. That validation now runs through source-specific `IIndexProfileHandler` implementations registered by provider-owned extensions such as `AddElasticsearchAIDocumentSource()` and `AddAzureAISearchAIMemorySource()`, so each provider/type pair owns its own embedding requirements and field schema.
 
 The MVC sample provisions the remote index during profile creation by resolving the keyed `ISearchIndexManager` for the selected provider, composing `IndexFullName` from the provider's configured `IndexPrefix` plus the user-entered index name, rejecting the create when that remote index already exists, and only persisting the local profile after the remote index is created successfully.
 
@@ -161,7 +163,9 @@ builder.Services
 
 Deleting an MVC index profile now also deletes the remote Elasticsearch or Azure AI Search index through the keyed `ISearchIndexManager` registered for that provider, preventing orphaned indexes from lingering after the profile is removed. The same handler pipeline is reused for synchronization and type-specific validation so the controller stays focused on the Orchard-style CRUD flow.
 
-If an administrator already deleted the remote index directly in Elasticsearch or Azure AI Search, the MVC app now still allows deleting the local index profile. The delete flow only blocks local removal when the remote index still exists and the provider fails to delete it.
+If an administrator already deleted the remote index directly in Elasticsearch or Azure AI Search, the MVC app now still allows deleting the local index profile. The same local delete is also allowed when the stored profile no longer has a resolvable remote index name or the original provider registration is no longer available. The delete flow only blocks local removal when the remote index still exists and the provider fails to delete it.
+
+`Articles` remains the only MVC-specific source registration. The sample app adds that descriptor directly in `Program.cs` and pairs it with `ArticleIndexProfileHandler`, because the article catalog and indexing logic belong only to the MVC sample rather than the reusable provider packages.
 
 ### Section 9 — Model Context Protocol (MCP)
 

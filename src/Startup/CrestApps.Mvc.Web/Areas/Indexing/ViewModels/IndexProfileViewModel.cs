@@ -1,5 +1,5 @@
+using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
-using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -21,11 +21,14 @@ public sealed class IndexProfileViewModel
 
     public string EmbeddingDeploymentId { get; set; }
 
-    public List<SelectListItem> Providers { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> Providers { get; set; } = [];
 
-    public List<SelectListItem> Types { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> Types { get; set; } = [];
 
-    public List<SelectListItem> EmbeddingDeployments { get; set; } = [];
+    [BindNever]
+    public IEnumerable<SelectListItem> EmbeddingDeployments { get; set; } = [];
 
     [BindNever]
     public IReadOnlyList<IndexProfileSourceDescriptor> Sources { get; set; } = [];

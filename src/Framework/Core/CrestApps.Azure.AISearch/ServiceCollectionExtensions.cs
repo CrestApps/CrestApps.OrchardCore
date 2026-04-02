@@ -1,3 +1,5 @@
+using CrestApps.AI;
+using CrestApps.AI.Indexing;
 using Azure;
 using Azure.Identity;
 using Azure.Search.Documents.Indexes;
@@ -90,4 +92,44 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddAzureAISearchDataSource(
+        this IServiceCollection services,
+        string type,
+        Action<IndexProfileSourceDescriptor> configure = null)
+    {
+        services.AddDefaultIndexProfileHandler();
+        services.Configure<IndexProfileSourceOptions>(options =>
+            options.AddOrUpdate(ProviderName, "Azure AI Search", type, configure));
+
+        return services;
+    }
+
+    public static IServiceCollection AddAzureAISearchAIDocumentSource(this IServiceCollection services)
+        => services
+            .AddAzureAISearchDataSource(IndexProfileTypes.AIDocuments, descriptor =>
+            {
+                descriptor.DisplayName = "AI Documents";
+                descriptor.Description = "Create an Azure AI Search index for uploaded and embedded AI document chunks.";
+            })
+            .AddAIDocumentIndexProfileHandler();
+
+    public static IServiceCollection AddAzureAISearchAIDataSource(this IServiceCollection services)
+        => services
+            .AddAzureAISearchDataSource(IndexProfileTypes.DataSource, descriptor =>
+            {
+                descriptor.DisplayName = "Data Source";
+                descriptor.Description = "Create an Azure AI Search index for AI knowledge base data source documents.";
+            })
+            .AddDataSourceRagServices()
+            .AddDataSourceIndexProfileHandler();
+
+    public static IServiceCollection AddAzureAISearchAIMemorySource(this IServiceCollection services)
+        => services
+            .AddAzureAISearchDataSource(IndexProfileTypes.AIMemory, descriptor =>
+            {
+                descriptor.DisplayName = "AI Memory";
+                descriptor.Description = "Create an Azure AI Search index for user and system memory records.";
+            })
+            .AddAIMemoryIndexProfileHandler();
 }
