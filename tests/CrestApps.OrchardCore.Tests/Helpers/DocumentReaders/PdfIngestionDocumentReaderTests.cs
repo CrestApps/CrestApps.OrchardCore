@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Documents.Pdf;
+using CrestApps.AI.Chat.Services;
 using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.Tests.Helpers.DocumentReaders;
@@ -53,7 +53,7 @@ public sealed class PdfIngestionDocumentReaderTests
         using var stream = new MemoryStream();
 
         await Assert.ThrowsAsync<NotSupportedException>(() =>
-            _reader.ReadAsync(stream, "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", TestContext.Current.CancellationToken));
+        _reader.ReadAsync(stream, "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -90,6 +90,7 @@ public sealed class PdfIngestionDocumentReaderTests
         page.AddText(text, 12, new UglyToad.PdfPig.Core.PdfPoint(72, 720), font);
 
         var bytes = builder.Build();
+
         return new MemoryStream(bytes);
     }
 
@@ -105,6 +106,7 @@ public sealed class PdfIngestionDocumentReaderTests
         }
 
         var bytes = builder.Build();
+
         return new MemoryStream(bytes);
     }
 
@@ -114,6 +116,7 @@ public sealed class PdfIngestionDocumentReaderTests
         builder.AddPage(595, 842); // Add empty page.
 
         var bytes = builder.Build();
+
         return new MemoryStream(bytes);
     }
 

@@ -28,6 +28,8 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
 - **Index & Migrations**: Shared `AIDocumentIndex` with `ReferenceId` and `ReferenceType` columns for multi-purpose document storage
 
+The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core.
+
 ### Sub-Features
 
 | Feature | ID | Description |
@@ -79,6 +81,8 @@ The orchestrator supports various document-related operations:
 4. **Enable the feature**: Enable `AI Chat Interaction Documents` in the admin dashboard.
 5. Start using the Documents tab in your chat interactions.
 
+If no **AI Documents** index has been configured yet, the UI should warn you before uploads are treated as searchable knowledge. Uploads can still be stored, but vector retrieval does not become active until a compatible AI Documents index is selected.
+
 ## AI Documents for Profiles
 
 | | |
@@ -126,7 +130,7 @@ Tabular file types (`.csv`, `.tsv`, `.xlsx`, `.xls`) are registered as non-embed
 
 Documents are managed directly through the AI Profile editor form. When you save a profile:
 
-1. **New files** selected in the Documents tab are uploaded, text-extracted, chunked, embedded, and stored
+1. **New files** selected in the Knowledge tab are uploaded, text-extracted, chunked, embedded, and stored
 2. **Removed documents** marked for deletion are removed from the store
 3. All changes are applied atomically when the profile is saved
 
@@ -136,8 +140,10 @@ There are no separate API endpoints for profile document management — everythi
 
 1. Enable the `AI Documents for Profiles` feature in the Orchard Core admin dashboard.
 2. Navigate to **Artificial Intelligence > AI Profiles** and edit a profile.
-3. Use the **Documents** tab to upload text-based documents.
+3. Use the **Knowledge** tab to upload text-based documents.
 4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
+
+For MVC hosts that use the shared framework services, configure the default AI Documents index first so uploaded profile documents are embedded into the expected search backend instead of remaining as unindexed attachments only.
 
 ## AI Documents for Chat Sessions
 
@@ -234,6 +240,8 @@ This ensures the AI document indexes stay free of orphaned entries when their pa
 If you see this warning, navigate to **Settings > Artificial Intelligence** and select an index profile.
 If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
 Leaving the setting empty is supported while you are configuring other AI features, but document retrieval remains unavailable until a valid index profile is selected.
+
+In `CrestApps.Mvc.Web`, the same requirement applies: upload storage alone does not make a document searchable. The MVC admin **AI Settings** page now lets you select the default **AI Documents** index profile and the default document `Top N` retrieval value. Until that setting is configured, the profile editor shows a warning so users know document uploads will not influence AI answers yet.
 
 ### "Embedding Search Service Not Available" Warning
 

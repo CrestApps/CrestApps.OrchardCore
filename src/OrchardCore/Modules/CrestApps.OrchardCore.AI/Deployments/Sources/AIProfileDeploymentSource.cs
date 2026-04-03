@@ -1,0 +1,66 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using CrestApps.AI.Profiles;
+using CrestApps.OrchardCore.AI.Deployments.Steps;
+using OrchardCore.Deployment;
+
+namespace CrestApps.OrchardCore.AI.Deployments.Sources;
+
+internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfileDeploymentStep>
+{
+    private readonly IAIProfileStore _profileStore;
+
+    public AIProfileDeploymentSource(IAIProfileStore profileStore)
+    {
+        _profileStore = profileStore;
+    }
+
+    protected override async Task ProcessAsync(AIProfileDeploymentStep step, DeploymentPlanResult result)
+    {
+        var profiles = await _profileStore.GetAllAsync();
+
+        var profilesData = new JsonArray();
+
+        var profileNames = step.IncludeAll
+        ? []
+        : step.ProfileNames ?? [];
+
+        foreach (var profile in profiles)
+        {
+            if (profileNames.Length > 0 && !profileNames.Contains(profile.Name))
+            {
+                continue;
+            }
+
+            var profileInfo = new JsonObject()
+            {
+                { "ItemId" , profile.ItemId },
+                { "Name", profile.Name },
+                { "DisplayText", profile.DisplayText },
+                { "WelcomeMessage", profile.WelcomeMessage },
+                { "Type", profile.Type.ToString() },
+                { "PromptTemplate", profile.PromptTemplate },
+                { "ChatDeploymentName", profile.ChatDeploymentName },
+                { "UtilityDeploymentName", profile.UtilityDeploymentName },
+                { "CreatedUtc", profile.CreatedUtc },
+                { "OwnerId", profile.OwnerId },
+                { "Author", profile.Author },
+                { "Settings", JsonSerializer.SerializeToNode(profile.Settings) },
+                { "Properties", JsonSerializer.SerializeToNode(profile.Properties) },
+            };
+
+            if (profile.TitleType.HasValue)
+            {
+                profileInfo.Add("TitleType", profile.TitleType.Value.ToString());
+            }
+
+            profilesData.Add(profileInfo);
+        }
+
+        result.Steps.Add(new JsonObject
+        {
+            ["name"] = step.Name,
+            ["profiles"] = profilesData,
+        });
+    }
+}

@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Chat.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
@@ -16,6 +16,7 @@ public sealed class DefaultChatNotificationSenderTests
     public async Task SendAsync_AIChatSession_DelegatesToTransport()
     {
         var notification = new ChatNotification("info") { Content = "Hello" };
+
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.SendNotificationAsync("s1", notification))
@@ -33,6 +34,7 @@ public sealed class DefaultChatNotificationSenderTests
     public async Task SendAsync_ChatInteraction_DelegatesToTransport()
     {
         var notification = new ChatNotification("info") { Content = "Hello" };
+
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.SendNotificationAsync("i1", notification))
@@ -72,6 +74,7 @@ public sealed class DefaultChatNotificationSenderTests
     public async Task UpdateAsync_AIChatSession_DelegatesToTransport()
     {
         var notification = new ChatNotification("info") { Content = "Updated" };
+
         var transportMock = new Mock<IChatNotificationTransport>();
         transportMock
             .Setup(t => t.UpdateNotificationAsync("s1", notification))

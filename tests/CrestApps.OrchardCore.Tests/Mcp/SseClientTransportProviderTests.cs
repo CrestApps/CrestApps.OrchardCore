@@ -1,13 +1,11 @@
 using System.Text;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Services;
-using CrestApps.OrchardCore.AI.Mcp.Services;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Mcp.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using Moq;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 
@@ -20,6 +18,7 @@ public sealed class SseClientTransportProviderTests
     {
         // Arrange
         var connection = new McpConnection { Source = McpConstants.TransportTypes.Sse };
+
         var provider = CreateProvider();
 
         // Act & Assert
@@ -31,6 +30,7 @@ public sealed class SseClientTransportProviderTests
     {
         // Arrange
         var connection = new McpConnection { Source = McpConstants.TransportTypes.StdIo };
+
         var provider = CreateProvider();
 
         // Act & Assert
@@ -158,6 +158,7 @@ public sealed class SseClientTransportProviderTests
         // Assert
         Assert.True(headers.ContainsKey("Authorization"));
         Assert.Equal($"Bearer {expectedToken}", headers["Authorization"]);
+
         tokenService.Verify(x => x.AcquireTokenAsync(tokenEndpoint, clientId, clientSecret, scopes, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -194,6 +195,7 @@ public sealed class SseClientTransportProviderTests
         // Assert
         Assert.True(headers.ContainsKey("Authorization"));
         Assert.Equal($"Bearer {expectedToken}", headers["Authorization"]);
+
         tokenService.Verify(x => x.AcquireTokenWithPrivateKeyJwtAsync(tokenEndpoint, clientId, privateKey, keyId, scopes, It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -205,6 +207,7 @@ public sealed class SseClientTransportProviderTests
         var tokenEndpoint = "https://auth.example.com/token";
         var clientId = "my-client-id";
         var rawCertBytes = new byte[] { 1, 2, 3, 4, 5 };
+
         var certBase64 = Convert.ToBase64String(rawCertBytes);
         var certPassword = "cert-password";
         var scopes = "admin";
@@ -227,9 +230,9 @@ public sealed class SseClientTransportProviderTests
                 tokenEndpoint,
                 clientId,
                 It.Is<byte[]>(b => b.SequenceEqual(rawCertBytes)),
-                certPassword,
-                scopes,
-                It.IsAny<CancellationToken>()))
+        certPassword,
+        scopes,
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedToken);
 
         var provider = CreateProvider(tokenService: tokenService.Object);
@@ -253,6 +256,7 @@ public sealed class SseClientTransportProviderTests
             ["X-Custom-Header"] = "custom-value",
             ["Authorization"] = "Bearer custom-token",
         };
+
         connection.Put(metadata);
 
         var provider = CreateProvider();
@@ -263,6 +267,7 @@ public sealed class SseClientTransportProviderTests
         // Assert
         Assert.Equal(2, headers.Count);
         Assert.Equal("custom-value", headers["X-Custom-Header"]);
+
         Assert.Equal("Bearer custom-token", headers["Authorization"]);
     }
 
@@ -343,9 +348,8 @@ public sealed class SseClientTransportProviderTests
         var options = optionsField?.GetValue(transport) as HttpClientTransportOptions;
 
         return options?.AdditionalHeaders as Dictionary<string, string>
-            ?? new Dictionary<string, string>();
+        ?? new Dictionary<string, string>();
     }
-
     /// <summary>
     /// A pass-through data protector that returns values unchanged.
     /// This simulates the behavior of decryption returning the original value.

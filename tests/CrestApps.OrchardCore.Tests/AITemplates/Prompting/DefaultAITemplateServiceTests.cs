@@ -1,7 +1,7 @@
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Providers;
-using CrestApps.AI.Prompting.Rendering;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Providers;
+using CrestApps.Templates.Rendering;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -14,12 +14,12 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider1 = new InMemoryProvider(
         [
-            new AITemplate { Id = "p1", Content = "Prompt one" },
-        ]);
+            new Template { Id = "p1", Content = "Prompt one" },
+            ]);
         var provider2 = new InMemoryProvider(
         [
-            new AITemplate { Id = "p2", Content = "Prompt two" },
-        ]);
+        new Template { Id = "p2", Content = "Prompt two" },
+            ]);
 
         var service = CreateService([provider1, provider2]);
 
@@ -45,8 +45,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "test-prompt", Content = "Hello world" },
-        ]);
+        new Template { Id = "test-prompt", Content = "Hello world" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -61,8 +61,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "Test-Prompt", Content = "Hello" },
-        ]);
+        new Template { Id = "Test-Prompt", Content = "Hello" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -76,8 +76,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "existing", Content = "Hello" },
-        ]);
+        new Template { Id = "existing", Content = "Hello" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -91,8 +91,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "greeting", Content = "Hello, {{ name }}!" },
-        ]);
+        new Template { Id = "greeting", Content = "Hello, {{ name }}!" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -109,8 +109,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "simple", Content = "You are an AI." },
-        ]);
+        new Template { Id = "simple", Content = "You are an AI." },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -132,9 +132,9 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "a", Content = "Part A" },
-            new AITemplate { Id = "b", Content = "Part B" },
-        ]);
+        new Template { Id = "a", Content = "Part A" },
+            new Template { Id = "b", Content = "Part B" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -148,9 +148,9 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "x", Content = "X" },
-            new AITemplate { Id = "y", Content = "Y" },
-        ]);
+        new Template { Id = "x", Content = "X" },
+            new Template { Id = "y", Content = "Y" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -164,8 +164,8 @@ public sealed class DefaultAITemplateServiceTests
     {
         var provider = new InMemoryProvider(
         [
-            new AITemplate { Id = "a", Content = "Part A" },
-        ]);
+        new Template { Id = "a", Content = "Part A" },
+            ]);
 
         var service = CreateService([provider]);
 
@@ -180,26 +180,26 @@ public sealed class DefaultAITemplateServiceTests
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.MergeAsync(["missing1", "missing2"]));
     }
 
-    private static DefaultAITemplateService CreateService(IAITemplateProvider[] providers)
+    private static DefaultTemplateService CreateService(ITemplateProvider[] providers)
     {
         var sp = new ServiceCollection().BuildServiceProvider();
-        var renderer = new FluidAITemplateEngine(
-            sp,
-            NullLogger<FluidAITemplateEngine>.Instance);
+        var renderer = new FluidTemplateEngine(
+        sp,
+        NullLogger<FluidTemplateEngine>.Instance);
 
-        return new DefaultAITemplateService(providers, renderer);
+        return new DefaultTemplateService(providers, renderer);
     }
 
-    private sealed class InMemoryProvider : IAITemplateProvider
+    private sealed class InMemoryProvider : ITemplateProvider
     {
-        private readonly IReadOnlyList<AITemplate> _templates;
+        private readonly IReadOnlyList<Template> _templates;
 
-        public InMemoryProvider(AITemplate[] templates)
+        public InMemoryProvider(Template[] templates)
         {
             _templates = templates;
         }
 
-        public Task<IReadOnlyList<AITemplate>> GetTemplatesAsync()
+        public Task<IReadOnlyList<Template>> GetTemplatesAsync()
         {
             return Task.FromResult(_templates);
         }

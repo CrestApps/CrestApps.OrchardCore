@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Models;
 

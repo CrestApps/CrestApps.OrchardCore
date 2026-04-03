@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.AI.Models
+@using OrchardCore
+
+@model AIProfileChatModeViewModel
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")">
+    <label asp-for="ChatMode" class="@Orchard.GetLabelClasses()">@T["Chat mode"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select" id="chatModeSelector">
+        </select>
+        <span class="hint">@T["Controls how users interact with this chat profile. Audio input adds a microphone for dictation. Conversation enables continuous two-way voice interaction."]</span>
+    </div>
+</div>
+
+<div class="@Orchard.GetWrapperClasses("profile-type profile-type-chat")" id="chatModeVoiceSelector" style="display: none;">
+    <label asp-for="VoiceName" class="@Orchard.GetLabelClasses()">@T["Voice"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="VoiceName" asp-items="Model.AvailableVoices" class="form-select">
+            <option value="">@T["Default voice"]</option>
+        </select>
+        <span class="hint">@T["Select a voice for text-to-speech synthesis. If no voice is selected, the provider's default voice is used."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var chatModeSelect = document.getElementById('chatModeSelector');
+        var voiceSelector = document.getElementById('chatModeVoiceSelector');
+        if (!chatModeSelect || !voiceSelector) return;
+
+        function toggleVoiceSelector() {
+            voiceSelector.style.display = chatModeSelect.value === '@nameof(ChatMode.Conversation)' ? '' : 'none';
+        }
+
+        chatModeSelect.addEventListener('change', toggleVoiceSelector);
+        toggleVoiceSelector();
+    });
+</script>

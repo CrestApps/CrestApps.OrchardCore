@@ -1,4 +1,4 @@
-using CrestApps.AI.Prompting.Rendering;
+using CrestApps.Templates.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -6,14 +6,14 @@ namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 
 public sealed class FluidAITemplateEngineTests
 {
-    private readonly FluidAITemplateEngine _renderer;
+    private readonly FluidTemplateEngine _renderer;
 
     public FluidAITemplateEngineTests()
     {
         var services = new ServiceCollection().BuildServiceProvider();
-        _renderer = new FluidAITemplateEngine(
+        _renderer = new FluidTemplateEngine(
             services,
-            NullLogger<FluidAITemplateEngine>.Instance);
+            NullLogger<FluidTemplateEngine>.Instance);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class FluidAITemplateEngineTests
     {
         var input = "Line 1\n\n\n\n\nLine 2";
 
-        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+        var result = FluidTemplateEngine.NormalizeWhitespace(input);
 
         Assert.Equal("Line 1\n\nLine 2", result);
     }
@@ -169,7 +169,7 @@ public sealed class FluidAITemplateEngineTests
     {
         var input = "  Line 1  \n  Line 2  ";
 
-        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+        var result = FluidTemplateEngine.NormalizeWhitespace(input);
 
         Assert.Equal("Line 1\nLine 2", result);
     }
@@ -179,7 +179,7 @@ public sealed class FluidAITemplateEngineTests
     {
         var input = "\n\n\nContent\n\n\n";
 
-        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+        var result = FluidTemplateEngine.NormalizeWhitespace(input);
 
         Assert.Equal("Content", result);
     }
@@ -189,7 +189,7 @@ public sealed class FluidAITemplateEngineTests
     {
         var input = "Line 1\n\nLine 2";
 
-        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+        var result = FluidTemplateEngine.NormalizeWhitespace(input);
 
         Assert.Equal("Line 1\n\nLine 2", result);
     }
@@ -197,8 +197,8 @@ public sealed class FluidAITemplateEngineTests
     [Fact]
     public void NormalizeWhitespace_EmptyString_ReturnsEmpty()
     {
-        Assert.Equal(string.Empty, FluidAITemplateEngine.NormalizeWhitespace(string.Empty));
-        Assert.Equal(string.Empty, FluidAITemplateEngine.NormalizeWhitespace(null));
+        Assert.Equal(string.Empty, FluidTemplateEngine.NormalizeWhitespace(string.Empty));
+        Assert.Equal(string.Empty, FluidTemplateEngine.NormalizeWhitespace(null));
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class FluidAITemplateEngineTests
     {
         var input = "Items:\n- Item A\n- Item B\n\nNext section";
 
-        var result = FluidAITemplateEngine.NormalizeWhitespace(input);
+        var result = FluidTemplateEngine.NormalizeWhitespace(input);
 
         Assert.Equal("Items:\n- Item A\n- Item B\n\nNext section", result);
     }
@@ -215,14 +215,14 @@ public sealed class FluidAITemplateEngineTests
     public async Task RenderAsync_NormalizesWhitespaceFromLiquidBlocks()
     {
         var template = """
-            {% if true %}
+{% if true %}
 
-            Hello
+Hello
 
-            {% endif %}
+{% endif %}
 
-            World
-            """;
+World
+""";
 
         var result = await _renderer.RenderAsync(template);
 

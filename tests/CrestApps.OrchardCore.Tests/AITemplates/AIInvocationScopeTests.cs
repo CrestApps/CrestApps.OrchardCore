@@ -1,7 +1,8 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
 
 namespace CrestApps.OrchardCore.Tests.AI;
+
 
 /// <summary>
 /// Tests that <see cref="AIInvocationScope"/> provides true per-invocation isolation
@@ -107,12 +108,14 @@ public sealed class AIInvocationScopeTests
             if (current is null)
             {
                 lock (errors) errors.Add($"Invocation {i}: Current was null after await.");
+
                 return;
             }
 
             if (!ReferenceEquals(current, myContext))
             {
                 lock (errors) errors.Add($"Invocation {i}: Current points to a different instance (got DataSourceId={current.DataSourceId}, expected ds-{i}).");
+
                 return;
             }
 
@@ -160,6 +163,7 @@ public sealed class AIInvocationScopeTests
             barrier.SignalAndWait();
 
             // Each invocation increments its own counter 10 times.
+
             for (var j = 0; j < 10; j++)
             {
                 await Task.Yield();
@@ -226,3 +230,4 @@ public sealed class AIInvocationScopeTests
         Assert.False(contextB.Items.ContainsKey("key"));
     }
 }
+

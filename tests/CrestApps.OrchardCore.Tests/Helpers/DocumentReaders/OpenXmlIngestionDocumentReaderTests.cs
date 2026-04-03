@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Documents.OpenXml;
+using CrestApps.AI.Chat.Services;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -74,13 +74,13 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         [
             ["Title", "Question", "Answer"],
             ["Thor Weapon", "What is Thor's weapon?", "Mjolnir"],
-        ]);
+            ]);
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
@@ -93,15 +93,15 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     {
         using var stream = CreateExcelWithInlineStrings(
         [
-            ["Name", "Value"],
+        ["Name", "Value"],
             ["Key1", "Data1"],
-        ]);
+            ]);
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
@@ -114,15 +114,15 @@ public sealed class OpenXmlIngestionDocumentReaderTests
     {
         using var stream = CreateExcelWithNumericValues(
         [
-            [1.0, 2.5, 3.7],
+        [1.0, 2.5, 3.7],
             [10.0, 20.0, 30.0],
-        ]);
+            ]);
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
@@ -136,10 +136,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreateExcelWithBooleans(true, false);
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Single(result.Sections[0].Elements);
@@ -152,10 +152,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreateExcelWithMultipleSheets();
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
 
@@ -169,10 +169,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreateEmptyExcel();
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Sections);
     }
@@ -183,10 +183,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreateExcelWithMixedTypes();
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.True(result.Sections[0].Elements.Count > 0);
@@ -202,10 +202,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreatePowerPoint("Slide 1 Title", "Slide 2 Content");
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.pptx",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Equal(2, result.Sections[0].Elements.Count);
@@ -217,10 +217,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = CreateEmptyPowerPoint();
 
         var result = await _reader.ReadAsync(
-            stream,
-            "test.pptx",
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            TestContext.Current.CancellationToken);
+        stream,
+        "test.pptx",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Sections);
     }
@@ -235,7 +235,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var stream = new MemoryStream();
 
         await Assert.ThrowsAsync<NotSupportedException>(() =>
-            _reader.ReadAsync(stream, "test.txt", "text/plain", TestContext.Current.CancellationToken));
+        _reader.ReadAsync(stream, "test.txt", "text/plain", TestContext.Current.CancellationToken));
     }
 
     #endregion
@@ -249,10 +249,10 @@ public sealed class OpenXmlIngestionDocumentReaderTests
         using var nonSeekable = new NonSeekableStream(seekableStream);
 
         var result = await _reader.ReadAsync(
-            nonSeekable,
-            "test.docx",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            TestContext.Current.CancellationToken);
+        nonSeekable,
+        "test.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result.Sections);
         Assert.Single(result.Sections[0].Elements);
@@ -312,6 +312,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             foreach (var rowData in rows)
             {
                 var row = new Row { RowIndex = rowIndex };
+
                 var colIndex = 0;
 
                 foreach (var cellValue in rowData)
@@ -364,6 +365,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             foreach (var rowData in rows)
             {
                 var row = new Row { RowIndex = rowIndex };
+
                 var colIndex = 0;
 
                 foreach (var cellValue in rowData)
@@ -416,6 +418,7 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             foreach (var rowData in rows)
             {
                 var row = new Row { RowIndex = rowIndex };
+
                 var colIndex = 0;
 
                 foreach (var value in rowData)
@@ -636,26 +639,26 @@ public sealed class OpenXmlIngestionDocumentReaderTests
             {
                 var slidePart = presentationPart.AddNewPart<SlidePart>();
                 slidePart.Slide = new P.Slide(
-                    new P.CommonSlideData(
-                        new P.ShapeTree(
-                            new P.NonVisualGroupShapeProperties(
-                                new P.NonVisualDrawingProperties { Id = 1, Name = "" },
-                                new P.NonVisualGroupShapeDrawingProperties(),
-                                new P.ApplicationNonVisualDrawingProperties()),
-                            new P.GroupShapeProperties(new Drawing.TransformGroup()),
-                            new P.Shape(
-                                new P.NonVisualShapeProperties(
-                                    new P.NonVisualDrawingProperties { Id = 2, Name = "TextBox" },
-                                    new P.NonVisualShapeDrawingProperties(),
-                                    new P.ApplicationNonVisualDrawingProperties()),
-                                new P.ShapeProperties(),
-                                new P.TextBody(
-                                    new Drawing.BodyProperties(),
-                                    new Drawing.ListStyle(),
-                                    new Drawing.Paragraph(
-                                        new Drawing.Run(
-                                            new Drawing.RunProperties { Language = "en-US" },
-                                            new Drawing.Text(text))))))));
+                new P.CommonSlideData(
+                new P.ShapeTree(
+                new P.NonVisualGroupShapeProperties(
+                new P.NonVisualDrawingProperties { Id = 1, Name = "" },
+                new P.NonVisualGroupShapeDrawingProperties(),
+                new P.ApplicationNonVisualDrawingProperties()),
+                new P.GroupShapeProperties(new Drawing.TransformGroup()),
+                new P.Shape(
+                new P.NonVisualShapeProperties(
+                new P.NonVisualDrawingProperties { Id = 2, Name = "TextBox" },
+                new P.NonVisualShapeDrawingProperties(),
+                new P.ApplicationNonVisualDrawingProperties()),
+                new P.ShapeProperties(),
+                new P.TextBody(
+                new Drawing.BodyProperties(),
+                new Drawing.ListStyle(),
+                new Drawing.Paragraph(
+                new Drawing.Run(
+                new Drawing.RunProperties { Language = "en-US" },
+                new Drawing.Text(text))))))));
 
                 slideIdList.AppendChild(new P.SlideId
                 {
@@ -684,7 +687,6 @@ public sealed class OpenXmlIngestionDocumentReaderTests
 
         return stream;
     }
-
     /// <summary>
     /// A wrapper stream that disables seeking to test the non-seekable code path.
     /// </summary>

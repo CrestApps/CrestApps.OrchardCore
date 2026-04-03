@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.AI.Deployments;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
 
@@ -30,9 +30,13 @@ public sealed class DefaultAIDeploymentManagerTests
         _siteServiceMock.Setup(s => s.GetSiteSettingsAsync())
             .ReturnsAsync(_siteMock.Object);
 
+        var optionsMonitor = new Mock<IOptionsMonitor<DefaultAIDeploymentSettings>>();
+        optionsMonitor.Setup(o => o.CurrentValue).Returns(_settings);
+
         _manager = new DefaultAIDeploymentManager(
             _storeMock.Object,
             [],
+            optionsMonitor.Object,
             _siteServiceMock.Object,
             NullLogger<DefaultAIDeploymentManager>.Instance);
     }
@@ -183,6 +187,7 @@ public sealed class DefaultAIDeploymentManagerTests
         {
             CreateDeployment("dep-scoped", "scoped-utility", AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1", modelName: "gpt-4o"),
         };
+
         var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentType.Utility, modelName: "gpt-4.1-mini");
 
         _storeMock.Setup(m => m.GetAllAsync())

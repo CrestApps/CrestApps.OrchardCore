@@ -1,0 +1,20 @@
+using CrestApps.AI.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
+namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+
+public class EditChatInteractionDataSourceViewModel
+{
+    public string DataSourceId { get; set; }
+
+    public int Strictness { get; set; }
+
+    public int TopNDocuments { get; set; }
+
+    public bool IsInScope { get; set; }
+
+    public string Filter { get; set; }
+
+    [BindNever]
+    public IEnumerable<AIDataSource> DataSources { get; set; }
+}

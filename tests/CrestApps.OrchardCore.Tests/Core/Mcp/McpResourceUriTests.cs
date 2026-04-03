@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.AI.Mcp;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 
@@ -27,6 +27,7 @@ public sealed class McpResourceUriTests
 
         Assert.True(result);
         Assert.Equal("Article", variables["contentType"]);
+
         Assert.Equal("abc123", variables["contentItemId"]);
     }
 
@@ -175,6 +176,7 @@ public sealed class McpResourceUriTests
 
         Assert.True(result);
         Assert.Equal("Article", variables["type"]);
+
         Assert.Equal("abc123", variables["id"]);
     }
 
@@ -189,6 +191,7 @@ public sealed class McpResourceUriTests
         // {type} matches "Article", {id} (last var) matches "Sub/abc123"
         Assert.True(result);
         Assert.Equal("Article", variables["type"]);
+
         Assert.Equal("Sub/abc123", variables["id"]);
     }
 
@@ -202,6 +205,7 @@ public sealed class McpResourceUriTests
 
         Assert.True(result);
         Assert.Equal("test.txt", variables["FileName"]);
+
         Assert.Equal("test.txt", variables["filename"]);
     }
 
@@ -227,7 +231,9 @@ public sealed class McpResourceUriTests
 
         Assert.True(result);
         Assert.Equal("myorg", variables["org"]);
+
         Assert.Equal("myrepo", variables["repo"]);
+
         Assert.Equal("src/main.cs", variables["file"]);
     }
 

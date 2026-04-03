@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;
@@ -56,8 +56,8 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "search",
-                        Description = "Search the web",
+                    Name = "search",
+                    Description = "Search the web",
                     },
                 ],
                 Prompts = [],
@@ -90,8 +90,8 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "summarize",
-                        Description = "Summarize text",
+                    Name = "summarize",
+                    Description = "Summarize text",
                     },
                 ],
                 Resources = [],
@@ -121,9 +121,9 @@ public sealed class DefaultMcpMetadataPromptGeneratorTests
                 [
                     new McpServerCapability
                     {
-                        Name = "docs",
-                        Description = "Documentation files",
-                        Uri = "file://docs/readme.md",
+                    Name = "docs",
+                    Description = "Documentation files",
+                    Uri = "file://docs/readme.md",
                     },
                 ],
             },

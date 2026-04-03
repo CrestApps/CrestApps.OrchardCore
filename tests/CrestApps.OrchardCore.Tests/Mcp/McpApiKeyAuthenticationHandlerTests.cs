@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;

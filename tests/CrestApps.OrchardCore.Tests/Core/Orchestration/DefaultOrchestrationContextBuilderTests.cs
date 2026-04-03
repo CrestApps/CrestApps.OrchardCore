@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
@@ -50,7 +50,7 @@ public sealed class DefaultOrchestrationContextBuilderTests
 
         var handler = new TestHandler(
             building: ctx => order.Add("building"),
-            built: ctx => order.Add("built"));
+        built: ctx => order.Add("built"));
         var builder = CreateBuilder([handler]);
 
         var context = await builder.BuildAsync(new AIProfile(), ctx =>
@@ -86,10 +86,10 @@ public sealed class DefaultOrchestrationContextBuilderTests
 
         var handler1 = new TestHandler(
             building: ctx => order.Add("handler1"),
-            built: null);
+        built: null);
         var handler2 = new TestHandler(
             building: ctx => order.Add("handler2"),
-            built: null);
+        built: null);
 
         // Handlers are reversed internally, so last registered runs first.
         var builder = CreateBuilder([handler1, handler2]);

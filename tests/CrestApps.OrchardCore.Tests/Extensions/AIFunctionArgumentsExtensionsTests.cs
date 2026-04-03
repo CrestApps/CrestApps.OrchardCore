@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.AI.Extensions;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Tests.Extensions;
@@ -121,7 +121,9 @@ public sealed class AIFunctionArgumentsExtensionsTests
         Assert.Equal(3, value.Length);
 
         Assert.Equal("one", value[0]);
+
         Assert.Equal("two", value[1]);
+
         Assert.Equal("three", value[2]);
     }
 

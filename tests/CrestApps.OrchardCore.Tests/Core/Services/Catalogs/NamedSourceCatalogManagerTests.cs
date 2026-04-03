@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
+using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -13,6 +12,7 @@ public sealed class NamedSourceCatalogManagerTests
         records ??= [];
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
+
         return new NamedSourceCatalogManager<TestNamedSourceCatalogEntry>(catalog, Enumerable.Empty<ICatalogEntryHandler<TestNamedSourceCatalogEntry>>(), logger);
     }
 
@@ -20,7 +20,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task FindByNameAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var manager = CreateManager([entry]);
+
         var result = await manager.FindByNameAsync("Test");
         Assert.Equal(entry, result);
     }
@@ -29,7 +31,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task GetAsync_ReturnsEntry_WhenExists()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var manager = CreateManager([entry]);
+
         var result = await manager.GetAsync("Test", "A");
         Assert.Equal(entry, result);
     }
@@ -38,7 +42,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task FindByNameAsync_InvokesLoadedHandler()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var records = new List<TestNamedSourceCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();
@@ -65,7 +71,9 @@ public sealed class NamedSourceCatalogManagerTests
     public async Task GetAsync_InvokesLoadedHandler()
     {
         var entry = new TestNamedSourceCatalogEntry { ItemId = "1", Name = "Test", Source = "A" };
+
         var records = new List<TestNamedSourceCatalogEntry> { entry };
+
         var catalog = FakeDocumentManager.CreateNamedSourceCatalog(records, out _);
         var logger = Mock.Of<ILogger<NamedSourceCatalogManager<TestNamedSourceCatalogEntry>>>();
         var callOrder = new Queue<string>();

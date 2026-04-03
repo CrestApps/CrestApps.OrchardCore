@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
@@ -15,7 +15,7 @@ public sealed class TestNamedCatalogEntry : CatalogItem, INameAwareModel
 
         return string.Equals(ItemId, other.ItemId, StringComparison.Ordinal)
             && string.Equals(Name, other.Name, StringComparison.Ordinal)
-            && GetType() == other.GetType();
+                && GetType() == other.GetType();
     }
 
     public override int GetHashCode()
@@ -23,4 +23,3 @@ public sealed class TestNamedCatalogEntry : CatalogItem, INameAwareModel
         return (ItemId?.GetHashCode() ?? 0) ^ (Name?.GetHashCode() ?? 0) ^ GetType().GetHashCode();
     }
 }
-

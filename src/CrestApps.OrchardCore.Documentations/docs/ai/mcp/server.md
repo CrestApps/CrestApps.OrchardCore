@@ -16,6 +16,8 @@ Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-co
 
 The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication.
 
+The reusable prompt aggregation, resource aggregation, SSE transport plumbing, and FTP/SFTP resource handlers are also available from the shared framework so non-OrchardCore hosts can expose the same protocol surfaces while keeping their own admin UI.
+
 ## Supported Capabilities
 
 The MCP server exposes the following capabilities:
@@ -48,6 +50,8 @@ Prompts are listed by clients via `ListPrompts` and invoked via `GetPrompt`, whi
 
 Prompts can also be registered programmatically in code or imported via recipes.
 
+In MVC, prompt definitions are stored and managed through dedicated admin pages, but they still flow through the same shared framework prompt service that backs MCP server discovery.
+
 ## Resource Support
 
 MCP **Resources** represent data that MCP clients can read. A resource has a URI that the client uses to request its content. Resources come in two flavors:
@@ -59,6 +63,8 @@ Resources can be:
 - Created and managed via the admin UI under **Artificial Intelligence** → **MCP Resources**
 - Registered programmatically in code
 - Discovered and accessed by external MCP clients
+
+Both the Orchard Core admin UI and the MVC sample now rely on the same framework-level resource services and FTP/SFTP handlers for server-side MCP resource resolution.
 
 ### Managing Resources via Admin UI
 

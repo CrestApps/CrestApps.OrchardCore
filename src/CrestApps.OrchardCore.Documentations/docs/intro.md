@@ -1,21 +1,40 @@
 ---
 sidebar_label: Introduction
 sidebar_position: 1
-title: CrestApps Orchard Core Modules
-description: Overview of CrestApps open-source modules for Orchard Core CMS
+title: CrestApps AI Platform
+description: Overview of the CrestApps AI Framework and Orchard Core modules for building AI-powered applications.
 ---
 
-# CrestApps Orchard Core Modules
+# CrestApps AI Platform
 
-CrestApps provides a collection of open-source modules designed to enhance **[Orchard Core](https://orchardcore.net/)**, a powerful application framework built on **ASP.NET Core**.
+CrestApps provides two complementary layers for building AI-powered .NET applications:
 
-## Key Focus Areas
+1. **[CrestApps AI Framework](framework/)** — A standalone .NET library for AI completions, orchestration, chat, MCP, A2A, and more. Use it in any ASP.NET Core application.
+2. **[Orchard Core Modules](#orchard-core-modules)** — Modules that wrap the framework with admin UI, recipes, deployment steps, and multi-tenant support for Orchard Core CMS.
 
-- **Modularity** – Independent modules allow for seamless integration based on project requirements.
-- **Security** – Designed following industry best practices to ensure application safety.
-- **Performance** – Optimized for speed and efficiency to maximize Orchard Core's potential.
+## Choosing Your Path
 
-## Module Categories
+| I want to... | Start here |
+|--------------|-----------|
+| Build an AI app without Orchard Core | [Framework Quick Start](framework/) |
+| Add AI to an Orchard Core site | [Getting Started](getting-started.md) |
+| Understand the AI architecture | [AI Core](framework/ai-core.md) |
+| See a complete working example | [MVC Example](framework/mvc-example.md) |
+
+## CrestApps AI Framework
+
+The framework is a set of NuGet packages that you compose via dependency injection. Key features:
+
+- **Provider-agnostic AI** — OpenAI, Azure OpenAI, Ollama, Azure AI Inference
+- **Orchestration** — Agentic tool-calling loop with progressive scoping and RAG
+- **Chat** — Session management, response routing, interaction history
+- **Document processing** — Upload, chunk, embed, and search documents
+- **MCP & A2A** — Standard protocols for tool sharing and agent collaboration
+- **Pluggable storage** — YesSql, Entity Framework, or custom persistence
+
+See the [Framework documentation](framework/) for details.
+
+## Orchard Core Modules
 
 ### Artificial Intelligence Suite
 

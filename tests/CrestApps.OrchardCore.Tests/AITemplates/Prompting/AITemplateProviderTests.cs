@@ -1,7 +1,7 @@
-using CrestApps.AI.Prompting;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Parsing;
-using CrestApps.AI.Prompting.Providers;
+using CrestApps.Templates;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Parsing;
+using CrestApps.Templates.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -12,11 +12,11 @@ public sealed class OptionsAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_ReturnsRegisteredTemplates()
     {
-        var options = new AITemplateOptions();
-        options.Templates.Add(new AITemplate { Id = "code-template", Content = "Registered via code." });
-        options.Templates.Add(new AITemplate { Id = "another", Content = "Another one." });
+        var options = new TemplateOptions();
+        options.Templates.Add(new Template { Id = "code-template", Content = "Registered via code." });
+        options.Templates.Add(new Template { Id = "another", Content = "Another one." });
 
-        var provider = new OptionsAITemplateProvider(Options.Create(options));
+        var provider = new OptionsTemplateProvider(Options.Create(options));
 
         var result = await provider.GetTemplatesAsync();
 
@@ -28,8 +28,8 @@ public sealed class OptionsAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_EmptyOptions_ReturnsEmpty()
     {
-        var options = new AITemplateOptions();
-        var provider = new OptionsAITemplateProvider(Options.Create(options));
+        var options = new TemplateOptions();
+        var provider = new OptionsTemplateProvider(Options.Create(options));
 
         var result = await provider.GetTemplatesAsync();
 
@@ -58,7 +58,7 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     [Fact]
     public async Task GetTemplatesAsync_DiscoversMdFiles()
     {
-        var promptsDir = Path.Combine(_tempDir, "AITemplates", "Prompts");
+        var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
 
         File.WriteAllText(Path.Combine(promptsDir, "test-prompt.md"), """
@@ -69,14 +69,14 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
             You are a test assistant.
             """);
 
-        var options = new AITemplateOptions();
+        var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
 
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
-        var provider = new FileSystemAITemplateProvider(
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var provider = new FileSystemTemplateProvider(
             Options.Create(options),
             parsers,
-            NullLogger<FileSystemAITemplateProvider>.Instance);
+            NullLogger<FileSystemTemplateProvider>.Instance);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -89,7 +89,7 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     [Fact]
     public async Task GetTemplatesAsync_DiscoverFeatureSubdirectories()
     {
-        var promptsDir = Path.Combine(_tempDir, "AITemplates", "Prompts");
+        var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         var featureDir = Path.Combine(promptsDir, "MyModule.Feature");
         Directory.CreateDirectory(featureDir);
 
@@ -100,14 +100,14 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
             Feature-specific content.
             """);
 
-        var options = new AITemplateOptions();
+        var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
 
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
-        var provider = new FileSystemAITemplateProvider(
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var provider = new FileSystemTemplateProvider(
             Options.Create(options),
             parsers,
-            NullLogger<FileSystemAITemplateProvider>.Instance);
+            NullLogger<FileSystemTemplateProvider>.Instance);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -119,14 +119,14 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     [Fact]
     public async Task GetTemplatesAsync_NoPromptsDirectory_ReturnsEmpty()
     {
-        var options = new AITemplateOptions();
+        var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
 
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
-        var provider = new FileSystemAITemplateProvider(
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var provider = new FileSystemTemplateProvider(
             Options.Create(options),
             parsers,
-            NullLogger<FileSystemAITemplateProvider>.Instance);
+            NullLogger<FileSystemTemplateProvider>.Instance);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -136,19 +136,19 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     [Fact]
     public async Task GetTemplatesAsync_UsesFilenameAsTitleWhenNotInFrontMatter()
     {
-        var promptsDir = Path.Combine(_tempDir, "AITemplates", "Prompts");
+        var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
 
         File.WriteAllText(Path.Combine(promptsDir, "my-cool-prompt.md"), "Just body, no front matter.");
 
-        var options = new AITemplateOptions();
+        var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
 
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
-        var provider = new FileSystemAITemplateProvider(
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var provider = new FileSystemTemplateProvider(
             Options.Create(options),
             parsers,
-            NullLogger<FileSystemAITemplateProvider>.Instance);
+            NullLogger<FileSystemTemplateProvider>.Instance);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -159,21 +159,21 @@ public sealed class FileSystemAITemplateProviderTests : IDisposable
     [Fact]
     public async Task GetTemplatesAsync_IgnoresNonMdFiles()
     {
-        var promptsDir = Path.Combine(_tempDir, "AITemplates", "Prompts");
+        var promptsDir = Path.Combine(_tempDir, "Templates", "Prompts");
         Directory.CreateDirectory(promptsDir);
 
         File.WriteAllText(Path.Combine(promptsDir, "valid.md"), "Valid prompt.");
         File.WriteAllText(Path.Combine(promptsDir, "readme.txt"), "Not a prompt.");
         File.WriteAllText(Path.Combine(promptsDir, "data.json"), "{}");
 
-        var options = new AITemplateOptions();
+        var options = new TemplateOptions();
         options.DiscoveryPaths.Add(_tempDir);
 
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
-        var provider = new FileSystemAITemplateProvider(
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var provider = new FileSystemTemplateProvider(
             Options.Create(options),
             parsers,
-            NullLogger<FileSystemAITemplateProvider>.Instance);
+            NullLogger<FileSystemTemplateProvider>.Instance);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -187,11 +187,11 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_DiscoversEmbeddedResources()
     {
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
-        // Use the test assembly which has embedded AI/Prompts/*.md files.
+        // Use the test assembly which has embedded Templates/Prompts/*.md files.
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
-        var provider = new EmbeddedResourceAITemplateProvider(assembly, parsers);
+        var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -202,10 +202,10 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_ParsesFrontMatter()
     {
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
-        var provider = new EmbeddedResourceAITemplateProvider(assembly, parsers);
+        var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -220,11 +220,11 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_SetsSourceFromAssemblyName()
     {
-        var options = new AITemplateOptions();
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
+        var options = new TemplateOptions();
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
-        var provider = new EmbeddedResourceAITemplateProvider(assembly, parsers);
+        var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
 
         var templates = await provider.GetTemplatesAsync();
 
@@ -234,11 +234,11 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     [Fact]
     public async Task GetTemplatesAsync_CustomSourceAndFeatureId()
     {
-        var options = new AITemplateOptions();
-        var parsers = new IAITemplateParser[] { new DefaultMarkdownAITemplateParser() };
+        var options = new TemplateOptions();
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
 
         var assembly = typeof(EmbeddedResourceAITemplateProviderTests).Assembly;
-        var provider = new EmbeddedResourceAITemplateProvider(assembly, parsers, source: "MySource", featureId: "MyFeature");
+        var provider = new EmbeddedResourceTemplateProvider(assembly, parsers, source: "MySource", featureId: "MyFeature");
 
         var templates = await provider.GetTemplatesAsync();
 

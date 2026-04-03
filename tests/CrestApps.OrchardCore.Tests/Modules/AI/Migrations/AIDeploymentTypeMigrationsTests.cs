@@ -1,6 +1,5 @@
 using System.Reflection;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
@@ -99,6 +98,7 @@ public sealed class AIDeploymentTypeMigrationsTests
             CreateConnection(itemId: "secondary-connection", name: "Secondary", legacyChatDeploymentName: "gpt-4.1"),
             CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4o-mini", legacyUtilityDeploymentName: "gpt-4o-mini"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -168,6 +168,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         {
             CreateConnection(itemId: "default-connection", name: "Default", legacyChatDeploymentName: "gpt-4.1-mini", legacyUtilityDeploymentName: "gpt-4.1-mini"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -197,10 +198,12 @@ public sealed class AIDeploymentTypeMigrationsTests
             DefaultChatDeploymentName = "existing-chat",
             DefaultEmbeddingDeploymentName = "existing-embedding",
         };
+
         var connections = new[]
         {
             CreateConnection(itemId: "legacy-connection", name: "Legacy", legacyChatDeploymentName: "gpt-4o-mini", legacyEmbeddingDeploymentName: "text-embedding-3-small"),
         };
+
         var deployments = new[]
         {
             new AIDeployment
@@ -289,9 +292,9 @@ public sealed class AIDeploymentTypeMigrationsTests
     }
 
     private static bool InvokeTryPopulateDefaultDeploymentSettings(
-        DefaultAIDeploymentSettings settings,
-        IEnumerable<AIProviderConnection> connections,
-        IEnumerable<AIDeployment> deployments)
+    DefaultAIDeploymentSettings settings,
+    IEnumerable<AIProviderConnection> connections,
+    IEnumerable<AIDeployment> deployments)
     {
         var assembly = Assembly.Load("CrestApps.OrchardCore.AI");
         var type = assembly.GetType(
@@ -329,10 +332,12 @@ public sealed class AIDeploymentTypeMigrationsTests
     private static AIProfile CreateProfile(string connectionName)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
+
         return new AIProfile
         {
             ConnectionName = connectionName,
         };
+
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 
@@ -344,6 +349,7 @@ public sealed class AIDeploymentTypeMigrationsTests
         string legacyEmbeddingDeploymentName = null)
     {
 #pragma warning disable CS0618 // Type or member is obsolete
+
         return new AIProviderConnection
         {
             ItemId = itemId,
@@ -353,6 +359,7 @@ public sealed class AIDeploymentTypeMigrationsTests
             UtilityDeploymentName = legacyUtilityDeploymentName,
             EmbeddingDeploymentName = legacyEmbeddingDeploymentName,
         };
+
 #pragma warning restore CS0618 // Type or member is obsolete
     }
 }

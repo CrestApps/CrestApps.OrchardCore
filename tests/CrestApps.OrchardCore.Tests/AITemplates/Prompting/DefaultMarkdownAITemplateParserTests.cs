@@ -1,14 +1,14 @@
-using CrestApps.AI.Prompting.Parsing;
+using CrestApps.Templates.Parsing;
 
 namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 
 public sealed class DefaultMarkdownAITemplateParserTests
 {
-    private readonly DefaultMarkdownAITemplateParser _parser;
+    private readonly DefaultMarkdownTemplateParser _parser;
 
     public DefaultMarkdownAITemplateParserTests()
     {
-        _parser = new DefaultMarkdownAITemplateParser();
+        _parser = new DefaultMarkdownTemplateParser();
     }
 
     [Fact]
@@ -52,12 +52,12 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_WithFrontMatter_ExtractsMetadataAndBody()
     {
         var content = """
-            ---
-            Title: My Prompt
-            Description: A helpful prompt
-            ---
-            You are a helpful assistant.
-            """;
+---
+Title: My Prompt
+Description: A helpful prompt
+---
+You are a helpful assistant.
+""";
 
         var result = _parser.Parse(content);
 
@@ -70,14 +70,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_WithAllMetadataFields_ExtractsAllFields()
     {
         var content = """
-            ---
-            Title: Chart Generator
-            Description: Generates Chart.js configs
-            IsListable: true
-            Category: Data Visualization
-            ---
-            You are a data visualization expert.
-            """;
+---
+Title: Chart Generator
+Description: Generates Chart.js configs
+IsListable: true
+Category: Data Visualization
+---
+You are a data visualization expert.
+""";
 
         var result = _parser.Parse(content);
 
@@ -92,11 +92,11 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_IsListable_DefaultsToTrue()
     {
         var content = """
-            ---
-            Title: A Prompt
-            ---
-            Body here.
-            """;
+---
+Title: A Prompt
+---
+Body here.
+""";
 
         var result = _parser.Parse(content);
 
@@ -107,11 +107,11 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_IsListableFalse_SetsFalse()
     {
         var content = """
-            ---
-            IsListable: false
-            ---
-            Body here.
-            """;
+---
+IsListable: false
+---
+Body here.
+""";
 
         var result = _parser.Parse(content);
 
@@ -122,18 +122,19 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_CustomProperties_GoToAdditionalProperties()
     {
         var content = """
-            ---
-            Title: Test
-            CustomKey: CustomValue
-            AnotherKey: AnotherValue
-            ---
-            Body content.
-            """;
+---
+Title: Test
+CustomKey: CustomValue
+AnotherKey: AnotherValue
+---
+Body content.
+""";
 
         var result = _parser.Parse(content);
 
         Assert.Equal("Test", result.Metadata.Title);
         Assert.Equal("CustomValue", result.Metadata.AdditionalProperties["CustomKey"]);
+
         Assert.Equal("AnotherValue", result.Metadata.AdditionalProperties["AnotherKey"]);
     }
 
@@ -141,10 +142,10 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_MissingClosingDelimiter_TreatsAsBody()
     {
         var content = """
-            ---
-            Title: My Prompt
-            You are a helpful assistant.
-            """;
+---
+Title: My Prompt
+You are a helpful assistant.
+""";
 
         var result = _parser.Parse(content);
 
@@ -156,10 +157,10 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_EmptyFrontMatter_ReturnsBody()
     {
         var content = """
-            ---
-            ---
-            Body here.
-            """;
+---
+---
+Body here.
+""";
 
         var result = _parser.Parse(content);
 
@@ -171,13 +172,13 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_MultiLineBody_PreservesContent()
     {
         var content = """
-            ---
-            Title: Multi-line
-            ---
-            Line one.
-            Line two.
-            Line three.
-            """;
+---
+Title: Multi-line
+---
+Line one.
+Line two.
+Line three.
+""";
 
         var result = _parser.Parse(content);
 
@@ -191,14 +192,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_MetadataKeysCaseInsensitive_SetsCorrectly()
     {
         var content = """
-            ---
-            title: Lower Case Title
-            DESCRIPTION: Upper case desc
-            islistable: false
-            category: Test
-            ---
-            Body.
-            """;
+---
+title: Lower Case Title
+DESCRIPTION: Upper case desc
+islistable: false
+category: Test
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -212,11 +213,11 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ValueWithColons_PreservesFullValue()
     {
         var content = """
-            ---
-            Title: A Title: With Colons
-            ---
-            Body.
-            """;
+---
+Title: A Title: With Colons
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -227,11 +228,11 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_InvalidIsListable_KeepsDefault()
     {
         var content = """
-            ---
-            IsListable: notabool
-            ---
-            Body.
-            """;
+---
+IsListable: notabool
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -243,12 +244,12 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_EmptyMetadataValues_SetEmptyStrings()
     {
         var content = """
-            ---
-            Title:
-            Description:
-            ---
-            Body.
-            """;
+---
+Title:
+Description:
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -260,13 +261,13 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_LineWithNoColon_IsSkipped()
     {
         var content = """
-            ---
-            Title: Valid
-            This line has no colon
-            Description: Also Valid
-            ---
-            Body.
-            """;
+---
+Title: Valid
+This line has no colon
+Description: Also Valid
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -278,12 +279,12 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_WhitespaceAroundValues_IsTrimmed()
     {
         var content = """
-            ---
-            Title:   Lots of spaces   
-            Description:    Also spaces    
-            ---
-            Body.
-            """;
+---
+Title:   Lots of spaces
+Description:    Also spaces
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -295,14 +296,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_MultiLineDescription_JoinsWithNewline()
     {
         var content = """
-            ---
-            Title: Test
-            Description: First line
-              second line
-              third line
-            ---
-            Body.
-            """;
+---
+Title: Test
+Description: First line
+  second line
+  third line
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -314,18 +315,19 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_MultiLineCustomProperty_JoinsWithNewline()
     {
         var content = """
-            ---
-            Title: Test
-            Notes: Line one
-              Line two
-            Category: General
-            ---
-            Body.
-            """;
+---
+Title: Test
+Notes: Line one
+  Line two
+Category: General
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
         Assert.Equal("Line one\nLine two", result.Metadata.AdditionalProperties["Notes"]);
+
         Assert.Equal("General", result.Metadata.Category);
     }
 
@@ -343,20 +345,20 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_CompactsJsonFencedBlocks()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            [Output Format]
-            ```json
-            {
-                "type": "bar",
-                "data": {
-                    "labels": ["Jan", "Feb"]
-                }
-            }
-            ```
-            """;
+[Output Format]
+```json
+{
+"type": "bar",
+"data": {
+"labels": ["Jan", "Feb"]
+}
+}
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -369,24 +371,24 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_CompactsMultipleJsonFencedBlocks()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            First block:
-            ```json
-            {
-                "a": 1
-            }
-            ```
+First block:
+```json
+{
+"a": 1
+}
+```
 
-            Second block:
-            ```json
-            {
-                "b": 2
-            }
-            ```
-            """;
+Second block:
+```json
+{
+"b": 2
+}
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -398,16 +400,17 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_PreservesNonJsonFencedBlocks()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            ```csharp
-            var x = new {
-                Name = "test"
-            };
-            ```
-            """;
+```csharp
+var x = new {
+Name = "test"
+};
+
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -418,14 +421,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_InvalidJsonInFence_PreservesAsIs()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            ```json
-            { not valid json }
-            ```
-            """;
+```json
+{ not valid json }
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -436,14 +439,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_AlreadyCompactJson_LeavesUnchanged()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            ```json
-            {"type":"bar","data":{"labels":["Jan"]}}
-            ```
-            """;
+```json
+{"type":"bar","data":{"labels":["Jan"]}}
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -454,18 +457,19 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_JsonArrayInFence_CompactsCorrectly()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            ```json
-            [
-                "one",
-                "two",
-                "three"
-            ]
-            ```
-            """;
+```json
+
+[
+"one",
+"two",
+"three"
+]
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -476,14 +480,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_NoFrontMatter_StillCompactsJson()
     {
         var content = """
-            Some text before.
+Some text before.
 
-            ```json
-            {
-                "key": "value"
-            }
-            ```
-            """;
+```json
+{
+"key": "value"
+}
+```
+""";
 
         var result = _parser.Parse(content);
 
@@ -493,7 +497,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
     [Fact]
     public void CompactJsonBlocks_EmptyString_ReturnsEmpty()
     {
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(string.Empty);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(string.Empty);
 
         Assert.Equal(string.Empty, result);
     }
@@ -501,7 +505,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
     [Fact]
     public void CompactJsonBlocks_NullString_ReturnsNull()
     {
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(null);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(null);
 
         Assert.Null(result);
     }
@@ -510,11 +514,11 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_UnclosedFence_LeavesAsIs()
     {
         var content = """
-            ```json
-            { "key": "value" }
-            """;
+```json
+{ "key": "value" }
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("""{ "key": "value" }""", result);
     }
@@ -523,20 +527,20 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_DeeplyNestedJson_CompactsCorrectly()
     {
         var content = """
-            ```json
-            {
-                "level1": {
-                    "level2": {
-                        "level3": {
-                            "value": "deep"
-                        }
-                    }
-                }
-            }
-            ```
-            """;
+```json
+{
+"level1": {
+"level2": {
+"level3": {
+"value": "deep"
+}
+}
+}
+}
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("""{"level1":{"level2":{"level3":{"value":"deep"}}}}""", result);
     }
@@ -545,18 +549,18 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_JsonWithMixedTypes_CompactsCorrectly()
     {
         var content = """
-            ```json
-            {
-                "name": "test",
-                "count": 42,
-                "active": true,
-                "tags": null,
-                "scores": [1, 2, 3]
-            }
-            ```
-            """;
+```json
+{
+"name": "test",
+"count": 42,
+"active": true,
+"tags": null,
+"scores": [1, 2, 3]
+}
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("""{"name":"test","count":42,"active":true,"tags":null,"scores":[1,2,3]}""", result);
     }
@@ -565,12 +569,12 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_EmptyJsonObject_LeavesAsIs()
     {
         var content = """
-            ```json
-            {}
-            ```
-            """;
+```json
+{}
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("{}", result);
     }
@@ -579,15 +583,15 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_SchemaDescriptionWithPipe_PreservesAsIs()
     {
         var content = """
-            ```json
-            {
-              "Concluded": true | false,
-              "DispositionId": "<id_or_null>"
-            }
-            ```
-            """;
+```json
+{
+"Concluded": true | false,
+"DispositionId": "<id_or_null>"
+}
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         // Contains pipe operator making it invalid JSON; should be preserved as-is
         Assert.Contains("true | false", result);
@@ -597,20 +601,20 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_MixedValidAndInvalidBlocks_CompactsOnlyValid()
     {
         var content = """
-            Valid block:
-            ```json
-            {
-                "key": "value"
-            }
-            ```
+Valid block:
+```json
+{
+"key": "value"
+}
+```
 
-            Invalid block:
-            ```json
-            { not valid }
-            ```
-            """;
+Invalid block:
+```json
+{ not valid }
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("""{"key":"value"}""", result);
         Assert.Contains("{ not valid }", result);
@@ -620,15 +624,15 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void CompactJsonBlocks_JsonWithUnicodeAndEscapes_CompactsCorrectly()
     {
         var content = """
-            ```json
-            {
-                "greeting": "Hello, \"world\"!",
-                "emoji": "\u2764"
-            }
-            ```
-            """;
+```json
+{
+"greeting": "Hello, \"world\"!",
+"emoji": "\u2764"
+}
+```
+""";
 
-        var result = DefaultMarkdownAITemplateParser.CompactJsonBlocks(content);
+        var result = DefaultMarkdownTemplateParser.CompactJsonBlocks(content);
 
         Assert.Contains("\"greeting\":", result);
         Assert.Contains("\"emoji\":", result);
@@ -639,22 +643,22 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_JsonBlockInBodyWithSurroundingText_CompactsJsonOnly()
     {
         var content = """
-            ---
-            Title: Test
-            ---
+---
+Title: Test
+---
 
-            Some instructions before JSON.
+Some instructions before JSON.
 
-            ```json
-            {
-                "response_format": {
-                    "type": "json_object"
-                }
-            }
-            ```
+```json
+{
+"response_format": {
+"type": "json_object"
+}
+}
+```
 
-            Some instructions after JSON.
-            """;
+Some instructions after JSON.
+""";
 
         var result = _parser.Parse(content);
 
@@ -667,14 +671,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersSingleEntry_ParsedCorrectly()
     {
         var content = """
-            ---
-            Title: Test
-            Parameters:
-            	- tools: array of tool objects for document processing.
-            ---
+---
+Title: Test
+Parameters:
+  - tools: array of tool objects for document processing.
+---
 
-            Body text.
-            """;
+Body text.
+""";
 
         var result = _parser.Parse(content);
 
@@ -687,16 +691,16 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersMultipleEntries_ParsedCorrectly()
     {
         var content = """
-            ---
-            Title: Test
-            Parameters:
-            	- tools: array of tool objects.
-            	- availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
-            	- searchToolName: the name of the search tool.
-            ---
+---
+Title: Test
+Parameters:
+  - tools: array of tool objects.
+  - availableDocuments: array of document objects with DocumentId, FileName, ContentType, and FileSize.
+  - searchToolName: the name of the search tool.
+---
 
-            Body text.
-            """;
+Body text.
+""";
 
         var result = _parser.Parse(content);
 
@@ -711,13 +715,13 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersEmpty_ReturnsEmptyList()
     {
         var content = """
-            ---
-            Title: Test
-            Parameters:
-            ---
+---
+Title: Test
+Parameters:
+---
 
-            Body text.
-            """;
+Body text.
+""";
 
         var result = _parser.Parse(content);
 
@@ -728,17 +732,17 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersWithOtherMetadata_ParsedCorrectly()
     {
         var content = """
-            ---
-            Title: My Template
-            Description: A test template with parameters.
-            Parameters:
-            	- name: the user name.
-            IsListable: false
-            Category: Testing
-            ---
+---
+Title: My Template
+Description: A test template with parameters.
+Parameters:
+  - name: the user name.
+IsListable: false
+Category: Testing
+---
 
-            Hello {{ name }}.
-            """;
+Hello {{ name }}.
+""";
 
         var result = _parser.Parse(content);
 
@@ -755,16 +759,16 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersMalformedEntry_SkipsInvalid()
     {
         var content = """
-            ---
-            Title: Test
-            Parameters:
-            	- validParam: a valid parameter.
-            	- missingcolon
-            	- : no name
-            ---
+---
+Title: Test
+Parameters:
+  - validParam: a valid parameter.
+  - missingcolon
+  - : no name
+---
 
-            Body.
-            """;
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -776,14 +780,14 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_ParametersWithoutBullets_ParsedCorrectly()
     {
         var content = """
-            ---
-            Title: Test
-            Parameters:
-            	toolName: the tool to use.
-            ---
+---
+Title: Test
+Parameters:
+  toolName: the tool to use.
+---
 
-            Body.
-            """;
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -803,6 +807,7 @@ public sealed class DefaultMarkdownAITemplateParserTests
 
         var template = result.Metadata.AdditionalProperties["PromptTemplate"];
         Assert.DoesNotContain("|", template.Split('\n')[0]);
+
         Assert.Contains("{% for item in items %}", template);
         Assert.Contains("{{ item.Name }}", template);
         Assert.Contains("{% endfor %}", template);
@@ -812,16 +817,16 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_BlockScalarIndicator_MultiLineCustomProperty_JoinsCorrectly()
     {
         var content = """
-            ---
-            Title: Test
-            Notes: |
-              Line one
-              Line two
-              Line three
-            Category: General
-            ---
-            Body.
-            """;
+---
+Title: Test
+Notes: |
+  Line one
+  Line two
+  Line three
+Category: General
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 
@@ -834,12 +839,12 @@ public sealed class DefaultMarkdownAITemplateParserTests
     public void Parse_PipeInValue_DoesNotTriggerBlockScalar()
     {
         var content = """
-            ---
-            Title: Test
-            Description: Use A | B syntax
-            ---
-            Body.
-            """;
+---
+Title: Test
+Description: Use A | B syntax
+---
+Body.
+""";
 
         var result = _parser.Parse(content);
 

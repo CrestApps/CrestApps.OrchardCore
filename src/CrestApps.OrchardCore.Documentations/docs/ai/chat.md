@@ -22,7 +22,7 @@ AI profiles are now source-agnostic in the admin UI. When you click **Add Profil
 
 The AI Profile editor groups the most common profile settings into five cards at the top of the page:
 
-- **General** — title, technical name, data source, profile type, orchestrator, and admin menu visibility
+- **General** — title, technical name, profile type, orchestrator, and admin menu visibility
 - **Deployments** — chat deployment and utility deployment
 - **Interactions** — title behavior, welcome/initial prompt behavior, prompt subject, chat mode, and per-profile user memory
 - **Instructions** — prompt template selection, template-specific prompt text, and system instructions
@@ -36,7 +36,7 @@ Profile-source AI Templates now follow the same top-level card grouping:
 - **Instructions** — prompt template text and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
-Additional advanced sections such as capabilities, response handling, analytics, documents, and post-session processing continue to appear below these cards in their existing sections.
+Additional advanced sections such as capabilities, response handling, analytics, and post-session processing continue to appear below these cards in their existing sections. In the **Knowledge** tab, AI Profiles now group the selected data source, the same data-source RAG controls used by chat interactions (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), uploaded profile documents, and session-document upload settings in one place. The model-parameter editors in both MVC and Orchard Core now also use consistent `(?)` hover help for Temperature, Top P, penalties, token limits, and past-message settings so profile editing matches the chat and template UX.
 
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
@@ -131,7 +131,7 @@ The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core adm
 
 1. Go to **Tools** > **Features** in the admin menu.
 2. Search for **AI Chat Admin Widget** and enable it.
-3. The floating chat widget will appear in the bottom-right corner of the admin dashboard.
+3. The floating chat widget will appear in the bottom-right corner of the admin dashboard after it has been configured with a profile.
 
 #### Configuring the Admin Widget
 
@@ -140,6 +140,8 @@ Navigate to **Settings** → **Artificial Intelligence** → **Admin Widget** to
 - **Profile**: Select the AI chat profile to use for the admin widget. 
 - **Max Sessions**: Set the maximum number of previous chat sessions displayed in the history panel (1–50).
 - **Primary Color**: Customize the widget's primary color (header, toggle button). Defaults to `#41b670` (Orchard Core green).
+
+If no profile is selected, the admin widget stays disabled and is not rendered.
 
 - :::tip Pro Tip
 It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.Agent`). Then when creating a profile, select all available capabilities to allow the profile to perform tasks on your website.

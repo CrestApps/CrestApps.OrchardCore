@@ -1,7 +1,9 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
 using Microsoft.Extensions.AI;
+
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
@@ -11,11 +13,13 @@ public sealed class SystemToolRegistryProviderTests
     [Fact]
     public async Task GetToolsAsync_NoSystemTools_ReturnsEmpty()
     {
+
         var provider = CreateProvider([]);
 
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
+
     }
 
     [Fact]
@@ -27,6 +31,7 @@ public sealed class SystemToolRegistryProviderTests
             Name = "regular_tool",
             Title = "Regular Tool",
             Description = "A normal tool",
+
         });
 
         var provider = new SystemToolRegistryProvider(Options.Create(options));
@@ -34,6 +39,7 @@ public sealed class SystemToolRegistryProviderTests
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
+
     }
 
     [Fact]
@@ -43,12 +49,14 @@ public sealed class SystemToolRegistryProviderTests
         [
             ("tool_a", "Tool A", "First tool"),
             ("tool_b", "Tool B", "Second tool"),
-        ]);
+
+            ]);
 
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.Count);
         Assert.All(result, t => Assert.Equal(ToolRegistryEntrySource.System, t.Source));
+
     }
 
     [Fact]
@@ -56,14 +64,16 @@ public sealed class SystemToolRegistryProviderTests
     {
         var provider = CreateProvider(
         [
-            ("my_tool", "My Tool", "Perform vector search over uploaded documents"),
-        ]);
+        ("my_tool", "My Tool", "Perform vector search over uploaded documents"),
+
+            ]);
 
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("my_tool", result[0].Name);
         Assert.Equal("Perform vector search over uploaded documents", result[0].Description);
+
     }
 
     [Fact]
@@ -75,6 +85,7 @@ public sealed class SystemToolRegistryProviderTests
             Name = "my_tool",
             IsSystemTool = true,
             Title = "My Tool Title",
+
         });
 
         var provider = new SystemToolRegistryProvider(Options.Create(options));
@@ -84,6 +95,7 @@ public sealed class SystemToolRegistryProviderTests
         Assert.Single(result);
         // Description is null, so it falls back to Title.
         Assert.Equal("My Tool Title", result[0].Description);
+
     }
 
     [Fact]
@@ -102,6 +114,7 @@ public sealed class SystemToolRegistryProviderTests
             Name = "regular_tool",
             Title = "Regular Tool",
             Description = "A regular tool",
+
         });
 
         var provider = new SystemToolRegistryProvider(Options.Create(options));
@@ -110,37 +123,43 @@ public sealed class SystemToolRegistryProviderTests
 
         Assert.Single(result);
         Assert.Equal("system_tool", result[0].Name);
+
     }
 
     [Fact]
     public async Task GetToolsAsync_SourceIdIsNull()
     {
+
         var provider = CreateProvider([("tool1", "Tool 1", "Description")]);
 
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Null(result[0].SourceId);
+
     }
 
     [Fact]
     public async Task GetToolsAsync_DataSourceSearchTool_ExcludedWhenNoDataSource()
     {
         var provider = CreateProviderWithPurpose(
-            ("search_data_sources", "Search Data Sources", "Search data sources", AIToolPurposes.DataSourceSearch));
+
+        ("search_data_sources", "Search Data Sources", "Search data sources", AIToolPurposes.DataSourceSearch));
 
         var context = new AICompletionContext();
 
         var result = await provider.GetToolsAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
+
     }
 
     [Fact]
     public async Task GetToolsAsync_DataSourceSearchTool_IncludedWhenDataSourceSet()
     {
         var provider = CreateProviderWithPurpose(
-            ("search_data_sources", "Search Data Sources", "Search data sources", AIToolPurposes.DataSourceSearch));
+
+        ("search_data_sources", "Search Data Sources", "Search data sources", AIToolPurposes.DataSourceSearch));
 
         var context = new AICompletionContext { DataSourceId = "ds-123" };
 
@@ -148,34 +167,40 @@ public sealed class SystemToolRegistryProviderTests
 
         Assert.Single(result);
         Assert.Equal("search_data_sources", result[0].Name);
+
     }
 
     [Fact]
     public async Task GetToolsAsync_DocumentProcessingTool_ExcludedWhenNoDocuments()
     {
         var provider = CreateProviderWithPurpose(
-            ("search_documents", "Search Docs", "Search uploaded documents", AIToolPurposes.DocumentProcessing));
+
+        ("search_documents", "Search Docs", "Search uploaded documents", AIToolPurposes.DocumentProcessing));
 
         var context = new AICompletionContext();
 
         var result = await provider.GetToolsAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Empty(result);
+
     }
 
     [Fact]
     public async Task GetToolsAsync_DocumentProcessingTool_IncludedWhenHasDocumentsSet()
     {
         var provider = CreateProviderWithPurpose(
-            ("search_documents", "Search Docs", "Search uploaded documents", AIToolPurposes.DocumentProcessing));
+
+        ("search_documents", "Search Docs", "Search uploaded documents", AIToolPurposes.DocumentProcessing));
 
         var context = new AICompletionContext();
+
         context.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
 
         var result = await provider.GetToolsAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("search_documents", result[0].Name);
+
     }
 
     [Fact]
@@ -202,16 +227,19 @@ public sealed class SystemToolRegistryProviderTests
             IsSystemTool = true,
             Description = "Generate an image",
             Purpose = AIToolPurposes.ContentGeneration,
+
         });
 
         var provider = new SystemToolRegistryProvider(Options.Create(options));
 
         // No data source, no documents — only ungated tools should appear.
         var context = new AICompletionContext();
+
         var result = await provider.GetToolsAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("generate_image", result[0].Name);
+
     }
 
     [Fact]
@@ -238,12 +266,14 @@ public sealed class SystemToolRegistryProviderTests
             IsSystemTool = true,
             Description = "Generate an image",
             Purpose = AIToolPurposes.ContentGeneration,
+
         });
 
         var provider = new SystemToolRegistryProvider(Options.Create(options));
 
         // Both data source and documents available — all tools should appear.
         var context = new AICompletionContext { DataSourceId = "ds-123" };
+
         context.AdditionalProperties[AICompletionContextKeys.HasDocuments] = true;
 
         var result = await provider.GetToolsAsync(context, TestContext.Current.CancellationToken);
@@ -252,18 +282,22 @@ public sealed class SystemToolRegistryProviderTests
         Assert.Contains(result, t => t.Name == "search_data_sources");
         Assert.Contains(result, t => t.Name == "search_documents");
         Assert.Contains(result, t => t.Name == "generate_image");
+
     }
 
     [Fact]
     public async Task GetToolsAsync_NoPurpose_AlwaysIncluded()
     {
+
         var provider = CreateProvider([("generic_tool", "Generic Tool", "A generic system tool")]);
 
         // Tools without a purpose are always included regardless of context.
+
         var result = await provider.GetToolsAsync(new AICompletionContext(), TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("generic_tool", result[0].Name);
+
     }
 
     private static SystemToolRegistryProvider CreateProvider((string name, string title, string description)[] tools)
@@ -278,13 +312,15 @@ public sealed class SystemToolRegistryProviderTests
                 Title = title,
                 Description = description,
             });
+
         }
 
         return new SystemToolRegistryProvider(Options.Create(options));
+
     }
 
     private static SystemToolRegistryProvider CreateProviderWithPurpose(
-        params (string name, string title, string description, string purpose)[] tools)
+    params (string name, string title, string description, string purpose)[] tools)
     {
         var options = new AIToolDefinitionOptions();
         foreach (var (name, title, description, purpose) in tools)
@@ -297,6 +333,7 @@ public sealed class SystemToolRegistryProviderTests
                 Description = description,
                 Purpose = purpose,
             });
+
         }
 
         return new SystemToolRegistryProvider(Options.Create(options));

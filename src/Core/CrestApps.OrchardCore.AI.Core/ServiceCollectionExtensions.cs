@@ -1,11 +1,15 @@
-using CrestApps.AI.Prompting.Extensions;
+using CrestApps.Templates.Extensions;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 using CrestApps.OrchardCore.AI.Core.Tools;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.Tooling;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +26,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
         services
-            .AddAIPrompting()
+            .AddAITemplating()
             .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
@@ -151,7 +155,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
     /// for each supported file extension, and configures <see cref="ChatDocumentsOptions"/>
@@ -190,7 +193,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Adds the orchestration services including the default progressive tool orchestrator,
     /// tool registry, orchestration context builder, and orchestrator resolver.
@@ -262,7 +264,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Registers an orchestrator implementation with the given name.
     /// Returns a builder for fluent configuration (e.g., setting a display title).

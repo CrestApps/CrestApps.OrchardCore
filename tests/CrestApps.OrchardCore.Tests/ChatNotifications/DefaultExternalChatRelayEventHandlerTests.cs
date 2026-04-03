@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,13 +18,14 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
         return new DefaultExternalChatRelayEventHandler(
             serviceProvider,
             new DefaultExternalChatRelayNotificationHandler(_senderMock.Object),
-            new PassthroughStringLocalizer<DefaultExternalChatRelayEventHandler>(),
-            NullLogger<DefaultExternalChatRelayEventHandler>.Instance);
+        new PassthroughStringLocalizer<DefaultExternalChatRelayEventHandler>(),
+        NullLogger<DefaultExternalChatRelayEventHandler>.Instance);
     }
 
     private static ServiceProvider BuildServiceProvider(params (string eventType, IExternalChatRelayNotificationBuilder builder)[] builders)
     {
         var services = new ServiceCollection();
+
         foreach (var (eventType, builder) in builders)
         {
             services.AddKeyedSingleton<IExternalChatRelayNotificationBuilder>(eventType, builder);
@@ -71,8 +72,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.Typing)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.Typing)),
+        Times.Once);
     }
 
     [Fact]
@@ -92,8 +93,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.Typing)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.Typing)),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationTypes.Typing),
-            Times.Once);
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -145,11 +146,11 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationTypes.Transfer),
-            Times.Once);
+        Times.Once);
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.AgentConnected)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.AgentConnected)),
+        Times.Once);
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationTypes.AgentConnected),
-            Times.Once);
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -224,8 +225,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.AgentReconnecting)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.AgentReconnecting)),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -249,8 +250,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.ConnectionLost)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.ConnectionLost)),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -274,7 +275,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.RemoveAsync("s1", ChatContextType.AIChatSession, ChatNotificationTypes.ConnectionLost),
-            Times.Once);
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -299,10 +300,10 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.UpdateAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.Transfer
-                    && n.Metadata != null
+            n => n.Type == ChatNotificationTypes.Transfer
+                && n.Metadata != null
                     && n.Metadata.ContainsKey("estimatedWaitTime"))),
-            Times.Once);
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -327,9 +328,9 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.SessionEnded
-                    && n.Content == "The agent has ended the session.")),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.SessionEnded
+                && n.Content == "The agent has ended the session.")),
+        Times.Once);
     }
 
     [Fact]
@@ -349,8 +350,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.SessionEnded)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.SessionEnded)),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -371,10 +372,10 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<ChatNotification>()),
-            Times.Never);
+        Times.Never);
         _senderMock.Verify(
             s => s.RemoveAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<string>()),
-            Times.Never);
+        Times.Never);
     }
 
     [Fact]
@@ -390,7 +391,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<ChatNotification>()),
-            Times.Never);
+        Times.Never);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -415,8 +416,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", ChatContextType.AIChatSession, It.Is<ChatNotification>(
-                n => n.Type == "info" && n.Content == "A supervisor has joined.")),
-            Times.Once);
+            n => n.Type == "info" && n.Content == "A supervisor has joined.")),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -431,7 +432,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
             () => handler.HandleEventAsync(
-                null, ChatContextType.AIChatSession, new ExternalChatRelayEvent(), TestContext.Current.CancellationToken));
+            null, ChatContextType.AIChatSession, new ExternalChatRelayEvent(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -442,7 +443,7 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => handler.HandleEventAsync(
-                "s1", ChatContextType.AIChatSession, null, TestContext.Current.CancellationToken));
+            "s1", ChatContextType.AIChatSession, null, TestContext.Current.CancellationToken));
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -469,8 +470,8 @@ public sealed class DefaultExternalChatRelayEventHandlerTests
 
         _senderMock.Verify(
             s => s.SendAsync("s1", chatType, It.Is<ChatNotification>(
-                n => n.Type == ChatNotificationTypes.Typing)),
-            Times.Once);
+            n => n.Type == ChatNotificationTypes.Typing)),
+        Times.Once);
     }
 
     // ───────────────────────────────────────────────────────────────

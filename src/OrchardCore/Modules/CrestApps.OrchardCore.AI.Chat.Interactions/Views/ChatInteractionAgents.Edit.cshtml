@@ -1,0 +1,119 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.AI.Models
+
+@model EditChatInteractionAgentsViewModel
+
+@if (Model.Agents is null || Model.Agents.Length == 0)
+{
+    return;
+}
+
+<div class="mb-3">
+
+    <h5 class="border-bottom pb-2">@T["Agents"]</h5>
+
+    @if (Model.AlwaysAvailableAgentCount > 0)
+    {
+        <div class="alert alert-info small">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            @T["There are {0} always-available agents that will be automatically included in every request.", Model.AlwaysAvailableAgentCount]
+        </div>
+    }
+
+    @if (Model.Agents.Length > 5)
+    {
+        <div class="mb-3">
+            <input type="text"
+                   class="form-control form-control-sm ci-agent-search-input"
+                   placeholder="@T["Search agents..."]"
+                   aria-label="@T["Search agents"]" />
+        </div>
+    }
+
+    <div class="form-check mb-2">
+        <input class="form-check-input ci-agent-global-toggle"
+               type="checkbox"
+               id="ciSelectAllAgents" />
+        <label class="form-check-label fw-semibold" for="ciSelectAllAgents">
+            @T["Select All Agents"]
+        </label>
+    </div>
+
+    <div class="ci-agent-list-container ms-3">
+        @for (var i = 0; i < Model.Agents.Length; i++)
+        {
+            <div class="form-check ci-agent-item"
+                 data-agent-name="@Model.Agents[i].DisplayText"
+                 data-agent-description="@Model.Agents[i].Description">
+                <input type="hidden" asp-for="Agents[i].ItemId" />
+                <input asp-for="Agents[i].IsSelected"
+                       type="checkbox"
+                       class="form-check-input ci-agent-checkbox"
+                       id="ci_agent_@i" />
+                <label class="form-check-label" asp-for="Agents[i].IsSelected">
+                    @Model.Agents[i].DisplayText
+                </label>
+                <span class="hint dashed small">@Model.Agents[i].Description</span>
+            </div>
+        }
+    </div>
+
+    <div class="ci-agent-no-results text-muted small d-none">@T["No agents match your search."]</div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.querySelector('.ci-agent-list-container');
+        if (!container) return;
+
+        const searchInput = document.querySelector('.ci-agent-search-input');
+        const globalToggle = document.querySelector('.ci-agent-global-toggle');
+        const noResults = document.querySelector('.ci-agent-no-results');
+
+        function updateGlobalToggle() {
+            const visible = [...container.querySelectorAll('.ci-agent-checkbox')].filter(cb => !cb.closest('.ci-agent-item')?.classList.contains('d-none'));
+            if (globalToggle) {
+                globalToggle.checked = visible.length > 0 && visible.every(cb => cb.checked);
+            }
+        }
+
+        // Global "Select All Agents" toggle.
+        if (globalToggle) {
+            globalToggle.addEventListener('change', function () {
+                const checked = this.checked;
+                container.querySelectorAll('.ci-agent-checkbox').forEach(cb => {
+                    if (!cb.closest('.ci-agent-item')?.classList.contains('d-none')) {
+                        cb.checked = checked;
+                    }
+                });
+            });
+        }
+
+        // Individual checkbox change.
+        container.querySelectorAll('.ci-agent-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateGlobalToggle);
+        });
+
+        // Search filter.
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value.trim().toLowerCase();
+                let anyVisible = false;
+
+                container.querySelectorAll('.ci-agent-item').forEach(item => {
+                    const name = (item.dataset.agentName || '').toLowerCase();
+                    const desc = (item.dataset.agentDescription || '').toLowerCase();
+                    const match = !query || name.includes(query) || desc.includes(query);
+                    item.classList.toggle('d-none', !match);
+                    if (match) anyVisible = true;
+                });
+
+                if (noResults) noResults.classList.toggle('d-none', anyVisible);
+                updateGlobalToggle();
+            });
+        }
+
+        // Set initial toggle state.
+        updateGlobalToggle();
+    });
+</script>

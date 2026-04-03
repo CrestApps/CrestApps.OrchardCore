@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<RootNamespace>CrestApps</RootNamespace>
+		<Title>CrestApps Core</Title>
+		<Description>
+			$(CrestAppsDescription)
+
+			Core service implementations for CrestApps. Framework-independent, usable in any ASP.NET Core application.
+		</Description>
+		<PackageTags>$(PackageTags) Core</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../../Abstractions/CrestApps.Abstractions/CrestApps.Abstractions.csproj" />
+	</ItemGroup>
+</Project>

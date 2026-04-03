@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Chat.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Models;
+using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -185,7 +185,7 @@ public sealed class CancelTransferNotificationActionHandlerTests
         // RemoveAsync should NOT be called.
         senderMock.Verify(
             s => s.RemoveAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<string>()),
-            Times.Never);
+        Times.Never);
     }
 
     // ───────────────────────────────────────────────────────────────

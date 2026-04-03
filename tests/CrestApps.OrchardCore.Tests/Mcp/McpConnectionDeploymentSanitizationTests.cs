@@ -1,8 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using OrchardCore.Entities;
+using CrestApps.AI.Mcp;
+using CrestApps.AI.Mcp.Models;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 
@@ -177,6 +176,7 @@ public sealed class McpConnectionDeploymentSanitizationTests
         };
 
         var customData = new JsonObject { ["Command"] = "docker" };
+
         connection.Properties["StdioMcpConnectionMetadata"] = JsonSerializer.SerializeToNode(customData);
 
         // Act
@@ -217,12 +217,12 @@ public sealed class McpConnectionDeploymentSanitizationTests
         var serialized = properties.ToJsonString();
 
         // Assert — the serialized JSON must not contain any of the secret values.
+
         foreach (var secret in secretValues)
         {
             Assert.DoesNotContain(secret, serialized);
         }
     }
-
     /// <summary>
     /// Simulates the export sanitization done by McpConnectionDeploymentSource.
     /// </summary>
@@ -232,10 +232,14 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
         foreach (var property in connection.Properties)
         {
-            properties[property.Key] = property.Value.DeepClone();
+            // Convert to JsonNode and deep clone
+            var json = JsonSerializer.Serialize(property.Value);
+            var node = JsonNode.Parse(json);
+            properties[property.Key] = node;
         }
 
         // Apply the same sanitization logic used in McpConnectionDeploymentSource.
+
         if (string.Equals(connection.Source, McpConstants.TransportTypes.Sse, StringComparison.Ordinal))
         {
             var metadataNode = properties[nameof(SseMcpConnectionMetadata)]?.AsObject();
@@ -254,7 +258,7 @@ public sealed class McpConnectionDeploymentSanitizationTests
 
     private static JsonObject GetMetadataNode(JsonObject properties)
         => properties[nameof(SseMcpConnectionMetadata)]?.AsObject()
-            ?? throw new InvalidOperationException("SseMcpConnectionMetadata not found in properties.");
+    ?? throw new InvalidOperationException("SseMcpConnectionMetadata not found in properties.");
 
     private static McpConnection CreateSseConnectionWithMetadata(SseMcpConnectionMetadata metadata)
     {

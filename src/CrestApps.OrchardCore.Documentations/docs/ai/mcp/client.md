@@ -27,6 +27,8 @@ Two transport types are supported:
 
 The **MCP Client Feature** enables your application to connect to remote MCP servers using standard HTTP requests with **Server-Sent Events (SSE)** transport, which allows real-time data flow between LLMs and external services.
 
+The transport, OAuth token acquisition, and connection metadata handling now live in shared framework services so Orchard Core and `CrestApps.Mvc.Web` can use the same MCP client behavior without duplicating protocol code.
+
 ### Connect to a Remote MCP Server
 
 1. Open your Orchard Core project.
@@ -102,6 +104,8 @@ For advanced scenarios, provide a JSON object of HTTP header key-value pairs. Th
 :::note
 All sensitive credentials (API keys, passwords, client secrets, private keys, client certificates) are **encrypted at rest** using ASP.NET Core Data Protection and are **never included** in deployment exports.
 :::
+
+When building custom hosts on top of the framework, surface the authentication-specific fields dynamically in the connection editor so users only see the settings relevant to the selected authentication type.
 
 ### SSE Recipe-Based Setup
 
@@ -213,3 +217,5 @@ Prefer configuration through code? Here's how to define the same connection usin
 After adding an MCP connection (SSE or Stdio), create an AI profile that uses it:
 
 👉 [Learn how to create an AI Profile](../overview#creating-ai-profiles)
+
+In the MVC sample, those selectable MCP connections appear alongside A2A agents and local AI tools on the **Capabilities** tab for AI Profiles, AI profile templates, and chat interactions.

@@ -9,6 +9,10 @@ description: How to create, register, and manage custom AI tools in Orchard Core
 
 This section is part of the **AI Services** (`CrestApps.OrchardCore.AI`) feature.
 
+:::tip Framework Reference
+For the framework-level tool builder pattern (`AddAITool<T>()`), tool purposes, and implementing tools in any .NET application, see the [Framework Custom Tools](../framework/tools.md) documentation. This page covers the **Orchard Core-specific** registration and admin UI.
+:::
+
 ## Extending AI Chat with Custom Functions
 
 You can enhance the AI chat functionality by adding custom functions. To create a custom function, inherit from `AIFunction` and register it as a service. AI tools are registered as singletons, so dependencies must be resolved at execution time using `arguments.Services`.
@@ -245,6 +249,7 @@ The citation system ensures that every `[doc:N]` marker in an AI response maps t
 
 4. **Tool-invoked searches** (run during streaming when the AI model calls tools):
    - `DataSourceSearchTool` and `SearchDocumentsTool` use the same `NextReferenceIndex()` counter and write their references to `AIInvocationScope.Current.ToolReferences`.
+   - Both tools are now registered from the shared framework layers, so Orchard Core, the MVC sample, and other hosts can reuse the same citation-aware search behavior without duplicating host-specific tool implementations.
 
 5. **Incremental collection**: Inside the streaming loop, `CitationReferenceCollector.CollectToolReferences()` checks for newly added tool references on each chunk and merges them into the `references` dictionary. Since the dictionary is passed by reference to each `CompletionPartialMessage`, the client receives progressively richer reference data.
 

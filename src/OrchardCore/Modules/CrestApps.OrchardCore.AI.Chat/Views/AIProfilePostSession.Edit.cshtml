@@ -1,0 +1,521 @@
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.AI.Models
+
+@model AIProfilePostSessionViewModel
+
+@{
+    var hasTools = Model.PostSessionTools is not null && Model.PostSessionTools.Count > 0;
+    var postSessionSettingsId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_settings";
+    var tasksContainerId = Html.IdFor(m => m.Tasks) + "_container";
+    var addTaskBtnId = Html.IdFor(m => m.Tasks) + "_add";
+    var tasksTabId = Html.IdFor(m => m.Tasks) + "_tab";
+    var tasksPaneId = Html.IdFor(m => m.Tasks) + "_pane";
+    var capabilitiesTabId = Html.IdFor(m => m.PostSessionTools) + "_tab";
+    var capabilitiesPaneId = Html.IdFor(m => m.PostSessionTools) + "_pane";
+    var tabsId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_tabs";
+    var tabContentId = Html.IdFor(m => m.EnablePostSessionProcessing) + "_tabContent";
+}
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="EnablePostSessionProcessing" />
+        <label class="form-check-label" asp-for="EnablePostSessionProcessing">@T["Enable Post-Session Processing"]</label>
+        <span class="hint dashed">@T["When enabled, the system will run AI-powered analysis on the complete conversation after the session is closed."]</span>
+    </div>
+</div>
+
+<div id="@postSessionSettingsId" class="@(Model.EnablePostSessionProcessing ? "" : "d-none")">
+    <div class="alert alert-info mb-3">
+        <i class="fa-solid fa-circle-info me-1"></i>
+        @T["Post-session processing runs after a chat session is closed (either due to inactivity or natural conversation ending). The AI model analyzes the complete conversation transcript to produce the configured results."]
+    </div>
+
+    <ul class="nav nav-tabs" id="@tabsId" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="@tasksTabId" data-bs-toggle="tab" data-bs-target="#@tasksPaneId" type="button" role="tab" aria-controls="@tasksPaneId" aria-selected="true">
+                @T["Tasks"]
+            </button>
+        </li>
+        @if (hasTools)
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="@capabilitiesTabId" data-bs-toggle="tab" data-bs-target="#@capabilitiesPaneId" type="button" role="tab" aria-controls="@capabilitiesPaneId" aria-selected="false">
+                    @T["Capabilities"]
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content border border-top-0 rounded-bottom p-3" id="@tabContentId">
+        <!-- Tasks Tab -->
+        <div class="tab-pane fade show active" id="@tasksPaneId" role="tabpanel" aria-labelledby="@tasksTabId">
+            <div class="mb-3">
+                <label class="form-label">@T["Post-Session Tasks"]</label>
+                <span class="hint dashed d-block mb-2">@T["Define the tasks to run when a session closes. Each task produces a structured result stored on the session."]</span>
+
+                <div id="@tasksContainerId">
+                    @for (var i = 0; i < Model.Tasks.Count; i++)
+                    {
+                        var task = Model.Tasks[i];
+                        <div class="card mb-2 post-session-task-card">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                <a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#@(tasksContainerId)_collapse_@i" role="button" aria-expanded="true">
+                                    <i class="fa-solid fa-chevron-down me-1"></i>
+                                    <span class="task-name-display fw-semibold">@(string.IsNullOrWhiteSpace(task.Name) ? T["New Task"] : task.Name)</span>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                            <div id="@(tasksContainerId)_collapse_@i" class="collapse show">
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">@T["Name"]</label>
+                                        <input type="text" class="form-control task-name-input" name="@Html.NameFor(m => m.Tasks[i].Name)" value="@task.Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" />
+                                        <span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">@T["Type"]</label>
+                                        <select class="form-select task-type-select" name="@Html.NameFor(m => m.Tasks[i].Type)">
+                                            <option value="Semantic" selected="@(task.Type == PostSessionTaskType.Semantic)">@T["Semantic"]</option>
+                                            <option value="PredefinedOptions" selected="@(task.Type == PostSessionTaskType.PredefinedOptions)">@T["Predefined Options"]</option>
+                                        </select>
+                                        <span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">@T["Instructions"]</label>
+                                        <textarea class="form-control post-session-instructions-editor" name="@Html.NameFor(m => m.Tasks[i].Instructions)" rows="3" placeholder="@T["Optional instructions for the AI model"]">@task.Instructions</textarea>
+                                        <span class="hint">@T["Additional instructions for the AI model when processing this task."]</span>
+                                    </div>
+                                    <div class="task-options-group @(task.Type == PostSessionTaskType.PredefinedOptions ? "" : "d-none")">
+                                        <div class="form-check mb-3">
+                                            <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.Tasks[i].AllowMultipleValues)" value="true" @(task.AllowMultipleValues ? "checked" : "") />
+                                            <label class="form-check-label">@T["Allow Multiple Values"]</label>
+                                            <span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">@T["Options"]</label>
+                                            <span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from. Each option has a value and an optional description to guide the AI."]</span>
+                                            <div class="task-options-container">
+                                                @for (var j = 0; j < task.Options.Count; j++)
+                                                {
+                                                    <div class="card mb-2 task-option-card">
+                                                        <div class="card-header d-flex justify-content-between align-items-center py-1">
+                                                            <span class="option-value-display fw-semibold small">@(string.IsNullOrWhiteSpace(task.Options[j].Value) ? T["New Option"] : task.Options[j].Value)</span>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]">
+                                                                <i class="fa-solid fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div class="card-body py-2">
+                                                            <div class="mb-2">
+                                                                <label class="form-label small">@T["Value"]</label>
+                                                                <input type="text" class="form-control form-control-sm option-value-input" name="@Html.NameFor(m => m.Tasks[i].Options[j].Value)" value="@task.Options[j].Value" required placeholder="@T["e.g., Resolved"]" />
+                                                            </div>
+                                                            <div class="mb-1">
+                                                                <label class="form-label small">@T["Description"]</label>
+                                                                <input type="text" class="form-control form-control-sm" name="@Html.NameFor(m => m.Tasks[i].Options[j].Description)" value="@task.Options[j].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-success" id="@addTaskBtnId"><i class="fa-solid fa-plus"></i> @T["Add Task"]</button>
+            </div>
+        </div>
+
+        <!-- Capabilities Tab -->
+        @if (hasTools)
+        {
+            var selectAllToolsId = Html.IdFor(m => m.PostSessionTools) + "_selectAll";
+
+            <div class="tab-pane fade" id="@capabilitiesPaneId" role="tabpanel" aria-labelledby="@capabilitiesTabId">
+                <div class="mb-3">
+                    <span class="hint dashed d-block mb-3">@T["Select AI tools that should be available during post-session processing. When tools are configured, the AI model can invoke them to perform actions beyond text analysis."]</span>
+
+                    <div class="mb-3">
+                        <input type="text"
+                               class="form-control form-control-sm ps-tool-search-input"
+                               placeholder="@T["Search tools..."]"
+                               aria-label="@T["Search tools"]" />
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input ps-global-tool-toggle"
+                               type="checkbox"
+                               id="@selectAllToolsId" />
+                        <label class="form-check-label fw-semibold" for="@selectAllToolsId">
+                            @T["Select All Tools"]
+                        </label>
+                    </div>
+
+                    <div class="ps-tool-groups-container">
+                        @foreach (var tools in Model.PostSessionTools)
+                        {
+                            var groupKey = tools.Key;
+                            var groupId = Html.IdFor(m => m.PostSessionTools) + "_" + groupKey.Replace(" ", "-");
+                            var selectAllGroupId = groupId + "_selectAll";
+
+                            <div class="mb-3 ps-tool-group" data-group-name="@groupKey">
+                                <h5>@groupKey</h5>
+
+                                <div class="form-check">
+                                    <input class="form-check-input ps-group-toggle"
+                                           type="checkbox"
+                                           id="@selectAllGroupId"
+                                           data-group="@groupId" />
+                                    <label class="form-check-label" for="@selectAllGroupId">
+                                        @T["Select All in {0}", groupKey]
+                                    </label>
+                                </div>
+
+                                <div class="ms-3">
+                                    @for (var i = 0; i < tools.Value.Length; i++)
+                                    {
+                                        <div class="form-check ps-tool-item" data-tool-name="@tools.Value[i].DisplayText" data-tool-description="@tools.Value[i].Description">
+                                            <input type="hidden" asp-for="@Model.PostSessionTools[groupKey][i].ItemId" />
+                                            <input asp-for="@Model.PostSessionTools[groupKey][i].IsSelected"
+                                                   type="checkbox"
+                                                   class="form-check-input ps-group-checkbox"
+                                                   data-group="@groupId"
+                                                   id="@(groupId)_@i" />
+
+                                            <label class="form-check-label"
+                                                   asp-for="@Model.PostSessionTools[groupKey][i].IsSelected">
+                                                @tools.Value[i].DisplayText
+                                            </label>
+                                            <span class="hint dashed">@tools.Value[i].Description</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="ps-tool-no-results text-muted small d-none">@T["No tools match your search."]</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style asp-name="easymde"></style>
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
+    document.addEventListener('DOMContentLoaded', function () {
+        var isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+        var toggleCheckbox = document.getElementById('@Html.IdFor(m => m.EnablePostSessionProcessing)');
+        var target = document.getElementById('@postSessionSettingsId');
+        if (toggleCheckbox && target) {
+            toggleCheckbox.addEventListener('change', function () {
+                target.classList.toggle('d-none', !this.checked);
+            });
+        }
+
+        var container = document.getElementById('@tasksContainerId');
+        var addButton = document.getElementById('@addTaskBtnId');
+        var tasksPrefix = '@Html.NameFor(m => m.Tasks)';
+        var containerIdPrefix = '@tasksContainerId';
+        var instructionEditors = new Map();
+
+        function applyEditorDirection(editor) {
+            if (!isRtl || !editor || !editor.codemirror) {
+                return;
+            }
+
+            var toolbar = editor.gui && editor.gui.toolbar;
+            if (toolbar) {
+                toolbar.style.direction = 'rtl';
+                toolbar.style.textAlign = 'right';
+            }
+
+            var wrapper = editor.codemirror.getWrapperElement();
+            if (wrapper) {
+                wrapper.style.textAlign = 'right';
+            }
+        }
+
+        function initializeInstructionEditor(textarea) {
+            if (!textarea || textarea.dataset.easymdeInitialized === 'true') {
+                return;
+            }
+
+            var editor = new EasyMDE({
+                element: textarea,
+                forceSync: true,
+                autoDownloadFontAwesome: false
+            });
+
+            textarea.dataset.easymdeInitialized = 'true';
+            instructionEditors.set(textarea, editor);
+            applyEditorDirection(editor);
+            window.setTimeout(function () {
+                editor.codemirror.refresh();
+            }, 0);
+        }
+
+        function initializeInstructionEditors(root) {
+            if (!root) {
+                return;
+            }
+
+            root.querySelectorAll('.post-session-instructions-editor').forEach(initializeInstructionEditor);
+        }
+
+        function destroyInstructionEditors(root) {
+            if (!root) {
+                return;
+            }
+
+            root.querySelectorAll('.post-session-instructions-editor').forEach(function (textarea) {
+                var editor = instructionEditors.get(textarea);
+
+                if (!editor) {
+                    return;
+                }
+
+                editor.toTextArea();
+                instructionEditors.delete(textarea);
+                delete textarea.dataset.easymdeInitialized;
+            });
+        }
+
+        function refreshInstructionEditors() {
+            instructionEditors.forEach(function (editor) {
+                if (!editor || !editor.codemirror) {
+                    return;
+                }
+
+                editor.codemirror.refresh();
+            });
+        }
+
+        function createOptionCard(taskIndex, optionIndex) {
+            var optionPrefix = tasksPrefix + '[' + taskIndex + '].Options';
+            var card = document.createElement('div');
+            card.className = 'card mb-2 task-option-card';
+            card.innerHTML =
+                '<div class="card-header d-flex justify-content-between align-items-center py-1">' +
+                    '<span class="option-value-display fw-semibold small">@T["New Option"]</span>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger remove-option-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                '</div>' +
+                '<div class="card-body py-2">' +
+                    '<div class="mb-2"><label class="form-label small">@T["Value"]</label><input type="text" class="form-control form-control-sm option-value-input" name="' + optionPrefix + '[' + optionIndex + '].Value" required placeholder="@T["e.g., Resolved"]" /></div>' +
+                    '<div class="mb-1"><label class="form-label small">@T["Description"]</label><input type="text" class="form-control form-control-sm" name="' + optionPrefix + '[' + optionIndex + '].Description" placeholder="@T["Optional: helps the AI understand when to select this option"]" /></div>' +
+                '</div>';
+            return card;
+        }
+
+        if (addButton && container) {
+            addButton.addEventListener('click', function () {
+                var index = container.querySelectorAll('.post-session-task-card').length;
+                var collapseId = containerIdPrefix + '_collapse_' + index;
+                var card = document.createElement('div');
+                card.className = 'card mb-2 post-session-task-card';
+                card.innerHTML =
+                    '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                        '<a class="btn btn-sm btn-link text-start text-decoration-none flex-grow-1 px-0 task-collapse-toggle" data-bs-toggle="collapse" href="#' + collapseId + '" role="button" aria-expanded="true">' +
+                            '<i class="fa-solid fa-chevron-down me-1"></i>' +
+                            '<span class="task-name-display fw-semibold">@T["New Task"]</span>' +
+                        '</a>' +
+                        '<button type="button" class="btn btn-sm btn-danger remove-task-btn" title="@T["Remove"]"><i class="fa-solid fa-trash"></i></button>' +
+                    '</div>' +
+                    '<div id="' + collapseId + '" class="collapse show">' +
+                        '<div class="card-body">' +
+                            '<div class="mb-3"><label class="form-label">@T["Name"]</label><input type="text" class="form-control task-name-input" name="' + tasksPrefix + '[' + index + '].Name" pattern="^[a-zA-Z0-9_]+$" required placeholder="@T["e.g., disposition"]" /><span class="hint">@T["A unique identifier for this task. Only alphanumeric characters and underscores are allowed."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Type"]</label><select class="form-select task-type-select" name="' + tasksPrefix + '[' + index + '].Type"><option value="Semantic">@T["Semantic"]</option><option value="PredefinedOptions">@T["Predefined Options"]</option></select><span class="hint">@T["Predefined Options: the AI selects from a list of values you define. Semantic: the AI generates freeform text based on your instructions."]</span></div>' +
+                            '<div class="mb-3"><label class="form-label">@T["Instructions"]</label><textarea class="form-control post-session-instructions-editor" name="' + tasksPrefix + '[' + index + '].Instructions" rows="3" placeholder="@T["Optional instructions for the AI model"]"></textarea><span class="hint">@T["Additional instructions for the AI model when processing this task."]</span></div>' +
+                            '<div class="task-options-group d-none">' +
+                                '<div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="' + tasksPrefix + '[' + index + '].AllowMultipleValues" value="true" /><label class="form-check-label">@T["Allow Multiple Values"]</label><span class="hint dashed">@T["When enabled, the AI model can select more than one option from the list."]</span></div>' +
+                                '<div class="mb-3"><label class="form-label">@T["Options"]</label><span class="hint dashed d-block mb-2">@T["Define the options the AI model can select from."]</span><div class="task-options-container"></div><button type="button" class="btn btn-sm btn-outline-success add-option-btn"><i class="fa-solid fa-plus"></i> @T["Add Option"]</button></div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(card);
+                initializeInstructionEditors(card);
+            });
+        }
+
+        // Remove task card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-task-btn')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) {
+                    destroyInstructionEditors(card);
+                    card.remove();
+                }
+            }
+        });
+
+        // Remove option card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.remove-option-btn')) {
+                var card = e.target.closest('.task-option-card');
+                if (card) card.remove();
+            }
+        });
+
+        // Add option card.
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.add-option-btn')) {
+                var taskCard = e.target.closest('.post-session-task-card');
+                if (taskCard) {
+                    var taskIndex = Array.from(container.querySelectorAll('.post-session-task-card')).indexOf(taskCard);
+                    var optionsContainer = taskCard.querySelector('.task-options-container');
+                    var optionIndex = optionsContainer.querySelectorAll('.task-option-card').length;
+                    optionsContainer.appendChild(createOptionCard(taskIndex, optionIndex));
+                }
+            }
+        });
+
+        // Update card header name display when the Name input changes.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('task-name-input')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) {
+                    var display = card.querySelector('.task-name-display');
+                    if (display) {
+                        display.textContent = e.target.value || '@T["New Task"]';
+                    }
+                }
+            }
+        });
+
+        // Update option card header when option value changes.
+        document.addEventListener('input', function (e) {
+            if (e.target.classList.contains('option-value-input')) {
+                var card = e.target.closest('.task-option-card');
+                if (card) {
+                    var display = card.querySelector('.option-value-display');
+                    if (display) {
+                        display.textContent = e.target.value || '@T["New Option"]';
+                    }
+                }
+            }
+        });
+
+        // Show/hide Options group based on Type selection.
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('task-type-select')) {
+                var card = e.target.closest('.post-session-task-card');
+                if (card) {
+                    var optionsGroup = card.querySelector('.task-options-group');
+                    if (optionsGroup) {
+                        optionsGroup.classList.toggle('d-none', e.target.value !== 'PredefinedOptions');
+                    }
+                }
+            }
+        });
+
+        // Capabilities tab: tool selection logic.
+        var toolContainer = document.querySelector('.ps-tool-groups-container');
+        if (toolContainer) {
+            var searchInput = document.querySelector('.ps-tool-search-input');
+            var globalToggle = document.querySelector('.ps-global-tool-toggle');
+            var noResults = document.querySelector('.ps-tool-no-results');
+
+            function updateGroupToggle(groupName) {
+                var all = toolContainer.querySelectorAll('.ps-group-checkbox[data-group="' + groupName + '"]');
+                var visible = Array.from(all).filter(function (cb) { return !cb.closest('.ps-tool-item')?.classList.contains('d-none'); });
+                var allChecked = visible.length > 0 && visible.every(function (cb) { return cb.checked; });
+                var toggle = toolContainer.querySelector('.ps-group-toggle[data-group="' + groupName + '"]');
+                if (toggle) toggle.checked = allChecked;
+            }
+
+            function updateGlobalToggle() {
+                var allVisible = Array.from(toolContainer.querySelectorAll('.ps-group-checkbox')).filter(function (cb) { return !cb.closest('.ps-tool-item')?.classList.contains('d-none'); });
+                globalToggle.checked = allVisible.length > 0 && allVisible.every(function (cb) { return cb.checked; });
+            }
+
+            var bulkUpdating = false;
+
+            toolContainer.querySelectorAll('.ps-group-toggle').forEach(function (toggle) {
+                toggle.addEventListener('change', function () {
+                    bulkUpdating = true;
+                    var checked = this.checked;
+                    toolContainer.querySelectorAll('.ps-group-checkbox[data-group="' + this.dataset.group + '"]').forEach(function (cb) {
+                        if (!cb.closest('.ps-tool-item')?.classList.contains('d-none')) {
+                            cb.checked = checked;
+                        }
+                    });
+                    bulkUpdating = false;
+                    updateGlobalToggle();
+                });
+            });
+
+            toolContainer.querySelectorAll('.ps-group-checkbox').forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    if (bulkUpdating) return;
+                    updateGroupToggle(this.dataset.group);
+                    updateGlobalToggle();
+                });
+            });
+
+            if (globalToggle) {
+                globalToggle.addEventListener('change', function () {
+                    bulkUpdating = true;
+                    var checked = this.checked;
+                    toolContainer.querySelectorAll('.ps-group-checkbox').forEach(function (cb) {
+                        if (!cb.closest('.ps-tool-item')?.classList.contains('d-none')) {
+                            cb.checked = checked;
+                        }
+                    });
+                    toolContainer.querySelectorAll('.ps-group-toggle').forEach(function (t) {
+                        if (!t.closest('.ps-tool-group')?.classList.contains('d-none')) {
+                            t.checked = checked;
+                        }
+                    });
+                    bulkUpdating = false;
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    var query = this.value.trim().toLowerCase();
+                    var anyVisible = false;
+
+                    toolContainer.querySelectorAll('.ps-tool-group').forEach(function (group) {
+                        var groupHasVisible = false;
+
+                        group.querySelectorAll('.ps-tool-item').forEach(function (item) {
+                            var name = (item.dataset.toolName || '').toLowerCase();
+                            var desc = (item.dataset.toolDescription || '').toLowerCase();
+                            var match = !query || name.includes(query) || desc.includes(query);
+                            item.classList.toggle('d-none', !match);
+                            if (match) groupHasVisible = true;
+                        });
+
+                        group.classList.toggle('d-none', !groupHasVisible);
+                        if (groupHasVisible) anyVisible = true;
+
+                        var groupId = group.querySelector('.ps-group-toggle')?.dataset.group;
+                        if (groupId) updateGroupToggle(groupId);
+                    });
+
+                    if (noResults) noResults.classList.toggle('d-none', anyVisible);
+                    updateGlobalToggle();
+                });
+            }
+
+            toolContainer.querySelectorAll('.ps-group-toggle').forEach(function (t) { updateGroupToggle(t.dataset.group); });
+            updateGlobalToggle();
+        }
+
+        initializeInstructionEditors(container || document);
+
+        document.addEventListener('shown.bs.tab', function () {
+            window.setTimeout(refreshInstructionEditors, 0);
+        });
+
+        document.addEventListener('shown.bs.collapse', function () {
+            window.setTimeout(refreshInstructionEditors, 0);
+        });
+    });
+</script>

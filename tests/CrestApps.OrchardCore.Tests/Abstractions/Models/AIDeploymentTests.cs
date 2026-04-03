@@ -1,6 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Abstractions.Models;
 
@@ -36,12 +35,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_WhenModelNameIsPresent_ShouldPreserveStoredModelName()
     {
         var deployment = JsonSerializer.Deserialize<AIDeployment>(
-            """
-            {
-              "Name": "openai-chat",
-              "ModelName": "gpt-4.1"
-            }
-            """);
+        """
+        {
+          "Name": "openai-chat",
+          "ModelName": "gpt-4.1"
+        }
+        """);
 
         Assert.NotNull(deployment);
         Assert.Equal("openai-chat", deployment.Name);
@@ -52,13 +51,13 @@ public sealed class AIDeploymentTests
     public void Deserialize_DefaultSettings_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var settings = JsonSerializer.Deserialize<DefaultAIDeploymentSettings>(
-            """
-            {
-              "DefaultChatDeploymentId": "chat-technical-name",
-              "DefaultUtilityDeploymentId": "utility-technical-name",
-              "DefaultEmbeddingDeploymentId": "embedding-technical-name"
-            }
-            """);
+        """
+        {
+          "DefaultChatDeploymentId": "chat-technical-name",
+          "DefaultUtilityDeploymentId": "utility-technical-name",
+          "DefaultEmbeddingDeploymentId": "embedding-technical-name"
+        }
+        """);
 
         Assert.NotNull(settings);
         Assert.Equal("chat-technical-name", settings.DefaultChatDeploymentName);
@@ -70,12 +69,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_Profile_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var profile = JsonSerializer.Deserialize<AIProfile>(
-            """
-            {
-              "ChatDeploymentId": "chat-technical-name",
-              "UtilityDeploymentId": "utility-technical-name"
-            }
-            """);
+        """
+        {
+          "ChatDeploymentId": "chat-technical-name",
+          "UtilityDeploymentId": "utility-technical-name"
+        }
+        """);
 
         Assert.NotNull(profile);
         Assert.Equal("chat-technical-name", profile.ChatDeploymentName);
@@ -86,12 +85,12 @@ public sealed class AIDeploymentTests
     public void Deserialize_ChatInteraction_WhenLegacyDeploymentIdsArePresent_ShouldPopulateDeploymentNames()
     {
         var interaction = JsonSerializer.Deserialize<ChatInteraction>(
-            """
-            {
-              "DeploymentId": "chat-technical-name",
-              "UtilityDeploymentId": "utility-technical-name"
-            }
-            """);
+        """
+        {
+          "DeploymentId": "chat-technical-name",
+          "UtilityDeploymentId": "utility-technical-name"
+        }
+        """);
 
         Assert.NotNull(interaction);
         Assert.Equal("chat-technical-name", interaction.ChatDeploymentName);

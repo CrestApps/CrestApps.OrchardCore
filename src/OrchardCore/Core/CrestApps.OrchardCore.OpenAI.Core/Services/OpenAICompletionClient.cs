@@ -1,0 +1,100 @@
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
+using CrestApps.AI.Models;
+using CrestApps.AI.OpenAI;
+using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.Services;
+using CrestApps.Templates.Services;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OpenAI.Chat;
+using OpenAIConst = CrestApps.AI.OpenAI.OpenAIConstants;
+
+namespace CrestApps.OrchardCore.OpenAI.Core.Services;
+
+public class OpenAICompletionClient : DeploymentAwareAICompletionClient
+{
+    private readonly IEnumerable<IOpenAIChatOptionsConfiguration> _openAIChatOptionsConfigurations;
+
+    public OpenAICompletionClient(
+        IAIClientFactory aIClientFactory,
+        ILoggerFactory loggerFactory,
+        IDistributedCache distributedCache,
+        IOptions<AIProviderOptions> providerOptions,
+        IEnumerable<IAICompletionServiceHandler> handlers,
+        IServiceProvider serviceProvider,
+        DefaultAIOptions defaultOptions,
+        INamedCatalog<AIDeployment> deploymentStore,
+        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
+        ITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
+        ) : base(
+        OpenAIConst.ImplementationName,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions.Value,
+        defaultOptions,
+        handlers,
+        deploymentStore,
+        aiTemplateService,
+        deploymentManager)
+    {
+        _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
+    }
+
+    protected OpenAICompletionClient(
+        string implementationName,
+        IAIClientFactory aIClientFactory,
+        ILoggerFactory loggerFactory,
+        IDistributedCache distributedCache,
+        AIProviderOptions providerOptions,
+        IEnumerable<IAICompletionServiceHandler> handlers,
+        IServiceProvider serviceProvider,
+        DefaultAIOptions defaultOptions,
+        INamedCatalog<AIDeployment> deploymentStore,
+        IEnumerable<IOpenAIChatOptionsConfiguration> openAIChatOptionsConfigurations,
+        ITemplateService aiTemplateService,
+        IAIDeploymentManager deploymentManager
+        ) : base(
+        implementationName,
+        aIClientFactory,
+        distributedCache,
+        loggerFactory,
+        serviceProvider,
+        providerOptions,
+        defaultOptions,
+        handlers,
+        deploymentStore,
+        aiTemplateService,
+        deploymentManager)
+    {
+        _openAIChatOptionsConfigurations = openAIChatOptionsConfigurations;
+    }
+
+    protected override string ProviderName
+        => OpenAIConstants.ClientName;
+
+    protected override async ValueTask ConfigureChatOptionsAsync(CompletionServiceConfigureContext configureContext)
+    {
+        foreach (var handler in _openAIChatOptionsConfigurations)
+        {
+            await handler.InitializeConfigurationAsync(configureContext);
+        }
+
+        configureContext.ChatOptions.RawRepresentationFactory = _ =>
+        {
+            var chatCompletionOptions = new ChatCompletionOptions();
+
+            foreach (var handler in _openAIChatOptionsConfigurations)
+            {
+                handler.Configure(configureContext, chatCompletionOptions);
+            }
+
+            return chatCompletionOptions;
+        };
+    }
+}

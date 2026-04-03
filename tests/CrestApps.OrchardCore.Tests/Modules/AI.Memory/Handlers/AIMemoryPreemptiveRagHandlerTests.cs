@@ -1,13 +1,13 @@
 using System.Security.Claims;
-using CrestApps.AI.Prompting.Models;
-using CrestApps.AI.Prompting.Services;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Templates.Models;
+using CrestApps.Templates.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +19,7 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Settings;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
+
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Memory.Handlers;
 
 public sealed class AIMemoryPreemptiveRagHandlerTests
@@ -63,16 +64,16 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
     public async Task HandleAsync_RelevantMemoriesFound_AppendsMemoryContext()
     {
         var memorySearchService = CreateMemorySearchService(
-            [
-                new AIMemorySearchResult
-                {
-                    MemoryId = "memory-1",
-                    Name = "preferred_name",
-                    Description = "The user's preferred name.",
-                    Content = "Mike",
-                    UpdatedUtc = new DateTime(2026, 3, 21, 0, 0, 0, DateTimeKind.Utc),
-                    Score = 0.98f,
-                },
+        [
+            new AIMemorySearchResult
+            {
+            MemoryId = "memory-1",
+            Name = "preferred_name",
+            Description = "The user's preferred name.",
+            Content = "Mike",
+            UpdatedUtc = new DateTime(2026, 3, 21, 0, 0, 0, DateTimeKind.Utc),
+            Score = 0.98f,
+            },
             ]);
 
         var handler = CreateHandler(memorySearchService: memorySearchService);
@@ -96,23 +97,23 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
     public async Task HandleAsync_DuplicateMatchesAcrossQueries_DeduplicatesByMemoryId()
     {
         var memorySearchService = CreateMemorySearchService(
-            [
-                new AIMemorySearchResult
-                {
-                    MemoryId = "memory-1",
-                    Name = "preferred_editor",
-                    Description = "The user's preferred editor.",
-                    Content = "VS Code",
-                    Score = 0.80f,
-                },
-                new AIMemorySearchResult
-                {
-                    MemoryId = "memory-1",
-                    Name = "preferred_editor",
-                    Description = "The user's preferred editor.",
-                    Content = "VS Code",
-                    Score = 0.95f,
-                },
+        [
+        new AIMemorySearchResult
+            {
+            MemoryId = "memory-1",
+            Name = "preferred_editor",
+            Description = "The user's preferred editor.",
+            Content = "VS Code",
+            Score = 0.80f,
+            },
+            new AIMemorySearchResult
+            {
+            MemoryId = "memory-1",
+            Name = "preferred_editor",
+            Description = "The user's preferred editor.",
+            Content = "VS Code",
+            Score = 0.95f,
+            },
             ]);
 
         var handler = CreateHandler(memorySearchService: memorySearchService);
@@ -122,9 +123,9 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
         };
 
         await handler.HandleAsync(new PreemptiveRagContext(
-            context,
-            new AIProfile(),
-            ["What editor do I prefer?", "Which IDE do I like?"]));
+        context,
+        new AIProfile(),
+        ["What editor do I prefer?", "Which IDE do I like?"]));
 
         var systemMessage = context.SystemMessageBuilder.ToString();
         Assert.Equal(1, CountOccurrences(systemMessage, "Memory: preferred_editor"));
@@ -132,29 +133,29 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
     }
 
     private static AIMemoryPreemptiveRagHandler CreateHandler(
-        string userId = "user-1",
-        AIMemorySearchService memorySearchService = null,
-        ISiteService siteService = null)
+    string userId = "user-1",
+    AIMemorySearchService memorySearchService = null,
+    ISiteService siteService = null)
     {
         var httpContextAccessor = new HttpContextAccessor
         {
             HttpContext = new DefaultHttpContext
             {
                 User = string.IsNullOrEmpty(userId)
-                    ? new ClaimsPrincipal(new ClaimsIdentity())
-                    : new ClaimsPrincipal(new ClaimsIdentity(
-                    [
-                        new Claim(ClaimTypes.NameIdentifier, userId),
-                    ], "TestAuth")),
+        ? new ClaimsPrincipal(new ClaimsIdentity())
+        : new ClaimsPrincipal(new ClaimsIdentity(
+        [
+        new Claim(ClaimTypes.NameIdentifier, userId),
+        ], "TestAuth")),
             },
         };
 
         return new AIMemoryPreemptiveRagHandler(
-            memorySearchService ?? CreateMemorySearchService([]),
-            new FakeAITemplateService(),
-            siteService ?? CreateSiteService(enableChatInteractionMemory: true),
-            httpContextAccessor,
-            NullLogger<AIMemoryPreemptiveRagHandler>.Instance);
+        memorySearchService ?? CreateMemorySearchService([]),
+        new FakeAITemplateService(),
+        siteService ?? CreateSiteService(enableChatInteractionMemory: true),
+        httpContextAccessor,
+        NullLogger<AIMemoryPreemptiveRagHandler>.Instance);
     }
 
     private static AIMemorySearchService CreateMemorySearchService(IEnumerable<AIMemorySearchResult> results)
@@ -164,6 +165,7 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
             Name = "memory-index",
             ProviderName = "test-provider",
         };
+
         indexProfile.Put(new AIMemoryIndexProfileMetadata
         {
             EmbeddingProviderName = "test-provider",
@@ -175,57 +177,59 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
 
         var indexProfileStore = new Mock<IIndexProfileStore>();
         indexProfileStore
-            .Setup(store => store.FindByNameAsync(indexProfile.Name))
-            .ReturnsAsync(indexProfile);
+        .Setup(store => store.FindByNameAsync(indexProfile.Name))
+        .ReturnsAsync(indexProfile);
 
         var vectorSearchService = new Mock<IMemoryVectorSearchService>();
         vectorSearchService
-            .Setup(service => service.SearchAsync(
-                indexProfile,
-                It.IsAny<float[]>(),
-                "user-1",
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(results);
+        .Setup(service => service.SearchAsync(
+        indexProfile,
+        It.IsAny<float[]>(),
+        "user-1",
+        It.IsAny<int>(),
+        It.IsAny<CancellationToken>()))
+        .ReturnsAsync(results);
 
         var services = new ServiceCollection()
-            .AddKeyedSingleton<IMemoryVectorSearchService>("test-provider", vectorSearchService.Object)
-            .BuildServiceProvider();
+        .AddKeyedSingleton<IMemoryVectorSearchService>("test-provider", vectorSearchService.Object)
+        .BuildServiceProvider();
 
         return new AIMemorySearchService(
-            siteService,
-            indexProfileStore.Object,
-            services,
-            new FakeAIClientFactory(new FakeEmbeddingGenerator([0.1f, 0.2f])),
-            NullLogger<AIMemorySearchService>.Instance);
+        siteService,
+        indexProfileStore.Object,
+        services,
+        new FakeAIClientFactory(new FakeEmbeddingGenerator([0.1f, 0.2f])),
+        NullLogger<AIMemorySearchService>.Instance);
     }
 
     private static ISiteService CreateSiteService(
-        bool enableChatInteractionMemory = true,
-        string indexProfileName = "memory-index",
-        bool enablePreemptiveMemoryRetrieval = true)
+    bool enableChatInteractionMemory = true,
+    string indexProfileName = "memory-index",
+    bool enablePreemptiveMemoryRetrieval = true)
     {
         var siteSettings = new Mock<ISite>();
         siteSettings.Setup(site => site.As<AIMemorySettings>())
-            .Returns(new AIMemorySettings
-            {
-                IndexProfileName = indexProfileName,
-                TopN = 5,
-            });
+        .Returns(new AIMemorySettings
+        {
+            IndexProfileName = indexProfileName,
+            TopN = 5,
+        });
+
         siteSettings.Setup(site => site.As<ChatInteractionMemorySettings>())
-            .Returns(new ChatInteractionMemorySettings
-            {
-                EnableUserMemory = enableChatInteractionMemory,
-            });
+        .Returns(new ChatInteractionMemorySettings
+        {
+            EnableUserMemory = enableChatInteractionMemory,
+        });
+
         siteSettings.Setup(site => site.As<GeneralAISettings>())
-            .Returns(new GeneralAISettings
-            {
-                EnablePreemptiveMemoryRetrieval = enablePreemptiveMemoryRetrieval,
-            });
+        .Returns(new GeneralAISettings
+        {
+            EnablePreemptiveMemoryRetrieval = enablePreemptiveMemoryRetrieval,
+        });
 
         var siteService = new Mock<ISiteService>();
         siteService.Setup(service => service.GetSiteSettingsAsync())
-            .ReturnsAsync(siteSettings.Object);
+        .ReturnsAsync(siteSettings.Object);
 
         return siteService.Object;
     }
@@ -244,26 +248,26 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
         return count;
     }
 
-    private sealed class FakeAITemplateService : IAITemplateService
+    private sealed class FakeAITemplateService : ITemplateService
     {
-        public Task<IReadOnlyList<AITemplate>> ListAsync()
-            => Task.FromResult<IReadOnlyList<AITemplate>>([]);
+        public Task<IReadOnlyList<Template>> ListAsync()
+            => Task.FromResult<IReadOnlyList<Template>>([]);
 
-        public Task<AITemplate> GetAsync(string id)
-            => Task.FromResult<AITemplate>(null);
+        public Task<Template> GetAsync(string id)
+            => Task.FromResult<Template>(null);
 
         public Task<string> RenderAsync(string id, IDictionary<string, object> arguments = null)
         {
             if (id == MemoryConstants.TemplateIds.MemoryContextHeader &&
-                arguments?.TryGetValue("searchToolName", out var searchToolName) == true &&
-                arguments.TryGetValue("results", out var resultsObj) == true &&
-                resultsObj is IEnumerable<object> results)
+            arguments?.TryGetValue("searchToolName", out var searchToolName) == true &&
+            arguments.TryGetValue("results", out var resultsObj) == true &&
+            resultsObj is IEnumerable<object> results)
             {
                 var lines = new List<string>
-                {
-                    "[Retrieved User Memory]",
-                    $"Use `{searchToolName}` for more memory.",
-                };
+            {
+            "[Retrieved User Memory]",
+            $"Use `{searchToolName}` for more memory.",
+            };
 
                 foreach (dynamic result in results)
                 {
@@ -299,7 +303,7 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
 
 #pragma warning disable MEAI001
         public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((IImageGenerator)null);
+    => new((IImageGenerator)null);
 
         public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
             => new((ISpeechToTextClient)null);
@@ -309,11 +313,11 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
 #pragma warning restore MEAI001
 
 #pragma warning disable MEAI001
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+    => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 
-        public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-            => new((ITextToSpeechClient)null);
+        public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+            => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
     }
 
@@ -329,9 +333,9 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
         public EmbeddingGeneratorMetadata Metadata { get; } = new("fake");
 
         public Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
-            IEnumerable<string> values,
-            EmbeddingGenerationOptions options = null,
-            CancellationToken cancellationToken = default)
+        IEnumerable<string> values,
+        EmbeddingGenerationOptions options = null,
+        CancellationToken cancellationToken = default)
         {
             var embeddings = new GeneratedEmbeddings<Embedding<float>>();
 

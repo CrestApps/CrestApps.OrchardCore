@@ -13,6 +13,10 @@ The suite enables highly customizable chat experiences, along with robust prompt
 
 It supports most AI providers including **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and any provider that adheres to the OpenAI API standard.
 
+:::tip Framework Documentation
+The Orchard Core AI Suite is built on the **[CrestApps AI Framework](../framework/)**. For core concepts like orchestration, context builders, response handlers, and tool registration, see the [Framework documentation](../framework/). This section focuses on the **Orchard Core-specific** admin UI, features, recipes, and deployment steps.
+:::
+
 ## Architecture
 
 The AI Suite is built on [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI), providing a standardized abstraction layer for AI services. The architecture follows a modular, feature-rich design, allowing you to enable only the components you need while still composing a larger AI integrations and solutions platform for your Orchard Core solution.
@@ -63,6 +67,10 @@ The suite also includes rich management capabilities in Orchard Core, such as AI
 2. Enable the desired AI features in the Orchard Core admin dashboard (**Tools → Features**)
 3. Configure at least one [AI provider](./providers/) with connection credentials
 4. Create an AI Profile and start interacting with AI models
+
+### Legacy tenant data compatibility
+
+When upgrading from older `2.0.0` previews or switching between branches that stored AI records under the legacy Orchard-layer assemblies, the AI module now rewrites `AI_Document` type names to the current framework-layer `CrestApps.AI.*` assemblies on startup. This keeps existing AI profiles, chat sessions, and chat prompts readable without requiring a manual database reset.
 
 ### Quick Start Configuration
 

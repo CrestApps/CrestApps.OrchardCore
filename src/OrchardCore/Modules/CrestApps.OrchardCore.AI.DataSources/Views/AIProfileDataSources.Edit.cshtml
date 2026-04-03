@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+@using OrchardCore
+
+@model EditProfileDataSourcesViewModel
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="DataSourceId" class="@Orchard.GetLabelClasses()">@T["Data source"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="DataSourceId" class="form-select">
+            <option value="">@T["No data source"]</option>
+            @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
+            {
+                @if (source.ItemId == Model.DataSourceId)
+                {
+                    <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
+                    continue;
+                }
+
+                <option value="@source.ItemId">@source.DisplayText</option>
+            }
+        </select>
+        <span asp-validation-for="DataSourceId" class="text-danger"></span>
+        <span class="hint">@T["Select the knowledge-base data source used to retrieve background context for this AI profile."]</span>
+    </div>
+</div>

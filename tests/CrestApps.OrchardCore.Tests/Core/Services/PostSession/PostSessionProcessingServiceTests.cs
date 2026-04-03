@@ -1,13 +1,15 @@
-using CrestApps.AI.Prompting.Services;
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.AI;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
+using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
 using Moq;
+
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.PostSession;
@@ -15,6 +17,7 @@ namespace CrestApps.OrchardCore.Tests.Core.Services.PostSession;
 public sealed class PostSessionProcessingServiceTests
 {
     private const string TestProviderName = "TestProvider";
+
     private const string TestConnectionName = "TestConnection";
     private const string TestDeploymentName = "gpt-4o";
 
@@ -25,10 +28,12 @@ public sealed class PostSessionProcessingServiceTests
         var profile = CreateProfile();
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
         {
+
             s.EnablePostSessionProcessing = false;
         });
 
         var session = CreateSession();
+
         var prompts = CreatePrompts();
 
         var service = CreateService();
@@ -37,6 +42,7 @@ public sealed class PostSessionProcessingServiceTests
         var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
 
         // Assert
+
         Assert.Null(result);
     }
 
@@ -48,10 +54,12 @@ public sealed class PostSessionProcessingServiceTests
         profile.AlterSettings<AIProfilePostSessionSettings>(s =>
         {
             s.EnablePostSessionProcessing = true;
+
             s.PostSessionTasks = [];
         });
 
         var session = CreateSession();
+
         var prompts = CreatePrompts();
 
         var service = CreateService();
@@ -60,6 +68,7 @@ public sealed class PostSessionProcessingServiceTests
         var result = await service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken);
 
         // Assert
+
         Assert.Null(result);
     }
 
@@ -75,20 +84,22 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "disposition",
-                    Type = PostSessionTaskType.PredefinedOptions,
-                    Instructions = "Determine the disposition.",
-                    Options =
-                    [
-                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
-                        new PostSessionTaskOption { Value = "Unresolved", Description = "Issue not resolved" },
-                    ],
-                },
+                Name = "disposition",
+                Type = PostSessionTaskType.PredefinedOptions,
+                Instructions = "Determine the disposition.",
+                Options =
+                [
+                new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+                new PostSessionTaskOption { Value = "Unresolved", Description = "Issue not resolved" },
+            ],
+            },
             ];
+
             s.ToolNames = [];
         });
 
         var session = CreateSession();
+
         var prompts = CreatePrompts();
 
         var mockChatClient = new Mock<IChatClient>();
@@ -98,17 +109,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()))
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+        "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt text");
 
         var service = CreateService(
+
             chatClient: mockChatClient.Object,
             templateService: mockTemplateService.Object);
 
@@ -118,10 +132,11 @@ public sealed class PostSessionProcessingServiceTests
         // Assert: The structured output path was invoked via the chat client.
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Once);
     }
 
     [Fact]
@@ -136,11 +151,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -150,7 +166,9 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
+
             .ReturnsAsync(mockTool);
 
         var mockChatClient = new Mock<IChatClient>();
@@ -158,23 +176,27 @@ public sealed class PostSessionProcessingServiceTests
         // The tools path calls non-generic GetResponseAsync.
         // Simulate response with a JSON result.
         var responseMessage = new ChatMessage(ChatRole.Assistant,
-            "{\"tasks\":[{\"name\":\"summary\",\"value\":\"User asked about pricing and was given options.\"}]}");
+
+        "{\"tasks\":[{\"name\":\"summary\",\"value\":\"User asked about pricing and was given options.\"}]}");
         var chatResponse = new ChatResponse(responseMessage);
 
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(chatResponse);
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -187,10 +209,11 @@ public sealed class PostSessionProcessingServiceTests
         // Assert: the chat client was invoked with tools in the options.
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.Is<ChatOptions>(opts => opts.Tools != null && opts.Tools.Count > 0),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.Is<ChatOptions>(opts => opts.Tools != null && opts.Tools.Count > 0),
+        It.IsAny<CancellationToken>()),
+
+        Times.Once);
     }
 
     [Fact]
@@ -205,11 +228,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["nonExistentTool"];
         });
 
@@ -218,6 +242,7 @@ public sealed class PostSessionProcessingServiceTests
 
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("nonExistentTool"))
             .ReturnsAsync((AITool)null);
 
@@ -225,18 +250,21 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()))
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+        "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -249,10 +277,11 @@ public sealed class PostSessionProcessingServiceTests
         // Assert: when no tools resolve, the structured output path is used (no tools in options).
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.Is<ChatOptions>(opts => opts.Tools == null || opts.Tools.Count == 0),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.Is<ChatOptions>(opts => opts.Tools == null || opts.Tools.Count == 0),
+        It.IsAny<CancellationToken>()),
+
+        Times.Once);
     }
 
     [Fact]
@@ -267,20 +296,23 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize.",
                 },
+
             ];
         });
 
         var session = CreateSession();
+
         var prompts = CreatePrompts();
 
         var service = CreateService();
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
+
             () => service.ProcessAsync(profile, session, prompts, TestContext.Current.CancellationToken));
     }
 
@@ -296,10 +328,11 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize.",
                 },
+
             ];
         });
 
@@ -307,17 +340,19 @@ public sealed class PostSessionProcessingServiceTests
         var prompts = CreatePrompts();
 
         var mockChatClient = new Mock<IChatClient>();
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
 
         // Return a valid system prompt but an empty user prompt.
         mockTemplateService
             .Setup(t => t.RenderAsync(AITemplateIds.PostSessionAnalysis, It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("System prompt");
         mockTemplateService
+
             .Setup(t => t.RenderAsync(AITemplateIds.PostSessionAnalysisPrompt, It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync(string.Empty);
 
         var service = CreateService(
+
             chatClient: mockChatClient.Object,
             templateService: mockTemplateService.Object);
 
@@ -328,10 +363,11 @@ public sealed class PostSessionProcessingServiceTests
         Assert.Null(result);
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Never);
     }
 
     [Fact]
@@ -346,20 +382,21 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "disposition",
-                    Type = PostSessionTaskType.PredefinedOptions,
-                    Instructions = "Determine the disposition.",
-                    Options =
-                    [
-                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
-                    ],
-                },
-                new PostSessionTask
-                {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize.",
-                },
+                Name = "disposition",
+                Type = PostSessionTaskType.PredefinedOptions,
+                Instructions = "Determine the disposition.",
+                Options =
+                [
+                new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+            ],
+            },
+            new PostSessionTask
+            {
+            Name = "summary",
+            Type = PostSessionTaskType.Semantic,
+            Instructions = "Summarize.",
+            },
+
             ];
         });
 
@@ -371,11 +408,13 @@ public sealed class PostSessionProcessingServiceTests
             Status = PostSessionTaskResultStatus.Succeeded,
             ProcessedAtUtc = DateTime.UtcNow,
         };
+
         session.PostSessionResults["summary"] = new PostSessionResult
         {
             Name = "summary",
             Value = "User asked about pricing.",
             Status = PostSessionTaskResultStatus.Succeeded,
+
             ProcessedAtUtc = DateTime.UtcNow,
         };
 
@@ -389,10 +428,11 @@ public sealed class PostSessionProcessingServiceTests
         Assert.Null(result);
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Never);
     }
 
     [Fact]
@@ -407,20 +447,21 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "disposition",
-                    Type = PostSessionTaskType.PredefinedOptions,
-                    Instructions = "Determine the disposition.",
-                    Options =
-                    [
-                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
-                    ],
-                },
-                new PostSessionTask
-                {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize.",
-                },
+                Name = "disposition",
+                Type = PostSessionTaskType.PredefinedOptions,
+                Instructions = "Determine the disposition.",
+                Options =
+                [
+                new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+            ],
+            },
+            new PostSessionTask
+            {
+            Name = "summary",
+            Type = PostSessionTaskType.Semantic,
+            Instructions = "Summarize.",
+            },
+
             ];
         });
 
@@ -432,10 +473,12 @@ public sealed class PostSessionProcessingServiceTests
             Status = PostSessionTaskResultStatus.Succeeded,
             ProcessedAtUtc = DateTime.UtcNow,
         };
+
         session.PostSessionResults["summary"] = new PostSessionResult
         {
             Name = "summary",
             Status = PostSessionTaskResultStatus.Failed,
+
             ErrorMessage = "Previous attempt failed",
         };
 
@@ -443,17 +486,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()))
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+        "{\"tasks\":[{\"name\":\"summary\",\"value\":\"Summarized the conversation.\"}]}")));
+
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
+
             chatClient: mockChatClient.Object,
             templateService: mockTemplateService.Object);
 
@@ -463,10 +509,11 @@ public sealed class PostSessionProcessingServiceTests
         // Assert: the chat client was invoked (the failed task should be retried).
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Once);
     }
 
     [Fact]
@@ -481,15 +528,17 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = [];
         });
 
         var session = CreateSession();
+
         var prompts = CreatePrompts();
 
         var mockChatClient = new Mock<IChatClient>();
@@ -500,16 +549,19 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseJson)));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt text");
 
         var service = CreateService(
+
             chatClient: mockChatClient.Object,
             templateService: mockTemplateService.Object);
 
@@ -522,10 +574,12 @@ public sealed class PostSessionProcessingServiceTests
         // This test verifies the service processes without errors.
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Once);
+
     }
 
     #region Helpers
@@ -536,6 +590,7 @@ public sealed class PostSessionProcessingServiceTests
         {
             ItemId = "test-profile-id",
             Name = "TestProfile",
+
             DisplayText = "Test Profile",
         };
 
@@ -549,6 +604,7 @@ public sealed class PostSessionProcessingServiceTests
             SessionId = "test-session-id",
             ProfileId = "test-profile-id",
             Status = ChatSessionStatus.Closed,
+
         };
     }
 
@@ -558,33 +614,37 @@ public sealed class PostSessionProcessingServiceTests
         [
             new AIChatSessionPrompt
             {
-                Role = ChatRole.User,
-                Content = "Hello, I need help with my order.",
-                CreatedUtc = DateTime.UtcNow,
+            Role = ChatRole.User,
+            Content = "Hello, I need help with my order.",
+            CreatedUtc = DateTime.UtcNow,
             },
             new AIChatSessionPrompt
             {
-                Role = ChatRole.Assistant,
-                Content = "Sure! I'd be happy to help. Could you provide your order number?",
-                CreatedUtc = DateTime.UtcNow,
+            Role = ChatRole.Assistant,
+            Content = "Sure! I'd be happy to help. Could you provide your order number?",
+            CreatedUtc = DateTime.UtcNow,
             },
+
         ];
     }
 
     private static PostSessionProcessingService CreateService(
         IChatClient chatClient = null,
         IAIToolsService toolsService = null,
-        IAITemplateService templateService = null)
+        ITemplateService templateService = null)
     {
         var mockClientFactory = new Mock<IAIClientFactory>();
+
         if (chatClient is not null)
         {
             mockClientFactory
                 .Setup(f => f.CreateChatClientAsync(TestProviderName, TestConnectionName, TestDeploymentName))
+
                 .ReturnsAsync(chatClient);
         }
 
         var mockDeploymentManager = new Mock<IAIDeploymentManager>();
+
         if (chatClient is not null)
         {
             var deployment = new AIDeployment
@@ -593,37 +653,45 @@ public sealed class PostSessionProcessingServiceTests
                 Name = TestDeploymentName,
                 ClientName = TestProviderName,
                 ConnectionName = TestConnectionName,
+
                 Type = AIDeploymentType.Chat,
             };
 
             mockDeploymentManager
                 .Setup(d => d.ResolveOrDefaultAsync(
                     It.IsAny<AIDeploymentType>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>()))
+            It.IsAny<string>(),
+            It.IsAny<string>()))
+
                 .ReturnsAsync(deployment);
         }
 
         var mockToolsService = toolsService is not null
-            ? null
-            : new Mock<IAIToolsService>();
+
+        ? null
+        : new Mock<IAIToolsService>();
 
         var mockTemplateService = templateService is not null
-            ? null
-            : new Mock<IAITemplateService>();
+
+        ? null
+        : new Mock<ITemplateService>();
 
         // Set up default template renders.
+
         if (mockTemplateService is not null)
         {
             mockTemplateService
                 .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
+
                 .ReturnsAsync("Default rendered text");
+
         }
 
         var providerOptions = new AIProviderOptions();
 
         var defaultOptions = new DefaultAIOptions
         {
+
             MaximumIterationsPerRequest = 10,
         };
 
@@ -635,13 +703,13 @@ public sealed class PostSessionProcessingServiceTests
             toolsService ?? mockToolsService.Object,
             templateService ?? mockTemplateService.Object,
             Options.Create(providerOptions),
-            defaultOptions,
-            new Mock<IServiceProvider>().Object,
-            clock.Object,
-            NullLoggerFactory.Instance,
-            mockDeploymentManager.Object);
-    }
+        defaultOptions,
+        new Mock<IServiceProvider>().Object,
+        clock.Object,
+        NullLoggerFactory.Instance,
 
+        mockDeploymentManager.Object);
+    }
     /// <summary>
     /// A minimal AIFunction implementation for testing tool resolution.
     /// </summary>
@@ -649,7 +717,9 @@ public sealed class PostSessionProcessingServiceTests
     {
         public TestAIFunction(string name)
         {
+
             Name = name;
+
         }
 
         public override string Name { get; }
@@ -664,6 +734,7 @@ public sealed class PostSessionProcessingServiceTests
             CancellationToken cancellationToken)
         {
             return new ValueTask<object>("Tool executed successfully.");
+
         }
     }
 
@@ -679,11 +750,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -693,6 +765,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -701,17 +774,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -722,6 +798,7 @@ public sealed class PostSessionProcessingServiceTests
         Assert.NotNull(result);
         Assert.True(result.ContainsKey("summary"));
         Assert.Equal("Customer asked about pricing.", result["summary"].Value);
+
         Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
     }
 
@@ -737,11 +814,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -751,6 +829,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -759,17 +838,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -780,6 +862,7 @@ public sealed class PostSessionProcessingServiceTests
         Assert.NotNull(result);
         Assert.True(result.ContainsKey("summary"));
         Assert.Equal("Customer asked about pricing.", result["summary"].Value);
+
         Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
     }
 
@@ -795,11 +878,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -809,6 +893,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -816,19 +901,22 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .SetupSequence(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "{")))
-            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
-                "{\"tasks\":[{\"name\":\"summary\",\"value\":\"The user requested fence information and follow-up was initiated.\"}]}")));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+            .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant,
+        "{\"tasks\":[{\"name\":\"summary\",\"value\":\"The user requested fence information and follow-up was initiated.\"}]}")));
+
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -842,10 +930,11 @@ public sealed class PostSessionProcessingServiceTests
         Assert.Equal(PostSessionTaskResultStatus.Succeeded, result["summary"].Status);
         mockChatClient.Verify(
             c => c.GetResponseAsync(
-                It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+            It.IsAny<IEnumerable<ChatMessage>>(),
+        It.IsAny<ChatOptions>(),
+        It.IsAny<CancellationToken>()),
+
+        Times.Exactly(2));
     }
 
     [Fact]
@@ -860,11 +949,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -874,6 +964,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -882,17 +973,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText)));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -904,6 +998,7 @@ public sealed class PostSessionProcessingServiceTests
         Assert.True(result.ContainsKey("summary"));
         Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
         Assert.NotNull(result["summary"].ErrorMessage);
+
         Assert.Equal(string.Empty, result["summary"].Value ?? string.Empty);
     }
 
@@ -919,21 +1014,22 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
                 new PostSessionTask
                 {
-                    Name = "disposition",
-                    Type = PostSessionTaskType.PredefinedOptions,
-                    Instructions = "Determine the disposition.",
-                    Options =
-                    [
-                        new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
-                    ],
-                },
+                Name = "disposition",
+                Type = PostSessionTaskType.PredefinedOptions,
+                Instructions = "Determine the disposition.",
+                Options =
+                [
+                new PostSessionTaskOption { Value = "Resolved", Description = "Issue resolved" },
+            ],
+            },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -943,6 +1039,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -950,17 +1047,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Still not JSON.")));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -973,6 +1073,7 @@ public sealed class PostSessionProcessingServiceTests
         Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
         Assert.Equal(PostSessionTaskResultStatus.Failed, result["disposition"].Status);
         Assert.NotNull(result["summary"].ErrorMessage);
+
         Assert.NotNull(result["disposition"].ErrorMessage);
     }
 
@@ -988,11 +1089,12 @@ public sealed class PostSessionProcessingServiceTests
             [
                 new PostSessionTask
                 {
-                    Name = "summary",
-                    Type = PostSessionTaskType.Semantic,
-                    Instructions = "Summarize the conversation.",
+                Name = "summary",
+                Type = PostSessionTaskType.Semantic,
+                Instructions = "Summarize the conversation.",
                 },
             ];
+
             s.ToolNames = ["sendEmail"];
         });
 
@@ -1002,6 +1104,7 @@ public sealed class PostSessionProcessingServiceTests
         var mockTool = new TestAIFunction("sendEmail");
         var mockToolsService = new Mock<IAIToolsService>();
         mockToolsService
+
             .Setup(t => t.GetByNameAsync("sendEmail"))
             .ReturnsAsync(mockTool);
 
@@ -1009,17 +1112,20 @@ public sealed class PostSessionProcessingServiceTests
         mockChatClient
             .Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
-                It.IsAny<ChatOptions>(),
-                It.IsAny<CancellationToken>()))
+        It.IsAny<ChatOptions>(),
+
+        It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(new ChatMessage(ChatRole.Assistant, "")));
 
-        var mockTemplateService = new Mock<IAITemplateService>();
+        var mockTemplateService = new Mock<ITemplateService>();
         mockTemplateService
+
             .Setup(t => t.RenderAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>()))
             .ReturnsAsync("Rendered prompt");
 
         var service = CreateService(
             chatClient: mockChatClient.Object,
+
             toolsService: mockToolsService.Object,
             templateService: mockTemplateService.Object);
 
@@ -1030,6 +1136,7 @@ public sealed class PostSessionProcessingServiceTests
         Assert.NotNull(result);
         Assert.True(result.ContainsKey("summary"));
         Assert.Equal(PostSessionTaskResultStatus.Failed, result["summary"].Status);
+
         Assert.NotNull(result["summary"].ErrorMessage);
     }
 

@@ -1,12 +1,11 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Chat.Services;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.ChatNotifications;
 
@@ -43,13 +42,13 @@ public sealed class EndSessionNotificationActionHandlerTests
             .Callback<string, ChatContextType, ChatNotification>((_, _, n) => captured = n)
             .Returns(Task.CompletedTask);
 
-        var clockMock = new Mock<IClock>();
-        clockMock.Setup(c => c.UtcNow).Returns(now);
+        var timeProviderMock = new Mock<TimeProvider>();
+        timeProviderMock.Setup(t => t.GetUtcNow()).Returns(new DateTimeOffset(now));
 
         var services = BuildServiceProvider(
             sessionManager: sessionManagerMock.Object,
             notificationSender: senderMock.Object,
-            clock: clockMock.Object);
+            timeProvider: timeProviderMock.Object);
 
         var context = CreateContext("session-1", ChatContextType.AIChatSession, services);
 
@@ -94,7 +93,7 @@ public sealed class EndSessionNotificationActionHandlerTests
         // Notification is not sent when session is not found (early return).
         senderMock.Verify(
             s => s.SendAsync(It.IsAny<string>(), It.IsAny<ChatContextType>(), It.IsAny<ChatNotification>()),
-            Times.Never);
+        Times.Never);
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -145,7 +144,7 @@ public sealed class EndSessionNotificationActionHandlerTests
     private static ServiceProvider BuildServiceProvider(
         IAIChatSessionManager sessionManager = null,
         IChatNotificationSender notificationSender = null,
-        IClock clock = null)
+        TimeProvider timeProvider = null)
     {
         var services = new ServiceCollection();
 
@@ -163,9 +162,9 @@ public sealed class EndSessionNotificationActionHandlerTests
             services.AddSingleton(notificationSender);
         }
 
-        if (clock is not null)
+        if (timeProvider is not null)
         {
-            services.AddSingleton(clock);
+            services.AddSingleton(timeProvider);
         }
 
         return services.BuildServiceProvider();

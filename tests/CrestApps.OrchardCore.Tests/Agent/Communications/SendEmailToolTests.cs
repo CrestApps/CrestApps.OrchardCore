@@ -44,13 +44,13 @@ public sealed class SendEmailToolTests
 
         // Assert: email should be sent successfully without throwing NullReferenceException.
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-            m.To == "test@example.com"
+        m.To == "test@example.com"
             && m.Subject == "Test Subject"
-            && m.HtmlBody == "<p>Test body</p>"
-            && m.Sender == null
-            && m.From == null),
-            It.IsAny<string>()),
-            Times.Once);
+                && m.HtmlBody == "<p>Test body</p>"
+                    && m.Sender == null
+                        && m.From == null),
+        It.IsAny<string>()),
+        Times.Once);
     }
 
     [Fact]
@@ -91,10 +91,10 @@ public sealed class SendEmailToolTests
 
         // Assert: email should include sender from the authenticated user.
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-            m.Sender == "sender@example.com"
+        m.Sender == "sender@example.com"
             && m.From == "sender@example.com"),
-            It.IsAny<string>()),
-            Times.Once);
+        It.IsAny<string>()),
+        Times.Once);
     }
 
     [Fact]
@@ -210,10 +210,10 @@ public sealed class SendEmailToolTests
 
         // Assert
         emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-            m.Cc == "cc@example.com"
+        m.Cc == "cc@example.com"
             && m.Bcc == "bcc@example.com"),
-            It.IsAny<string>()),
-            Times.Once);
+        It.IsAny<string>()),
+        Times.Once);
     }
 
     private static ServiceProvider CreateServiceProvider(
@@ -241,6 +241,7 @@ public sealed class SendEmailToolTests
     private static Mock<UserManager<IUser>> MockUserManager()
     {
         var store = new Mock<IUserStore<IUser>>();
+
         return new Mock<UserManager<IUser>>(
             store.Object, null, null, null, null, null, null, null, null);
     }

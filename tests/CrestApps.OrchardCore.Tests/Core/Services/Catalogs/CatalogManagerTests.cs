@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
+using CrestApps.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -132,6 +131,27 @@ public sealed class CatalogManagerTests
         await manager.DeleteAsync(entry);
         handlerMock.Verify(h => h.DeletingAsync(It.Is<DeletingContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
         handlerMock.Verify(h => h.DeletedAsync(It.Is<DeletedContext<TestCatalogEntry>>(ctx => ctx.Model == entry)), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SavesCatalogChanges()
+    {
+        var entry = new TestCatalogEntry { ItemId = "1" };
+        var catalogMock = new Mock<ICatalog<TestCatalogEntry>>();
+        catalogMock
+            .Setup(catalog => catalog.DeleteAsync(entry))
+            .ReturnsAsync(true);
+        catalogMock
+            .Setup(catalog => catalog.SaveChangesAsync())
+            .Returns(ValueTask.CompletedTask);
+
+        var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
+        var manager = new CatalogManager<TestCatalogEntry>(catalogMock.Object, [], logger);
+
+        await manager.DeleteAsync(entry);
+
+        catalogMock.Verify(catalog => catalog.DeleteAsync(entry), Times.Once);
+        catalogMock.Verify(catalog => catalog.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]

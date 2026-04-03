@@ -108,16 +108,16 @@ const config = {
                 to: '/docs/getting-started',
               },
               {
+                label: 'Framework',
+                to: '/docs/framework',
+              },
+              {
                 label: 'AI Suite',
                 to: '/docs/ai',
               },
               {
                 label: 'AI Providers',
                 to: '/docs/ai/providers',
-              },
-              {
-                label: 'Consuming AI Services',
-                to: '/docs/ai/consuming-ai-services',
               },
             ],
           },

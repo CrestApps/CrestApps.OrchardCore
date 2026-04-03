@@ -124,7 +124,7 @@ After you start storing production memory data, avoid changing the configured ma
 
 #### AI Profiles
 
-AI Profiles expose **Enable User Memory** in the **Interactions** card of the profile editor.
+AI Profiles expose **Enable User Memory** in the **Knowledge** tab of the profile editor.
 
 - Default: **disabled**
 - Scope: per profile
@@ -133,7 +133,7 @@ This lets you opt in only on the profiles where cross-session personalization is
 
 #### AI Profile Templates
 
-Profile-source AI Templates also expose **Enable User Memory** in the **Interactions** card.
+Profile-source AI Templates also expose **Enable User Memory** in the **Knowledge** tab.
 
 - Default: **disabled**
 - Scope: persisted with the template and applied to new profiles created from it

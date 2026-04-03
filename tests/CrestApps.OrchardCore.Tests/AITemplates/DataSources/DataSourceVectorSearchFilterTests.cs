@@ -9,7 +9,7 @@ public sealed class DataSourceVectorSearchFilterTests
     public void AzureAISearch_BuildODataFilter_AlwaysIncludesDataSourceId()
     {
         var serviceType = Type.GetType(
-            "CrestApps.OrchardCore.AI.DataSources.AzureAI.Services.AzureAISearchDataSourceContentManager, CrestApps.OrchardCore.AI.DataSources.AzureAI",
+            "CrestApps.Azure.AISearch.Services.AzureAISearchDataSourceContentManager, CrestApps.Azure.AISearch",
             throwOnError: true);
 
         var method = serviceType!.GetMethod("BuildODataFilter", BindingFlags.Static | BindingFlags.NonPublic);
@@ -24,7 +24,7 @@ public sealed class DataSourceVectorSearchFilterTests
     public void AzureAISearch_BuildODataFilter_MergesUserFilterWithDataSourceId()
     {
         var serviceType = Type.GetType(
-            "CrestApps.OrchardCore.AI.DataSources.AzureAI.Services.AzureAISearchDataSourceContentManager, CrestApps.OrchardCore.AI.DataSources.AzureAI",
+            "CrestApps.Azure.AISearch.Services.AzureAISearchDataSourceContentManager, CrestApps.Azure.AISearch",
             throwOnError: true);
 
         var method = serviceType!.GetMethod("BuildODataFilter", BindingFlags.Static | BindingFlags.NonPublic);
@@ -39,7 +39,7 @@ public sealed class DataSourceVectorSearchFilterTests
     public void Elasticsearch_BuildMustQueryDebug_AlwaysIncludesDataSourceId()
     {
         var serviceType = Type.GetType(
-            "CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.OrchardCore.AI.DataSources.Elasticsearch",
+            "CrestApps.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.Elasticsearch",
             throwOnError: true);
 
         var method = serviceType.GetMethod("BuildMustQueryDebug", BindingFlags.Static | BindingFlags.NonPublic);
@@ -58,7 +58,7 @@ public sealed class DataSourceVectorSearchFilterTests
     public void Elasticsearch_BuildMustQueryDebug_AddsWrapperQueryWithBase64Filter()
     {
         var serviceType = Type.GetType(
-            "CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.OrchardCore.AI.DataSources.Elasticsearch",
+            "CrestApps.Elasticsearch.Services.ElasticsearchDataSourceContentManager, CrestApps.Elasticsearch",
             throwOnError: true);
 
         var method = serviceType.GetMethod("BuildMustQueryDebug", BindingFlags.Static | BindingFlags.NonPublic);

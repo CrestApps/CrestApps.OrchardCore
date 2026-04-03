@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Chat.Copilot.Settings;

@@ -13,6 +13,10 @@ description: Foundational infrastructure for the CrestApps AI Suite in Orchard C
 
 Provides the core AI services and management infrastructure. (`EnabledByDependencyOnly = true`)
 
+:::tip Framework Reference
+This page covers the **Orchard Core admin UI and feature configuration**. For the underlying framework concepts (completion clients, orchestration, context builders), see the [Framework AI Core](../framework/ai-core.md) and [Orchestration](../framework/orchestration.md) documentation.
+:::
+
 ## AI Services Feature
 
 The **AI Services** feature provides the foundational infrastructure for the broader CrestApps AI Suite in Orchard Core. It covers configurable profiles, orchestration, provider integrations, connection and deployment management, prompt and tool infrastructure, and site-level AI administration.

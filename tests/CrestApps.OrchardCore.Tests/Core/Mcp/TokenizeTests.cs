@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.AI;
 
 namespace CrestApps.OrchardCore.Tests.Core.Mcp;
 
@@ -86,7 +86,7 @@ public sealed class TokenizeTests
         // Both should stem to the same form and thus overlap.
         Assert.True(
             recipesTokens.Overlaps(recipeTokens),
-            $"Expected overlap between [{string.Join(", ", recipesTokens)}] and [{string.Join(", ", recipeTokens)}]");
+        $"Expected overlap between [{string.Join(", ", recipesTokens)}] and [{string.Join(", ", recipeTokens)}]");
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public sealed class TokenizeTests
 
         Assert.True(
             gerundTokens.Overlaps(baseTokens),
-            $"Expected overlap between [{string.Join(", ", gerundTokens)}] and [{string.Join(", ", baseTokens)}]");
+        $"Expected overlap between [{string.Join(", ", gerundTokens)}] and [{string.Join(", ", baseTokens)}]");
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class TokenizeTests
 
         Assert.True(
             pastTokens.Overlaps(baseTokens),
-            $"Expected overlap between [{string.Join(", ", pastTokens)}] and [{string.Join(", ", baseTokens)}]");
+        $"Expected overlap between [{string.Join(", ", pastTokens)}] and [{string.Join(", ", baseTokens)}]");
     }
 
     [Fact]

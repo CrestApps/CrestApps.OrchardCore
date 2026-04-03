@@ -115,10 +115,10 @@ public sealed class DefaultOAuth2TokenServiceTests
     {
         // Arrange
         var handler = new MockHttpMessageHandler((_, _) =>
-            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
-            {
-                Content = new StringContent("{\"error\":\"invalid_client\"}"),
-            }));
+        Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+        {
+            Content = new StringContent("{\"error\":\"invalid_client\"}"),
+        }));
         var service = CreateService(handler);
         var ct = TestContext.Current.CancellationToken;
 
@@ -321,7 +321,6 @@ public sealed class DefaultOAuth2TokenServiceTests
             });
         });
     }
-
     /// <summary>
     /// Synchronously parses form-encoded content from the request.
     /// </summary>
@@ -335,7 +334,7 @@ public sealed class DefaultOAuth2TokenServiceTests
             .Select(p => p.Split('='))
             .ToDictionary(
                 p => Uri.UnescapeDataString(p[0]),
-                p => Uri.UnescapeDataString(p[1].Replace('+', ' ')));
+        p => Uri.UnescapeDataString(p[1].Replace('+', ' ')));
     }
 
     private static string GenerateTestRsaPrivateKeyPem()

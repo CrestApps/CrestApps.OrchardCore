@@ -1,13 +1,20 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Completions;
+using CrestApps.AI.Models;
+
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Tooling;
+
 using Microsoft.Extensions.AI;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
+
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
 /// <summary>
 /// A test orchestrator used for verifying orchestrator resolution.
 /// </summary>
+
 internal sealed class TestOrchestrator : IOrchestrator
 {
     public string Name => "custom";
@@ -20,10 +27,10 @@ internal sealed class TestOrchestrator : IOrchestrator
         {
             Contents = [new TextContent("test response")],
         };
+
         await Task.CompletedTask;
     }
 }
-
 /// <summary>
 /// A no-op completion service for testing.
 /// </summary>
@@ -34,6 +41,7 @@ internal sealed class NullCompletionService : IAICompletionService
         IEnumerable<ChatMessage> messages,
         AICompletionContext context,
         CancellationToken cancellationToken = default)
+
     {
         return Task.FromResult(new ChatResponse([]));
     }
@@ -45,10 +53,10 @@ internal sealed class NullCompletionService : IAICompletionService
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
+
         yield break;
     }
 }
-
 /// <summary>
 /// A no-op tool registry for testing.
 /// </summary>
@@ -57,6 +65,7 @@ internal sealed class NullToolRegistry : IToolRegistry
     public Task<IReadOnlyList<ToolRegistryEntry>> GetAllAsync(
         AICompletionContext context,
         CancellationToken cancellationToken = default)
+
     {
         return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>([]);
     }
@@ -67,16 +76,17 @@ internal sealed class NullToolRegistry : IToolRegistry
         AICompletionContext context,
         CancellationToken cancellationToken = default)
     {
+
         return Task.FromResult<IReadOnlyList<ToolRegistryEntry>>([]);
     }
 }
-
 /// <summary>
 /// A no-op AI client factory for testing.
 /// </summary>
 internal sealed class NullAIClientFactory : IAIClientFactory
 {
     public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName)
+
         => new((IChatClient)null);
 
     public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName)
@@ -84,8 +94,8 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> CreateImageGeneratorAsync(string providerName, string connectionName, string deploymentName = null)
-        => new((IImageGenerator)null);
 
+    => new((IImageGenerator)null);
     public ValueTask<ISpeechToTextClient> CreateSpeechToTextClientAsync(string providerName, string connectionName, string deploymentName = null)
         => new((ISpeechToTextClient)null);
 
@@ -94,10 +104,10 @@ internal sealed class NullAIClientFactory : IAIClientFactory
 #pragma warning restore MEAI001
 
 #pragma warning disable MEAI001
-    public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
-        => new((ITextToSpeechClient)null);
+    public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(string providerName, string connectionName, string deploymentName = null)
+    => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 
-    public ValueTask<ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
-        => new((ITextToSpeechClient)null);
+    public ValueTask<Microsoft.Extensions.AI.ITextToSpeechClient> CreateTextToSpeechClientAsync(AIDeployment deployment)
+        => new((Microsoft.Extensions.AI.ITextToSpeechClient)null);
 #pragma warning restore MEAI001
 }

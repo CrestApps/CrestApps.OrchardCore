@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -302,11 +302,11 @@ public sealed class McpServerAuthorizationHandlerTests
         authServiceMock
             .Setup(s => s.AuthorizeAsync(
                 It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<object>(),
-                It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+        It.IsAny<object>(),
+        It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
             .ReturnsAsync(authorizeResult
-                ? AuthorizationResult.Success()
-                : AuthorizationResult.Failed());
+        ? AuthorizationResult.Success()
+        : AuthorizationResult.Failed());
 
         services.AddSingleton(authServiceMock.Object);
 

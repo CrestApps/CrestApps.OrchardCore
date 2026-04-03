@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
@@ -20,4 +20,3 @@ public sealed class TestCatalogEntry : CatalogItem
         return (ItemId?.GetHashCode() ?? 0) ^ GetType().GetHashCode();
     }
 }
-

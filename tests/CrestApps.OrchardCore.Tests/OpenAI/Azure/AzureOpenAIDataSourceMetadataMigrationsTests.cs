@@ -1,9 +1,6 @@
-
 using System.Reflection;
 
-using CrestApps.OrchardCore.AI.Core.Models;
-
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.AI.Models;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,19 +13,14 @@ using Moq;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 
-
 namespace CrestApps.OrchardCore.Tests.OpenAI.Azure;
 
-
-
 public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
-
 {
 
     [Fact]
 
     public void FindFirstEmbeddingMetadata_WhenEmbeddingConnectionExists_ShouldReturnMetadata()
-
     {
 
         var providerOptions = new AIProviderOptions();
@@ -84,7 +76,6 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
     [Fact]
 
     public void FindFirstEmbeddingMetadata_WhenNoEmbeddingConnectionConfigured_ShouldLogWarningAndReturnEmptyMetadata()
-
     {
 
         var providerOptions = new AIProviderOptions();
@@ -117,24 +108,23 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
 
         logger.Verify(x => x.Log(
 
-                LogLevel.Warning,
+            LogLevel.Warning,
 
-                It.IsAny<EventId>(),
+            It.IsAny<EventId>(),
 
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No AI provider connection with an embedding deployment")),
+        It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No AI provider connection with an embedding deployment")),
 
-                It.IsAny<Exception>(),
+        It.IsAny<Exception>(),
 
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
 
-            Times.Once);
+        Times.Once);
 
     }
 
 
 
     private static DataSourceIndexProfileMetadata InvokeFindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
-
     {
 
         var assembly = Assembly.Load("CrestApps.OrchardCore.OpenAI.Azure");
@@ -152,6 +142,4 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
         return (DataSourceIndexProfileMetadata)method.Invoke(null, [serviceProvider, logger])!;
 
     }
-
 }
-

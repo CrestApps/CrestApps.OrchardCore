@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore YesSql Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      OrchardCore-specific YesSql stores that extend the framework-independent CrestApps.Data.YesSql.
+    </Description>
+    <PackageTags>$(PackageTags) AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../../Framework/Stores/CrestApps.Data.YesSql/CrestApps.Data.YesSql.csproj" />
+  </ItemGroup>
+
+</Project>

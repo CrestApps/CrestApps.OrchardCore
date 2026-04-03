@@ -157,9 +157,9 @@ internal sealed class Program
             AppContext.BaseDirectory,
             Environment.CurrentDirectory,
         }
-        .Select(path => new DirectoryInfo(path))
-        .DistinctBy(directory => directory.FullName)
-        .ToArray();
+            .Select(path => new DirectoryInfo(path))
+            .DistinctBy(directory => directory.FullName)
+            .ToArray();
 
         foreach (var candidateDirectory in candidateDirectories)
         {
@@ -180,7 +180,7 @@ internal sealed class Program
     private static bool IsRepositoryRoot(DirectoryInfo directory)
         => File.Exists(Path.Combine(directory.FullName, "global.json")) ||
             File.Exists(Path.Combine(directory.FullName, "NuGet.config")) ||
-            File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx"));
+                File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx"));
 
     private static DirectoryNotFoundException CreateAgentSkillsNotFoundException(string projectRoot, string agentSkillsRoot)
     {
@@ -238,10 +238,10 @@ internal sealed class Program
         return typeof(IRecipeStep).Assembly.ExportedTypes
             .Where(type =>
                 typeof(IRecipeStep).IsAssignableFrom(type) &&
-                type is { IsAbstract: false, IsInterface: false })
-            .OrderBy(type => type.Name, StringComparer.Ordinal)
-            .Select(type => CreateRecipeStep(type, schemaDefinitions, partNames))
-            .ToArray();
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => CreateRecipeStep(type, schemaDefinitions, partNames))
+                    .ToArray();
     }
 
     private static IContentDefinitionSchemaDefinition[] CreateContentDefinitionSchemaDefinitions()
@@ -249,10 +249,10 @@ internal sealed class Program
         return typeof(IContentDefinitionSchemaDefinition).Assembly.ExportedTypes
             .Where(type =>
                 typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
-                type is { IsAbstract: false, IsInterface: false })
-            .OrderBy(type => type.Name, StringComparer.Ordinal)
-            .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type)!)
-            .ToArray();
+                    type is { IsAbstract: false, IsInterface: false })
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type)!)
+                    .ToArray();
     }
 
     private static IRecipeStep CreateRecipeStep(
@@ -378,7 +378,7 @@ internal sealed class Program
     private sealed class StubContentSchemaProvider(
         IReadOnlyList<string> partNames,
         IReadOnlyList<string> fieldTypeNames) : IContentSchemaProvider
-    {
+        {
         public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
             => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
 

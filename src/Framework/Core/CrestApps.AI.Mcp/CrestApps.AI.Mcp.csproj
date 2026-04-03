@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+<RootNamespace>CrestApps.AI.Mcp</RootNamespace>
+<Title>CrestApps AI MCP Core</Title>
+<Description>
+$(CrestAppsDescription)
+
+Model Context Protocol (MCP) implementation for CrestApps AI services.
+</Description>
+<PackageTags>$(PackageTags) AI MCP</PackageTags>
+</PropertyGroup>
+
+<ItemGroup>
+<FrameworkReference Include="Microsoft.AspNetCore.App" />
+</ItemGroup>
+
+<ItemGroup>
+  <PackageReference Include="ModelContextProtocol" />
+  <PackageReference Include="FluentFTP" />
+  <PackageReference Include="SSH.NET" />
+</ItemGroup>
+
+<ItemGroup>
+<ProjectReference Include="../../Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
+</ItemGroup>
+
+</Project>

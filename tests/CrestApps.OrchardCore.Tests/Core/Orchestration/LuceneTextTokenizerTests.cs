@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.AI;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;
 
@@ -40,7 +40,7 @@ public sealed class LuceneTextTokenizerTests
         var tokensB = _tokenizer.Tokenize("recipe");
 
         Assert.True(tokensA.Overlaps(tokensB),
-            $"Expected overlap between [{string.Join(", ", tokensA)}] and [{string.Join(", ", tokensB)}]");
+        $"Expected overlap between [{string.Join(", ", tokensA)}] and [{string.Join(", ", tokensB)}]");
     }
 
     [Fact]
