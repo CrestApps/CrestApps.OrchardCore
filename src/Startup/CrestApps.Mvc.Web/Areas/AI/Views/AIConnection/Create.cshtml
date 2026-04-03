@@ -23,7 +23,7 @@
             <div class="mb-3">
                 <label asp-for="Source" class="form-label">Provider <span class="text-danger">*</span></label>
                 <select asp-for="Source" class="form-select" asp-items="Model.Providers" id="providerSelect">
-                    <option value="">— Select Provider —</option>
+                    <option value="">Select provider</option>
                 </select>
                 <span asp-validation-for="Source" class="text-danger"></span>
             </div>
@@ -35,7 +35,7 @@
             <div class="mb-3" id="authTypeGroup">
                 <label asp-for="AuthenticationType" class="form-label">Authentication type</label>
                 <select asp-for="AuthenticationType" class="form-select" asp-items="Model.AuthenticationTypes" id="authTypeSelect">
-                    <option value="">— Select authentication type —</option>
+                    <option value="">Select authentication type</option>
                 </select>
             </div>
             <div class="mb-3" id="apiKeyGroup">

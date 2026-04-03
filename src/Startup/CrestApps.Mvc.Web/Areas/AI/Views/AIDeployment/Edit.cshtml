@@ -27,7 +27,7 @@
             <div class="mb-3">
                 <label asp-for="ClientName" class="form-label">Provider</label>
                 <select asp-for="ClientName" class="form-select" asp-items="Model.Providers" id="providerSelect">
-                    <option value="">— Select Provider —</option>
+                    <option value="">Select provider</option>
                 </select>
             </div>
             <div class="mb-3">
@@ -50,7 +50,9 @@
             </div>
             <div class="mb-3" id="connectionGroup">
                 <label asp-for="ConnectionName" class="form-label">Connection</label>
-                <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections"></select>
+                <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections">
+                    <option value="">No connection</option>
+                </select>
                 <div class="form-text">The connection this deployment belongs to.</div>
             </div>
 
@@ -69,7 +71,7 @@
                 <div class="mb-3">
                     <label asp-for="AuthenticationType" class="form-label">Authentication type</label>
                     <select asp-for="AuthenticationType" class="form-select" asp-items="Model.AuthenticationTypes" id="authTypeSelect">
-                        <option value="">— Select authentication type —</option>
+                        <option value="">Select authentication type</option>
                     </select>
                 </div>
                 <div class="mb-3" id="apiKeyGroup">

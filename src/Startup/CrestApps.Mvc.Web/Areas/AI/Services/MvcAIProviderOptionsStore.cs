@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
 
 namespace CrestApps.Mvc.Web.Areas.AI.Services;
@@ -96,7 +97,19 @@ public sealed class MvcAIProviderOptionsStore
 
         foreach (var provider in providers)
         {
-            options.Providers[provider.Key] = provider.Value;
+            var targetProvider = AIProviderOptionsConnectionMerger.GetOrAddProvider(options, provider.Key);
+
+#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
+            targetProvider.DefaultChatDeploymentName ??= provider.Value.DefaultChatDeploymentName;
+            targetProvider.DefaultEmbeddingDeploymentName ??= provider.Value.DefaultEmbeddingDeploymentName;
+            targetProvider.DefaultImagesDeploymentName ??= provider.Value.DefaultImagesDeploymentName;
+            targetProvider.DefaultUtilityDeploymentName ??= provider.Value.DefaultUtilityDeploymentName;
+#pragma warning restore CS0618
+
+            foreach (var connection in provider.Value.Connections)
+            {
+                AIProviderOptionsConnectionMerger.MergeConnection(targetProvider, connection.Key, connection.Value);
+            }
         }
     }
 }

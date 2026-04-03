@@ -2,6 +2,7 @@ using CrestApps.AI;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -44,10 +45,12 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddScoped<DefaultAIDeploymentStore>()
-            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
-            .AddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>()
+            .AddScoped<IAIDeploymentStore>(sp => sp.GetRequiredService<DefaultAIDeploymentStore>())
+            .AddScoped<ConfigurationAIDeploymentCatalog>()
+            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<IAIDeploymentManager, CrestApps.AI.Services.DefaultAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
         return services;

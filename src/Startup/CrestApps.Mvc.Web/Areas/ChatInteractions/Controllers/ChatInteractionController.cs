@@ -401,8 +401,8 @@ public sealed class ChatInteractionController : Controller
         // Orchestrators
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = new[] { new SelectListItem("— Default orchestrator —", "") }
-            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+        model.Orchestrators = orchestrators
+            .Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key))
             .ToList();
 
         // Copilot

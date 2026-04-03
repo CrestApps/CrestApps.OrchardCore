@@ -145,17 +145,15 @@ public sealed class AIDataSourceController : Controller
         var indexProfiles = await _indexProfileStore.GetAllAsync();
 
         // Source index profiles: exclude DataSource type profiles
-        model.SourceIndexProfiles = new[] { new SelectListItem("— Select index profile —", "") }
-            .Concat(indexProfiles
-                .Where(p => !string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
-                .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name)))
+        model.SourceIndexProfiles = indexProfiles
+            .Where(p => !string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
+            .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name))
             .ToList();
 
         // Knowledge base index profiles: only DataSource type profiles
-        model.KnowledgeBaseIndexProfiles = new[] { new SelectListItem("— Select index profile —", "") }
-            .Concat(indexProfiles
-                .Where(p => string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
-                .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name)))
+        model.KnowledgeBaseIndexProfiles = indexProfiles
+            .Where(p => string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
+            .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name))
             .ToList();
     }
 }

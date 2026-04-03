@@ -66,14 +66,16 @@
                     <div class="mb-3">
                         <label asp-for="ChatDeploymentName" class="form-label">Deployment</label>
                         <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.Deployments">
-                            <option value="">— Select deployment —</option>
+                            <option value="">Select deployment</option>
                         </select>
                         <div class="form-text">The AI model deployment to use for this chat.</div>
                     </div>
 
                     <div class="mb-3">
                         <label asp-for="OrchestratorName" class="form-label">Orchestrator</label>
-                        <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators"></select>
+                        <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators">
+                            <option value="">Use default orchestrator</option>
+                        </select>
                         <div class="form-text">The orchestrator that manages AI interactions.</div>
                     </div>
 
@@ -388,7 +390,7 @@
                             </span>
                         </label>
                         <select asp-for="DataSourceId" class="form-select" asp-items="Model.DataSources">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">Select a RAG data source to provide background knowledge for this interaction.</div>
                     </div>

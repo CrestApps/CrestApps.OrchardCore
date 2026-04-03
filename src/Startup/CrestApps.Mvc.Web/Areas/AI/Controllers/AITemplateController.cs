@@ -226,21 +226,19 @@ public sealed class AITemplateController : Controller
 
         var allDeployments = await _deploymentCatalog.GetAllAsync();
 
-        model.ChatDeployments = new[] { new SelectListItem("— Default Chat Deployment —", "") }
-            .Concat(allDeployments
-                .Where(d => d.Type.Supports(AIDeploymentType.Chat))
-                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+        model.ChatDeployments = allDeployments
+            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name))
             .ToList();
 
-        model.UtilityDeployments = new[] { new SelectListItem("— Default Utility Deployment —", "") }
-            .Concat(allDeployments
-                .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
-                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+        model.UtilityDeployments = allDeployments
+            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name))
             .ToList();
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = new[] { new SelectListItem("— Default Orchestrator —", "") }
-            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+        model.Orchestrators = orchestrators
+            .Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key))
             .ToList();
 
         model.CopilotAuthenticationType = _copilotOptions.AuthenticationType;
@@ -340,10 +338,9 @@ public sealed class AITemplateController : Controller
         }
 
         var dataSources = await _dataSourceStore.GetAllAsync();
-        model.DataSources = new[] { new SelectListItem("— No data source —", "") }
-            .Concat(dataSources
-                .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
-                .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)))
+        model.DataSources = dataSources
+            .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
             .ToList();
     }
 

@@ -1,9 +1,12 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
+using CrestApps.Infrastructure;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Mvc.Web.Areas.AI.Controllers;
 
@@ -12,7 +15,7 @@ namespace CrestApps.Mvc.Web.Areas.AI.Controllers;
 public sealed class AIDeploymentController : Controller
 {
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
-    private readonly ICatalog<AIProviderConnection> _connectionCatalog;
+    private readonly AIProviderOptions _providerOptions;
 
     private static readonly List<SelectListItem> _providers =
     [
@@ -38,17 +41,25 @@ public sealed class AIDeploymentController : Controller
 
     public AIDeploymentController(
         ICatalog<AIDeployment> deploymentCatalog,
-        ICatalog<AIProviderConnection> connectionCatalog)
+        IOptionsSnapshot<AIProviderOptions> providerOptions)
     {
         _deploymentCatalog = deploymentCatalog;
-        _connectionCatalog = connectionCatalog;
+        _providerOptions = providerOptions.Value;
     }
 
     public async Task<IActionResult> Index()
     {
         var deployments = await _deploymentCatalog.GetAllAsync();
 
-        return View(deployments);
+        return View(deployments
+            .Select(deployment =>
+            {
+                var model = AIDeploymentViewModel.FromDeployment(deployment);
+                model.IsReadOnly = AIConfigurationRecordIds.IsConfigurationDeploymentId(deployment.ItemId);
+                return model;
+            })
+            .OrderBy(static deployment => deployment.TechnicalName, StringComparer.OrdinalIgnoreCase)
+            .ToList());
     }
 
     public async Task<IActionResult> Create()
@@ -116,6 +127,12 @@ public sealed class AIDeploymentController : Controller
             return NotFound();
         }
 
+        if (AIConfigurationRecordIds.IsConfigurationDeploymentId(deployment.ItemId))
+        {
+            TempData["ErrorMessage"] = "Deployments defined in appsettings are read-only and cannot be edited from the UI.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = AIDeploymentViewModel.FromDeployment(deployment);
         await PopulateDropdownsAsync(model);
 
@@ -126,6 +143,12 @@ public sealed class AIDeploymentController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AIDeploymentViewModel model)
     {
+        if (AIConfigurationRecordIds.IsConfigurationDeploymentId(model.ItemId))
+        {
+            TempData["ErrorMessage"] = "Deployments defined in appsettings are read-only and cannot be edited from the UI.";
+            return RedirectToAction(nameof(Index));
+        }
+
         if (string.IsNullOrWhiteSpace(model.ModelName))
         {
             ModelState.AddModelError(nameof(model.ModelName), "Model name is required.");
@@ -155,6 +178,12 @@ public sealed class AIDeploymentController : Controller
             return NotFound();
         }
 
+        if (AIConfigurationRecordIds.IsConfigurationDeploymentId(existing.ItemId))
+        {
+            TempData["ErrorMessage"] = "Deployments defined in appsettings are read-only and cannot be edited from the UI.";
+            return RedirectToAction(nameof(Index));
+        }
+
         // Clear connection for standalone providers.
 
         if (_standaloneProviders.Contains(model.ClientName ?? string.Empty))
@@ -181,17 +210,39 @@ public sealed class AIDeploymentController : Controller
             return NotFound();
         }
 
+        if (AIConfigurationRecordIds.IsConfigurationDeploymentId(deployment.ItemId))
+        {
+            TempData["ErrorMessage"] = "Deployments defined in appsettings are read-only and cannot be deleted from the UI.";
+            return RedirectToAction(nameof(Index));
+        }
+
         await _deploymentCatalog.DeleteAsync(deployment);
         await _deploymentCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task PopulateDropdownsAsync(AIDeploymentViewModel model)
+    private Task PopulateDropdownsAsync(AIDeploymentViewModel model)
     {
-        var connections = await _connectionCatalog.GetAllAsync();
-        model.Connections = new[] { new SelectListItem("— No Connection (Standalone) —", "") }
-            .Concat(connections.Select(c => new SelectListItem(c.DisplayText ?? c.Name, c.Name)))
+        var selectedProvider = string.IsNullOrWhiteSpace(model.ClientName)
+            ? null
+            : model.ClientName;
+
+        model.Connections = _providerOptions.Providers
+            .Where(provider => selectedProvider is null || provider.Key.Equals(selectedProvider, StringComparison.OrdinalIgnoreCase))
+            .Where(static provider => provider.Value.Connections is not null)
+            .OrderBy(provider => provider.Key, StringComparer.OrdinalIgnoreCase)
+            .SelectMany(provider => provider.Value.Connections
+                .OrderBy(connection => connection.Value.GetStringValue("ConnectionNameAlias", false) ?? connection.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(connection =>
+                {
+                    var connectionAlias = connection.Value.GetStringValue("ConnectionNameAlias", false) ?? connection.Key;
+                    var displayName = selectedProvider is null
+                        ? $"{connectionAlias} ({provider.Key})"
+                        : connectionAlias;
+
+                    return new SelectListItem(displayName, connection.Key);
+                }))
             .ToList();
         model.Providers = _providers;
         model.AuthenticationTypes = _authTypes;
@@ -199,5 +250,7 @@ public sealed class AIDeploymentController : Controller
             .Where(static type => type != AIDeploymentType.None)
             .Select(static t => new SelectListItem(t.ToString(), t.ToString()))
             .ToList();
+
+        return Task.CompletedTask;
     }
 }

@@ -139,7 +139,7 @@
                     <div class="mb-2">
                         <label class="form-label">Deployment</label>
                         <select class="form-select setting-input" id="setting-deployment" data-setting="deploymentName">
-                            <option value="">— Select deployment —</option>
+                            <option value="">Select deployment</option>
                             @foreach (var d in Model.Deployments)
                             {
                                 <option value="@d.Value" selected="@(d.Value == Model.ChatDeploymentName ? "selected" : null)">@d.Text</option>
@@ -150,6 +150,7 @@
                     <div class="mb-2">
                         <label class="form-label">Orchestrator</label>
                         <select class="form-select setting-input" id="setting-orchestratorName" name="OrchestratorName" data-setting="orchestratorName">
+                            <option value="">Use default orchestrator</option>
                             @foreach (var o in Model.Orchestrators)
                             {
                                 <option value="@o.Value" selected="@(o.Value == Model.OrchestratorName ? "selected" : null)">@o.Text</option>
@@ -390,7 +391,7 @@
                             </span>
                         </label>
                         <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select setting-input" id="setting-dataSourceId" data-setting="dataSourceId">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">External data source for AI context.</div>
                     </div>

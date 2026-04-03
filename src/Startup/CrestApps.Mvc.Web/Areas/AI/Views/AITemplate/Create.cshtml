@@ -94,7 +94,7 @@
                                 <div class="mb-3">
                                     <label asp-for="ProfileType" class="form-label">Profile type</label>
                                     <select asp-for="ProfileType" class="form-select" id="profileTypeSelect" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AIProfileType>()">
-                                        <option value="">— Default —</option>
+                                        <option value="">Default</option>
                                     </select>
                                     <div class="form-text">Choose the type of the profile.</div>
                                 </div>
@@ -103,7 +103,7 @@
                                 <div class="mb-3">
                                     <label asp-for="TitleType" class="form-label">Title type</label>
                                     <select asp-for="TitleType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AISessionTitleType>()">
-                                        <option value="">— Default —</option>
+                                        <option value="">Default</option>
                                     </select>
                                     <div class="form-text">How the chat session title is determined.</div>
                                 </div>
@@ -113,21 +113,27 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="ChatDeploymentName" class="form-label">Chat deployment</label>
-                                    <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                    <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments">
+                                        <option value="">Use default chat deployment</option>
+                                    </select>
                                     <div class="form-text">The chat model deployment to use.</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="UtilityDeploymentName" class="form-label">Utility deployment</label>
-                                    <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                    <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments">
+                                        <option value="">Use default utility deployment</option>
+                                    </select>
                                     <div class="form-text">Optional deployment for utility tasks.</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="OrchestratorName" class="form-label">Orchestrator</label>
-                                    <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators"></select>
+                                    <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators">
+                                        <option value="">Use default orchestrator</option>
+                                    </select>
                                     <div class="form-text">The orchestrator that manages AI interactions.</div>
                                 </div>
                             </div>
@@ -500,7 +506,9 @@
                         <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                         <div class="mb-3">
                             <label asp-for="DataSourceId" class="form-label">RAG data source</label>
-                            <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select"></select>
+                            <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
+                                <option value="">No data source</option>
+                            </select>
                             <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for profiles created from this template.</div>
                         </div>
                         <div class="row">
@@ -803,64 +811,64 @@
             var profileFields = document.getElementById('profileFields');
             var systemPromptFields = document.getElementById('systemPromptFields');
 
-        function updateVisibility() {
-        var isProfile = sourceSelect.value === 'Profile';
-        profileFields.style.display = isProfile ? '' : 'none';
-        systemPromptFields.style.display = isProfile ? 'none' : '';
-        if (isProfile) {
-        toggleProfileTypeFields();
-        } else {
-        document.querySelectorAll('#profileFields .profile-type').forEach(function (el) { el.classList.add('d-none'); });
-        }
-        }
+            // --- Profile Type conditional visibility ---
+            var profileTypeSelect = document.getElementById('profileTypeSelect');
+            var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
+            var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
+            var initialPromptGroup = document.getElementById('initialPromptGroup');
 
-        sourceSelect.addEventListener('change', updateVisibility);
-        updateVisibility();
+            function convertToKebabCase(str) {
+                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            }
 
-        // --- Profile Type conditional visibility ---
-        var profileTypeSelect = document.getElementById('profileTypeSelect');
-        var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
-        var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
-        var initialPromptGroup = document.getElementById('initialPromptGroup');
+            function toggleProfileTypeFields() {
+                if (!profileTypeSelect) return;
+                var value = profileTypeSelect.value;
+                if (!value) {
+                    document.querySelectorAll('form .profile-type').forEach(function (el) { el.classList.add('d-none'); });
+                    return;
+                }
+                var className = 'profile-type-' + convertToKebabCase(value);
+                document.querySelectorAll('form .profile-type').forEach(function (el) {
+                    if (el.classList.contains(className)) {
+                        el.classList.remove('d-none');
+                    } else {
+                        el.classList.add('d-none');
+                    }
+                });
+                toggleInitialPromptFields();
+            }
 
-        function convertToKebabCase(str) {
-        return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-        }
+            function toggleInitialPromptFields() {
+                if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
+                var isChatType = profileTypeSelect.value === 'Chat';
+                var showInitialPrompt = addInitialPromptCheck.checked;
+                welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
+                initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
+            }
 
-        function toggleProfileTypeFields() {
-        if (!profileTypeSelect) return;
-        var value = profileTypeSelect.value;
-        if (!value) {
-        document.querySelectorAll('#profileFields .profile-type').forEach(function (el) { el.classList.add('d-none'); });
-        return;
-        }
-        var className = 'profile-type-' + convertToKebabCase(value);
-        document.querySelectorAll('#profileFields .profile-type').forEach(function (el) {
-        if (el.classList.contains(className)) {
-        el.classList.remove('d-none');
-        } else {
-        el.classList.add('d-none');
-        }
-        });
-        toggleInitialPromptFields();
-        }
+            function updateVisibility() {
+                var isProfile = sourceSelect.value === 'Profile';
+                profileFields.style.display = isProfile ? '' : 'none';
+                systemPromptFields.style.display = isProfile ? 'none' : '';
+                if (isProfile) {
+                    toggleProfileTypeFields();
+                } else {
+                    document.querySelectorAll('form .profile-type').forEach(function (el) { el.classList.add('d-none'); });
+                }
+            }
 
-        function toggleInitialPromptFields() {
-        if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
-        var isChatType = profileTypeSelect.value === 'Chat';
-        var showInitialPrompt = addInitialPromptCheck.checked;
-        welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
-        initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
-        }
+            sourceSelect.addEventListener('change', updateVisibility);
 
-        if (profileTypeSelect) {
-        profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
-        toggleProfileTypeFields();
-        }
+            if (profileTypeSelect) {
+                profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
+            }
 
-        if (addInitialPromptCheck) {
-        addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
-        }
+            if (addInitialPromptCheck) {
+                addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
+            }
+
+            updateVisibility();
 
         // --- Select All / Deselect All tools ---
         var selectAllBtn = document.getElementById('select-all-tools');

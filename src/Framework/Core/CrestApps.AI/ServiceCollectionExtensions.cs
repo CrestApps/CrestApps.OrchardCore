@@ -122,6 +122,7 @@ public static class ServiceCollectionExtensions
             .AddCrestAppsCoreServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>();
 
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>());
         services.TryAddScoped<IAICompletionService, DefaultAICompletionService>();
         services.TryAddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>();
 

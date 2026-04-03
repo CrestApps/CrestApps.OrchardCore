@@ -23,6 +23,8 @@ public sealed class AIDeploymentViewModel
 
     public string ApiKey { get; set; }
 
+    public bool IsReadOnly { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Connections { get; set; } = [];
 

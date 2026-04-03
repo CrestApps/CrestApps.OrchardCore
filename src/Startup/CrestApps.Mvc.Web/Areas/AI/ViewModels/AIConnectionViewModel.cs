@@ -21,6 +21,8 @@ public sealed class AIConnectionViewModel
 
     public string ApiKey { get; set; }
 
+    public bool IsReadOnly { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Providers { get; set; } = [];
 
@@ -48,6 +50,16 @@ public sealed class AIConnectionViewModel
 
         return model;
     }
+
+    public static AIConnectionViewModel FromConfiguration(string itemId, string name, string displayText, string source)
+        => new()
+        {
+            ItemId = itemId,
+            Name = name,
+            DisplayText = displayText,
+            Source = source,
+            IsReadOnly = true,
+        };
 
     public void ApplyTo(AIProviderConnection connection)
     {

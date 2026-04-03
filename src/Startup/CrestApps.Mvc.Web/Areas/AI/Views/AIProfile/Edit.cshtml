@@ -80,7 +80,7 @@
                             <div class="mb-3">
                                 <label asp-for="TitleType" class="form-label">Title type</label>
                                 <select asp-for="TitleType" class="form-select" asp-items="Html.GetEnumSelectList<CrestApps.AI.Models.AISessionTitleType>()">
-                                    <option value="">— Default —</option>
+                                    <option value="">Default</option>
                                 </select>
                                 <div class="form-text">How the chat session title is determined.</div>
                             </div>
@@ -98,21 +98,27 @@
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="ChatDeploymentName" class="form-label">Chat deployment</label>
-                                <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments"></select>
+                                <select asp-for="ChatDeploymentName" class="form-select" asp-items="Model.ChatDeployments">
+                                    <option value="">Use default chat deployment</option>
+                                </select>
                                 <div class="form-text">The chat model deployment to use.</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="UtilityDeploymentName" class="form-label">Utility deployment</label>
-                                <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments"></select>
+                                <select asp-for="UtilityDeploymentName" class="form-select" asp-items="Model.UtilityDeployments">
+                                    <option value="">Use default utility deployment</option>
+                                </select>
                                 <div class="form-text">Optional deployment for utility tasks (planning, summarization).</div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="OrchestratorName" class="form-label">Orchestrator</label>
-                                <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators"></select>
+                                <select asp-for="OrchestratorName" class="form-select" asp-items="Model.Orchestrators">
+                                    <option value="">Use default orchestrator</option>
+                                </select>
                                 <div class="form-text">The orchestrator that manages AI interactions.</div>
                             </div>
                         </div>
@@ -479,7 +485,9 @@
                     <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                     <div class="mb-3">
                         <label asp-for="DataSourceId" class="form-label">RAG data source</label>
-                        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select"></select>
+                        <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
+                            <option value="">No data source</option>
+                        </select>
                         <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for this profile.</div>
                     </div>
                     <div class="row">

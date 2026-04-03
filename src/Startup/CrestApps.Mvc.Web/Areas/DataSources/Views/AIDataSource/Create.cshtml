@@ -21,6 +21,7 @@
             <div class="mb-3">
                 <label asp-for="SourceIndexProfileName" class="form-label">Source index profile <span class="text-danger">*</span></label>
                 <select asp-for="SourceIndexProfileName" asp-items="Model.SourceIndexProfiles" class="form-select" required>
+                    <option value="">Select index profile</option>
                 </select>
                 <span asp-validation-for="SourceIndexProfileName" class="text-danger"></span>
                 <div class="form-text">The index to read source documents from.</div>
@@ -29,6 +30,7 @@
             <div class="mb-3">
                 <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label">Knowledge base index profile</label>
                 <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.KnowledgeBaseIndexProfiles" class="form-select">
+                    <option value="">Select index profile</option>
                 </select>
                 <span asp-validation-for="AIKnowledgeBaseIndexProfileName" class="text-danger"></span>
                 <div class="form-text">The index where chunked and embedded documents are stored for AI retrieval.</div>

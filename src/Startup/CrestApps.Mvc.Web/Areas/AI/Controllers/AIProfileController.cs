@@ -135,14 +135,12 @@ public sealed class AIProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AIProfileViewModel model, List<IFormFile> Documents)
     {
-
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Name is required.");
         }
 
         if (!ModelState.IsValid)
-
         {
             await PopulateDropdownsAsync(model);
 
@@ -155,16 +153,18 @@ public sealed class AIProfileController : Controller
         model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
         model.ApplyTo(profile);
 
-        await _profileManager.CreateAsync(profile);
+        // Assign ItemId early so document processing can use it as a reference.
+        profile.ItemId = Guid.NewGuid().ToString("N");
 
-        if (Documents != null && Documents.Count > 0)
+        if (Documents is { Count: > 0 })
         {
-
             await UploadDocumentsAsync(profile, Documents);
         }
 
-        return RedirectToAction(nameof(Index));
+        // Single save: persists the profile together with any uploaded documents and chunks.
+        await _profileManager.CreateAsync(profile);
 
+        return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> Edit(string id)
@@ -254,21 +254,19 @@ public sealed class AIProfileController : Controller
     {
         var allDeployments = await _deploymentCatalog.GetAllAsync();
 
-        model.ChatDeployments = new[] { new SelectListItem("— Default Chat Deployment —", "") }
-            .Concat(allDeployments
-                .Where(d => d.Type.Supports(AIDeploymentType.Chat))
-                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+        model.ChatDeployments = allDeployments
+            .Where(d => d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name))
             .ToList();
 
-        model.UtilityDeployments = new[] { new SelectListItem("— Default Utility Deployment —", "") }
-            .Concat(allDeployments
-                .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
-                .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name)))
+        model.UtilityDeployments = allDeployments
+            .Where(d => d.Type.Supports(AIDeploymentType.Utility) || d.Type.Supports(AIDeploymentType.Chat))
+            .Select(d => new SelectListItem(BuildDeploymentLabel(d), d.Name))
             .ToList();
 
         var orchestrators = _orchestratorOptions.GetOrchestratorDescriptors();
-        model.Orchestrators = new[] { new SelectListItem("— Default orchestrator —", "") }
-            .Concat(orchestrators.Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key)))
+        model.Orchestrators = orchestrators
+            .Select(o => new SelectListItem(o.Value.Title ?? o.Key, o.Key))
             .ToList();
 
         // Copilot
@@ -299,14 +297,13 @@ public sealed class AIProfileController : Controller
         }
 
         var templates = await _templateCatalog.GetAllAsync();
-        model.Templates = new[] { new SelectListItem("— No Template —", "") }
-            .Concat(templates.Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)))
+        model.Templates = templates
+            .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId))
             .ToList();
 
-        model.AvailableProfileTemplates = new[] { new SelectListItem("— Select a template to apply —", "") }
-            .Concat(templates
-                .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
-                .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId)))
+        model.AvailableProfileTemplates = templates
+            .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
+            .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId))
             .ToList();
 
         var selectedNames = new HashSet<string>(model.SelectedToolNames ?? [], StringComparer.OrdinalIgnoreCase);
@@ -370,10 +367,9 @@ public sealed class AIProfileController : Controller
 
         var allDataSources = await _dataSourceStore.GetAllAsync();
 
-        model.DataSources = new[] { new SelectListItem("— No data source —", "") }
-            .Concat(allDataSources
-                .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
-                .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId)))
+        model.DataSources = allDataSources
+            .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
             .ToList();
 
         var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
@@ -491,9 +487,6 @@ public sealed class AIProfileController : Controller
                 _logger.LogError(ex, "Error processing uploaded file '{FileName}'.", file.FileName);
             }
         }
-
-        await _profileManager.UpdateAsync(profile);
-        await _documentStore.SaveChangesAsync();
     }
 
     private async Task PopulateAttachedDocumentsAsync(AIProfileViewModel model)
@@ -580,7 +573,6 @@ public sealed class AIProfileController : Controller
         }
 
         profile.Put(documentsMetadata);
-        await _documentStore.SaveChangesAsync();
     }
 
     private static void ApplyTemplateToProfile(AIProfile profile, AIProfileTemplate template)

@@ -44,6 +44,8 @@ CrestApps.Mvc.Web/
 
 The sample now keeps feature-specific controllers, Razor views, and related MVC-only services or models close to the owning area instead of accumulating under a single `Areas/Admin` catch-all folder.
 
+MVC admin forms also keep placeholder dropdown options in the Razor views instead of injecting fake empty `SelectListItem` entries from controllers. The option collections now contain only real persisted values, while the views render plain placeholders such as `Select provider`, `Use default orchestrator`, or `None` when an empty selection is allowed.
+
 ## Startup Configuration Walkthrough
 
 The `Program.cs` file is organized into numbered sections. Here is what each section does:
@@ -121,6 +123,53 @@ builder.Services
 ```
 
 Plus application-specific provider configuration via `MvcAIProviderOptionsStore`.
+
+`AddAzureOpenAIProvider()` also registers the `AzureSpeech` deployment provider used by MVC speech-to-text and text-to-speech selectors, so standalone Azure AI Services deployments from `CrestApps:AI:Deployments` participate in the same merged deployment catalog as UI-managed deployments.
+
+The shared AI options pipeline now also reads connection definitions from `CrestApps:AI:Connections`, merges them with any UI-managed MVC connections, and exposes the combined set everywhere the runtime resolves provider connections. Each configured connection must provide a `Name` plus `ClientName`, and the MVC AI Deployment editor now uses that merged options source too, so appsettings-defined connections appear alongside admin-created connections when creating or editing deployments.
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "Connections": [
+        {
+          "Name": "primary",
+          "ClientName": "OpenAI",
+          "ApiKey": "YOUR_API_KEY",
+          "DefaultDeploymentName": "gpt-4.1"
+        }
+      ]
+    }
+  }
+}
+```
+
+Provider-grouped connection settings under `CrestApps:Providers:{ProviderName}:Connections:{ConnectionName}` still work too. The framework now keeps those provider-defined connections and the `CrestApps:AI:Connections` array in the same runtime options graph, then merges UI-managed MVC connections on top without duplicating host-specific merge code.
+
+AI deployments now follow the same pattern. `CrestApps:AI:Deployments` can be defined either as a flat array of deployment records or as a provider-grouped object, and those configuration deployments are merged with the persisted deployment catalog for both MVC and Orchard Core read operations. Connection-scoped `Deployments` arrays nested under provider connections continue to work as well.
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "Deployments": [
+        {
+          "ClientName": "AzureSpeech",
+          "Name": "whisper",
+          "Type": "SpeechToText",
+          "IsDefault": true,
+          "Endpoint": "https://eastus.stt.speech.microsoft.com",
+          "AuthenticationType": "ApiKey",
+          "ApiKey": "YOUR_API_KEY"
+        }
+      ]
+    }
+  }
+}
+```
+
+When a connection or deployment comes from system configuration, the MVC admin keeps it visible in separate read-only cards below the user-defined records and blocks edit/delete actions. Only records created through the UI remain editable there.
 
 ### Section 7 — Elasticsearch Services
 

@@ -31,7 +31,7 @@
             <div class="mb-3">
                 <label asp-for="ProviderName" class="form-label">Provider <span class="text-danger">*</span></label>
                 <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select" required>
-                    <option value="">— Select Provider —</option>
+                    <option value="">Select Provider</option>
                 </select>
                 <span asp-validation-for="ProviderName" class="text-danger"></span>
                 <div class="form-text">The search backend provider.</div>
@@ -40,7 +40,7 @@
             <div class="mb-3">
                 <label asp-for="Type" class="form-label">Type <span class="text-danger">*</span></label>
                 <select asp-for="Type" asp-items="Model.Types" class="form-select" required>
-                    <option value="">— Select Type —</option>
+                    <option value="">Select Type</option>
                 </select>
                 <span asp-validation-for="Type" class="text-danger"></span>
                 <div class="form-text" id="typeDescription">Determines how this index is used.</div>
@@ -49,6 +49,7 @@
             <div class="mb-3" id="embeddingDeploymentGroup">
                 <label asp-for="EmbeddingDeploymentId" class="form-label">Embedding deployment</label>
                 <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+                    <option value="">Select an Embedding Deployment</option>
                 </select>
                 <span asp-validation-for="EmbeddingDeploymentId" class="text-danger"></span>
                 <div class="form-text">The embedding deployment used to generate vector embeddings for this index.</div>
@@ -84,7 +85,7 @@
             typeSelect.innerHTML = '';
             const placeholder = document.createElement('option');
             placeholder.value = '';
-            placeholder.textContent = '— Select Type —';
+            placeholder.textContent = 'Select type';
             typeSelect.appendChild(placeholder);
 
             unique.forEach(source => {

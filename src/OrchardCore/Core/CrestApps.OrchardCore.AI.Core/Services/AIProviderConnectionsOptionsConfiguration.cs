@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.Logging;
@@ -47,63 +48,38 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
             return;
         }
 
-        var groups = document.Records.Values
-            .GroupBy(x => x.ClientName)
-            .Select(x => new
-            {
-                ProviderName = x.Key,
-                Connections = x,
-            });
-
-        foreach (var group in groups)
+        foreach (var connection in document.Records.Values)
         {
             try
             {
-                if (!options.Providers.TryGetValue(group.ProviderName, out var provider))
+                if (string.IsNullOrWhiteSpace(connection.ClientName) ||
+                    string.IsNullOrWhiteSpace(connection.ItemId))
                 {
-                    provider = new AIProvider()
-                    {
-                        Connections = new Dictionary<string, AIProviderConnectionEntry>(),
-                    };
+                    continue;
                 }
 
-                foreach (var connection in group.Connections)
-                {
-                    var mappingContext = new InitializingAIProviderConnectionContext(connection);
-
-                    if (string.IsNullOrEmpty(connection.ItemId))
-                    {
-                        continue;
-                    }
+                var mappingContext = new InitializingAIProviderConnectionContext(connection);
 
 #pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-                    mappingContext.Values["ChatDeploymentName"] = connection.ChatDeploymentName;
-                    mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
-                    mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
-                    mappingContext.Values["ImagesDeploymentName"] = connection.ImagesDeploymentName;
-                    mappingContext.Values["SpeechToTextDeploymentName"] = connection.SpeechToTextDeploymentName;
+                mappingContext.Values["ChatDeploymentName"] = connection.ChatDeploymentName;
+                mappingContext.Values["EmbeddingDeploymentName"] = connection.EmbeddingDeploymentName;
+                mappingContext.Values["UtilityDeploymentName"] = connection.UtilityDeploymentName;
+                mappingContext.Values["ImagesDeploymentName"] = connection.ImagesDeploymentName;
+                mappingContext.Values["SpeechToTextDeploymentName"] = connection.SpeechToTextDeploymentName;
 #pragma warning restore CS0618
-                    mappingContext.Values["ConnectionNameAlias"] = connection.Name;
+                mappingContext.Values["ConnectionNameAlias"] = connection.Name;
 
-                    _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
+                _handlers.Invoke((handler, ctx) => handler.Initializing(ctx), mappingContext, _logger);
 
-                    provider.Connections[connection.ItemId] = new AIProviderConnectionEntry(mappingContext.Values);
-                }
-
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-
-                if (string.IsNullOrEmpty(provider.DefaultChatDeploymentName) && provider.Connections.Count > 0)
-                {
-                    provider.DefaultChatDeploymentName = provider.Connections.First().Value?.GetChatDeploymentOrDefaultName(false);
-                }
-
-#pragma warning restore CS0618
-
-                options.Providers[group.ProviderName] = provider;
+                AIProviderOptionsConnectionMerger.MergeConnection(
+                    options,
+                    connection.ClientName,
+                    connection.ItemId,
+                    new AIProviderConnectionEntry(mappingContext.Values));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to configure AI provider '{ProviderName}' from stored connections. The provider will be skipped. This may occur if the stored connection data is invalid or uses an outdated format. Please review the provider connection settings.", group.ProviderName);
+                _logger.LogWarning(ex, "Failed to configure AI provider connection '{ConnectionId}' for provider '{ProviderName}' from stored connections. This may occur if the stored connection data is invalid or uses an outdated format. Please review the provider connection settings.", connection.ItemId, connection.ClientName);
             }
         }
     }

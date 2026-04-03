@@ -11,6 +11,7 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.Data.YesSql;
+using CrestApps.Data.YesSql.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.Indexes;
 using CrestApps.Mvc.Web.Areas.Admin.Handlers;
@@ -86,7 +87,6 @@ internal static class YesSqlServiceCollectionExtensions
             .AddSourceDocumentCatalog<McpConnection, McpConnectionIndex>()
             .AddNamedDocumentCatalog<McpPrompt, McpPromptIndex>()
             .AddSourceDocumentCatalog<McpResource, McpResourceIndex>()
-            .AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>()
             .AddNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>()
             .AddScoped<DefaultAIDeploymentManager>()
             .AddScoped<IAIDeploymentManager>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
@@ -111,6 +111,14 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<ICatalogManager<Article>, CatalogManager<Article>>()
             .AddScoped<ICatalogEntryHandler<Article>, ArticleIndexingHandler>()
             .AddScoped<ArticleIndexingService>();
+
+        services
+            .AddScoped<YesSqlAIDeploymentStore>()
+            .AddScoped<IAIDeploymentStore>(sp => sp.GetRequiredService<YesSqlAIDeploymentStore>())
+            .AddScoped<ConfigurationAIDeploymentCatalog>()
+            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>());
 
         return services;
     }

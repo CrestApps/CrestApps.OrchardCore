@@ -31,7 +31,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultChatDeploymentName" class="form-label">Default chat deployment</label>
                         <select asp-for="DefaultChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for chat sessions and chat interactions when no specific chat deployment is configured.</div>
                     </div>
@@ -39,7 +39,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultUtilityDeploymentName" class="form-label">Default utility deployment</label>
                         <select asp-for="DefaultUtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for auxiliary tasks such as planning, intent detection, query rewriting, and chart generation.</div>
                     </div>
@@ -47,7 +47,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultEmbeddingDeploymentName" class="form-label">Default embedding deployment</label>
                         <select asp-for="DefaultEmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for embedding generation in document indexing, data sources, and vector search.</div>
                     </div>
@@ -55,7 +55,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultImageDeploymentName" class="form-label">Default image deployment</label>
                         <select asp-for="DefaultImageDeploymentName" asp-items="Model.ImageDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for image generation.</div>
                     </div>
@@ -63,7 +63,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultSpeechToTextDeploymentName" class="form-label">Default speech-to-text deployment</label>
                         <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for speech-to-text transcription.</div>
                     </div>
@@ -71,7 +71,7 @@
                     <div class="mb-3">
                         <label asp-for="DefaultTextToSpeechDeploymentName" class="form-label">Default text-to-speech deployment</label>
                         <select asp-for="DefaultTextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
-                            <option value="">— None —</option>
+                            <option value="">None</option>
                         </select>
                         <div class="form-text">The default deployment used for text-to-speech synthesis.</div>
                     </div>
@@ -91,7 +91,9 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label asp-for="MemoryIndexProfileName" class="form-label">Default memory index</label>
-                        <select asp-for="MemoryIndexProfileName" asp-items="Model.MemoryIndexProfiles" class="form-select"></select>
+                        <select asp-for="MemoryIndexProfileName" asp-items="Model.MemoryIndexProfiles" class="form-select">
+                            <option value="">None</option>
+                        </select>
                         <span asp-validation-for="MemoryIndexProfileName" class="text-danger"></span>
                         <div class="form-text">Choose the AI Memory index profile used to store and retrieve user memories.</div>
                     </div>
@@ -132,7 +134,9 @@
 
                     <div class="mb-3">
                         <label asp-for="DocumentIndexProfileName" class="form-label">Default AI Documents index</label>
-                        <select asp-for="DocumentIndexProfileName" asp-items="Model.DocumentIndexProfiles" class="form-select"></select>
+                        <select asp-for="DocumentIndexProfileName" asp-items="Model.DocumentIndexProfiles" class="form-select">
+                            <option value="">None</option>
+                        </select>
                         <div class="form-text">Choose the AI Documents index profile that stores embedded document chunks for retrieval during chat.</div>
                     </div>
 

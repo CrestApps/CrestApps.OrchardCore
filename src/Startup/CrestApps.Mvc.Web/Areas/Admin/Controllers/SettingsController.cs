@@ -310,15 +310,13 @@ public sealed class SettingsController : Controller
         model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
 
-        model.DocumentIndexProfiles = [new SelectListItem("— None —", "")];
-        model.DocumentIndexProfiles = model.DocumentIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
+        model.DocumentIndexProfiles = (await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name)));
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name));
 
-        model.MemoryIndexProfiles = [new SelectListItem("— None —", "")];
-        model.MemoryIndexProfiles = model.MemoryIndexProfiles.Concat((await _indexProfileStore.GetByTypeAsync(MemoryIndexProfileType))
+        model.MemoryIndexProfiles = (await _indexProfileStore.GetByTypeAsync(MemoryIndexProfileType))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name)));
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name));
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)

@@ -31,7 +31,7 @@
             <div class="mb-3">
                 <label asp-for="ProviderName" class="form-label">Provider <span class="text-danger">*</span></label>
                 <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select" disabled>
-                    <option value="">— Select Provider —</option>
+                    <option value="">Select Provider</option>
                 </select>
                 <input type="hidden" asp-for="ProviderName" />
                 <span asp-validation-for="ProviderName" class="text-danger"></span>
@@ -41,7 +41,7 @@
             <div class="mb-3">
                 <label asp-for="Type" class="form-label">Type <span class="text-danger">*</span></label>
                 <select asp-for="Type" asp-items="Model.Types" class="form-select" disabled>
-                    <option value="">— Select Type —</option>
+                    <option value="">Select Type</option>
                 </select>
                 <input type="hidden" asp-for="Type" />
                 <span asp-validation-for="Type" class="text-danger"></span>
@@ -51,6 +51,7 @@
             <div class="mb-3" id="embeddingDeploymentGroup">
                 <label asp-for="EmbeddingDeploymentId" class="form-label">Embedding deployment</label>
                 <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select" disabled>
+                    <option value="">Select an Embedding Deployment</option>
                 </select>
                 <input type="hidden" asp-for="EmbeddingDeploymentId" />
                 <span asp-validation-for="EmbeddingDeploymentId" class="text-danger"></span>
@@ -85,7 +86,7 @@
             typeSelect.innerHTML = '';
             const placeholder = document.createElement('option');
             placeholder.value = '';
-            placeholder.textContent = '— Select Type —';
+            placeholder.textContent = 'Select type';
             typeSelect.appendChild(placeholder);
 
             unique.forEach(source => {
