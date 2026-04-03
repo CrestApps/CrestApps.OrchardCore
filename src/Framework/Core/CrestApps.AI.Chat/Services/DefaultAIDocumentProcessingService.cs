@@ -125,14 +125,21 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
         }
 
         string text;
-        using (var stream = file.OpenReadStream())
+        try
         {
+            using var stream = file.OpenReadStream();
             var mediaType = MediaTypeHelper.InferMediaType(extension, file.ContentType);
             var ingestionDoc = await reader.ReadAsync(stream, file.FileName, mediaType);
 
             text = string.Join('\n', ingestionDoc.EnumerateContent()
                 .Select(element => element.Text)
                 .Where(content => !string.IsNullOrWhiteSpace(content)));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Document processing: failed to read file '{FileName}' with extension '{Extension}'.", file.FileName, extension);
+
+            return DocumentProcessingResult.Failed($"Failed to read the document '{file.FileName}'.");
         }
 
         if (string.IsNullOrWhiteSpace(text))

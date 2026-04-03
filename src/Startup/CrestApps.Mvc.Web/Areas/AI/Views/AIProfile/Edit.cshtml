@@ -13,7 +13,7 @@
 <h2><i class="bi bi-pencil"></i> Edit AI Profile</h2>
 <hr />
 
-<form asp-action="Edit" method="post">
+<form asp-action="Edit" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="ItemId" />
     <div class="row">
         <div class="col-md-8">
@@ -45,8 +45,8 @@
                 <!-- Basic Info Tab -->
                 <div class="tab-pane fade show active" id="basic" role="tabpanel">
                     <div class="mb-3">
-                        <label asp-for="DisplayText" class="form-label">Title</label>
-                        <input asp-for="DisplayText" id="profileTitle" class="form-control" placeholder="e.g., My Chat Assistant" />
+                        <label asp-for="DisplayText" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input asp-for="DisplayText" id="profileTitle" class="form-control" required placeholder="e.g., My Chat Assistant" />
                     </div>
                     <div class="mb-3">
                         <label asp-for="Name" class="form-label">Technical name <span class="text-danger">*</span></label>
@@ -129,8 +129,8 @@
                         { "CopilotModels", Model.CopilotAvailableModels },
                     })
 
-                    <!-- Chat-only: Prompt Subject -->
-                    <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
+                    <!-- Chat & TemplatePrompt: Prompt Subject -->
+                    <div class="mb-3 profile-type profile-type-chat profile-type-template-prompt@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat && Model.Type != CrestApps.AI.Models.AIProfileType.TemplatePrompt ? " d-none" : "")">
                         <label asp-for="PromptSubject" class="form-label">Prompt subject</label>
                         <input asp-for="PromptSubject" class="form-control" placeholder="Optional subject context for the prompt" />
                         <div class="form-text">Provides context to the AI about the primary subject of the conversation.</div>
@@ -465,7 +465,7 @@
                     }
                 </div>
 
-                <!-- Knowledge Base Tab -->
+                <!-- Knowledge Tab -->
                 <div class="tab-pane fade" id="docs" role="tabpanel">
                     <div class="mb-3">
                         <div class="form-check form-switch">
@@ -536,17 +536,27 @@
                             </div>
                         </div>
                     </div>
-                    @if (Model.AttachedDocuments.Count > 0)
-                    {
-                        <h6 class="mt-3 mb-2"><i class="bi bi-file-earmark-text"></i> Attached Documents</h6>
+
+                    <h6 class="mt-3 mb-2"><i class="bi bi-file-earmark-text"></i> Attached Documents</h6>
+                    <div id="existing-docs-list">
                         @foreach (var doc in Model.AttachedDocuments)
                         {
-                            <div class="d-flex align-items-center mb-2">
+                            <div class="d-flex align-items-center mb-2 existing-doc-row" data-doc-id="@doc.DocumentId">
                                 <i class="bi bi-file-earmark me-2"></i>
                                 <span class="flex-grow-1">@doc.FileName <small class="text-muted">(@(doc.FileSize < 1024 ? doc.FileSize + " B" : doc.FileSize < 1048576 ? (doc.FileSize / 1024.0).ToString("F1") + " KB" : (doc.FileSize / 1048576.0).ToString("F1") + " MB"))</small></span>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-existing-doc-btn" title="Remove">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </div>
                         }
-                    }
+                    </div>
+                    <div id="removed-docs-container"></div>
+                    <div id="pending-docs-list" class="mb-2"></div>
+                    <div class="mb-3">
+                        <input type="file" class="form-control" id="doc-add-input" multiple
+                               accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
+                        <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
+                    </div>
                 </div>
 
                 <!-- Data Extraction Tab -->
@@ -661,55 +671,137 @@
                         </div>
                     </div>
 
-                    <div id="postSessionTasksSection" class="@(Model.EnablePostSessionProcessing ? "" : "d-none")">
+                    <div id="postSessionTasksSection" class="mb-3 @(Model.EnablePostSessionProcessing ? "" : "d-none")">
                         <div id="post-session-tasks">
                             @for (var i = 0; i < Model.PostSessionTasks.Count; i++)
                             {
                                 var task = Model.PostSessionTasks[i];
                                 <div class="card mb-3 post-session-task-card">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link active" data-bs-toggle="tab" href="#taskInfo_@i" role="tab">Task Info</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#taskCaps_@i" role="tab">Capabilities</a>
+                                            </li>
+                                        </ul>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-task-btn ms-2"><i class="bi bi-trash"></i></button>
+                                    </div>
                                     <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <h6 class="card-title mb-2">Task @(i + 1)</h6>
-                                            <button type="button" class="btn btn-sm btn-outline-danger remove-task-btn"><i class="bi bi-trash"></i></button>
-                                        </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
+                                        <div class="tab-content">
+                                            <div class="tab-pane fade show active" id="taskInfo_@i" role="tabpanel">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-2">
+                                                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                                                            <input name="PostSessionTasks[@i].Name" class="form-control" value="@task.Name" required />
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-2">
+                                                            <label class="form-label">Type</label>
+                                                            <select name="PostSessionTasks[@i].Type" class="form-select post-session-task-type">
+                                                                @if (task.Type == CrestApps.AI.Models.PostSessionTaskType.Semantic)
+                                                                {
+                                                                    <option value="Semantic" selected>Semantic</option>
+                                                                    <option value="PredefinedOptions">Predefined Options</option>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <option value="Semantic">Semantic</option>
+                                                                    <option value="PredefinedOptions" selected>Predefined Options</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 <div class="mb-2">
-                                                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                                                    <input name="PostSessionTasks[@i].Name" class="form-control" value="@task.Name" required />
+                                                    <label class="form-label">Instructions</label>
+                                                    <textarea name="PostSessionTasks[@i].Instructions" class="form-control" rows="2">@task.Instructions</textarea>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <div class="form-check">
+                                                        <input name="PostSessionTasks[@i].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" @(task.AllowMultipleValues ? "checked" : "") />
+                                                        <label class="form-check-label">Allow multiple values</label>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-0 post-session-options-group@(task.Type == CrestApps.AI.Models.PostSessionTaskType.PredefinedOptions ? "" : " d-none")">
+                                                    <label class="form-label">Options (one per line)</label>
+                                                    <textarea name="PostSessionTasks[@i].Options" class="form-control" rows="3">@task.Options</textarea>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
-                                                <div class="mb-2">
-                                                    <label class="form-label">Type</label>
-                                                    <select name="PostSessionTasks[@i].Type" class="form-select">
-                                                        @if (task.Type == CrestApps.AI.Models.PostSessionTaskType.Semantic)
+                                            <div class="tab-pane fade" id="taskCaps_@i" role="tabpanel">
+                                                <p class="text-muted small mb-3">Select the capabilities available to this task.</p>
+                                                <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-robot"></i> AI Agents</h6>
+                                                @if (Model.AvailableAgents.Count == 0)
+                                                {
+                                                    <p class="text-muted small">No agent profiles available.</p>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var agent in Model.AvailableAgents)
+                                                    {
+                                                        <div class="form-check mb-1">
+                                                            <input class="form-check-input" type="checkbox" name="PostSessionTasks[@i].SelectedAgentNames" value="@agent.Name"
+                                                                   id="task@(i)_agent_@agent.Name" @(task.SelectedAgentNames.Contains(agent.Name) ? "checked" : "") />
+                                                            <label class="form-check-label" for="task@(i)_agent_@agent.Name">@agent.DisplayText</label>
+                                                        </div>
+                                                    }
+                                                }
+                                                <h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-diagram-3"></i> A2A Hosts</h6>
+                                                @if (Model.AvailableA2AConnections.Count == 0)
+                                                {
+                                                    <p class="text-muted small">No A2A hosts configured.</p>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var conn in Model.AvailableA2AConnections)
+                                                    {
+                                                        <div class="form-check mb-1">
+                                                            <input class="form-check-input" type="checkbox" name="PostSessionTasks[@i].SelectedA2AConnectionIds" value="@conn.ItemId"
+                                                                   id="task@(i)_a2a_@conn.ItemId" @(task.SelectedA2AConnectionIds.Contains(conn.ItemId) ? "checked" : "") />
+                                                            <label class="form-check-label" for="task@(i)_a2a_@conn.ItemId">@conn.DisplayText</label>
+                                                        </div>
+                                                    }
+                                                }
+                                                <h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Hosts</h6>
+                                                @if (Model.AvailableMcpConnections.Count == 0)
+                                                {
+                                                    <p class="text-muted small">No MCP hosts configured.</p>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var conn in Model.AvailableMcpConnections)
+                                                    {
+                                                        <div class="form-check mb-1">
+                                                            <input class="form-check-input" type="checkbox" name="PostSessionTasks[@i].SelectedMcpConnectionIds" value="@conn.ItemId"
+                                                                   id="task@(i)_mcp_@conn.ItemId" @(task.SelectedMcpConnectionIds.Contains(conn.ItemId) ? "checked" : "") />
+                                                            <label class="form-check-label" for="task@(i)_mcp_@conn.ItemId">@conn.DisplayText</label>
+                                                        </div>
+                                                    }
+                                                }
+                                                <h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-tools"></i> AI Tools</h6>
+                                                @if (Model.AvailableTools.Count == 0)
+                                                {
+                                                    <p class="text-muted small">No AI tools registered.</p>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var group in Model.AvailableTools.GroupBy(t => t.Category).OrderBy(g => g.Key))
+                                                    {
+                                                        <h6 class="text-secondary mt-2 mb-1 small"><i class="bi bi-folder"></i> @group.Key</h6>
+                                                        @foreach (var tool in group)
                                                         {
-                                                            <option value="Semantic" selected>Semantic</option>
-                                                            <option value="PredefinedOptions">Predefined Options</option>
+                                                            <div class="form-check mb-1">
+                                                                <input class="form-check-input" type="checkbox" name="PostSessionTasks[@i].SelectedToolNames" value="@tool.Name"
+                                                                       id="task@(i)_tool_@tool.Name" @(task.SelectedToolNames.Contains(tool.Name) ? "checked" : "") />
+                                                                <label class="form-check-label" for="task@(i)_tool_@tool.Name">@tool.Title</label>
+                                                            </div>
                                                         }
-                                                        else
-                                                        {
-                                                            <option value="Semantic">Semantic</option>
-                                                            <option value="PredefinedOptions" selected>Predefined Options</option>
-                                                        }
-                                                    </select>
-                                                </div>
+                                                    }
+                                                }
                                             </div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <label class="form-label">Instructions</label>
-                                            <textarea name="PostSessionTasks[@i].Instructions" class="form-control" rows="2">@task.Instructions</textarea>
-                                        </div>
-                                        <div class="mb-2">
-                                            <div class="form-check">
-                                                <input name="PostSessionTasks[@i].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" @(task.AllowMultipleValues ? "checked" : "") />
-                                                <label class="form-check-label">Allow multiple values</label>
-                                            </div>
-                                        </div>
-                                        <div class="mb-0">
-                                            <label class="form-label">Options (one per line)</label>
-                                            <textarea name="PostSessionTasks[@i].Options" class="form-control" rows="3">@task.Options</textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -1094,19 +1186,81 @@
             var addTaskBtn = document.getElementById('add-task-btn');
             var taskIndex = @Model.PostSessionTasks.Count;
 
+            var taskCapabilities = {
+                agents: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableAgents.Select(a => new { a.Name, a.DisplayText }))),
+                a2a: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableA2AConnections.Select(c => new { c.ItemId, c.DisplayText }))),
+                mcp: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableMcpConnections.Select(c => new { c.ItemId, c.DisplayText }))),
+                tools: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AvailableTools.GroupBy(t => t.Category).OrderBy(g => g.Key).Select(g => new { Category = g.Key, Items = g.Select(t => new { t.Name, t.Title }) })))
+            };
+
+            function buildTaskCapabilitiesHtml(idx) {
+                var html = '<p class="text-muted small mb-3">Select the capabilities available to this task.</p>';
+                html += '<h6 class="mb-2 border-bottom pb-2"><i class="bi bi-robot"></i> AI Agents</h6>';
+                if (taskCapabilities.agents.length === 0) { html += '<p class="text-muted small">No agent profiles available.</p>'; }
+                else { taskCapabilities.agents.forEach(function (a) { html += '<div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="PostSessionTasks[' + idx + '].SelectedAgentNames" value="' + a.Name + '" id="task' + idx + '_agent_' + a.Name + '" /><label class="form-check-label" for="task' + idx + '_agent_' + a.Name + '">' + a.DisplayText + '</label></div>'; }); }
+                html += '<h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-diagram-3"></i> A2A Hosts</h6>';
+                if (taskCapabilities.a2a.length === 0) { html += '<p class="text-muted small">No A2A hosts configured.</p>'; }
+                else { taskCapabilities.a2a.forEach(function (c) { html += '<div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="PostSessionTasks[' + idx + '].SelectedA2AConnectionIds" value="' + c.ItemId + '" id="task' + idx + '_a2a_' + c.ItemId + '" /><label class="form-check-label" for="task' + idx + '_a2a_' + c.ItemId + '">' + c.DisplayText + '</label></div>'; }); }
+                html += '<h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-plug"></i> MCP Hosts</h6>';
+                if (taskCapabilities.mcp.length === 0) { html += '<p class="text-muted small">No MCP hosts configured.</p>'; }
+                else { taskCapabilities.mcp.forEach(function (c) { html += '<div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="PostSessionTasks[' + idx + '].SelectedMcpConnectionIds" value="' + c.ItemId + '" id="task' + idx + '_mcp_' + c.ItemId + '" /><label class="form-check-label" for="task' + idx + '_mcp_' + c.ItemId + '">' + c.DisplayText + '</label></div>'; }); }
+                html += '<h6 class="mb-2 mt-3 border-bottom pb-2"><i class="bi bi-tools"></i> AI Tools</h6>';
+                if (taskCapabilities.tools.length === 0) { html += '<p class="text-muted small">No AI tools registered.</p>'; }
+                else { taskCapabilities.tools.forEach(function (g) { html += '<h6 class="text-secondary mt-2 mb-1 small"><i class="bi bi-folder"></i> ' + g.Category + '</h6>'; g.Items.forEach(function (t) { html += '<div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="PostSessionTasks[' + idx + '].SelectedToolNames" value="' + t.Name + '" id="task' + idx + '_tool_' + t.Name + '" /><label class="form-check-label" for="task' + idx + '_tool_' + t.Name + '">' + t.Title + '</label></div>'; }); }); }
+                return html;
+            }
+
+            function updatePostSessionTaskOptionsVisibility(taskCard) {
+                if (!taskCard) return;
+                var typeSelect = taskCard.querySelector('.post-session-task-type');
+                var optionsGroup = taskCard.querySelector('.post-session-options-group');
+                if (!typeSelect || !optionsGroup) return;
+                optionsGroup.classList.toggle('d-none', typeSelect.value !== 'PredefinedOptions');
+            }
+
             if (addTaskBtn) {
                 addTaskBtn.addEventListener('click', function () {
                     var idx = taskIndex++;
                     var card = document.createElement('div');
                     card.className = 'card mb-3 post-session-task-card';
-                    card.innerHTML = '<div class="card-body"><div class="d-flex justify-content-between align-items-start"><h6 class="card-title mb-2">Task ' + (idx + 1) + '</h6><button type="button" class="btn btn-sm btn-outline-danger remove-task-btn"><i class="bi bi-trash"></i></button></div><div class="row"><div class="col-md-6"><div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input name="PostSessionTasks[' + idx + '].Name" class="form-control" required /></div></div><div class="col-md-6"><div class="mb-2"><label class="form-label">Type</label><select name="PostSessionTasks[' + idx + '].Type" class="form-select"><option value="Semantic">Semantic</option><option value="PredefinedOptions">Predefined Options</option></select></div></div></div><div class="mb-2"><label class="form-label">Instructions</label><textarea name="PostSessionTasks[' + idx + '].Instructions" class="form-control" rows="2"></textarea></div><div class="mb-2"><div class="form-check"><input name="PostSessionTasks[' + idx + '].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" /><label class="form-check-label">Allow multiple values</label></div></div><div class="mb-0"><label class="form-label">Options (one per line)</label><textarea name="PostSessionTasks[' + idx + '].Options" class="form-control" rows="3"></textarea></div></div>';
+                    card.innerHTML =
+                        '<div class="card-header d-flex justify-content-between align-items-center py-2">' +
+                            '<ul class="nav nav-tabs card-header-tabs" role="tablist">' +
+                                '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#taskInfo_' + idx + '" role="tab">Task Info</a></li>' +
+                                '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#taskCaps_' + idx + '" role="tab">Capabilities</a></li>' +
+                            '</ul>' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger remove-task-btn ms-2"><i class="bi bi-trash"></i></button>' +
+                        '</div>' +
+                        '<div class="card-body"><div class="tab-content">' +
+                            '<div class="tab-pane fade show active" id="taskInfo_' + idx + '" role="tabpanel">' +
+                                '<div class="row"><div class="col-md-6"><div class="mb-2"><label class="form-label">Name <span class="text-danger">*</span></label><input name="PostSessionTasks[' + idx + '].Name" class="form-control" required /></div></div>' +
+                                '<div class="col-md-6"><div class="mb-2"><label class="form-label">Type</label><select name="PostSessionTasks[' + idx + '].Type" class="form-select post-session-task-type"><option value="Semantic">Semantic</option><option value="PredefinedOptions">Predefined Options</option></select></div></div></div>' +
+                                '<div class="mb-2"><label class="form-label">Instructions</label><textarea name="PostSessionTasks[' + idx + '].Instructions" class="form-control" rows="2"></textarea></div>' +
+                                '<div class="mb-2"><div class="form-check"><input name="PostSessionTasks[' + idx + '].AllowMultipleValues" type="checkbox" class="form-check-input" value="true" /><label class="form-check-label">Allow multiple values</label></div></div>' +
+                                '<div class="mb-0 post-session-options-group d-none"><label class="form-label">Options (one per line)</label><textarea name="PostSessionTasks[' + idx + '].Options" class="form-control" rows="3"></textarea></div>' +
+                            '</div>' +
+                            '<div class="tab-pane fade" id="taskCaps_' + idx + '" role="tabpanel">' + buildTaskCapabilitiesHtml(idx) + '</div>' +
+                        '</div></div>';
                     tasksContainer.appendChild(card);
+                    updatePostSessionTaskOptionsVisibility(card);
                 });
             }
+
+            document.querySelectorAll('.post-session-task-card').forEach(updatePostSessionTaskOptionsVisibility);
 
             document.addEventListener('click', function (e) {
                 if (e.target.closest('.remove-task-btn')) {
                     e.target.closest('.post-session-task-card')?.remove();
+                }
+
+                if (e.target.classList.contains('post-session-task-type')) {
+                    updatePostSessionTaskOptionsVisibility(e.target.closest('.post-session-task-card'));
+                }
+            });
+
+            document.addEventListener('change', function (e) {
+                if (e.target.classList.contains('post-session-task-type')) {
+                    updatePostSessionTaskOptionsVisibility(e.target.closest('.post-session-task-card'));
                 }
             });
 
@@ -1185,6 +1339,85 @@
                         }
                     }
                 });
+            })();
+
+            // --- Document Management ---
+            (function () {
+                var removedContainer = document.getElementById('removed-docs-container');
+                var pendingDocsList = document.getElementById('pending-docs-list');
+                var fileInput = document.getElementById('doc-add-input');
+                var fileContainer = document.querySelector('form');
+                var pendingFiles = [];
+                var pendingIndex = 0;
+
+                // Remove existing documents
+                document.addEventListener('click', function (e) {
+                    var removeBtn = e.target.closest('.remove-existing-doc-btn');
+                    if (removeBtn) {
+                        var row = removeBtn.closest('.existing-doc-row');
+                        var docId = row.dataset.docId;
+                        row.remove();
+                        var hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'RemovedDocumentIds';
+                        hidden.value = docId;
+                        removedContainer.appendChild(hidden);
+                    }
+                });
+
+                // Add new files on selection
+                if (fileInput) {
+                    fileInput.addEventListener('change', function () {
+                        for (var i = 0; i < this.files.length; i++) {
+                            var file = this.files[i];
+                            var idx = pendingIndex++;
+                            pendingFiles.push({ index: idx, file: file });
+
+                            var row = document.createElement('div');
+                            row.className = 'd-flex align-items-center mb-2 pending-doc-row';
+                            row.dataset.index = idx;
+                            row.innerHTML = '<i class="bi bi-file-earmark-plus me-2 text-success"></i>' +
+                                '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
+                                '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc-btn" title="Remove"><i class="bi bi-trash"></i></button>';
+                            pendingDocsList.appendChild(row);
+
+                            var dt = new DataTransfer();
+                            dt.items.add(file);
+                            var hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'file';
+                            hiddenInput.name = 'Documents';
+                            hiddenInput.style.display = 'none';
+                            hiddenInput.files = dt.files;
+                            hiddenInput.dataset.docIndex = idx;
+                            fileContainer.appendChild(hiddenInput);
+                        }
+                        this.value = '';
+                    });
+                }
+
+                // Remove pending files
+                document.addEventListener('click', function (e) {
+                    var removeBtn = e.target.closest('.remove-pending-doc-btn');
+                    if (removeBtn) {
+                        var row = removeBtn.closest('.pending-doc-row');
+                        var idx = row.dataset.index;
+                        row.remove();
+                        var input = fileContainer.querySelector('input[data-doc-index="' + idx + '"]');
+                        if (input) input.remove();
+                    }
+                });
+
+                function escapeHtml(text) {
+                    var div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+
+                function formatSize(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / 1048576).toFixed(1) + ' MB';
+                }
             })();
         });
     </script>

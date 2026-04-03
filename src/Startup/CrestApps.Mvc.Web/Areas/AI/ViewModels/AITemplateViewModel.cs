@@ -295,6 +295,10 @@ public sealed class AITemplateViewModel
                         Instructions = t.Instructions,
                         AllowMultipleValues = t.AllowMultipleValues,
                         Options = string.Join(Environment.NewLine, t.Options.Select(o => o.Value)),
+                        SelectedToolNames = t.ToolNames ?? [],
+                        SelectedAgentNames = t.AgentNames ?? [],
+                        SelectedA2AConnectionIds = t.A2AConnectionIds ?? [],
+                        SelectedMcpConnectionIds = t.McpConnectionIds ?? [],
                     })
                 .ToList();
             }
@@ -496,6 +500,10 @@ public sealed class AITemplateViewModel
                         .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
                         .Select(o => new PostSessionTaskOption { Value = o.Trim() })
                         .ToList(),
+                        ToolNames = t.SelectedToolNames ?? [],
+                        AgentNames = t.SelectedAgentNames ?? [],
+                        A2AConnectionIds = t.SelectedA2AConnectionIds ?? [],
+                        McpConnectionIds = t.SelectedMcpConnectionIds ?? [],
                     })
                 .ToList(),
             });

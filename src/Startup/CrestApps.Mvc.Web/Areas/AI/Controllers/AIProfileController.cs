@@ -52,6 +52,7 @@ public sealed class AIProfileController : Controller
     private readonly GitHubOAuthService _oauthService;
     private readonly AIToolDefinitionOptions _toolOptions;
     private readonly IAIDataSourceStore _dataSourceStore;
+    private readonly ILogger<AIProfileController> _logger;
 
     public AIProfileController(
         IAIProfileManager profileManager,
@@ -71,7 +72,8 @@ public sealed class AIProfileController : Controller
         IOptions<CopilotOptions> copilotOptions,
         GitHubOAuthService oauthService,
         IOptions<AIToolDefinitionOptions> toolOptions,
-        IAIDataSourceStore dataSourceStore)
+        IAIDataSourceStore dataSourceStore,
+        ILogger<AIProfileController> logger)
     {
         _profileManager = profileManager;
         _deploymentCatalog = deploymentCatalog;
@@ -88,11 +90,10 @@ public sealed class AIProfileController : Controller
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
         _copilotOptions = copilotOptions.Value;
-
         _oauthService = oauthService;
         _toolOptions = toolOptions.Value;
         _dataSourceStore = dataSourceStore;
-
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
@@ -178,6 +179,7 @@ public sealed class AIProfileController : Controller
 
         var model = AIProfileViewModel.FromProfile(profile);
 
+        await PopulateAttachedDocumentsAsync(model);
         await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDropdownsAsync(model);
 
@@ -186,7 +188,7 @@ public sealed class AIProfileController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(AIProfileViewModel model)
+    public async Task<IActionResult> Edit(AIProfileViewModel model, List<IFormFile> Documents, string[] RemovedDocumentIds)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -195,6 +197,7 @@ public sealed class AIProfileController : Controller
 
         if (!ModelState.IsValid)
         {
+            await PopulateAttachedDocumentsAsync(model);
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -205,13 +208,22 @@ public sealed class AIProfileController : Controller
         if (existing == null)
         {
             return NotFound();
-
         }
 
         model.SelectedA2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         model.SelectedMcpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
 
         model.ApplyTo(existing);
+
+        if (RemovedDocumentIds is { Length: > 0 })
+        {
+            await RemoveDocumentsAsync(existing, RemovedDocumentIds);
+        }
+
+        if (Documents is { Count: > 0 })
+        {
+            await UploadDocumentsAsync(existing, Documents);
+        }
 
         await _profileManager.UpdateAsync(existing);
 
@@ -433,55 +445,142 @@ public sealed class AIProfileController : Controller
 
         foreach (var file in files)
         {
-
             if (file.Length == 0)
-
             {
                 continue;
             }
 
-            var ext = Path.GetExtension(file.FileName);
-
-            var storagePath = $"documents/{profile.ItemId}/{UniqueId.GenerateId()}{ext}";
-
-            using (var stream = file.OpenReadStream())
+            try
             {
-                await _fileStore.SaveFileAsync(storagePath, stream);
+                var ext = Path.GetExtension(file.FileName);
+                var storagePath = $"documents/{profile.ItemId}/{UniqueId.GenerateId()}{ext}";
+
+                using (var stream = file.OpenReadStream())
+                {
+                    await _fileStore.SaveFileAsync(storagePath, stream);
+                }
+
+                var result = await _documentProcessingService.ProcessFileAsync(
+                    file,
+                    profile.ItemId,
+                    AIReferenceTypes.Document.Profile,
+                    embeddingGenerator);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Failed to process file '{FileName}': {Error}", file.FileName, result.Error);
+                    continue;
+                }
+
+                await _documentStore.CreateAsync(result.Document);
+
+                foreach (var chunk in result.Chunks)
+                {
+                    await _chunkStore.CreateAsync(chunk);
+                }
+
+                await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
+
+                var documentsMetadata = profile.As<DocumentsMetadata>();
+                documentsMetadata.Documents ??= [];
+                documentsMetadata.Documents.Add(result.DocumentInfo);
+                profile.Put(documentsMetadata);
             }
-
-            var result = await _documentProcessingService.ProcessFileAsync(
-
-                file,
-                profile.ItemId,
-                AIReferenceTypes.Document.Profile,
-                embeddingGenerator);
-
-            if (!result.Success)
-
+            catch (Exception ex)
             {
-                continue;
+                _logger.LogError(ex, "Error processing uploaded file '{FileName}'.", file.FileName);
             }
-
-            await _documentStore.CreateAsync(result.Document);
-
-            foreach (var chunk in result.Chunks)
-
-            {
-                await _chunkStore.CreateAsync(chunk);
-            }
-
-            await _documentIndexingService.IndexAsync(result.Document, result.Chunks);
-
-            var documentsMetadata = profile.As<DocumentsMetadata>();
-            documentsMetadata.Documents ??= [];
-            documentsMetadata.Documents.Add(result.DocumentInfo);
-            profile.Put(documentsMetadata);
-
         }
 
         await _profileManager.UpdateAsync(profile);
         await _documentStore.SaveChangesAsync();
+    }
 
+    private async Task PopulateAttachedDocumentsAsync(AIProfileViewModel model)
+    {
+        if (string.IsNullOrWhiteSpace(model.ItemId))
+        {
+            return;
+        }
+
+        var storedDocuments = await _documentStore.GetDocumentsAsync(model.ItemId, AIReferenceTypes.Document.Profile);
+        var documentsById = (model.AttachedDocuments ?? [])
+            .Where(d => !string.IsNullOrWhiteSpace(d.DocumentId))
+            .ToDictionary(d => d.DocumentId, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var document in storedDocuments)
+        {
+            if (string.IsNullOrWhiteSpace(document.ItemId))
+            {
+                continue;
+            }
+
+            documentsById[document.ItemId] = new DocumentItem
+            {
+                DocumentId = document.ItemId,
+                FileName = document.FileName,
+                ContentType = document.ContentType,
+                FileSize = document.FileSize,
+            };
+        }
+
+        model.AttachedDocuments = documentsById.Values
+            .OrderBy(d => d.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task RemoveDocumentsAsync(AIProfile profile, string[] documentIds)
+    {
+        var documentsMetadata = profile.As<DocumentsMetadata>();
+
+        if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var documentId in documentIds)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+            {
+                continue;
+            }
+
+            try
+            {
+                var docInfo = documentsMetadata.Documents.FirstOrDefault(d =>
+                    string.Equals(d.DocumentId, documentId, StringComparison.OrdinalIgnoreCase));
+
+                if (docInfo == null)
+                {
+                    continue;
+                }
+
+                documentsMetadata.Documents.Remove(docInfo);
+
+                var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(documentId);
+
+                if (chunks.Count > 0)
+                {
+                    await _documentIndexingService.DeleteChunksAsync(chunks.Select(c => c.ItemId));
+                }
+
+                await _chunkStore.DeleteByDocumentIdAsync(documentId);
+
+                var document = await _documentStore.FindByIdAsync(documentId);
+
+                if (document != null)
+                {
+                    await _documentStore.DeleteAsync(document);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing document '{DocumentId}'.", documentId);
+            }
+        }
+
+        profile.Put(documentsMetadata);
+        await _documentStore.SaveChangesAsync();
     }
 
     private static void ApplyTemplateToProfile(AIProfile profile, AIProfileTemplate template)
