@@ -14,15 +14,18 @@ public sealed class DefaultOAuth2TokenService : IOAuth2TokenService
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<DefaultOAuth2TokenService> _logger;
 
     public DefaultOAuth2TokenService(
         IHttpClientFactory httpClientFactory,
         IMemoryCache cache,
+        TimeProvider timeProvider,
         ILogger<DefaultOAuth2TokenService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _cache = cache;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -187,9 +190,9 @@ public sealed class DefaultOAuth2TokenService : IOAuth2TokenService
         return tokenResponse.AccessToken;
     }
 
-    private static string CreateClientAssertion(string tokenEndpoint, string clientId, string privateKeyPem, string keyId)
+    private string CreateClientAssertion(string tokenEndpoint, string clientId, string privateKeyPem, string keyId)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
 
         var header = new Dictionary<string, string>
         {

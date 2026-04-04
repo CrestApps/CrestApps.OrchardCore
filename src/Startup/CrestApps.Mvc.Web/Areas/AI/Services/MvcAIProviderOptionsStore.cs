@@ -21,7 +21,7 @@ public sealed class MvcAIProviderOptionsStore
     {
         var providers = new Dictionary<string, AIProvider>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var group in connections.GroupBy(static connection => connection.ClientName))
+        foreach (var group in connections.GroupBy(static connection => AIProviderNameNormalizer.Normalize(connection.ClientName)))
         {
             if (string.IsNullOrWhiteSpace(group.Key))
             {

@@ -561,7 +561,7 @@
                     <div id="removed-docs-container"></div>
                     <div id="pending-docs-list" class="mb-2"></div>
                     <div class="mb-3">
-                        <input type="file" class="form-control" id="doc-add-input" multiple
+                        <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
                                accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
                         <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
                     </div>
@@ -933,14 +933,32 @@
             var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             var initialPromptGroup = document.getElementById('initialPromptGroup');
 
-            function convertToKebabCase(str) {
-                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            function normalizeProfileType(str) {
+                return (str || '')
+                    .trim()
+                    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+                    .replace(/\s+/g, '-')
+                    .toLowerCase();
+            }
+
+            function getSelectedProfileTypeClassName() {
+                if (!profileTypeSelect || !profileTypeSelect.value) {
+                    return '';
+                }
+
+                var selectedOption = profileTypeSelect.options[profileTypeSelect.selectedIndex];
+                var profileType = selectedOption ? selectedOption.text : profileTypeSelect.value;
+
+                return 'profile-type-' + normalizeProfileType(profileType);
             }
 
             function toggleProfileTypeFields() {
                 if (!profileTypeSelect) return;
-                var value = profileTypeSelect.value;
-                var className = 'profile-type-' + convertToKebabCase(value);
+                var className = getSelectedProfileTypeClassName();
+                if (!className) {
+                    document.querySelectorAll('.profile-type').forEach(function (el) { el.classList.add('d-none'); });
+                    return;
+                }
                 document.querySelectorAll('.profile-type').forEach(function (el) {
                     el.classList.toggle('d-none', !el.classList.contains(className));
                 });
@@ -949,7 +967,7 @@
 
             function toggleInitialPromptFields() {
                 if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
-                var isChatType = profileTypeSelect.value === 'Chat';
+                var isChatType = getSelectedProfileTypeClassName() === 'profile-type-chat';
                 var showInitialPrompt = addInitialPromptCheck.checked;
                 welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
@@ -1354,9 +1372,39 @@
                 var removedContainer = document.getElementById('removed-docs-container');
                 var pendingDocsList = document.getElementById('pending-docs-list');
                 var fileInput = document.getElementById('doc-add-input');
-                var fileContainer = document.querySelector('form');
                 var pendingFiles = [];
-                var pendingIndex = 0;
+
+                function syncPendingFiles() {
+                    if (!fileInput) {
+                        return;
+                    }
+
+                    var dataTransfer = new DataTransfer();
+
+                    pendingFiles.forEach(function (file) {
+                        dataTransfer.items.add(file);
+                    });
+
+                    fileInput.files = dataTransfer.files;
+                }
+
+                function renderPendingFiles() {
+                    if (!pendingDocsList) {
+                        return;
+                    }
+
+                    pendingDocsList.innerHTML = '';
+
+                    pendingFiles.forEach(function (file, index) {
+                        var row = document.createElement('div');
+                        row.className = 'd-flex align-items-center mb-2 pending-doc-row';
+                        row.dataset.index = index;
+                        row.innerHTML = '<i class="bi bi-file-earmark-plus me-2 text-success"></i>' +
+                            '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc-btn" title="Remove"><i class="bi bi-trash"></i></button>';
+                        pendingDocsList.appendChild(row);
+                    });
+                }
 
                 // Remove existing documents
                 document.addEventListener('click', function (e) {
@@ -1377,29 +1425,11 @@
                 if (fileInput) {
                     fileInput.addEventListener('change', function () {
                         for (var i = 0; i < this.files.length; i++) {
-                            var file = this.files[i];
-                            var idx = pendingIndex++;
-                            pendingFiles.push({ index: idx, file: file });
-
-                            var row = document.createElement('div');
-                            row.className = 'd-flex align-items-center mb-2 pending-doc-row';
-                            row.dataset.index = idx;
-                            row.innerHTML = '<i class="bi bi-file-earmark-plus me-2 text-success"></i>' +
-                                '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
-                                '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc-btn" title="Remove"><i class="bi bi-trash"></i></button>';
-                            pendingDocsList.appendChild(row);
-
-                            var dt = new DataTransfer();
-                            dt.items.add(file);
-                            var hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'file';
-                            hiddenInput.name = 'Documents';
-                            hiddenInput.style.display = 'none';
-                            hiddenInput.files = dt.files;
-                            hiddenInput.dataset.docIndex = idx;
-                            fileContainer.appendChild(hiddenInput);
+                            pendingFiles.push(this.files[i]);
                         }
-                        this.value = '';
+
+                        syncPendingFiles();
+                        renderPendingFiles();
                     });
                 }
 
@@ -1408,10 +1438,13 @@
                     var removeBtn = e.target.closest('.remove-pending-doc-btn');
                     if (removeBtn) {
                         var row = removeBtn.closest('.pending-doc-row');
-                        var idx = row.dataset.index;
-                        row.remove();
-                        var input = fileContainer.querySelector('input[data-doc-index="' + idx + '"]');
-                        if (input) input.remove();
+                        var idx = parseInt(row.dataset.index, 10);
+
+                        if (!Number.isNaN(idx)) {
+                            pendingFiles.splice(idx, 1);
+                            syncPendingFiles();
+                            renderPendingFiles();
+                        }
                     }
                 });
 

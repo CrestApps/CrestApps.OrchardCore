@@ -5,18 +5,18 @@ using CrestApps.OrchardCore.AI.Memory.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Services;
 
 internal sealed class AIMemoryIndexingService
 {
     private readonly IAIMemoryStore _memoryStore;
-    private readonly ISiteService _siteService;
+    private readonly AIMemoryOptions _memoryOptions;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IServiceProvider _serviceProvider;
@@ -25,7 +25,7 @@ internal sealed class AIMemoryIndexingService
 
     public AIMemoryIndexingService(
         IAIMemoryStore memoryStore,
-        ISiteService siteService,
+        IOptions<AIMemoryOptions> memoryOptions,
         IIndexProfileStore indexProfileStore,
         IAIClientFactory aiClientFactory,
         IServiceProvider serviceProvider,
@@ -33,7 +33,7 @@ internal sealed class AIMemoryIndexingService
         ILogger<AIMemoryIndexingService> logger)
     {
         _memoryStore = memoryStore;
-        _siteService = siteService;
+        _memoryOptions = memoryOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiClientFactory = aiClientFactory;
         _serviceProvider = serviceProvider;
@@ -43,14 +43,12 @@ internal sealed class AIMemoryIndexingService
 
     public async Task IndexAsync(AIMemoryEntry memory, CancellationToken cancellationToken = default)
     {
-        var settings = await _siteService.GetSettingsAsync<AIMemorySettings>();
-
-        if (string.IsNullOrEmpty(settings.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {
@@ -122,14 +120,12 @@ internal sealed class AIMemoryIndexingService
             return;
         }
 
-        var settings = await _siteService.GetSettingsAsync<AIMemorySettings>();
-
-        if (string.IsNullOrEmpty(settings.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(settings.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {

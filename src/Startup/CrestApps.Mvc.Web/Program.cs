@@ -157,6 +157,9 @@ builder.Services
     // Shared document ingestion, extraction, tabular processing, and RAG over attachments.
     .AddDefaultDocumentProcessingServices()
 
+    // Shared user-memory orchestration, tools, and preemptive retrieval behavior.
+    .AddAIMemoryServices()
+
     // Agent-to-agent protocol support so remote agents can participate as tools.
     .AddCrestAppsA2AClient()
 

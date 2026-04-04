@@ -1,6 +1,10 @@
+using CrestApps.AI;
+using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
+using Microsoft.Extensions.DependencyInjection;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -15,17 +19,19 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
 {
     private static readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan _defaultInactivityTimeout = TimeSpan.FromMinutes(30);
-    private static readonly int _maxRetryAttempts = 3;
     private static readonly TimeSpan _retryDelay = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AIChatSessionCloseBackgroundService> _logger;
 
     public AIChatSessionCloseBackgroundService(
         IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
         ILogger<AIChatSessionCloseBackgroundService> logger)
     {
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -40,10 +46,12 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var session = scope.ServiceProvider.GetRequiredService<ISession>();
                 var profileManager = scope.ServiceProvider.GetRequiredService<IAIProfileManager>();
-                var utcNow = DateTime.UtcNow;
+                var postCloseProcessor = scope.ServiceProvider.GetRequiredService<AIChatSessionPostCloseProcessor>();
+                var promptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
+                var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
-                await CloseInactiveSessionsAsync(session, profileManager, utcNow, stoppingToken);
-                await RetryPendingProcessingAsync(session, utcNow, stoppingToken);
+                await CloseInactiveSessionsAsync(session, profileManager, promptStore, postCloseProcessor, utcNow, stoppingToken);
+                await RetryPendingProcessingAsync(session, profileManager, promptStore, postCloseProcessor, utcNow, stoppingToken);
 
                 await session.SaveChangesAsync(stoppingToken);
             }
@@ -63,6 +71,8 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
     private async Task CloseInactiveSessionsAsync(
         ISession session,
         IAIProfileManager profileManager,
+        IAIChatSessionPromptStore promptStore,
+        AIChatSessionPostCloseProcessor postCloseProcessor,
         DateTime utcNow,
         CancellationToken cancellationToken)
     {
@@ -94,13 +104,10 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 chatSession.Status = ChatSessionStatus.Closed;
                 chatSession.ClosedAtUtc = utcNow;
 
-                var hasPostProcessing = NeedsPostSessionProcessing(profile);
-
-                if (hasPostProcessing)
+                if (AIChatSessionPostCloseProcessor.NeedsProcessing(profile, chatSession))
                 {
-                    chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Pending;
-                    chatSession.PostSessionProcessingAttempts = 0;
-                    chatSession.PostSessionProcessingLastAttemptUtc = null;
+                    var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+                    await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
                 }
                 else
                 {
@@ -115,16 +122,16 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                         "Closed inactive session '{SessionId}' for profile '{ProfileId}'. Post-processing: {NeedsProcessing}.",
                         chatSession.SessionId,
                         profile.ItemId,
-                        hasPostProcessing);
+                        chatSession.PostSessionProcessingStatus != PostSessionProcessingStatus.None);
                 }
             }
         }
     }
-    /// <summary>
-    /// Retries post-session processing for sessions that are still pending and within the retry window.
-    /// </summary>
     private async Task RetryPendingProcessingAsync(
         ISession session,
+        IAIProfileManager profileManager,
+        IAIChatSessionPromptStore promptStore,
+        AIChatSessionPostCloseProcessor postCloseProcessor,
         DateTime utcNow,
         CancellationToken cancellationToken)
     {
@@ -145,7 +152,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 continue;
             }
 
-            if (chatSession.PostSessionProcessingAttempts >= _maxRetryAttempts)
+            if (chatSession.PostSessionProcessingAttempts >= AIChatSessionPostCloseProcessor.MaxPostCloseAttempts)
             {
                 chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Failed;
                 await session.SaveAsync(chatSession);
@@ -153,7 +160,7 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 _logger.LogWarning(
                     "Post-session processing for session '{SessionId}' failed after {MaxAttempts} attempts.",
                     chatSession.SessionId,
-                    _maxRetryAttempts);
+                    AIChatSessionPostCloseProcessor.MaxPostCloseAttempts);
                 continue;
             }
 
@@ -163,43 +170,23 @@ public sealed class AIChatSessionCloseBackgroundService : BackgroundService
                 continue;
             }
 
-            chatSession.PostSessionProcessingAttempts++;
-            chatSession.PostSessionProcessingLastAttemptUtc = utcNow;
+            var profile = await profileManager.FindByIdAsync(chatSession.ProfileId);
 
-            // Mark as completed since we don't have OC-specific post-session pipeline.
-            // When a post-session processing service is registered at the framework level,
-            // this should call it and only mark completed on success.
-            chatSession.PostSessionProcessingStatus = PostSessionProcessingStatus.Completed;
+            if (profile == null)
+            {
+                continue;
+            }
+
+            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+            await postCloseProcessor.ProcessAsync(profile, chatSession, prompts, cancellationToken);
             await session.SaveAsync(chatSession);
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Marked post-session processing as completed for session '{SessionId}'.",
+                    "Processed pending post-close work for session '{SessionId}'.",
                     chatSession.SessionId);
             }
         }
-    }
-    /// <summary>
-    /// Determines whether a profile has any post-session processing configured.
-    /// </summary>
-    private static bool NeedsPostSessionProcessing(AIProfile profile)
-    {
-        var extractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
-
-        if (extractionSettings?.EnableDataExtraction == true)
-        {
-            return true;
-        }
-
-        var analytics = profile.As<AnalyticsMetadata>();
-
-        if (analytics is not null
-            && (analytics.EnableSessionMetrics || analytics.EnableConversionMetrics || analytics.EnableAIResolutionDetection))
-        {
-            return true;
-        }
-
-        return false;
     }
 }

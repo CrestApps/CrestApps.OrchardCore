@@ -359,7 +359,7 @@ public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
     {
         var entry = new AIDeploymentConfigurationEntry
         {
-            ProviderName = GetStringValue(deploymentObject["ClientName"]) ?? GetStringValue(deploymentObject["ProviderName"]) ?? providerName,
+            ProviderName = AIProviderNameNormalizer.Normalize(GetStringValue(deploymentObject["ClientName"]) ?? GetStringValue(deploymentObject["ProviderName"]) ?? providerName),
             Name = GetStringValue(deploymentObject["Name"]),
             ModelName = GetStringValue(deploymentObject["ModelName"]) ?? GetStringValue(deploymentObject["Name"]),
             IsDefault = GetBooleanValue(deploymentObject["IsDefault"]),

@@ -29,6 +29,12 @@ public static class AppDataSettingsServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
+        services.Configure<GeneralAIOptions>(configuration.GetSection(AppDataConfigurationSections.GeneralAISettings));
+        services.Configure<AIMemoryOptions>(configuration.GetSection(AppDataConfigurationSections.AIMemory));
+        services.Configure<InteractionDocumentOptions>(configuration.GetSection(AppDataConfigurationSections.InteractionDocuments));
+        services.Configure<AIDataSourceOptions>(configuration.GetSection(AppDataConfigurationSections.AIDataSources));
+        services.Configure<ChatInteractionMemoryOptions>(configuration.GetSection(AppDataConfigurationSections.ChatInteractionMemory));
+
         return services
             .AddAppDataSettings<GeneralAISettings>(configuration, AppDataConfigurationSections.GeneralAISettings)
             .AddAppDataSettings<DefaultOrchestratorSettings>(configuration, AppDataConfigurationSections.DefaultOrchestrator)

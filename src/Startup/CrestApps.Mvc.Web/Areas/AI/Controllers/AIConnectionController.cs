@@ -269,7 +269,7 @@ public sealed class AIConnectionController : Controller
         foreach (var connectionSection in section.GetChildren())
         {
             var connectionName = connectionSection["Name"];
-            var providerName = connectionSection["ClientName"];
+            var providerName = AIProviderNameNormalizer.Normalize(connectionSection["ClientName"]);
 
             if (string.IsNullOrWhiteSpace(connectionName) || string.IsNullOrWhiteSpace(providerName))
             {
@@ -309,7 +309,7 @@ public sealed class AIConnectionController : Controller
 
                 AddConfiguredConnection(
                     connections,
-                    providerSection.Key,
+                    AIProviderNameNormalizer.Normalize(providerSection.Key),
                     connectionSection.Key,
                     connectionSection["ConnectionNameAlias"]);
             }
@@ -322,6 +322,7 @@ public sealed class AIConnectionController : Controller
         string connectionName,
         string displayText)
     {
+        providerName = AIProviderNameNormalizer.Normalize(providerName);
         var key = BuildConnectionKey(providerName, connectionName);
         connections[key] = new ConfiguredConnectionEntry(
             providerName,
@@ -330,7 +331,7 @@ public sealed class AIConnectionController : Controller
     }
 
     private static string BuildConnectionKey(string providerName, string connectionName)
-        => $"{providerName}:{connectionName}";
+        => $"{AIProviderNameNormalizer.Normalize(providerName)}:{connectionName}";
 
     private sealed record ConfiguredConnectionEntry(string ProviderName, string ConnectionName, string DisplayText);
 }

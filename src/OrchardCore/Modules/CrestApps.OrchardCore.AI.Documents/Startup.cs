@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -25,6 +26,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 
@@ -42,7 +44,15 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
-        services.AddScoped<IInteractionDocumentSettingsProvider, OrchardCoreInteractionDocumentSettingsProvider>();
+        services.AddScoped<IOptions<InteractionDocumentOptions>>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptionsSnapshot<InteractionDocumentOptions>>().Value.Clone();
+            var settings = sp.GetRequiredService<ISiteService>().GetSettingsAsync<InteractionDocumentSettings>().GetAwaiter().GetResult();
+            var overrides = InteractionDocumentOptions.FromSettings(settings);
+            options.IndexProfileName = overrides.IndexProfileName;
+            options.TopN = overrides.TopN;
+            return Options.Create(options);
+        });
         services.AddScoped<IAIChatDocumentAuthorizationService, OrchardAIChatDocumentAuthorizationService>();
         services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
 
@@ -53,9 +63,6 @@ public sealed class Startup : StartupBase
 
         // Add document processing system tools and supporting services.
         services.AddDefaultDocumentProcessingServices();
-
-        // Register the document Preemptive RAG handler.
-        services.AddScoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>();
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
@@ -112,4 +119,3 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
             .AddRemoveChatSessionDocumentEndpoint();
     }
 }
-

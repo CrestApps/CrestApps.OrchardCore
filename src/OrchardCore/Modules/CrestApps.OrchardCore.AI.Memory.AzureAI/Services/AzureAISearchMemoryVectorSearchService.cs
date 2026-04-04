@@ -2,9 +2,10 @@ using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 
@@ -22,7 +23,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
     }
 
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
-        IndexProfile indexProfile,
+        SearchIndexProfile indexProfile,
         float[] embedding,
         string userId,
         int topN,

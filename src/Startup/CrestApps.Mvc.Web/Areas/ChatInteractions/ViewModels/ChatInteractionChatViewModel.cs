@@ -33,6 +33,7 @@ internal sealed class ChatInteractionChatViewModel
 
     // A2A Connections
     public string[] SelectedA2AConnectionIds { get; set; } = [];
+
     public IEnumerable<A2AConnectionSelectionItem> AvailableA2AConnections { get; set; } = [];
 
     // MCP Connections
@@ -41,14 +42,17 @@ internal sealed class ChatInteractionChatViewModel
 
     // AI Tools
     public string[] SelectedToolNames { get; set; } = [];
+
     public List<ToolSelectionItem> AvailableTools { get; set; } = [];
 
     // AI Agents
     public string[] SelectedAgentNames { get; set; } = [];
+
     public List<AgentSelectionItem> AvailableAgents { get; set; } = [];
 
     // Prompt Templates
     public IEnumerable<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
+
     public IEnumerable<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
 
     // Documents
@@ -57,13 +61,18 @@ internal sealed class ChatInteractionChatViewModel
     public bool HasDocumentIndexConfiguration { get; set; }
 
     public string DocumentIndexProfileName { get; set; }
+
     public IEnumerable<ChatDocumentInfo> Documents { get; set; } = [];
 
     // Data Sources
     public string DataSourceId { get; set; }
+
     public int? DataSourceStrictness { get; set; }
+
     public int? DataSourceTopNDocuments { get; set; }
-    public bool DataSourceIsInScope { get; set; } = true;
+
+    public bool DataSourceIsInScope { get; set; }
+
     public string DataSourceFilter { get; set; }
 
     // Copilot

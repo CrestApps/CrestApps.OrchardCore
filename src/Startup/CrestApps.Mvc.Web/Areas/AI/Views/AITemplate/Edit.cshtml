@@ -937,18 +937,32 @@
             var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             var initialPromptGroup = document.getElementById('initialPromptGroup');
 
-            function convertToKebabCase(str) {
-                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            function normalizeProfileType(str) {
+                return (str || '')
+                    .trim()
+                    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+                    .replace(/\s+/g, '-')
+                    .toLowerCase();
+            }
+
+            function getSelectedProfileTypeClassName() {
+                if (!profileTypeSelect || !profileTypeSelect.value) {
+                    return '';
+                }
+
+                var selectedOption = profileTypeSelect.options[profileTypeSelect.selectedIndex];
+                var profileType = selectedOption ? selectedOption.text : profileTypeSelect.value;
+
+                return 'profile-type-' + normalizeProfileType(profileType);
             }
 
             function toggleProfileTypeFields() {
                 if (!profileTypeSelect) return;
-                var value = profileTypeSelect.value;
-                if (!value) {
+                var className = getSelectedProfileTypeClassName();
+                if (!className) {
                     document.querySelectorAll('form .profile-type').forEach(function (el) { el.classList.add('d-none'); });
                     return;
                 }
-                var className = 'profile-type-' + convertToKebabCase(value);
                 document.querySelectorAll('form .profile-type').forEach(function (el) {
                     if (el.classList.contains(className)) {
                         el.classList.remove('d-none');
@@ -975,7 +989,7 @@
 
             function toggleInitialPromptFields() {
                 if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
-                var isChatType = profileTypeSelect.value === 'Chat';
+                var isChatType = getSelectedProfileTypeClassName() === 'profile-type-chat';
                 var showInitialPrompt = addInitialPromptCheck.checked;
                 welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);

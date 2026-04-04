@@ -3,6 +3,7 @@ using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Chat.Tools;
 using CrestApps.AI.Completions;
 using CrestApps.AI.Handlers;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Tooling;
@@ -54,11 +55,27 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds shared chat-session processing services used by both AI profile chat
+    /// and chat interactions across hosts.
+    /// </summary>
+    public static IServiceCollection AddAIChatSessionProcessingServices(this IServiceCollection services)
+    {
+        services.TryAddScoped<DataExtractionService>();
+        services.TryAddScoped<PostSessionProcessingService>();
+        services.TryAddScoped<AIChatSessionPostCloseProcessor>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds the default chat interaction handlers.
     /// </summary>
     public static IServiceCollection AddChatInteractionServices(this IServiceCollection services)
     {
         services.AddChatNotificationServices();
+        services.AddAIChatSessionProcessingServices();
 
         // Register templates embedded in this assembly.
         services.AddTemplatesFromAssembly(typeof(ServiceCollectionExtensions).Assembly);
@@ -86,6 +103,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ITabularBatchResultCache, TabularBatchResultCache>();
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, DocumentOrchestrationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>());
 
         services.AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(
             ".txt",

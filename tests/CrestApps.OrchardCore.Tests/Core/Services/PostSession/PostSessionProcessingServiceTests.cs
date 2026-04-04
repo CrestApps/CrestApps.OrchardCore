@@ -1,16 +1,13 @@
 using CrestApps.AI;
 using CrestApps.AI.Clients;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 using Moq;
-
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.PostSession;
 
@@ -660,8 +657,9 @@ public sealed class PostSessionProcessingServiceTests
             mockDeploymentManager
                 .Setup(d => d.ResolveOrDefaultAsync(
                     It.IsAny<AIDeploymentType>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()))
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>()))
 
                 .ReturnsAsync(deployment);
         }
@@ -687,28 +685,21 @@ public sealed class PostSessionProcessingServiceTests
 
         }
 
-        var providerOptions = new AIProviderOptions();
-
         var defaultOptions = new DefaultAIOptions
         {
 
             MaximumIterationsPerRequest = 10,
         };
 
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(DateTime.UtcNow);
-
         return new PostSessionProcessingService(
             mockClientFactory.Object,
             toolsService ?? mockToolsService.Object,
             templateService ?? mockTemplateService.Object,
-            Options.Create(providerOptions),
-        defaultOptions,
-        new Mock<IServiceProvider>().Object,
-        clock.Object,
-        NullLoggerFactory.Instance,
-
-        mockDeploymentManager.Object);
+            defaultOptions,
+            new Mock<IServiceProvider>().Object,
+            TimeProvider.System,
+            NullLoggerFactory.Instance,
+            mockDeploymentManager.Object);
     }
     /// <summary>
     /// A minimal AIFunction implementation for testing tool resolution.

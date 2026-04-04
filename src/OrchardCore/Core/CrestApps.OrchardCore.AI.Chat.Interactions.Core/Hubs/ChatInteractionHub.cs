@@ -231,7 +231,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                         {
                             Strictness = GetInt(settings, "strictness"),
                             TopNDocuments = GetInt(settings, "topNDocuments"),
-                            IsInScope = GetBool(settings, "isInScope") ?? true,
+                            IsInScope = GetBool(settings, "isInScope") ?? false,
                             Filter = GetString(settings, "filter"),
                         });
                     }

@@ -40,6 +40,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     private readonly string _apiKey;
     private readonly string _identityId;
     private readonly string _region;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _tokenLock = new(1, 1);
 
@@ -51,6 +52,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         AzureAuthenticationType authType,
         string apiKey,
         string identityId,
+        TimeProvider timeProvider,
         ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
@@ -60,6 +62,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
         _apiKey = apiKey;
         _identityId = identityId;
         _region = TryExtractRegion(endpoint);
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -518,7 +521,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         try
         {
-            if (_cachedToken != null && _tokenExpires > DateTimeOffset.UtcNow.AddMinutes(-1))
+            if (_cachedToken != null && _tokenExpires > _timeProvider.GetUtcNow().AddMinutes(-1))
             {
                 return _cachedToken;
             }

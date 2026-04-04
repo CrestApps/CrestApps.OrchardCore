@@ -18,9 +18,10 @@ public sealed class ChatInteractionHub : ChatInteractionHubBase
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
         IEnumerable<IChatInteractionSettingsHandler> settingsHandlers,
+        TimeProvider timeProvider,
         YesSql.ISession session,
         ILogger<ChatInteractionHub> logger)
-        : base(interactionManager, promptStore, orchestrationContextBuilder, orchestratorResolver, settingsHandlers, logger)
+        : base(interactionManager, promptStore, orchestrationContextBuilder, orchestratorResolver, settingsHandlers, timeProvider, logger)
     {
         _session = session;
     }

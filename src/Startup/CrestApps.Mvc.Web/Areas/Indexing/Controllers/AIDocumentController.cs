@@ -1,5 +1,7 @@
 using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
@@ -19,6 +21,8 @@ public sealed class AIDocumentController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly FileSystemFileStore _fileStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIClientFactory _aiClientFactory;
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
 
     public AIDocumentController(
@@ -27,6 +31,8 @@ public sealed class AIDocumentController : Controller
         IAIProfileManager profileManager,
         FileSystemFileStore fileStore,
         IAIDocumentProcessingService documentProcessingService,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
         MvcAIDocumentIndexingService documentIndexingService)
     {
         _documentStore = documentStore;
@@ -34,6 +40,8 @@ public sealed class AIDocumentController : Controller
         _profileManager = profileManager;
         _fileStore = fileStore;
         _documentProcessingService = documentProcessingService;
+        _deploymentManager = deploymentManager;
+        _aiClientFactory = aiClientFactory;
         _documentIndexingService = documentIndexingService;
     }
 
@@ -62,7 +70,13 @@ public sealed class AIDocumentController : Controller
             await _fileStore.SaveFileAsync(storagePath, stream);
         }
 
-        var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(null, null);
+        var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Embedding);
+        var embeddingGenerator = embeddingDeployment == null
+            ? null
+            : await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+                embeddingDeployment.ClientName,
+                embeddingDeployment.ConnectionName,
+                embeddingDeployment.ModelName);
         var result = await _documentProcessingService.ProcessFileAsync(
             file,
             profileId,

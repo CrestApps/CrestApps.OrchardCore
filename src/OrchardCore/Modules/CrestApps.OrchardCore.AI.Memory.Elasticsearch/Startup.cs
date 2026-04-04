@@ -1,3 +1,4 @@
+using CrestApps.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;

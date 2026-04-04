@@ -170,6 +170,77 @@ public sealed class DocumentOrchestrationHandlerTests
     }
 
     [Fact]
+    public async Task BuiltAsync_WithStrictScope_PassesStrictScopeToTemplate()
+    {
+        var handler = CreateHandler(CreateToolOptionsWithDocTools());
+        var context = new OrchestrationContext
+        {
+            CompletionContext = new AICompletionContext(),
+            Documents =
+            [
+                new ChatDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "report.pdf",
+                },
+            ],
+        };
+
+        var interaction = new ChatInteraction
+        {
+            Documents =
+            [
+                new ChatDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "report.pdf",
+                },
+            ],
+        };
+
+        interaction.Put(new AIDataSourceRagMetadata { IsInScope = true });
+
+        await handler.BuiltAsync(new OrchestrationContextBuiltContext(interaction, context));
+
+        var systemMessage = context.SystemMessageBuilder.ToString();
+        Assert.Contains("Scope mode: strict", systemMessage);
+    }
+
+    [Fact]
+    public async Task BuiltAsync_ProfileKnowledgeBaseWithStrictScope_IncludesDocumentToolGuidance()
+    {
+        var handler = CreateHandler(CreateToolOptionsWithDocTools());
+        var context = new OrchestrationContext
+        {
+            CompletionContext = new AICompletionContext(),
+        };
+
+        var profile = new AIProfile();
+        profile.Put(new AIDataSourceRagMetadata { IsInScope = true });
+        profile.Put(new DocumentsMetadata
+        {
+            Documents =
+            [
+                new ChatDocumentInfo
+                {
+                    DocumentId = "doc1",
+                    FileName = "report.pdf",
+                    ContentType = "application/pdf",
+                    FileSize = 2048,
+                },
+            ],
+        });
+
+        await handler.BuiltAsync(new OrchestrationContextBuiltContext(profile, context));
+
+        var systemMessage = context.SystemMessageBuilder.ToString();
+        Assert.Contains("Background knowledge is available for this profile.", systemMessage);
+        Assert.Contains("Search the profile knowledge documents first", systemMessage);
+        Assert.Contains("read_document", systemMessage);
+        Assert.Contains("Scope mode: strict", systemMessage);
+    }
+
+    [Fact]
     public async Task BuiltAsync_WithoutDocuments_NoChanges()
     {
         var handler = CreateHandler();
@@ -274,13 +345,25 @@ public sealed class DocumentOrchestrationHandlerTests
         {
             if (arguments != null && arguments.TryGetValue("tools", out var toolsObj) && toolsObj is IEnumerable<object> tools)
             {
+                var isInScope = arguments.TryGetValue("isInScope", out var isInScopeObj) &&
+                    isInScopeObj is true;
+                var hasKnowledgeBaseDocuments =
+                    arguments.TryGetValue("knowledgeBaseDocuments", out var knowledgeBaseDocumentsObj) &&
+                    knowledgeBaseDocumentsObj is IEnumerable<object> knowledgeBaseDocuments &&
+                    knowledgeBaseDocuments.Any();
                 var lines = new List<string>
                 {
                     "[Available Documents or attachments]",
-                    "The user has uploaded the following documents as supplementary context.",
+                    hasKnowledgeBaseDocuments
+                        ? "Background knowledge is available for this profile."
+                        : "The user has uploaded the following documents as supplementary context.",
+                    $"Scope mode: {(isInScope ? "strict" : "relaxed")}",
+                    "",
+                    hasKnowledgeBaseDocuments
+                        ? "Search the profile knowledge documents first using the available document tools before answering."
+                        : "Search the uploaded documents first using the document tools before answering.",
                     "",
                     "Available document tools:",
-
                 };
 
                 foreach (dynamic tool in tools)

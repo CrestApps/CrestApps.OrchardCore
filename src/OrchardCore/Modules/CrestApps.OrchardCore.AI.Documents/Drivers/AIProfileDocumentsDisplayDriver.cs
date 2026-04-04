@@ -1,4 +1,5 @@
 using CrestApps.AI;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
@@ -30,6 +31,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIClientFactory _aiClientFactory;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly ILogger _logger;
 
@@ -43,6 +45,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         IAIDocumentChunkStore chunkStore,
         IAIDocumentProcessingService documentProcessingService,
         IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
         IOptions<ChatDocumentsOptions> extractorOptions,
         ILogger<AIProfileDocumentsDisplayDriver> logger,
         IStringLocalizer<AIProfileDocumentsDisplayDriver> stringLocalizer)
@@ -54,6 +57,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         _chunkStore = chunkStore;
         _documentProcessingService = documentProcessingService;
         _deploymentManager = deploymentManager;
+        _aiClientFactory = aiClientFactory;
         _extractorOptions = extractorOptions;
         _logger = logger;
         S = stringLocalizer;
@@ -148,8 +152,16 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             if (model.Files != null && model.Files.Length > 0)
             {
                 var deployment = await ResolveDeploymentAsync(profile);
-                var connectionName = deployment?.ConnectionName;
-                var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, connectionName);
+                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
+                    AIDeploymentType.Embedding,
+                    clientName: deployment?.ClientName,
+                    connectionName: deployment?.ConnectionName);
+                var embeddingGenerator = embeddingDeployment == null
+                    ? null
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+                        embeddingDeployment.ClientName,
+                        embeddingDeployment.ConnectionName,
+                        embeddingDeployment.ModelName);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

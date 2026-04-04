@@ -54,6 +54,7 @@ public sealed class ChatInteractionHubTests
             new Mock<IOrchestrationContextBuilder>(MockBehavior.Strict).Object,
             new Mock<IOrchestratorResolver>(MockBehavior.Strict).Object,
             [new PromptTemplateChatInteractionSettingsHandler()],
+            TimeProvider.System,
             sessionMock.Object,
             NullLogger<ChatInteractionHub>.Instance)
         {
@@ -139,6 +140,7 @@ public sealed class ChatInteractionHubTests
             new Mock<IOrchestrationContextBuilder>(MockBehavior.Strict).Object,
             new Mock<IOrchestratorResolver>(MockBehavior.Strict).Object,
             [new DataSourceChatInteractionSettingsHandler(serviceProvider, NullLogger<DataSourceChatInteractionSettingsHandler>.Instance)],
+            TimeProvider.System,
             sessionMock.Object,
             NullLogger<ChatInteractionHub>.Instance)
         {

@@ -35,7 +35,7 @@ internal sealed class ConfigurationAIProviderConnectionsOptionsConfiguration : I
             {
                 var connection = ReadConnection(connectionSection);
                 var connectionName = connection.GetStringValue("Name", false);
-                var clientName = connection.GetStringValue("ClientName", false);
+                var clientName = AIProviderNameNormalizer.Normalize(connection.GetStringValue("ClientName", false));
 
                 if (string.IsNullOrWhiteSpace(connectionName))
                 {

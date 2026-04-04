@@ -1,3 +1,4 @@
+using CrestApps.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;

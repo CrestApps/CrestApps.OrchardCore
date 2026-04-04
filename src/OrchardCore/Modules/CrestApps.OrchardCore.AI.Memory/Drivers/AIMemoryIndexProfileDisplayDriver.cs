@@ -1,4 +1,5 @@
 using CrestApps.AI.Deployments;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;

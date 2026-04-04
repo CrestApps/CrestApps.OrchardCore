@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
@@ -75,15 +76,25 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
+            .AddScoped<IOptions<GeneralAIOptions>>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptionsSnapshot<GeneralAIOptions>>().Value.Clone();
+                var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
+                var settings = GeneralAIOptions.FromSettings(site.As<GeneralAISettings>());
+
+                options.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
+                options.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
+                options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
+                options.OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching;
+                options.EnableDistributedCaching = settings.EnableDistributedCaching;
+                options.OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry;
+                options.EnableOpenTelemetry = settings.EnableOpenTelemetry;
+
+                return Options.Create(options);
+            })
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
-            .AddScoped(sp =>
-            {
-                var defaultOptions = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>().Value;
-                var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
-
-                return defaultOptions.ApplySiteOverrides(site.As<GeneralAISettings>());
-            }).AddNavigationProvider<AIProfileAdminMenu>();
+            .AddNavigationProvider<AIProfileAdminMenu>();
 
         services
             .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
@@ -221,13 +232,8 @@ public sealed class ChatCoreStartup : StartupBase
             .AddDataMigration<AIChatSessionPromptIndexMigrations>()
             .AddDataMigration<AIChatSessionPromptDataMigrations>();
 
-        // Register the data extraction service.
-        services.AddScoped<DataExtractionService>();
+        services.AddAIChatSessionProcessingServices();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
-
-        // Register the post-session processing service.
-        services.AddScoped<PostSessionProcessingService>();
-
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
 
         // Register orchestration services for AI Profile chat
@@ -303,7 +309,10 @@ public sealed class ChatAnalyticsStartup : StartupBase
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddIndexProvider<AIChatSessionMetricsIndexProvider>();
 
+        services.TryAddScoped<AIChatSessionEventPostCloseObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>()));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>()));
     }
 }
 

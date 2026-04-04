@@ -43,14 +43,17 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     private const string _conversationCtsKey = "ConversationCts";
 
     private readonly IServiceProvider _services;
+    private readonly TimeProvider _timeProvider;
 
     protected AIChatHubCore(
         IServiceProvider services,
+        TimeProvider timeProvider,
         ILogger logger)
 
     {
 
         _services = services;
+        _timeProvider = timeProvider;
         Logger = logger;
     }
 
@@ -73,7 +76,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     /// abstraction (e.g., <c>IClock</c>).
     /// </summary>
     protected virtual DateTime GetUtcNow()
-        => DateTime.UtcNow;
+        => _timeProvider.GetUtcNow().UtcDateTime;
     /// <summary>
     /// Generates a unique identifier. Override to use a framework-specific
     /// ID generator (e.g., OrchardCore's <c>IdGenerator</c>).

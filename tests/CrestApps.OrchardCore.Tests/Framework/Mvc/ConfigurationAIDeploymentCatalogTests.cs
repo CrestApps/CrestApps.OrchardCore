@@ -124,6 +124,39 @@ public sealed class ConfigurationAIDeploymentCatalogTests
         Assert.Equal(AIDeploymentType.SpeechToText, deployment.Type);
     }
 
+    [Fact]
+    public async Task GetAllAsync_ShouldNormalizeAzureOpenAIStandaloneDeployments()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["CrestApps:AI:Deployments:0:ClientName"] = "AzureOpenAI",
+                ["CrestApps:AI:Deployments:0:Name"] = "text-embedding-3-small",
+                ["CrestApps:AI:Deployments:0:ModelName"] = "text-embedding-3-small",
+                ["CrestApps:AI:Deployments:0:Type"] = "Embedding",
+                ["CrestApps:AI:Deployments:0:Endpoint"] = "https://example.openai.azure.com/",
+                ["CrestApps:AI:Deployments:0:AuthenticationType"] = "ApiKey",
+                ["CrestApps:AI:Deployments:0:ApiKey"] = "secret",
+            })
+            .Build();
+
+        var aiOptions = new AIOptions();
+        aiOptions.AddDeploymentProvider("Azure", entry => entry.SupportsContainedConnection = true);
+
+        var catalog = new ConfigurationAIDeploymentCatalog(
+            new TestAIDeploymentStore([]),
+            configuration,
+            Options.Create(new AIProviderOptions()),
+            Options.Create(aiOptions),
+            new EphemeralDataProtectionProvider(),
+            NullLogger<ConfigurationAIDeploymentCatalog>.Instance);
+
+        var deployment = Assert.Single(await catalog.GetAllAsync());
+
+        Assert.Equal("Azure", deployment.ClientName);
+        Assert.Equal(AIDeploymentType.Embedding, deployment.Type);
+    }
+
     private sealed class TestAIDeploymentStore(List<AIDeployment> deployments) : IAIDeploymentStore
     {
         public ValueTask CreateAsync(AIDeployment entry)

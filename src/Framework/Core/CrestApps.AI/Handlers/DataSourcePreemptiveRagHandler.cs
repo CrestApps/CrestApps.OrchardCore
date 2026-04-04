@@ -14,6 +14,7 @@ using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI.Handlers;
 
@@ -23,7 +24,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
     private readonly IAIClientFactory _aiClientFactory;
     private readonly ITemplateService _templateService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IAIDataSourceSettingsProvider _settingsProvider;
+    private readonly AIDataSourceOptions _options;
     private readonly ILogger _logger;
 
     public DataSourcePreemptiveRagHandler(
@@ -31,14 +32,14 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         IAIClientFactory aiClientFactory,
         ITemplateService templateService,
         IAIDeploymentManager deploymentManager,
-        IAIDataSourceSettingsProvider settingsProvider,
+        IOptions<AIDataSourceOptions> options,
         ILogger<DataSourcePreemptiveRagHandler> logger)
     {
         _serviceProvider = serviceProvider;
         _aiClientFactory = aiClientFactory;
         _templateService = templateService;
         _deploymentManager = deploymentManager;
-        _settingsProvider = settingsProvider;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -165,8 +166,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var settings = await _settingsProvider.GetAsync();
-        var topN = settings.GetTopNDocuments(ragMetadata?.TopNDocuments);
+        var topN = _options.GetTopNDocuments(ragMetadata?.TopNDocuments);
 
         string providerFilter = null;
 
@@ -213,12 +213,12 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             }
         }
 
-        var strictness = settings.GetStrictness(ragMetadata?.Strictness);
+        var strictness = _options.GetStrictness(ragMetadata?.Strictness);
         var query = allResults.AsEnumerable();
 
         if (strictness > 0)
         {
-            var threshold = strictness / (float)AIDataSourceSettings.MaxStrictness;
+            var threshold = strictness / (float)AIDataSourceOptions.MaxStrictness;
             query = query.Where(result => result.Score >= threshold);
         }
 

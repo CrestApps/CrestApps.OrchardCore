@@ -18,7 +18,7 @@ builder.Services
     .AddCrestAppsMcpClient();
 ```
 
-This registers transport providers, OAuth2 support, and the core `McpService` that manages connections to remote MCP servers.
+This registers transport providers, OAuth2 support, the core `McpService` that manages connections to remote MCP servers, and the shared AI-profile completion-context handler that flows selected MCP connection IDs into the completion request.
 
 ## Problem & Solution
 
@@ -42,6 +42,7 @@ The MCP client framework:
 | `IOAuth2TokenService` | `DefaultOAuth2TokenService` | Scoped | OAuth2 token acquisition and caching |
 | `IMcpClientTransportProvider` | `SseClientTransportProvider` | Scoped | Server-Sent Events transport |
 | `IMcpClientTransportProvider` | `StdioClientTransportProvider` | Scoped | Standard I/O transport |
+| `IAICompletionContextBuilderHandler` | `McpAICompletionContextBuilderHandler` | Scoped | Copies selected MCP connection IDs from AI profile metadata into the completion context |
 
 Two transport types are automatically registered in `McpClientAIOptions`:
 

@@ -15,10 +15,12 @@ namespace CrestApps.AI.OpenAI.Azure.Services;
 public sealed class AzureSpeechClientProvider : IAIClientProvider
 {
     private readonly ILoggerFactory _loggerFactory;
+    private readonly TimeProvider _timeProvider;
 
-    public AzureSpeechClientProvider(ILoggerFactory loggerFactory)
+    public AzureSpeechClientProvider(ILoggerFactory loggerFactory, TimeProvider timeProvider)
     {
         _loggerFactory = loggerFactory;
+        _timeProvider = timeProvider;
     }
 
     public bool CanHandle(string providerName)
@@ -45,6 +47,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
             authType,
             apiKey,
             identityId,
+            _timeProvider,
             logger);
 
         return ValueTask.FromResult<ISpeechToTextClient>(client);
@@ -62,6 +65,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
             authType,
             apiKey,
             identityId,
+            _timeProvider,
             logger);
 
         return ValueTask.FromResult<ITextToSpeechClient>(client);
@@ -78,6 +82,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
             authType,
             apiKey,
             identityId,
+            _timeProvider,
             logger);
 
         return await client.GetVoicesAsync();

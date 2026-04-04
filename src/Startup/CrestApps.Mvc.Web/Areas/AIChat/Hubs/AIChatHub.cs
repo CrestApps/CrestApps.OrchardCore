@@ -12,8 +12,9 @@ public sealed class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     public AIChatHub(
         IServiceProvider services,
+        TimeProvider timeProvider,
         ILogger<AIChatHub> logger)
-        : base(services, logger)
+        : base(services, timeProvider, logger)
     {
     }
 }

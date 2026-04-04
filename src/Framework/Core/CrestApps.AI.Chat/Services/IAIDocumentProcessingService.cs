@@ -9,12 +9,6 @@ namespace CrestApps.AI.Chat.Services;
 public interface IAIDocumentProcessingService
 {
     /// <summary>
-    /// Creates an embedding generator for the given provider and connection.
-    /// Returns <see langword="null"/> if no embedding deployment is configured or the generator cannot be created.
-    /// </summary>
-    Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName);
-
-    /// <summary>
     /// Processes an uploaded file by extracting text, chunking, generating embeddings, and creating an AI document.
     /// </summary>
     Task<DocumentProcessingResult> ProcessFileAsync(

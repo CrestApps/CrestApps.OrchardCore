@@ -4,10 +4,12 @@ using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.DataSources;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
@@ -42,8 +44,10 @@ public sealed class AIProfileController : Controller
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly FileSystemFileStore _fileStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIClientFactory _aiClientFactory;
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
-    private readonly IInteractionDocumentSettingsProvider _interactionDocumentSettingsProvider;
+    private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
@@ -64,8 +68,10 @@ public sealed class AIProfileController : Controller
         IAIDocumentChunkStore chunkStore,
         FileSystemFileStore fileStore,
         IAIDocumentProcessingService documentProcessingService,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
         MvcAIDocumentIndexingService documentIndexingService,
-        IInteractionDocumentSettingsProvider interactionDocumentSettingsProvider,
+        IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
@@ -84,8 +90,10 @@ public sealed class AIProfileController : Controller
         _chunkStore = chunkStore;
         _fileStore = fileStore;
         _documentProcessingService = documentProcessingService;
+        _deploymentManager = deploymentManager;
+        _aiClientFactory = aiClientFactory;
         _documentIndexingService = documentIndexingService;
-        _interactionDocumentSettingsProvider = interactionDocumentSettingsProvider;
+        _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
@@ -156,13 +164,19 @@ public sealed class AIProfileController : Controller
         // Assign ItemId early so document processing can use it as a reference.
         profile.ItemId = Guid.NewGuid().ToString("N");
 
-        if (Documents is { Count: > 0 })
+        var hasDocumentChanges = Documents is { Count: > 0 };
+
+        if (hasDocumentChanges)
         {
             await UploadDocumentsAsync(profile, Documents);
         }
 
-        // Single save: persists the profile together with any uploaded documents and chunks.
         await _profileManager.CreateAsync(profile);
+
+        if (hasDocumentChanges)
+        {
+            await _documentStore.SaveChangesAsync();
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -215,17 +229,26 @@ public sealed class AIProfileController : Controller
 
         model.ApplyTo(existing);
 
+        var hasDocumentChanges = false;
+
         if (RemovedDocumentIds is { Length: > 0 })
         {
             await RemoveDocumentsAsync(existing, RemovedDocumentIds);
+            hasDocumentChanges = true;
         }
 
         if (Documents is { Count: > 0 })
         {
             await UploadDocumentsAsync(existing, Documents);
+            hasDocumentChanges = true;
         }
 
         await _profileManager.UpdateAsync(existing);
+
+        if (hasDocumentChanges)
+        {
+            await _documentStore.SaveChangesAsync();
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -372,7 +395,7 @@ public sealed class AIProfileController : Controller
             .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
             .ToList();
 
-        var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
+        var documentSettings = _interactionDocumentOptions;
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
 
         if (!string.IsNullOrWhiteSpace(documentSettings.IndexProfileName))
@@ -437,7 +460,7 @@ public sealed class AIProfileController : Controller
 
     private async Task UploadDocumentsAsync(AIProfile profile, List<IFormFile> files)
     {
-        var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(null, null);
+        var embeddingGenerator = await CreateEmbeddingGeneratorAsync();
 
         foreach (var file in files)
         {
@@ -487,6 +510,14 @@ public sealed class AIProfileController : Controller
                 _logger.LogError(ex, "Error processing uploaded file '{FileName}'.", file.FileName);
             }
         }
+    }
+
+    private async Task<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>> CreateEmbeddingGeneratorAsync()
+    {
+        var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Embedding);
+        return deployment == null
+            ? null
+            : await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
     }
 
     private async Task PopulateAttachedDocumentsAsync(AIProfileViewModel model)

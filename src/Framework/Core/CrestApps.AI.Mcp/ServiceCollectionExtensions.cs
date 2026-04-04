@@ -1,6 +1,7 @@
 using CrestApps.AI.Mcp.Handlers;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;
+using CrestApps.AI.Completions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IOAuth2TokenService, DefaultOAuth2TokenService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMcpClientTransportProvider, SseClientTransportProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IMcpClientTransportProvider, StdioClientTransportProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAICompletionContextBuilderHandler, McpAICompletionContextBuilderHandler>());
 
         services.Configure<McpClientAIOptions>(options =>
         {

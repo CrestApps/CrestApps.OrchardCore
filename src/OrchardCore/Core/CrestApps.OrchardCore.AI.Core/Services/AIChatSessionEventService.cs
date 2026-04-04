@@ -1,6 +1,5 @@
 using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Indexes;
-using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -12,14 +11,14 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class AIChatSessionEventService
 {
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     public AIChatSessionEventService(
         ISession session,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
     /// <summary>
     /// Records a new session event when a chat session starts.
@@ -27,7 +26,7 @@ public sealed class AIChatSessionEventService
     /// </summary>
     public async Task RecordSessionStartedAsync(AIChatSession chatSession)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
         var evt = new AIChatSessionEvent
@@ -56,7 +55,7 @@ public sealed class AIChatSessionEventService
         if (evt is null)
         {
             // If no start event exists, create a complete record.
-            var now = _clock.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             var isAuthenticated = !string.IsNullOrEmpty(chatSession.UserId);
 
             evt = new AIChatSessionEvent
@@ -78,7 +77,7 @@ public sealed class AIChatSessionEventService
             return;
         }
 
-        var endTime = chatSession.ClosedAtUtc ?? _clock.UtcNow;
+        var endTime = chatSession.ClosedAtUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
 
         evt.SessionEndedUtc = endTime;
         evt.MessageCount = promptCount;

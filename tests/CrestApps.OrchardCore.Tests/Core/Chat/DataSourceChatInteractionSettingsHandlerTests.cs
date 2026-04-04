@@ -35,7 +35,7 @@ public sealed class DataSourceChatInteractionSettingsHandlerTests
         Assert.Equal("datasource-1", dataSourceMetadata.DataSourceId);
 
         Assert.True(interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata));
-        Assert.True(ragMetadata.IsInScope);
+        Assert.False(ragMetadata.IsInScope);
         Assert.Null(ragMetadata.Strictness);
         Assert.Null(ragMetadata.TopNDocuments);
         Assert.Null(ragMetadata.Filter);
@@ -63,5 +63,6 @@ public sealed class DataSourceChatInteractionSettingsHandlerTests
         Assert.Null(ragMetadata.Strictness);
         Assert.Null(ragMetadata.TopNDocuments);
         Assert.Null(ragMetadata.Filter);
+        Assert.False(ragMetadata.IsInScope);
     }
 }

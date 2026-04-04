@@ -1,10 +1,10 @@
 using CrestApps.AI.Models;
-using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
 
 using CrestApps.Infrastructure.Indexing;
 
 using CrestApps.Infrastructure.Indexing.Models;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 
@@ -13,19 +13,19 @@ namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 /// </summary>
 public sealed class MvcAIDocumentIndexingService
 {
-    private readonly IInteractionDocumentSettingsProvider _settingsProvider;
+    private readonly InteractionDocumentOptions _options;
     private readonly ISearchIndexProfileStore _indexProfileStore;
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MvcAIDocumentIndexingService> _logger;
 
     public MvcAIDocumentIndexingService(
-        IInteractionDocumentSettingsProvider settingsProvider,
+        IOptions<InteractionDocumentOptions> options,
         ISearchIndexProfileStore indexProfileStore,
         IServiceProvider serviceProvider,
         ILogger<MvcAIDocumentIndexingService> logger)
     {
-        _settingsProvider = settingsProvider;
+        _options = options.Value;
         _indexProfileStore = indexProfileStore;
         _serviceProvider = serviceProvider;
 
@@ -166,7 +166,7 @@ public sealed class MvcAIDocumentIndexingService
 
     private async Task<SearchIndexProfile> GetConfiguredIndexProfileAsync(CancellationToken cancellationToken)
     {
-        var settings = await _settingsProvider.GetAsync();
+        var settings = _options;
 
         if (string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {

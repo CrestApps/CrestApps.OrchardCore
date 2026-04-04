@@ -97,6 +97,8 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             }
         }
 
+        var ragMetadata = GetRagMetadata(context.Resource);
+
         var hasKnowledgeBaseDocuments = knowledgeBaseDocuments?.Any() == true;
         var hasUserSuppliedDocuments = userSuppliedDocuments?.Any() == true;
 
@@ -152,6 +154,7 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             ["availableDocuments"] = context.OrchestrationContext.Documents,
             ["knowledgeBaseDocuments"] = hasKnowledgeBaseDocuments ? knowledgeBaseDocuments : Array.Empty<ChatDocumentInfo>(),
             ["userSuppliedDocuments"] = hasUserSuppliedDocuments ? userSuppliedDocuments : Array.Empty<ChatDocumentInfo>(),
+            ["isInScope"] = ragMetadata?.IsInScope == true,
         };
 
         var header = await _templateService.RenderAsync(AITemplateIds.DocumentAvailability, arguments);
@@ -161,5 +164,22 @@ public sealed class DocumentOrchestrationHandler : IOrchestrationContextBuilderH
             context.OrchestrationContext.SystemMessageBuilder.AppendLine();
             context.OrchestrationContext.SystemMessageBuilder.Append(header);
         }
+    }
+
+    private static AIDataSourceRagMetadata GetRagMetadata(object resource)
+    {
+        if (resource is AIProfile profile &&
+            profile.TryGet<AIDataSourceRagMetadata>(out var profileMetadata))
+        {
+            return profileMetadata;
+        }
+
+        if (resource is ChatInteraction interaction &&
+            interaction.TryGet<AIDataSourceRagMetadata>(out var interactionMetadata))
+        {
+            return interactionMetadata;
+        }
+
+        return null;
     }
 }

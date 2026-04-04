@@ -11,6 +11,7 @@ using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
+using CrestApps.Services;
 using CrestApps.Templates;
 using CrestApps.Templates.Extensions;
 using Microsoft.AspNetCore.Http;
@@ -201,6 +202,42 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddAIMemoryServices(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddOptions<AIMemoryOptions>();
+        services.AddOptions<GeneralAIOptions>();
+        services.AddOptions<ChatInteractionMemoryOptions>();
+        services.TryAddScoped<IAIMemorySafetyService, DefaultAIMemorySafetyService>();
+        services.TryAddScoped<IAIMemorySearchService, AIMemorySearchService>();
+        services.TryAdd(ServiceDescriptor.Scoped<ICatalog<AIMemoryEntry>>(sp => sp.GetRequiredService<IAIMemoryStore>()));
+        services.TryAddScoped<ICatalogManager<AIMemoryEntry>, CatalogManager<AIMemoryEntry>>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AIMemoryOrchestrationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPreemptiveRagHandler, AIMemoryPreemptiveRagHandler>());
+
+        services.AddAITool<SearchUserMemoriesTool>(SearchUserMemoriesTool.TheName)
+            .WithTitle("Search User Memories")
+            .WithDescription("Search the current authenticated user's long-term memory for relevant preferences, active projects, recurring topics, interests, identity details, and other reusable background facts saved from prior conversations.")
+            .WithPurpose(AIToolPurposes.Memory);
+
+        services.AddAITool<ListUserMemoriesTool>(ListUserMemoriesTool.TheName)
+            .WithTitle("List User Memories")
+            .WithDescription("List the current authenticated user's saved long-term memories when you need to review what durable preferences, projects, topics, interests, and other background facts are already known about them.")
+            .WithPurpose(AIToolPurposes.Memory);
+
+        services.AddAITool<SaveUserMemoryTool>(SaveUserMemoryTool.TheName)
+            .WithTitle("Save User Memory")
+            .WithDescription("Create or update a long-term memory for the current authenticated user when they reveal durable context such as preferences, active projects, recurring topics, interests, or other facts that should persist across future conversations, even if they did not explicitly ask to save it.")
+            .WithPurpose(AIToolPurposes.Memory);
+
+        services.AddAITool<RemoveUserMemoryTool>(RemoveUserMemoryTool.TheName)
+            .WithTitle("Remove User Memory")
+            .WithDescription("Remove a previously saved long-term memory for the current authenticated user when the user asks to forget it or when the memory should no longer be retained.")
+            .WithPurpose(AIToolPurposes.Memory);
+
+        return services;
+    }
     /// <summary>
     /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
     /// for each supported file extension.
@@ -247,8 +284,8 @@ public static class ServiceCollectionExtensions
 
         services.AddOptions<DefaultOrchestratorSettings>();
         services.AddOptions<DefaultAIDeploymentSettings>();
-        services.AddOptions<InteractionDocumentSettings>();
-        services.AddOptions<AIDataSourceSettings>();
+        services.AddOptions<InteractionDocumentOptions>();
+        services.AddOptions<AIDataSourceOptions>();
 
         // Register DefaultAIOptions as a scoped service that reads from IOptionsSnapshot
 
@@ -258,7 +295,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped(sp =>
         {
             var snapshot = sp.GetRequiredService<IOptionsSnapshot<DefaultAIOptions>>();
-            var settings = sp.GetRequiredService<IOptionsSnapshot<GeneralAISettings>>();
+            var settings = sp.GetRequiredService<IOptions<GeneralAIOptions>>();
 
             return snapshot.Value.ApplySiteOverrides(settings.Value);
         });
@@ -267,8 +304,6 @@ public static class ServiceCollectionExtensions
 
         // OrchardCore overrides this with its ISiteService-backed implementation.
         services.TryAddScoped<IAIDeploymentManager, DefaultAIDeploymentManager>();
-        services.TryAddScoped<IInteractionDocumentSettingsProvider, DefaultInteractionDocumentSettingsProvider>();
-        services.TryAddScoped<IAIDataSourceSettingsProvider, DefaultAIDataSourceSettingsProvider>();
 
         services.TryAddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());

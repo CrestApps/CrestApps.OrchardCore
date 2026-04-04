@@ -59,7 +59,7 @@ public sealed class ChatInteractionViewModel
     public string DataSourceId { get; set; }
     public int? DataSourceStrictness { get; set; }
     public int? DataSourceTopNDocuments { get; set; }
-    public bool DataSourceIsInScope { get; set; } = true;
+    public bool DataSourceIsInScope { get; set; }
     public string DataSourceFilter { get; set; }
 
     // Copilot

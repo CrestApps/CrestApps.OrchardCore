@@ -185,8 +185,7 @@ internal sealed class PreemptiveRagOrchestrationHandler : IOrchestrationContextB
         }
     }
 
-    private static Dictionary<string, object> CreateSearchToolArguments() =>
-    new()
+    private static Dictionary<string, object> CreateSearchToolArguments() => new()
     {
         ["searchToolNames"] = new[]
         {

@@ -31,4 +31,10 @@ public sealed class ChatMessageCompletedContext
     /// Gets or sets the number of output tokens generated in this completion.
     /// </summary>
     public int OutputTokenCount { get; init; }
+
+    /// <summary>
+    /// Gets a shared item bag that handlers can use to pass host-agnostic results
+    /// to later handlers without rerunning the same processing logic.
+    /// </summary>
+    public IDictionary<string, object> Items { get; } = new Dictionary<string, object>(StringComparer.Ordinal);
 }

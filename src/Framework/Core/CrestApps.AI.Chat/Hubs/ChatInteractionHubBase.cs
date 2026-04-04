@@ -18,12 +18,15 @@ namespace CrestApps.AI.Chat.Hubs;
 /// </summary>
 public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
 {
+    private readonly TimeProvider _timeProvider;
+
     protected ChatInteractionHubBase(
         ICatalogManager<ChatInteraction> interactionManager,
         IChatInteractionPromptStore promptStore,
         IOrchestrationContextBuilder orchestrationContextBuilder,
         IOrchestratorResolver orchestratorResolver,
         IEnumerable<IChatInteractionSettingsHandler> settingsHandlers,
+        TimeProvider timeProvider,
         ILogger logger)
     {
         InteractionManager = interactionManager;
@@ -31,6 +34,7 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         OrchestrationContextBuilder = orchestrationContextBuilder;
         OrchestratorResolver = orchestratorResolver;
         SettingsHandlers = settingsHandlers;
+        _timeProvider = timeProvider;
         Logger = logger;
     }
 
@@ -53,10 +57,10 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         => Task.CompletedTask;
 
     /// <summary>
-    /// Override to get the current UTC time. Default uses <see cref="DateTime.UtcNow"/>.
+    /// Override to get the current UTC time. Default uses <see cref="TimeProvider"/>.
     /// </summary>
     protected virtual DateTime GetUtcNow()
-        => DateTime.UtcNow;
+        => _timeProvider.GetUtcNow().UtcDateTime;
 
     /// <summary>
     /// Override to perform authorization checks before processing a request.

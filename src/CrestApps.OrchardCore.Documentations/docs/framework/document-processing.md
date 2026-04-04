@@ -15,7 +15,7 @@ description: Document readers, semantic search, and tabular data extraction for 
 builder.Services
     .AddCrestAppsAI()
     .AddOrchestrationServices()
-    .AddChatInteractionHandlers()
+    .AddChatInteractionServices()
     .AddDefaultDocumentProcessingServices()
     .AddOpenAIProvider();
 ```
@@ -36,7 +36,7 @@ The document processing system handles the full pipeline from upload to retrieva
 
 | Service | Implementation | Lifetime | Purpose |
 |---------|---------------|----------|---------|
-| `IAIDocumentProcessingService` | `DefaultAIDocumentProcessingService` | Scoped | Orchestrates document processing |
+| `IAIDocumentProcessingService` | `DefaultAIDocumentProcessingService` | Scoped | Reads, chunks, and materializes `AIDocument` / `AIDocumentChunk` records |
 | `ITabularBatchProcessor` | `TabularBatchProcessor` | Scoped | Processes CSV/Excel batch queries |
 | `ITabularBatchResultCache` | `TabularBatchResultCache` | Singleton | Caches tabular query results |
 | `DocumentOrchestrationHandler` | — | Scoped | Injects document context into orchestration |
@@ -65,14 +65,20 @@ These tools are automatically available to the orchestrator when documents are a
 
 ### `IAIDocumentProcessingService`
 
-Orchestrates the full document processing pipeline.
+Processes an uploaded file after the host has resolved any embedding generator it wants to use.
 
 ```csharp
 public interface IAIDocumentProcessingService
 {
-    Task ProcessAsync(AIDocumentProcessingContext context, CancellationToken cancellationToken = default);
+    Task<DocumentProcessingResult> ProcessFileAsync(
+        IFormFile file,
+        string referenceId,
+        string referenceType,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator);
 }
 ```
+
+The framework no longer asks `IAIDocumentProcessingService` to create embedding generators. Hosts resolve the embedding deployment through `IAIDeploymentManager` and create the generator through `IAIClientFactory`, then pass it into `ProcessFileAsync(...)`. That keeps deployment selection and AI client creation in the shared client/deployment runtime instead of duplicating that logic inside the document processor.
 
 ### Adding a Custom Document Reader
 

@@ -18,17 +18,20 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMemoryCache _cache;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     public DefaultA2AConnectionAuthService(
         IDataProtectionProvider dataProtectionProvider,
         IHttpClientFactory httpClientFactory,
         IMemoryCache cache,
+        TimeProvider timeProvider,
         ILogger<DefaultA2AConnectionAuthService> logger)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _httpClientFactory = httpClientFactory;
         _cache = cache;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -355,9 +358,9 @@ internal sealed class DefaultA2AConnectionAuthService : IA2AConnectionAuthServic
         return tokenResponse.AccessToken;
     }
 
-    private static string CreateClientAssertion(string tokenEndpoint, string clientId, string privateKeyPem, string keyId)
+    private string CreateClientAssertion(string tokenEndpoint, string clientId, string privateKeyPem, string keyId)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
 
         var headerObj = new Dictionary<string, string>
         {

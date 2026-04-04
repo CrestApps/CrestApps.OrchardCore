@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -48,7 +49,7 @@ public sealed class AIDeploymentViewModel
                 .Select(static type => type.ToString())
                 .ToArray(),
             ConnectionName = deployment.ConnectionName,
-            ClientName = deployment.ClientName,
+            ClientName = AIProviderNameNormalizer.Normalize(deployment.ClientName),
         };
 
         if (deployment.Properties != null)
@@ -67,7 +68,7 @@ public sealed class AIDeploymentViewModel
         deployment.ModelName = ModelName;
         deployment.Type = GetDeploymentType();
         deployment.ConnectionName = ConnectionName;
-        deployment.ClientName = ClientName;
+        deployment.ClientName = AIProviderNameNormalizer.Normalize(ClientName);
         deployment.IsDefault = false;
 
         deployment.Properties ??= new Dictionary<string, object>();

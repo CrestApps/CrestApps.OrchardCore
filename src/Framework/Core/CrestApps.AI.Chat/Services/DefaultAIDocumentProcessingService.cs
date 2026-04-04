@@ -1,5 +1,3 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
@@ -21,88 +19,19 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
     private readonly IServiceProvider _serviceProvider;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
-    private readonly IAIClientFactory _aiClientFactory;
-    private readonly IOptions<AIProviderOptions> _providerOptions;
-    private readonly IAIDeploymentManager _deploymentManager;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DefaultAIDocumentProcessingService> _logger;
 
     public DefaultAIDocumentProcessingService(
         IServiceProvider serviceProvider,
         IOptions<ChatDocumentsOptions> extractorOptions,
-        IAIClientFactory aiClientFactory,
-        IOptions<AIProviderOptions> providerOptions,
-        IAIDeploymentManager deploymentManager,
         TimeProvider timeProvider,
         ILogger<DefaultAIDocumentProcessingService> logger)
     {
         _serviceProvider = serviceProvider;
         _extractorOptions = extractorOptions;
-        _aiClientFactory = aiClientFactory;
-        _providerOptions = providerOptions;
-        _deploymentManager = deploymentManager;
         _timeProvider = timeProvider;
         _logger = logger;
-    }
-
-    public async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName)
-    {
-        var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentType.Embedding,
-            clientName: providerName,
-            connectionName: connectionName);
-
-        if (embeddingDeployment != null)
-        {
-            var generator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                embeddingDeployment.ClientName,
-                embeddingDeployment.ConnectionName,
-                embeddingDeployment.ModelName);
-
-            if (generator == null)
-            {
-                _logger.LogWarning(
-                    "Failed to create embedding generator for client {Client}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
-                    embeddingDeployment.ClientName,
-                    embeddingDeployment.ConnectionName,
-                    embeddingDeployment.Name);
-            }
-
-            return generator;
-        }
-
-        string deploymentName = null;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (!string.IsNullOrEmpty(providerName) &&
-            !string.IsNullOrEmpty(connectionName) &&
-                _providerOptions.Value.Providers.TryGetValue(providerName, out var provider))
-        {
-            if (provider.Connections.TryGetValue(connectionName, out var connection))
-            {
-                deploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
-            }
-        }
-#pragma warning restore CS0618
-
-        if (string.IsNullOrEmpty(deploymentName))
-        {
-            _logger.LogInformation("No embedding deployment configured. Documents will be stored without embeddings for vector search.");
-            return null;
-        }
-
-        var legacyGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(providerName, connectionName, deploymentName);
-
-        if (legacyGenerator == null)
-        {
-            _logger.LogWarning(
-                "Failed to create embedding generator for client {Client}, connection {Connection}, deployment {Deployment}. Documents will be stored without embeddings.",
-                providerName,
-                connectionName,
-                deploymentName);
-        }
-
-        return legacyGenerator;
     }
 
     public async Task<DocumentProcessingResult> ProcessFileAsync(

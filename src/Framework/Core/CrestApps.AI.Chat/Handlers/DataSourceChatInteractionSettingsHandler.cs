@@ -22,6 +22,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
     public async Task UpdatingAsync(ChatInteraction interaction, JsonElement settings)
     {
         var dataSourceId = GetString(settings, "dataSourceId");
+        var isInScope = GetBool(settings, "isInScope") ?? false;
 
         if (string.IsNullOrWhiteSpace(dataSourceId))
         {
@@ -30,7 +31,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
             {
                 metadata.Strictness = null;
                 metadata.TopNDocuments = null;
-                metadata.IsInScope = true;
+                metadata.IsInScope = isInScope;
                 metadata.Filter = null;
             });
             return;
@@ -54,7 +55,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
             {
                 metadata.Strictness = null;
                 metadata.TopNDocuments = null;
-                metadata.IsInScope = true;
+                metadata.IsInScope = isInScope;
                 metadata.Filter = null;
             });
             return;
@@ -69,7 +70,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
         {
             metadata.Strictness = GetInt(settings, "strictness");
             metadata.TopNDocuments = GetInt(settings, "topNDocuments");
-            metadata.IsInScope = GetBool(settings, "isInScope") ?? true;
+            metadata.IsInScope = isInScope;
             metadata.Filter = GetString(settings, "filter");
         });
     }

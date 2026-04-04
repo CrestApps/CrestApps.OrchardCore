@@ -36,7 +36,7 @@ public sealed class AITemplateController : Controller
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIProfileManager _profileManager;
-    private readonly IInteractionDocumentSettingsProvider _interactionDocumentSettingsProvider;
+    private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
@@ -52,7 +52,7 @@ public sealed class AITemplateController : Controller
         ICatalog<McpConnection> mcpConnectionCatalog,
         IAIDataSourceStore dataSourceStore,
         IAIProfileManager profileManager,
-        IInteractionDocumentSettingsProvider interactionDocumentSettingsProvider,
+        IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
@@ -66,7 +66,7 @@ public sealed class AITemplateController : Controller
         _mcpConnectionCatalog = mcpConnectionCatalog;
         _dataSourceStore = dataSourceStore;
         _profileManager = profileManager;
-        _interactionDocumentSettingsProvider = interactionDocumentSettingsProvider;
+        _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
@@ -323,7 +323,7 @@ public sealed class AITemplateController : Controller
             })
             .ToList();
 
-        var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
+        var documentSettings = _interactionDocumentOptions;
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
 
         if (!string.IsNullOrWhiteSpace(documentSettings.IndexProfileName))

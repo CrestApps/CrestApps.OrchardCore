@@ -4,6 +4,8 @@ using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
@@ -45,8 +47,10 @@ public sealed class ChatInteractionController : Controller
     private readonly IAIDocumentChunkStore _chunkStore;
     private readonly FileSystemFileStore _fileStore;
     private readonly IAIDocumentProcessingService _documentProcessingService;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIClientFactory _aiClientFactory;
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
-    private readonly IInteractionDocumentSettingsProvider _interactionDocumentSettingsProvider;
+    private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
     private readonly OrchestratorOptions _orchestratorOptions;
@@ -68,8 +72,10 @@ public sealed class ChatInteractionController : Controller
         IAIDocumentChunkStore chunkStore,
         FileSystemFileStore fileStore,
         IAIDocumentProcessingService documentProcessingService,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory,
         MvcAIDocumentIndexingService documentIndexingService,
-        IInteractionDocumentSettingsProvider interactionDocumentSettingsProvider,
+        IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService aiTemplateService,
         IOptions<OrchestratorOptions> orchestratorOptions,
@@ -89,8 +95,10 @@ public sealed class ChatInteractionController : Controller
         _chunkStore = chunkStore;
         _fileStore = fileStore;
         _documentProcessingService = documentProcessingService;
+        _deploymentManager = deploymentManager;
+        _aiClientFactory = aiClientFactory;
         _documentIndexingService = documentIndexingService;
-        _interactionDocumentSettingsProvider = interactionDocumentSettingsProvider;
+        _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
         _orchestratorOptions = orchestratorOptions.Value;
@@ -185,7 +193,7 @@ public sealed class ChatInteractionController : Controller
         var prompts = await _promptStore.GetPromptsAsync(id);
 
         var dataSourceMetadata = interaction.As<DataSourceMetadata>();
-        var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+        interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata);
         var promptMetadata = interaction.As<PromptTemplateMetadata>();
 
         var model = new ChatInteractionChatViewModel
@@ -204,10 +212,10 @@ public sealed class ChatInteractionController : Controller
             DocumentTopN = interaction.DocumentTopN,
             Documents = interaction.Documents ?? [],
             DataSourceId = string.IsNullOrWhiteSpace(dataSourceMetadata.DataSourceId) ? null : dataSourceMetadata.DataSourceId,
-            DataSourceStrictness = ragMetadata.Strictness,
-            DataSourceTopNDocuments = ragMetadata.TopNDocuments,
-            DataSourceIsInScope = ragMetadata.IsInScope,
-            DataSourceFilter = ragMetadata.Filter,
+            DataSourceStrictness = ragMetadata?.Strictness,
+            DataSourceTopNDocuments = ragMetadata?.TopNDocuments,
+            DataSourceIsInScope = ragMetadata?.IsInScope ?? false,
+            DataSourceFilter = ragMetadata?.Filter,
             SelectedA2AConnectionIds = interaction.A2AConnectionIds?.ToArray() ?? [],
             SelectedMcpConnectionIds = interaction.McpConnectionIds?.ToArray() ?? [],
             SelectedToolNames = interaction.ToolNames?.ToArray() ?? [],
@@ -361,7 +369,7 @@ public sealed class ChatInteractionController : Controller
         .ToList();
 
         // Document settings
-        var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
+        var documentSettings = _interactionDocumentOptions;
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
 
         if (!string.IsNullOrWhiteSpace(documentSettings.IndexProfileName))
@@ -494,7 +502,7 @@ public sealed class ChatInteractionController : Controller
         .ToList();
 
         // Document settings
-        var documentSettings = await _interactionDocumentSettingsProvider.GetAsync();
+        var documentSettings = _interactionDocumentOptions;
         model.DocumentIndexProfileName = documentSettings.IndexProfileName;
 
         if (!string.IsNullOrWhiteSpace(documentSettings.IndexProfileName))
@@ -658,7 +666,7 @@ public sealed class ChatInteractionController : Controller
 
     private async Task UploadDocumentsAsync(ChatInteraction interaction, List<IFormFile> files)
     {
-        var embeddingGenerator = await _documentProcessingService.CreateEmbeddingGeneratorAsync(null, null);
+        var embeddingGenerator = await CreateEmbeddingGeneratorAsync();
 
         foreach (var file in files)
         {
@@ -734,6 +742,14 @@ public sealed class ChatInteractionController : Controller
 
             }
         }
+    }
+
+    private async Task<Microsoft.Extensions.AI.IEmbeddingGenerator<string, Microsoft.Extensions.AI.Embedding<float>>> CreateEmbeddingGeneratorAsync()
+    {
+        var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Embedding);
+        return deployment == null
+            ? null
+            : await _aiClientFactory.CreateEmbeddingGeneratorAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
     }
 
     private async Task PopulateCopilotChatStatusAsync(ChatInteractionChatViewModel model)

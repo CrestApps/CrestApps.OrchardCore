@@ -1,8 +1,9 @@
 using System.Text.Json.Nodes;
+using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
+using CrestApps.Infrastructure.Indexing.Models;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 
@@ -20,7 +21,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
     }
 
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
-        IndexProfile indexProfile,
+        SearchIndexProfile indexProfile,
         float[] embedding,
         string userId,
         int topN,

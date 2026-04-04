@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.AI.Tools;
 
@@ -41,7 +42,7 @@ public sealed class CurrentDateTimeTool : AIFunction
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = (arguments.Services.GetService<TimeProvider>() ?? TimeProvider.System).GetUtcNow();
 
         if (arguments.TryGetValue("timezone", out var tzValue) && tzValue is string tzString && !string.IsNullOrWhiteSpace(tzString))
         {

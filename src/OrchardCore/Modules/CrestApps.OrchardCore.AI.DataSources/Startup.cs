@@ -19,6 +19,7 @@ using CrestApps.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data.Migration;
@@ -29,6 +30,7 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.Settings;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.DataSources;
@@ -48,9 +50,17 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-        services.AddScoped<IAIDataSourceSettingsProvider, OrchardCoreAIDataSourceSettingsProvider>();
+        services.AddScoped<IOptions<AIDataSourceOptions>>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptionsSnapshot<AIDataSourceOptions>>().Value.Clone();
+            var settings = sp.GetRequiredService<ISiteService>().GetSettingsAsync<AIDataSourceSettings>().GetAwaiter().GetResult();
+            var overrides = AIDataSourceOptions.FromSettings(settings);
+            options.DefaultStrictness = overrides.DefaultStrictness;
+            options.DefaultTopNDocuments = overrides.DefaultTopNDocuments;
+            return Options.Create(options);
+        });
 
-        services.AddScoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>();
+        services.AddDataSourceRagServices();
 
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
@@ -94,4 +104,3 @@ public sealed class DataSourcesOCDeploymentStartup : StartupBase
         services.AddDeployment<AIDataSourceDeploymentSource, AIDataSourceDeploymentStep, AIDataSourceDeploymentStepDisplayDriver>();
     }
 }
-

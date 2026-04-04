@@ -1,3 +1,4 @@
+using CrestApps.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;

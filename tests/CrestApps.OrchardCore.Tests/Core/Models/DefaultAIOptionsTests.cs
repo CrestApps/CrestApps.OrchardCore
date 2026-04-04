@@ -45,7 +45,7 @@ public sealed class DefaultAIOptionsTests
             EnableOpenTelemetry = false,
         };
 
-        var result = options.ApplySiteOverrides(new GeneralAISettings
+        var result = options.ApplySiteOverrides(new GeneralAIOptions
         {
             OverrideMaximumIterationsPerRequest = true,
             MaximumIterationsPerRequest = 50,
@@ -72,7 +72,7 @@ public sealed class DefaultAIOptionsTests
             EnableOpenTelemetry = true,
         };
 
-        var result = options.ApplySiteOverrides(new GeneralAISettings
+        var result = options.ApplySiteOverrides(new GeneralAIOptions
         {
             OverrideMaximumIterationsPerRequest = false,
             MaximumIterationsPerRequest = 15,

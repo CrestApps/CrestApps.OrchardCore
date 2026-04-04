@@ -14,7 +14,7 @@ public interface IAIClientFactory
     /// </summary>
     /// <param name="providerName">The name of the AI provider (e.g., "OpenAI", "AzureOpenAI").</param>
     /// <param name="connectionName">The name of the connection configuration to use.</param>
-    /// <param name="deploymentName">The name of the deployment or model to use.</param>
+    /// <param name="deploymentName">The name of the deployment or model to use. If not provided, the default embedding deployment from the connection will be used.</param>
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="IChatClient"/>.
     /// </returns>
@@ -28,7 +28,7 @@ public interface IAIClientFactory
     /// <returns>
     /// A <see cref="ValueTask{TResult}"/> representing the asynchronous operation, with the created <see cref="IEmbeddingGenerator{TInput, TEmbedding}"/>.
     /// </returns>
-    ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName);
+    ValueTask<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(string providerName, string connectionName, string deploymentName = null);
     /// <summary>
     /// Asynchronously creates an <see cref="IImageGenerator"/> instance for the given provider, connection, and deployment.
     /// </summary>

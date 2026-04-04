@@ -1,4 +1,5 @@
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -36,7 +37,7 @@ public sealed class AIConnectionViewModel
             ItemId = connection.ItemId,
             Name = connection.Name,
             DisplayText = connection.DisplayText,
-            Source = connection.Source,
+            Source = AIProviderNameNormalizer.Normalize(connection.Source),
         };
 
         // Read provider-specific settings from Properties dictionary.
@@ -57,7 +58,7 @@ public sealed class AIConnectionViewModel
             ItemId = itemId,
             Name = name,
             DisplayText = displayText,
-            Source = source,
+            Source = AIProviderNameNormalizer.Normalize(source),
             IsReadOnly = true,
         };
 
@@ -65,7 +66,7 @@ public sealed class AIConnectionViewModel
     {
         connection.Name = Name;
         connection.DisplayText = DisplayText;
-        connection.Source = Source;
+        connection.Source = AIProviderNameNormalizer.Normalize(Source);
 
         // Store provider-specific settings in Properties dictionary.
         connection.Properties ??= new Dictionary<string, object>();

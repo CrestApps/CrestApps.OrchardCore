@@ -39,7 +39,7 @@ public sealed class DefaultAIOptions
         return this;
     }
 
-    public DefaultAIOptions ApplySiteOverrides(GeneralAISettings settings)
+    public DefaultAIOptions ApplySiteOverrides(GeneralAIOptions settings)
     {
         var options = new DefaultAIOptions
         {

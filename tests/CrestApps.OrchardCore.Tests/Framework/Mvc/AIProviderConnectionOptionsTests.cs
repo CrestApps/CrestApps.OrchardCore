@@ -69,6 +69,33 @@ public sealed class AIProviderConnectionOptionsTests
     }
 
     [Fact]
+    public void AddCrestAppsAI_WhenAzureOpenAIClientNameConfigured_ShouldNormalizeToAzureProvider()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["CrestApps:AI:Connections:0:Name"] = "config-primary",
+                ["CrestApps:AI:Connections:0:ClientName"] = "AzureOpenAI",
+                ["CrestApps:AI:Connections:0:Endpoint"] = "https://example.openai.azure.com/",
+                ["CrestApps:AI:Connections:0:AuthenticationType"] = "ApiKey",
+                ["CrestApps:AI:Connections:0:ApiKey"] = "secret",
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLogging();
+        services.AddCrestAppsAI();
+        using var serviceProvider = services.BuildServiceProvider();
+
+        var options = serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+
+        Assert.True(options.Providers.ContainsKey(AzureOpenAIConstants.ClientName));
+        Assert.Contains("config-primary", options.Providers[AzureOpenAIConstants.ClientName].Connections.Keys);
+        Assert.False(options.Providers.ContainsKey("AzureOpenAI"));
+    }
+
+    [Fact]
     public void MvcAIProviderOptionsStore_ApplyTo_ShouldKeepConfiguredConnectionsAndAddUiConnections()
     {
         var options = new AIProviderOptions();
@@ -205,6 +232,21 @@ public sealed class AIProviderConnectionOptionsTests
         var model = Assert.IsAssignableFrom<IReadOnlyCollection<AIDeploymentViewModel>>(viewResult.Model);
 
         Assert.Contains(model, deployment => deployment.TechnicalName == "whisper" && deployment.IsReadOnly);
+    }
+
+    [Fact]
+    public void AIConnectionViewModel_ApplyTo_ShouldNormalizeAzureOpenAIProviderName()
+    {
+        var model = new AIConnectionViewModel
+        {
+            Source = "AzureOpenAI",
+            Name = "config-primary",
+        };
+
+        var connection = new AIProviderConnection();
+        model.ApplyTo(connection);
+
+        Assert.Equal(AzureOpenAIConstants.ClientName, connection.Source);
     }
 
     [Fact]

@@ -12,6 +12,7 @@ using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI.Chat.Tools;
 
@@ -43,7 +44,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
     public override string Name => TheName;
 
-    public override string Description => "Searches available document knowledge using semantic vector search and returns the most relevant text chunks. If no relevant content is found, you MUST still answer the user's prompt using your general knowledge.";
+    public override string Description => "Searches available document knowledge using semantic vector search and returns the most relevant text chunks. If no relevant content is found, report that the documents do not contain the answer.";
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -55,7 +56,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
+            var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
 
         if (!arguments.TryGetFirstString("query", out var query))
         {
@@ -91,11 +92,18 @@ public sealed class SearchDocumentsTool : AIFunction
                 return "Document search requires an active chat interaction session or AI profile.";
             }
 
+            var isStrictScope = executionContext?.Resource switch
+            {
+                AIProfile profile => profile.TryGet<AIDataSourceRagMetadata>(out var profileMetadata) && profileMetadata.IsInScope,
+                ChatInteraction chatInteraction => chatInteraction.TryGet<AIDataSourceRagMetadata>(out var interactionMetadata) && interactionMetadata.IsInScope,
+                _ => false,
+            };
+
             var showUserDocumentAwareness =
                 executionContext?.Resource is not AIProfile ||
                     searchScopes.Any(scope => scope.ReferenceType == AIReferenceTypes.Document.ChatSession);
 
-            var settings = await arguments.Services.GetRequiredService<IInteractionDocumentSettingsProvider>().GetAsync();
+            var settings = arguments.Services.GetRequiredService<IOptions<InteractionDocumentOptions>>().Value;
 
             if (string.IsNullOrWhiteSpace(settings.IndexProfileName))
             {
@@ -209,9 +217,16 @@ public sealed class SearchDocumentsTool : AIFunction
 
             if (finalResults.Count == 0)
             {
-                return showUserDocumentAwareness
-                ? "No relevant content was found in the uploaded documents for this query. Answer using your general knowledge instead."
-                : "No relevant background knowledge content was found for this query. Answer using your general knowledge instead.";
+                if (showUserDocumentAwareness)
+                {
+                    return isStrictScope
+                        ? "No relevant content was found in the uploaded documents for this query. Tell the user the uploaded documents do not contain the answer."
+                        : "No relevant content was found in the uploaded documents for this query.";
+                }
+
+                return isStrictScope
+                    ? "No relevant background knowledge content was found for this query. Tell the user the available knowledge does not contain the answer."
+                    : "No relevant background knowledge content was found for this query.";
             }
 
             using var builder = ZString.CreateStringBuilder();

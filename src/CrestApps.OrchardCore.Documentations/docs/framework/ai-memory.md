@@ -17,10 +17,13 @@ Enable the `CrestApps.OrchardCore.AI.Memory` feature. Memory requires the AI Cha
 builder.Services
     .AddCrestAppsAI()
     .AddOrchestrationServices()
+    .AddAIMemoryServices()
     .AddOpenAIProvider(); // at least one provider
 ```
 
-The module registers everything automatically — store, safety validation, tools, orchestration handlers, and YesSql indexes. Once enabled, authenticated users gain four AI-callable memory tools out of the box.
+`AddAIMemoryServices()` registers the shared framework behavior — safety validation, memory tools, orchestration handlers, preemptive memory retrieval, and the default semantic memory search service. Hosts still provide the durable store plus any provider-specific vector-search adapters (`IAIMemoryStore`, `ISearchIndexProfileStore`, and keyed `IMemoryVectorSearchService`) while configuring runtime options such as `AIMemoryOptions`, `GeneralAIOptions`, and `ChatInteractionMemoryOptions` through standard `IOptions<>` registration.
+
+The Orchard Core memory module layers its YesSql storage, indexing, and admin UI on top of that shared framework registration. Once enabled, authenticated users gain four AI-callable memory tools out of the box.
 
 ## Problem & Solution
 
@@ -85,9 +88,10 @@ Every save operation passes through `IAIMemorySafetyService` before persisting. 
 | Interface | Namespace | Purpose |
 |-----------|-----------|---------|
 | `IAIMemoryStore` | `CrestApps.AI` | CRUD operations for memory entries, extends `ICatalog<AIMemoryEntry>` |
+| `IAIMemorySearchService` | `CrestApps.AI` | Shared semantic memory search service used by memory tools and preemptive RAG |
+| `IMemoryVectorSearchService` | `CrestApps.AI` | Provider-specific vector-search adapter resolved by search-provider name |
 | `IAIMemorySafetyService` | `CrestApps.AI` | Validates memory content against sensitive data patterns |
 | `ICatalogEntryHandler<AIMemoryEntry>` | `CrestApps.Services` | Lifecycle hooks for memory create/update/delete events |
-| `IMemoryVectorSearchService` | `CrestApps.OrchardCore` | Semantic vector search over memory embeddings |
 | `IOrchestrationContextBuilderHandler` | `CrestApps.AI.Orchestration` | Injects memory tools and context into the orchestration pipeline |
 | `IPreemptiveRagHandler` | `CrestApps.AI.Orchestration` | Proactively retrieves relevant memories before AI responds |
 
@@ -114,6 +118,31 @@ public interface IAIMemorySafetyService
     bool TryValidate(string name, string description, string content, out string errorMessage);
 }
 ```
+
+### `IAIMemorySearchService`
+
+This shared abstraction is implemented by the framework runtime so Orchard Core, MVC, or any other host can reuse the same memory-search behavior:
+
+```csharp
+public interface IAIMemorySearchService
+{
+    Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
+        string userId,
+        IEnumerable<string> queries,
+        int? requestedTopN,
+        CancellationToken cancellationToken = default);
+}
+```
+
+### Runtime Options
+
+Shared memory orchestration now reads runtime settings through `IOptions<>` instead of host-specific provider interfaces:
+
+- `IOptions<AIMemoryOptions>` controls which AI Memory index profile is used at runtime and the default `TopN` result count.
+- `IOptions<GeneralAIOptions>` controls cross-cutting AI runtime behavior such as preemptive memory retrieval.
+- `IOptions<ChatInteractionMemoryOptions>` controls whether ad-hoc chat interactions expose user memory by default.
+
+MVC binds those options from its `App_Data/appsettings.json`-backed sections, while Orchard Core composes tenant site settings into scoped options so the shared framework code stays host-agnostic.
 
 ## Memory Tools
 

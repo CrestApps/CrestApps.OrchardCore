@@ -1,3 +1,4 @@
+using CrestApps.AI.Clients;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
@@ -73,6 +74,7 @@ public static class AIChatDocumentEndpoints
         HttpRequest request,
         [FromServices] ICatalogManager<ChatInteraction> interactionManager,
         [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIClientFactory aiClientFactory,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
         [FromServices] IAIDocumentProcessingService documentProcessingService,
@@ -108,7 +110,16 @@ public static class AIChatDocumentEndpoints
         }
 
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: interaction.ChatDeploymentName);
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, deployment?.ConnectionName ?? interaction.ConnectionName);
+        var embeddingDeployment = await deploymentManager.ResolveOrDefaultAsync(
+            AIDeploymentType.Embedding,
+            clientName: deployment?.ClientName,
+            connectionName: deployment?.ConnectionName ?? interaction.ConnectionName);
+        var embeddingGenerator = embeddingDeployment == null
+            ? null
+            : await aiClientFactory.CreateEmbeddingGeneratorAsync(
+                embeddingDeployment.ClientName,
+                embeddingDeployment.ConnectionName,
+                embeddingDeployment.ModelName);
         var logger = loggerFactory.CreateLogger("AIChatDocumentEndpoints");
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 
@@ -246,6 +257,7 @@ public static class AIChatDocumentEndpoints
         [FromServices] IAIChatSessionManager sessionManager,
         [FromServices] IAIProfileManager profileManager,
         [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] IAIClientFactory aiClientFactory,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
         [FromServices] IAIDocumentProcessingService documentProcessingService,
@@ -321,7 +333,16 @@ public static class AIChatDocumentEndpoints
         }
 
         var deployment = await ResolveSessionDeploymentAsync(profile, deploymentManager);
-        var embeddingGenerator = await documentProcessingService.CreateEmbeddingGeneratorAsync(deployment?.ClientName, deployment?.ConnectionName);
+        var embeddingDeployment = await deploymentManager.ResolveOrDefaultAsync(
+            AIDeploymentType.Embedding,
+            clientName: deployment?.ClientName,
+            connectionName: deployment?.ConnectionName);
+        var embeddingGenerator = embeddingDeployment == null
+            ? null
+            : await aiClientFactory.CreateEmbeddingGeneratorAsync(
+                embeddingDeployment.ClientName,
+                embeddingDeployment.ConnectionName,
+                embeddingDeployment.ModelName);
         var logger = loggerFactory.CreateLogger("AIChatDocumentEndpoints");
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 

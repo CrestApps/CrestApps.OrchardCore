@@ -39,9 +39,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     public AIChatHub(
         IServiceProvider services,
+        TimeProvider timeProvider,
         ILogger<AIChatHub> logger,
         IStringLocalizer<AIChatHub> stringLocalizer)
-    : base(services, logger)
+    : base(services, timeProvider, logger)
     {
         S = stringLocalizer;
     }
@@ -70,8 +71,8 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override DateTime GetUtcNow()
     {
-        var clock = Context.GetHttpContext()?.RequestServices?.GetService<IClock>();
-        return clock?.UtcNow ?? DateTime.UtcNow;
+        var timeProvider = Context.GetHttpContext()?.RequestServices?.GetService<TimeProvider>();
+        return (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
     }
 
     protected override string GenerateId()

@@ -574,7 +574,7 @@
                     <h6 class="mt-3 mb-2"><i class="bi bi-paperclip"></i> Attach Documents</h6>
                     <div id="pending-docs-list" class="mb-2"></div>
                     <div class="mb-3">
-                        <input type="file" class="form-control" id="doc-add-input" multiple
+                        <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
                                accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
                         <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
                     </div>
@@ -817,14 +817,32 @@
             const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             const initialPromptGroup = document.getElementById('initialPromptGroup');
 
-            function convertToKebabCase(str) {
-                return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+            function normalizeProfileType(str) {
+                return (str || '')
+                    .trim()
+                    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+                    .replace(/\s+/g, '-')
+                    .toLowerCase();
+            }
+
+            function getSelectedProfileTypeClassName() {
+                if (!profileTypeSelect || !profileTypeSelect.value) {
+                    return '';
+                }
+
+                const selectedOption = profileTypeSelect.options[profileTypeSelect.selectedIndex];
+                const profileType = selectedOption ? selectedOption.text : profileTypeSelect.value;
+
+                return 'profile-type-' + normalizeProfileType(profileType);
             }
 
             function toggleProfileTypeFields() {
                 if (!profileTypeSelect) return;
-                const value = profileTypeSelect.value;
-                const className = 'profile-type-' + convertToKebabCase(value);
+                const className = getSelectedProfileTypeClassName();
+                if (!className) {
+                    document.querySelectorAll('.profile-type').forEach(function (el) { el.classList.add('d-none'); });
+                    return;
+                }
                 const elements = document.querySelectorAll('.profile-type');
                 elements.forEach(function (el) {
                     if (el.classList.contains(className)) {
@@ -838,7 +856,7 @@
 
             function toggleInitialPromptFields() {
                 if (!profileTypeSelect || !addInitialPromptCheck || !welcomeMessageGroup || !initialPromptGroup) return;
-                const isChatType = profileTypeSelect.value === 'Chat';
+                const isChatType = getSelectedProfileTypeClassName() === 'profile-type-chat';
                 const showInitialPrompt = addInitialPromptCheck.checked;
                 welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
@@ -1214,9 +1232,38 @@
             var docAddInput = document.getElementById('doc-add-input');
             var pendingDocsList = document.getElementById('pending-docs-list');
             var pendingFiles = [];
-            var fileContainer = document.createElement('div');
-            fileContainer.style.display = 'none';
-            document.querySelector('form').appendChild(fileContainer);
+
+            function syncPendingFiles() {
+                if (!docAddInput) {
+                    return;
+                }
+
+                var dataTransfer = new DataTransfer();
+
+                pendingFiles.forEach(function (file) {
+                    dataTransfer.items.add(file);
+                });
+
+                docAddInput.files = dataTransfer.files;
+            }
+
+            function renderPendingFiles() {
+                if (!pendingDocsList) {
+                    return;
+                }
+
+                pendingDocsList.innerHTML = '';
+
+                pendingFiles.forEach(function (file, index) {
+                    var row = document.createElement('div');
+                    row.className = 'd-flex align-items-center mb-2 pending-doc-row';
+                    row.dataset.index = index;
+                    row.innerHTML = '<i class="bi bi-file-earmark-plus me-2 text-success"></i>' +
+                        '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc" title="Remove"><i class="bi bi-trash"></i></button>';
+                    pendingDocsList.appendChild(row);
+                });
+            }
 
             if (docAddInput) {
                 docAddInput.addEventListener('change', function () {
@@ -1224,30 +1271,11 @@
                     if (!files || files.length === 0) return;
 
                     for (var i = 0; i < files.length; i++) {
-                        var file = files[i];
-                        var idx = pendingFiles.length;
-                        pendingFiles.push(file);
-
-                        var row = document.createElement('div');
-                        row.className = 'd-flex align-items-center mb-2 pending-doc-row';
-                        row.dataset.index = idx;
-                        row.innerHTML = '<i class="bi bi-file-earmark-plus me-2 text-success"></i>' +
-                            '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
-                            '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc" title="Remove"><i class="bi bi-trash"></i></button>';
-                        pendingDocsList.appendChild(row);
-
-                        var dt = new DataTransfer();
-                        dt.items.add(file);
-                        var hiddenInput = document.createElement('input');
-                        hiddenInput.type = 'file';
-                        hiddenInput.name = 'Documents';
-                        hiddenInput.style.display = 'none';
-                        hiddenInput.files = dt.files;
-                        hiddenInput.dataset.docIndex = idx;
-                        fileContainer.appendChild(hiddenInput);
+                        pendingFiles.push(files[i]);
                     }
 
-                    this.value = '';
+                    syncPendingFiles();
+                    renderPendingFiles();
                 });
             }
 
@@ -1255,10 +1283,13 @@
                 var removeBtn = e.target.closest('.remove-pending-doc');
                 if (removeBtn) {
                     var row = removeBtn.closest('.pending-doc-row');
-                    var idx = row.dataset.index;
-                    row.remove();
-                    var input = fileContainer.querySelector('input[data-doc-index="' + idx + '"]');
-                    if (input) input.remove();
+                    var idx = parseInt(row.dataset.index, 10);
+
+                    if (!Number.isNaN(idx)) {
+                        pendingFiles.splice(idx, 1);
+                        syncPendingFiles();
+                        renderPendingFiles();
+                    }
                 }
             });
 

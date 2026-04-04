@@ -14,6 +14,7 @@ using Cysharp.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI.Tools;
 
@@ -166,7 +167,7 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             var ragMetadata = GetRagMetadata(executionContext);
-            var siteSettings = await arguments.Services.GetRequiredService<IAIDataSourceSettingsProvider>().GetAsync();
+            var siteSettings = arguments.Services.GetRequiredService<IOptions<AIDataSourceOptions>>().Value;
 
             string providerFilter = null;
 
@@ -207,7 +208,7 @@ public sealed class DataSourceSearchTool : AIFunction
 
             if (strictness > 0)
             {
-                var threshold = strictness / (float)AIDataSourceSettings.MaxStrictness;
+                var threshold = strictness / (float)AIDataSourceOptions.MaxStrictness;
                 results = results.Where(result => result.Score >= threshold);
 
                 if (!results.Any())

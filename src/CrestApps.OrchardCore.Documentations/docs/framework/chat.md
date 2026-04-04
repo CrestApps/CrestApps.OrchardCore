@@ -15,7 +15,7 @@ description: Chat session management, interaction handlers, and response routing
 builder.Services
     .AddCrestAppsAI()
     .AddOrchestrationServices()
-    .AddChatInteractionHandlers()
+    .AddChatInteractionServices()
     .AddOpenAIProvider();
 ```
 
@@ -30,12 +30,17 @@ A chat experience involves more than sending messages to an LLM:
 
 The chat system provides all of this with a pluggable handler architecture.
 
-## Services Registered by `AddChatInteractionHandlers()`
+## Services Registered by `AddChatInteractionServices()`
 
 | Service | Implementation | Lifetime | Purpose |
 |---------|---------------|----------|---------|
 | `ChatInteractionCompletionContextBuilderHandler` | — | Scoped | Enriches completion context with chat history |
 | `ChatInteractionEntryHandler` | — | Scoped | Catalog lifecycle handler for `ChatInteraction` |
+| `DataExtractionService` | `DataExtractionService` | Scoped | Extracts configured fields from completed chat turns |
+| `PostSessionProcessingService` | `PostSessionProcessingService` | Scoped | Runs AI-powered post-session tasks and evaluations |
+| `AIChatSessionPostCloseProcessor` | `AIChatSessionPostCloseProcessor` | Scoped | Applies the shared post-close pipeline used by Orchard Core and MVC |
+| `DataExtractionChatSessionHandler` | — | Scoped | Runs shared extraction and closes sessions on natural farewells |
+| `PostSessionProcessingChatSessionHandler` | — | Scoped | Triggers the shared post-close processor when a session closes |
 
 :::info
 The chat system also registers embedded templates from the `CrestApps.AI.Chat` assembly for system prompts.
@@ -158,11 +163,11 @@ NewAsync()          SaveAsync()         (inactivity / explicit close)
 | **Creation** | `IAIChatSessionManager.NewAsync()` allocates a new `AIChatSession`, assigns a `SessionId`, sets `Status = Active`, records `CreatedUtc`, and associates it with the profile and user. |
 | **Active Use** | Every user message updates `LastActivityUtc`. Prompts are appended via `IAIChatSessionPromptStore`. Documents may be attached to `session.Documents`. |
 | **Interaction Transfer** | If a response handler transfers the conversation (e.g., AI → live agent), a new `ChatInteraction` is created while the session continues. The session's `ResponseHandlerName` updates to the new handler. |
-| **Closure** | The session status changes to `Closed` and `ClosedAtUtc` is recorded. Post-session tasks (analytics, conversion goal evaluation) run asynchronously. |
+| **Closure** | The session status changes to `Closed` and `ClosedAtUtc` is recorded. The shared post-close processor updates extraction state, post-session task results, resolution analysis, and conversion-goal evaluation so hosts reuse the same runtime behavior. |
 | **Deletion** | `DeleteAsync()` removes the session and its associated prompts. `DeleteAllAsync()` removes all sessions for a given profile and user. |
 
 :::info
-Sessions do not expire automatically at the framework level. Expiration policies (e.g., closing sessions after 30 minutes of inactivity) are implemented by the application or a background task.
+The framework now standardizes the post-close processing pipeline, but hosts still own the storage-specific background policy that decides when inactive sessions should be closed and retried.
 :::
 
 ### Key Properties of `AIChatSession`
