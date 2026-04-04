@@ -27,14 +27,12 @@ public sealed class Startup : StartupBase
         CrestApps.Elasticsearch.ServiceCollectionExtensions.AddElasticsearchServices(services);
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
-
         {
             o.DisplayName = S["AI Knowledge Base Index (Elasticsearch)"];
             o.Description = S["Create an Elasticsearch index to store AI knowledge base document embeddings for vector search."];
         });
 
         services.Configure<AIDataSourceOptions>(options =>
-
         {
             options.AddFieldMapping(ElasticsearchConstants.ProviderName, IndexingConstants.ContentsIndexSource, mapping =>
             {
@@ -44,13 +42,11 @@ public sealed class Startup : StartupBase
             });
 
             options.AddFieldMapping(ElasticsearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
-
             {
                 mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
                 mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
                 mapping.DefaultContentField = AIConstants.ColumnNames.Content;
             });
-
         });
     }
 }

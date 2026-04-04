@@ -1,8 +1,8 @@
-using CrestApps.AI;
-using CrestApps.AI.Indexing;
 using Azure;
 using Azure.Identity;
 using Azure.Search.Documents.Indexes;
+using CrestApps.AI;
+using CrestApps.AI.Indexing;
 using CrestApps.Azure.AISearch.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
@@ -54,9 +54,7 @@ public static class ServiceCollectionExtensions
         services.TryAddKeyedScoped<IDataSourceContentManager>(
             ProviderName,
             (sp, _) => new AzureAISearchDataSourceContentManager(
-            sp.GetRequiredService<SearchIndexClient>(),
-
-                sp.GetRequiredService<ILogger<AzureAISearchDataSourceContentManager>>()));
+            sp.GetRequiredService<SearchIndexClient>(), sp.GetRequiredService<ILogger<AzureAISearchDataSourceContentManager>>()));
 
         services.TryAddKeyedScoped<IDataSourceDocumentReader>(
             ProviderName,
@@ -72,23 +70,17 @@ public static class ServiceCollectionExtensions
             ProviderName,
             (sp, _) => new AzureAISearchIndexManager(
             sp.GetRequiredService<SearchIndexClient>(),
-            sp.GetRequiredService<IOptions<AzureAISearchConnectionOptions>>(),
-
-                sp.GetRequiredService<ILogger<AzureAISearchIndexManager>>()));
+            sp.GetRequiredService<IOptions<AzureAISearchConnectionOptions>>(), sp.GetRequiredService<ILogger<AzureAISearchIndexManager>>()));
 
         services.TryAddKeyedScoped<ISearchDocumentManager>(
             ProviderName,
             (sp, _) => new AzureAISearchDocumentManager(
-            sp.GetRequiredService<SearchIndexClient>(),
-
-                sp.GetRequiredService<ILogger<AzureAISearchDocumentManager>>()));
+            sp.GetRequiredService<SearchIndexClient>(), sp.GetRequiredService<ILogger<AzureAISearchDocumentManager>>()));
 
         services.TryAddKeyedScoped<IVectorSearchService>(
             ProviderName,
             (sp, _) => new AzureAISearchVectorSearchService(
-            sp.GetRequiredService<SearchIndexClient>(),
-
-                sp.GetRequiredService<ILogger<AzureAISearchVectorSearchService>>()));
+            sp.GetRequiredService<SearchIndexClient>(), sp.GetRequiredService<ILogger<AzureAISearchVectorSearchService>>()));
 
         return services;
     }

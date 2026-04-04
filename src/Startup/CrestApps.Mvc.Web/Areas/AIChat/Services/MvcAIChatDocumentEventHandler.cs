@@ -5,18 +5,18 @@ namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public sealed class MvcAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {
-    private readonly MvcAIDocumentIndexingService _documentIndexingService;
+    private readonly IMvcAIChatDocumentIndexingQueue _indexingQueue;
 
-    public MvcAIChatDocumentEventHandler(MvcAIDocumentIndexingService documentIndexingService)
+    public MvcAIChatDocumentEventHandler(IMvcAIChatDocumentIndexingQueue indexingQueue)
     {
-        _documentIndexingService = documentIndexingService;
+        _indexingQueue = indexingQueue;
     }
 
     public async Task UploadedAsync(AIChatDocumentUploadContext context, CancellationToken cancellationToken = default)
     {
         foreach (var document in context.UploadedDocuments)
         {
-            await _documentIndexingService.IndexAsync(document.Document, document.Chunks, cancellationToken);
+            await _indexingQueue.QueueIndexAsync(document.Document, document.Chunks, cancellationToken);
         }
     }
 
@@ -27,6 +27,6 @@ public sealed class MvcAIChatDocumentEventHandler : IAIChatDocumentEventHandler
             return;
         }
 
-        await _documentIndexingService.DeleteChunksAsync(context.ChunkIds, cancellationToken);
+        await _indexingQueue.QueueDeleteChunksAsync(context.ChunkIds, cancellationToken);
     }
 }

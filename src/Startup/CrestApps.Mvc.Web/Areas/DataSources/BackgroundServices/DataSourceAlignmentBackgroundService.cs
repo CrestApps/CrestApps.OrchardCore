@@ -15,13 +15,16 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
     private static readonly TimeSpan _alignmentCheckInterval = TimeSpan.FromMinutes(30);
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<DataSourceAlignmentBackgroundService> _logger;
 
     public DataSourceAlignmentBackgroundService(
         IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
         ILogger<DataSourceAlignmentBackgroundService> logger)
     {
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -29,8 +32,20 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
     {
         using var timer = new PeriodicTimer(_alignmentCheckInterval);
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
+            try
+            {
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    break;
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+
             if (!ShouldRunAlignment())
             {
                 continue;
@@ -55,9 +70,9 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
     /// Determines whether the alignment should run based on the current UTC hour.
     /// Alignment runs daily between 2:00 AM and 2:30 AM UTC.
     /// </summary>
-    private static bool ShouldRunAlignment()
+    private bool ShouldRunAlignment()
     {
-        var utcNow = DateTime.UtcNow;
+        var utcNow = _timeProvider.GetUtcNow();
 
         return utcNow.Hour == 2 && utcNow.Minute < 30;
     }
@@ -77,7 +92,7 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
         }
 
         var dataSources = await dataSourceStore.GetAllAsync();
-        var dataSourceList = dataSources as IReadOnlyCollection<AIDataSource> ?? dataSources.ToList();
+        var dataSourceList = dataSources?.ToList() ?? [];
 
         if (dataSourceList.Count == 0)
         {

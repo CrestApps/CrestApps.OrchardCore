@@ -41,7 +41,9 @@ public static class AITemplateIds
 
     public const string RagToolSearchRelaxed = "rag-tool-search-relaxed";
 
-    public const string DataSourceContextHeader = "datasource-context-header";
+    public const string DataSourceAvailability = "data-source-availability";
+
+    public const string DataSourceContextHeader = "data-source-context-header";
 
     public const string DocumentContextHeader = "document-context-header";
 

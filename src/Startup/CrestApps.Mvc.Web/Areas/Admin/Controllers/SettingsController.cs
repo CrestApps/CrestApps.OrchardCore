@@ -85,8 +85,12 @@ public sealed class SettingsController : Controller
 
         var model = new SettingsViewModel
         {
+            EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
+            OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest,
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
+            OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching,
             EnableDistributedCaching = settings.EnableDistributedCaching,
+            OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
             DefaultOrchestratorEnablePreemptiveRag = defaultOrchestratorSettings.EnablePreemptiveRag,
             MemoryIndexProfileName = memorySettings.IndexProfileName,
@@ -189,8 +193,12 @@ public sealed class SettingsController : Controller
         // Save general AI settings.
         var settings = await _settingsService.GetAsync();
 
+        settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
+        settings.OverrideMaximumIterationsPerRequest = model.OverrideMaximumIterationsPerRequest;
         settings.MaximumIterationsPerRequest = model.MaximumIterationsPerRequest;
+        settings.OverrideEnableDistributedCaching = model.OverrideEnableDistributedCaching;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
+        settings.OverrideEnableOpenTelemetry = model.OverrideEnableOpenTelemetry;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
 
         await _settingsService.SaveAsync(settings);

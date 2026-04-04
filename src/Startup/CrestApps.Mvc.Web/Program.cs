@@ -302,6 +302,9 @@ builder.Services.ConfigureOptions<MvcCopilotOptionsConfiguration>();
 // =============================================================================
 
 builder.Services.AddHostedService<AIChatSessionCloseBackgroundService>();
+builder.Services.AddSingleton<MvcAIChatDocumentIndexingQueue>();
+builder.Services.AddSingleton<IMvcAIChatDocumentIndexingQueue>(sp => sp.GetRequiredService<MvcAIChatDocumentIndexingQueue>());
+builder.Services.AddHostedService<AIChatDocumentIndexingBackgroundService>();
 builder.Services.AddHostedService<DataSourceSyncBackgroundService>();
 builder.Services.AddHostedService<DataSourceAlignmentBackgroundService>();
 

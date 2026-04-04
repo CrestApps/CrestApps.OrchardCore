@@ -59,7 +59,7 @@ public interface IAICompletionContextBuilderHandler
 | Handler | Purpose |
 |---------|---------|
 | `AIProfileCompletionContextBuilderHandler` | Adds profile-level system messages and settings |
-| `DataSourceAICompletionContextBuilderHandler` | Injects RAG data from configured data sources |
+| `DataSourceAICompletionContextBuilderHandler` | Attaches the selected data source id to the completion context |
 | `ChatInteractionCompletionContextBuilderHandler` | Adds chat history and interaction context |
 | `A2AAICompletionContextBuilderHandler` | Enriches with A2A agent information |
 

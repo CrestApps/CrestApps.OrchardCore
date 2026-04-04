@@ -64,8 +64,10 @@ Here is the end-to-end flow when a user sends a query to a profile with data sou
    └── Top-N most similar chunks are returned (e.g., top 3)
        │
        ▼
-4. Context Enrichment (DataSourceAICompletionContextBuilderHandler)
-   └── Retrieved chunks are injected into the AI completion context as system messages
+4. Context Enrichment
+   └── `DataSourceAICompletionContextBuilderHandler` selects the attached data source
+   └── `DataSourceOrchestrationHandler` injects availability/tool guidance
+   └── `DataSourcePreemptiveRagHandler` injects retrieved chunks as system context
        │
        ▼
 5. AI Completion
@@ -82,17 +84,23 @@ The number of document chunks retrieved (Top-N) is configurable per profile. A h
 
 ## Architecture
 
-Data sources integrate with the orchestration pipeline through the `DataSourceAICompletionContextBuilderHandler`. When a profile has data sources configured, the orchestrator automatically:
+Data sources integrate with the orchestration pipeline through three shared framework components:
 
-1. Retrieves relevant documents from the vector store
-2. Injects them into the completion context as system messages
-3. The AI model uses them to ground its responses
+1. `DataSourceAICompletionContextBuilderHandler` copies the selected data source id into the completion context
+2. `DataSourceOrchestrationHandler` injects data-source availability instructions and keeps the search tool in scope
+3. `DataSourcePreemptiveRagHandler` performs preemptive retrieval and injects matching chunks into the system message
 
 ```text
 User Query
     │
     ▼
 DataSourceAICompletionContextBuilderHandler
+    │ (attaches data source id)
+    ▼
+DataSourceOrchestrationHandler
+    │ (adds data-source availability + tool guidance)
+    ▼
+DataSourcePreemptiveRagHandler
     │ (queries vector store)
     ▼
 Completion Context (enriched with relevant documents)

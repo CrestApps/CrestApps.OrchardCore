@@ -198,6 +198,7 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddDataSourceRagServices(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, DataSourceOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>());
 
         return services;

@@ -1,7 +1,5 @@
 using CrestApps.AI;
-using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
 using CrestApps.OrchardCore.AI.Core;
@@ -30,8 +28,8 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
-using OrchardCore.Settings;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.DataSources;
 
@@ -53,12 +51,13 @@ public sealed class Startup : StartupBase
         services.AddScoped<IOptions<AIDataSourceOptions>>(sp =>
         {
             var options = sp.GetRequiredService<IOptionsSnapshot<AIDataSourceOptions>>().Value.Clone();
-            var settings = sp.GetRequiredService<ISiteService>().GetSettingsAsync<AIDataSourceSettings>().GetAwaiter().GetResult();
+            var settings = sp.GetRequiredService<ISiteService>().GetSettings<AIDataSourceSettings>();
             var overrides = AIDataSourceOptions.FromSettings(settings);
             options.DefaultStrictness = overrides.DefaultStrictness;
             options.DefaultTopNDocuments = overrides.DefaultTopNDocuments;
             return Options.Create(options);
         });
+
 
         services.AddDataSourceRagServices();
 

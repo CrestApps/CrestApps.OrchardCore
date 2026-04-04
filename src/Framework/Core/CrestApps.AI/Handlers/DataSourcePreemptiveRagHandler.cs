@@ -105,7 +105,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         }
 
         var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
-        var embeddingDeploymentId = indexProfile.EmbeddingDeploymentId ?? profileMetadata?.EmbeddingDeploymentId;
+        var embeddingDeploymentId = indexProfile.EmbeddingDeploymentId ?? profileMetadata.EmbeddingDeploymentId;
 
         var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,

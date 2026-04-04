@@ -241,7 +241,7 @@ The citation system ensures that every `[doc:N]` marker in an AI response maps t
 1. **Scope creation**: The SignalR hub wraps each invocation in `using var scope = AIInvocationScope.Begin()`. This creates a fresh `AIInvocationContext` that is visible to all code in the same async flow.
 
 2. **Preemptive RAG handlers** (run during orchestration context building):
-   - `DataSourcePreemptiveRagOrchestrationHandler` searches the configured data source, generates `[doc:N]` markers, and stores references in `orchestrationContext.Properties["DataSourceReferences"]`. It calls `AIInvocationScope.Current.NextReferenceIndex()` for each reference.
+   - `DataSourcePreemptiveRagHandler` searches the configured data source, generates `[doc:N]` markers, and stores references in `orchestrationContext.Properties["DataSourceReferences"]`. It calls `AIInvocationScope.Current.NextReferenceIndex()` for each reference.
    - `DocumentPreemptiveRagHandler` does the same for uploaded documents, storing in `orchestrationContext.Properties["DocumentReferences"]`. Because it uses the same shared counter, its indices continue where data sources left off.
    - After all handlers have run, `PreemptiveRagOrchestrationHandler` evaluates the `IsInScope` constraint. If no references were produced and `IsInScope` is enabled, a scoping directive is injected. When tools are available, the directive encourages the model to try tool-based search before concluding no answer exists.
 

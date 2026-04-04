@@ -259,7 +259,6 @@ public sealed class ApiChatStartup : StartupBase
 }
 
 #region Connection Management Feature
-
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
@@ -294,11 +293,9 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
         services.AddDeployment<AIProviderConnectionDeploymentSource, AIProviderConnectionDeploymentStep, AIProviderConnectionDeploymentStepDisplayDriver>();
     }
 }
-
 #endregion
 
 #region Chat Analytics Feature
-
 [Feature(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsStartup : StartupBase
 {
@@ -310,9 +307,9 @@ public sealed class ChatAnalyticsStartup : StartupBase
             .AddIndexProvider<AIChatSessionMetricsIndexProvider>();
 
         services.TryAddScoped<AIChatSessionEventPostCloseObserver>();
+        services.TryAddScoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>());
+        services.TryAddScoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>()));
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>()));
     }
 }
 

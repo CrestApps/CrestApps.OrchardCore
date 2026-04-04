@@ -30,10 +30,15 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
     {
         using var timer = new PeriodicTimer(_interval);
 
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                {
+                    break;
+                }
+
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 await SyncDataSourcesAsync(scope.ServiceProvider, stoppingToken);
             }
@@ -63,7 +68,7 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
         }
 
         var dataSources = await dataSourceStore.GetAllAsync();
-        var dataSourceList = dataSources as IReadOnlyCollection<AIDataSource> ?? dataSources.ToList();
+        var dataSourceList = dataSources?.ToList() ?? [];
 
         if (dataSourceList.Count == 0)
         {

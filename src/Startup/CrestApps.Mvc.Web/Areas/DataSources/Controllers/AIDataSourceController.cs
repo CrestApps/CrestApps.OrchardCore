@@ -42,7 +42,7 @@ public sealed class AIDataSourceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(AIDataSourceViewModel model)
     {
-        Validate(model);
+        await ValidateAsync(model);
 
         if (!ModelState.IsValid)
         {
@@ -90,7 +90,7 @@ public sealed class AIDataSourceController : Controller
             return NotFound();
         }
 
-        Validate(model);
+        await ValidateAsync(model);
 
         if (!ModelState.IsValid)
         {
@@ -122,7 +122,7 @@ public sealed class AIDataSourceController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private void Validate(AIDataSourceViewModel model)
+    private async Task ValidateAsync(AIDataSourceViewModel model)
     {
         if (string.IsNullOrWhiteSpace(model.DisplayText))
         {
@@ -138,15 +138,48 @@ public sealed class AIDataSourceController : Controller
         {
             ModelState.AddModelError(nameof(model.ContentFieldName), "Content field name is required.");
         }
+
+        if (!string.IsNullOrWhiteSpace(model.SourceIndexProfileName))
+        {
+            var sourceIndexProfile = await _indexProfileStore.FindByNameAsync(model.SourceIndexProfileName);
+
+            if (sourceIndexProfile == null)
+            {
+                ModelState.AddModelError(nameof(model.SourceIndexProfileName), "The selected source index profile could not be found.");
+            }
+            else if (string.Equals(sourceIndexProfile.Type, IndexProfileTypes.AIDocuments, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(sourceIndexProfile.Type, IndexProfileTypes.AIMemory, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(sourceIndexProfile.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(model.SourceIndexProfileName), "The selected source index profile type is not supported for data sources.");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.AIKnowledgeBaseIndexProfileName))
+        {
+            var knowledgeBaseIndexProfile = await _indexProfileStore.FindByNameAsync(model.AIKnowledgeBaseIndexProfileName);
+
+            if (knowledgeBaseIndexProfile == null)
+            {
+                ModelState.AddModelError(nameof(model.AIKnowledgeBaseIndexProfileName), "The selected knowledge base index profile could not be found.");
+            }
+            else if (!string.Equals(knowledgeBaseIndexProfile.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError(nameof(model.AIKnowledgeBaseIndexProfileName), "The selected knowledge base index profile must be an AI Data Source profile.");
+            }
+        }
     }
 
     private async Task PopulateDropdownsAsync(AIDataSourceViewModel model)
     {
         var indexProfiles = await _indexProfileStore.GetAllAsync();
 
-        // Source index profiles: exclude DataSource type profiles
+        // Source index profiles: exclude AI-specific target indexes.
         model.SourceIndexProfiles = indexProfiles
-            .Where(p => !string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
+            .Where(p =>
+                !string.Equals(p.Type, IndexProfileTypes.AIDocuments, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(p.Type, IndexProfileTypes.AIMemory, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(p.Type, IndexProfileTypes.DataSource, StringComparison.OrdinalIgnoreCase))
             .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.Name))
             .ToList();
 

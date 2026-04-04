@@ -46,6 +46,10 @@ The sample now keeps feature-specific controllers, Razor views, and related MVC-
 
 MVC admin forms also keep placeholder dropdown options in the Razor views instead of injecting fake empty `SelectListItem` entries from controllers. The option collections now contain only real persisted values, while the views render plain placeholders such as `Select provider`, `Use default orchestrator`, or `None` when an empty selection is allowed.
 
+The MVC admin AI settings screen now exposes the full shared `GeneralAISettings` surface used by the framework runtime, including preemptive memory retrieval plus the override flags for maximum iterations, distributed caching, and OpenTelemetry. Profile and profile-template editors also use the same **Data Processing & Metrics** tab layout so session inactivity, extraction rules, analytics, conversion goals, and post-session processing stay aligned across both editors.
+
+Because the MVC sample stores runtime state under `App_Data`, the project now excludes `App_Data/**` from `.NET 10` `dotnet watch` input discovery. That prevents Aspire and other watch-based local runs from restarting `MvcWeb` when uploads create files under `App_Data/Documents` or runtime services update logs and local data files.
+
 ## Startup Configuration Walkthrough
 
 The `Program.cs` file is organized into numbered sections. Here is what each section does:
@@ -64,6 +68,8 @@ Loads settings from the normal appsettings chain plus `App_Data/appsettings.json
 | `App_Data/appsettings.json` | Local machine overrides for admin-managed AI, MCP, Copilot, and pagination settings |
 | `AppDataConfigurationFileService` | Writes admin-managed sections back into the same `App_Data/appsettings.json` file that ASP.NET Core watches, so changes persist and reload through `IConfiguration` without a restart |
 | `AppDataSettingsService<T>` | Reads merged `IConfiguration` and persists nested sections back into `App_Data/appsettings.json` through `AppDataConfigurationFileService` |
+
+The project file also excludes the broader `App_Data` folder from `dotnet watch` so watch-based local hosts do not mistake uploaded documents or SQLite/log writes for source changes and restart the app in the middle of a request.
 
 ### Section 3 — ASP.NET Core MVC Setup
 
@@ -103,7 +109,9 @@ builder.Services
     .AddCrestAppsSignalR();
 ```
 
-`AddChatInteractionHandlers()` now registers the shared `DataSourceChatInteractionSettingsHandler`, so Chat Interactions persist the selected data source and RAG metadata through the framework settings pipeline instead of MVC-only wiring. The provider service blocks also pull in `AddDataSourceRagServices()`, which registers `DataSourcePreemptiveRagHandler` at the framework level so preemptive RAG stays aligned with the saved chat settings.
+`AddChatInteractionHandlers()` now registers the shared `DataSourceChatInteractionSettingsHandler`, so Chat Interactions persist the selected data source and RAG metadata through the framework settings pipeline instead of MVC-only wiring. The provider service blocks also pull in `AddDataSourceRagServices()`, which now registers both `DataSourceOrchestrationHandler` and `DataSourcePreemptiveRagHandler` at the framework level so source availability instructions and preemptive RAG stay aligned with the saved chat settings.
+
+Documents, memory, and data sources now remain fully independent orchestration sources in the shared framework. Each source injects its own availability instructions and preemptive-RAG context, so the orchestrator can compose them together without the document prompts needing to know whether memory or data sources are also attached.
 
 ### Section 6 — AI Providers
 
@@ -284,6 +292,8 @@ Three hosted services for ongoing maintenance:
 | `AIChatSessionCloseBackgroundService` | Closes idle/expired chat sessions |
 | `DataSourceSyncBackgroundService` | Synchronizes vector search data |
 | `DataSourceAlignmentBackgroundService` | Aligns indices after config changes |
+
+The data-source hosted services treat timer cancellation as a normal shutdown path, and the alignment service safely handles an empty data-source store instead of dereferencing a null collection during a periodic run.
 
 
 

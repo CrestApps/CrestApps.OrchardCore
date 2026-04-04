@@ -25,17 +25,15 @@ public sealed class Startup : StartupBase
     {
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
-        CrestApps.Azure.AISearch.ServiceCollectionExtensions.AddAzureAISearchServices(services);
+        Azure.AISearch.ServiceCollectionExtensions.AddAzureAISearchServices(services);
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
-
         {
             o.DisplayName = S["AI Knowledge Base Index (Azure AI Search)"];
             o.Description = S["Create an Azure AI Search index to store AI knowledge base document embeddings for vector search."];
         });
 
         services.Configure<AIDataSourceOptions>(options =>
-
         {
             options.AddFieldMapping(AzureAISearchConstants.ProviderName, IndexingConstants.ContentsIndexSource, mapping =>
             {
@@ -45,13 +43,11 @@ public sealed class Startup : StartupBase
             });
 
             options.AddFieldMapping(AzureAISearchConstants.ProviderName, AIConstants.AIDocumentsIndexingTaskType, mapping =>
-
             {
                 mapping.DefaultKeyField = AIConstants.ColumnNames.ChunkId;
                 mapping.DefaultTitleField = AIConstants.ColumnNames.FileName;
                 mapping.DefaultContentField = AIConstants.ColumnNames.Content;
             });
-
         });
     }
 }
