@@ -1,6 +1,9 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure;
+using CrestApps.AI.Services;
+using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
@@ -10,34 +13,30 @@ public abstract class DataSourceIndexProfileHandlerBase : IndexProfileHandlerBas
 {
     protected string ProviderName { get; }
 
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
 
-    protected DataSourceIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
+    protected DataSourceIndexProfileHandlerBase(
+        string providerName,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
     }
 
-    protected async Task<int> GetEmbeddingDimensionsAsync(DataSourceIndexProfileMetadata metadata)
+    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
     {
         const int defaultDimensions = 1536;
-
-#pragma warning disable CS0618 // Type or member is obsolete
-
-        if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
-        {
-            return defaultDimensions;
-        }
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
         try
         {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                metadata.EmbeddingProviderName,
-                metadata.EmbeddingConnectionName,
-                metadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618 // Type or member is obsolete
+            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+                _deploymentManager,
+                _aiClientFactory,
+                metadata);
 
             if (embeddingGenerator == null)
             {

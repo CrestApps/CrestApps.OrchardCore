@@ -149,6 +149,10 @@ The **General** card currently supports:
 
 The appsettings-based `DefaultParameters` still provide the base values. Site settings only replace a value when the matching override toggle is enabled. `AbsoluteMaximumIterationsPerRequest` always stays configuration-owned and the effective `MaximumIterationsPerRequest` is always `Math.Min(MaximumIterationsPerRequest, AbsoluteMaximumIterationsPerRequest)`.
 
+Orchard Core shows a tenant reload warning on this editor. When one of these values changes, the module requests a shell release so refreshed `IOptions<GeneralAIOptions>` values are applied consistently across the tenant.
+
+Orchard Core shows a tenant reload warning on this editor. When one of these values changes, the module requests a shell release so refreshed `IOptions<GeneralAIOptions>` values are applied consistently across the tenant.
+
 #### Typed AI Deployments
 
 Each deployment is a first-class entity with a **Type**. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.

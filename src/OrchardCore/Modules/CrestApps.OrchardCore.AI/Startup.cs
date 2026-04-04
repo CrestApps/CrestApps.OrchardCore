@@ -41,7 +41,6 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.AI;
@@ -76,23 +75,8 @@ public sealed class Startup : StartupBase
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
             .AddScoped<PromptTemplateSelectionService>()
-            .AddScoped<IOptions<GeneralAIOptions>>(sp =>
-            {
-                var options = sp.GetRequiredService<IOptionsSnapshot<GeneralAIOptions>>().Value.Clone();
-                var site = sp.GetRequiredService<ISiteService>().GetSiteSettingsAsync().GetAwaiter().GetResult();
-                var settings = GeneralAIOptions.FromSettings(site.As<GeneralAISettings>());
-
-                options.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
-                options.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
-                options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
-                options.OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching;
-                options.EnableDistributedCaching = settings.EnableDistributedCaching;
-                options.OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry;
-                options.EnableOpenTelemetry = settings.EnableOpenTelemetry;
-
-                return Options.Create(options);
-            })
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
+            .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
@@ -161,6 +145,15 @@ public sealed class Startup : StartupBase
             .AddGetDeploymentsEndpoint()
             .AddGetConnectionsEndpoint()
             .AddGetVoicesEndpoint();
+    }
+}
+
+[RequireFeatures("OrchardCore.Indexing")]
+public sealed class IndexingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<IndexProfileEmbeddingMetadataMigrations>();
     }
 }
 

@@ -23,6 +23,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIDocumentAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIDocumentAzureAISearchDocumentIndexHandler>();
         services.AddKeyedScoped<IVectorSearchService, AzureAISearchVectorSearchService>(AzureAISearchConstants.ProviderName);

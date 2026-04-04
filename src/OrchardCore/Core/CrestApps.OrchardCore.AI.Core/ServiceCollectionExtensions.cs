@@ -4,12 +4,14 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
+using CrestApps.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 
 namespace CrestApps.OrchardCore.AI.Core;
@@ -62,6 +64,16 @@ public static class ServiceCollectionExtensions
             .AddScoped<ICatalog<AIDataSource>, DefaultAIDataSourceStore>()
             .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
             .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddOrchardCoreIndexingAdapters(this IServiceCollection services, string providerName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+
+        services.TryAddKeyedScoped<ISearchIndexManager, OrchardCoreSearchIndexManager>(providerName);
+        services.TryAddKeyedScoped<ISearchDocumentManager, OrchardCoreSearchDocumentManager>(providerName);
 
         return services;
     }

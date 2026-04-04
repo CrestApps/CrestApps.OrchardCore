@@ -7,12 +7,11 @@ namespace CrestApps.AI.Chat.Handlers;
 
 internal sealed class ChatInteractionCompletionContextBuilderHandler : IAICompletionContextBuilderHandler
 {
-
     private readonly ITemplateService _aiTemplateService;
+
     public ChatInteractionCompletionContextBuilderHandler(ITemplateService aiTemplateService)
     {
         _aiTemplateService = aiTemplateService;
-
     }
 
     public async Task BuildingAsync(AICompletionContextBuildingContext context)
@@ -20,7 +19,6 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         if (context.Resource is not ChatInteraction interaction)
         {
             return;
-
         }
 
         context.Context.ConnectionName = interaction.ConnectionName;
@@ -43,7 +41,6 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         if (interaction.DocumentTopN.HasValue)
         {
             context.Context.AdditionalProperties["DocumentTopN"] = interaction.DocumentTopN.Value;
-
         }
 
         if (interaction.TryGet<DataSourceMetadata>(out var dataSourceMetadata) &&
@@ -62,7 +59,6 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
     }
 
     public Task BuiltAsync(AICompletionContextBuiltContext context)
-
         => Task.CompletedTask;
 
     private async Task<string> ResolveSystemMessageAsync(ChatInteraction interaction)
@@ -70,33 +66,28 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         var promptMetadata = interaction.As<PromptTemplateMetadata>();
         var validTemplates = promptMetadata.Templates?
             .Where(selection => !string.IsNullOrWhiteSpace(selection.TemplateId))
-
             .ToList();
 
         if (validTemplates is not { Count: > 0 })
         {
             return interaction.SystemMessage;
-
         }
 
         var parts = new List<string>(validTemplates.Count);
 
         foreach (var template in validTemplates)
         {
-
             var rendered = await _aiTemplateService.RenderAsync(template.TemplateId, template.Parameters);
 
             if (!string.IsNullOrWhiteSpace(rendered))
             {
                 parts.Add(rendered);
             }
-
         }
 
         if (!string.IsNullOrWhiteSpace(interaction.SystemMessage))
         {
             parts.Add(interaction.SystemMessage);
-
         }
 
         return parts.Count == 0

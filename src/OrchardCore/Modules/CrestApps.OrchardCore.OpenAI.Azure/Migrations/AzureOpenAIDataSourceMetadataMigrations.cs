@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI.Azure;
 using CrestApps.AI.Profiles;
@@ -8,7 +9,6 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
@@ -248,7 +248,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                     { "IndexName", "AIKnowledgeBaseWarehouse" },
                 });
 
-                knowledgeBaseIndex.Put(FindFirstEmbeddingMetadata(scope.ServiceProvider, logger));
+                knowledgeBaseIndex.Put(await FindFirstEmbeddingMetadataAsync(scope.ServiceProvider, logger));
 
                 var indexManager = scope.ServiceProvider.GetKeyedService<IIndexManager>(firstProviderName);
 
@@ -461,42 +461,24 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
     /// Finds the first available embedding connection from configured AI providers.
     /// If no embedding connection is found, logs a warning and returns empty metadata.
     /// </summary>
-    private static DataSourceIndexProfileMetadata FindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
+    private static async Task<DataSourceIndexProfileMetadata> FindFirstEmbeddingMetadataAsync(IServiceProvider serviceProvider, ILogger logger)
     {
-        var providerOptions = serviceProvider.GetRequiredService<IOptions<AIProviderOptions>>().Value;
+        var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
+        var deployment = (await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)).FirstOrDefault();
 
-        foreach (var (providerName, provider) in providerOptions.Providers)
+        if (deployment != null)
         {
-            if (provider.Connections is null)
+            return new DataSourceIndexProfileMetadata
             {
-                continue;
-            }
-
-            foreach (var (connectionName, connection) in provider.Connections)
-            {
-#pragma warning disable CS0618 // Obsolete deployment name methods retained for backward compatibility
-                var embeddingDeploymentName = connection.GetEmbeddingDeploymentOrDefaultName(false);
-#pragma warning restore CS0618
-
-                if (!string.IsNullOrEmpty(embeddingDeploymentName))
-                {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    return new DataSourceIndexProfileMetadata
-                    {
-                        EmbeddingProviderName = providerName,
-                        EmbeddingConnectionName = connectionName,
-                        EmbeddingDeploymentName = embeddingDeploymentName,
-                    };
-#pragma warning restore CS0618 // Type or member is obsolete
-                }
-            }
+                EmbeddingDeploymentId = deployment.ItemId,
+            };
         }
 
         logger.LogWarning(
-            "No AI provider connection with an embedding deployment was found. " +
-            "The 'AI Knowledge Base Warehouse' index was created without an embedding connection. " +
-            "To enable knowledge base indexing, configure an AI provider connection with an embedding deployment, " +
-            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding connection.");
+            "No embedding deployment was found. " +
+            "The 'AI Knowledge Base Warehouse' index was created without an embedding deployment. " +
+            "To enable knowledge base indexing, configure an embedding deployment, " +
+            "then update the 'AI Knowledge Base Warehouse' index in Search > Indexing to set an embedding deployment.");
 
         return new DataSourceIndexProfileMetadata();
     }

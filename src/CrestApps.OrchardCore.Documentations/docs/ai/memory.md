@@ -103,7 +103,7 @@ The core **AI Memory** feature is enabled by dependency when one of those provid
 3. Create a new index using either:
    - **AI Memory (Azure AI Search)**
    - **AI Memory (Elasticsearch)**
-4. Choose the embedding connection that should be used for memory indexing and search.
+4. Choose the embedding deployment that should be used for memory indexing and search.
 
 ### 3. Configure global memory settings
 
@@ -113,6 +113,9 @@ Navigate to **Settings → Artificial Intelligence → Memory** and configure:
 - **Default top N** — the default number of matching memories returned by searches
 
 You can leave **Index profile** empty while you are still setting up unrelated AI features such as Copilot. Memory retrieval and indexing stay inactive until you select a valid memory index profile.
+Changing these memory defaults in Orchard Core now shows a tenant reload warning and requests a shell release so refreshed `AIMemoryOptions` values are applied consistently.
+The Orchard Core Azure AI Search and Elasticsearch memory modules now resolve provider clients and indexing adapters from Orchard Core's own search-provider registrations, keeping memory retrieval aligned with the selected Orchard Core indexing backend.
+Memory index profiles now share the same `DataSourceIndexProfileMetadata` embedding-deployment record used by data sources and documents, and the AI module migrates older memory-specific metadata into that shared format automatically.
 
 Preemptive memory retrieval itself is controlled separately under **Settings → Artificial Intelligence → General** through **Enable Preemptive Memory Retrieval**. This lets you keep user memory tools enabled while turning off the upfront memory injection step for the tenant.
 
@@ -148,6 +151,7 @@ Chat Interactions add a site setting under **Settings → Artificial Intelligenc
 - Default: **enabled**
 
 This enables private memory for authenticated Chat Interaction users. Memory retrieval and indexing only become active after a valid memory index profile is configured.
+The Chat Interactions memory editor also shows a tenant reload warning and requests a shell release when the setting changes so `ChatInteractionMemoryOptions` stays in sync.
 
 ## Authentication Behavior
 

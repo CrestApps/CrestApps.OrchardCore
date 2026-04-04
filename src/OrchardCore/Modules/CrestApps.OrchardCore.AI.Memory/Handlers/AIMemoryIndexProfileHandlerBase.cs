@@ -1,6 +1,8 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
-using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.AI.Services;
+using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 
@@ -10,31 +12,30 @@ public abstract class AIMemoryIndexProfileHandlerBase : IndexProfileHandlerBase
 {
     protected string ProviderName { get; }
 
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
 
-    protected AIMemoryIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
+    protected AIMemoryIndexProfileHandlerBase(
+        string providerName,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
     }
 
-    protected async Task<int> GetEmbeddingDimensionsAsync(AIMemoryIndexProfileMetadata metadata)
+    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
     {
         const int defaultDimensions = 1536;
-
-        if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
-        {
-            return defaultDimensions;
-        }
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
         try
         {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                metadata.EmbeddingProviderName,
-                metadata.EmbeddingConnectionName,
-                metadata.EmbeddingDeploymentName);
+            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+                _deploymentManager,
+                _aiClientFactory,
+                metadata);
 
             if (embeddingGenerator is null)
             {

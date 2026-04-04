@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Entities;
@@ -13,8 +13,10 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 
 public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
-    public AIDocumentAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-    : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    public AIDocumentAzureAISearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -35,8 +37,7 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
         }
 
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
-        var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {

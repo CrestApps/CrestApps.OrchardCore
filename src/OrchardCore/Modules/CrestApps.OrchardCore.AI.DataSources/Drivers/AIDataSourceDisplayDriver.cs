@@ -56,16 +56,15 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             var allIndexes = await _indexProfileStore.GetAllAsync();
 
             model.SourceIndexProfileNames = allIndexes
-            .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
-            .GroupBy(i => i.ProviderName)
-            .OrderBy(g => g.Key)
-            .SelectMany(g =>
-            {
-                var group = new SelectListGroup { Name = g.Key };
+                .Where(i => !string.Equals(i.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(i => i.ProviderName)
+                .OrderBy(g => g.Key)
+                .SelectMany(g =>
+                {
+                    var group = new SelectListGroup { Name = g.Key };
 
-                return g.OrderBy(i => i.Name).Select(i => new SelectListItem(i.Name, i.Name) { Group = group });
-
-            });
+                    return g.OrderBy(i => i.Name).Select(i => new SelectListItem(i.Name, i.Name) { Group = group });
+                });
 
             // Show ALL master indexes from all providers, grouped by provider.
             model.AIKnowledgeBaseIndexProfileNames = allIndexes
@@ -77,7 +76,6 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
                     var group = new SelectListGroup { Name = g.Key };
 
                     return g.OrderBy(i => i.Name).Select(i => new SelectListItem(i.Name, i.Name) { Group = group });
-
                 });
 
             model.FieldNames ??= [];

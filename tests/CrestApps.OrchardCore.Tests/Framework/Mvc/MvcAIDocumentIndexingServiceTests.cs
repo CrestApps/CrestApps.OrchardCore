@@ -68,7 +68,7 @@ public sealed class MvcAIDocumentIndexingServiceTests
             },
         ];
 
-        await service.IndexAsync(document, chunks);
+        await service.IndexAsync(document, chunks, TestContext.Current.CancellationToken);
 
         documentManager.Verify(
             manager => manager.AddOrUpdateAsync(It.IsAny<IIndexProfileInfo>(), It.IsAny<IReadOnlyCollection<IndexDocument>>(), It.IsAny<CancellationToken>()),

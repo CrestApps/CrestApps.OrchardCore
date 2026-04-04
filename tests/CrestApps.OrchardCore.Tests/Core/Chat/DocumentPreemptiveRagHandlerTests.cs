@@ -3,6 +3,7 @@ using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
 using CrestApps.AI.Completions;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
@@ -29,17 +30,28 @@ public sealed class DocumentPreemptiveRagHandlerTests
             Name = "docs-index",
             ProviderName = "test-provider",
         };
-        indexProfile.Put(new ChatInteractionIndexProfileMetadata
+        indexProfile.Put(new DataSourceIndexProfileMetadata
         {
-            EmbeddingProviderName = "OpenAI",
-            EmbeddingConnectionName = "Default",
-            EmbeddingDeploymentName = "embedding",
+            EmbeddingDeploymentId = "embedding-id",
         });
 
         var indexProfileStore = new Mock<ISearchIndexProfileStore>();
         indexProfileStore
             .Setup(store => store.FindByNameAsync("docs-index"))
             .ReturnsAsync(indexProfile);
+
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager
+            .Setup(manager => manager.FindByIdAsync("embedding-id"))
+            .ReturnsAsync(new AIDeployment
+            {
+                ItemId = "embedding-id",
+                Name = "embedding",
+                ModelName = "embedding",
+                ClientName = "OpenAI",
+                ConnectionName = "Default",
+                Type = AIDeploymentType.Embedding,
+            });
 
         var vectorSearchService = new Mock<IVectorSearchService>();
         vectorSearchService
@@ -67,6 +79,7 @@ public sealed class DocumentPreemptiveRagHandlerTests
 
         var services = new ServiceCollection()
             .AddSingleton<IAIClientFactory>(new FakeAIClientFactory(new FakeEmbeddingGenerator([0.1f, 0.2f])))
+            .AddSingleton<IAIDeploymentManager>(deploymentManager.Object)
             .AddSingleton<ISearchIndexProfileStore>(indexProfileStore.Object)
             .AddSingleton<ITemplateService, FakeTemplateService>()
             .AddSingleton<IOptions<InteractionDocumentOptions>>(Options.Create(new InteractionDocumentOptions
@@ -112,6 +125,7 @@ public sealed class DocumentPreemptiveRagHandlerTests
     {
         var services = new ServiceCollection()
             .AddSingleton<IAIClientFactory>(new FakeAIClientFactory(new FakeEmbeddingGenerator([0.1f])))
+            .AddSingleton<IAIDeploymentManager>(Mock.Of<IAIDeploymentManager>())
             .AddSingleton<ISearchIndexProfileStore>(Mock.Of<ISearchIndexProfileStore>())
             .AddSingleton<ITemplateService, FakeTemplateService>()
             .AddSingleton<IOptions<InteractionDocumentOptions>>(Options.Create(new InteractionDocumentOptions()))

@@ -1,24 +1,24 @@
 using Azure;
 using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 
 public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearchService
 {
-    private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     public AzureAISearchMemoryVectorSearchService(
-        SearchIndexClient searchIndexClient,
+        AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchMemoryVectorSearchService> logger)
     {
-        _searchIndexClient = searchIndexClient;
+        _clientFactory = clientFactory;
         _logger = logger;
     }
 
@@ -36,7 +36,7 @@ public sealed class AzureAISearchMemoryVectorSearchService : IMemoryVectorSearch
 
         try
         {
-            var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+            var searchClient = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
             var vectorQuery = new VectorizedQuery(embedding)
             {
                 KNearestNeighborsCount = topN,

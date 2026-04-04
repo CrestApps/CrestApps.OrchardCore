@@ -32,7 +32,7 @@ public sealed class MvcAIChatDocumentEventHandlerTests
                     Chunks = [new AIDocumentChunk { ItemId = "chunk-2" }],
                 },
             ],
-        });
+        }, TestContext.Current.CancellationToken);
 
         queue.Verify(service => service.QueueIndexAsync(It.IsAny<AIDocument>(), It.IsAny<IReadOnlyCollection<AIDocumentChunk>>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
@@ -50,7 +50,7 @@ public sealed class MvcAIChatDocumentEventHandlerTests
         await handler.RemovedAsync(new AIChatDocumentRemoveContext
         {
             ChunkIds = ["chunk-1", "chunk-2"],
-        });
+        }, TestContext.Current.CancellationToken);
 
         queue.Verify(service => service.QueueDeleteChunksAsync(It.Is<IReadOnlyCollection<string>>(ids => ids.Count == 2), It.IsAny<CancellationToken>()), Times.Once);
     }

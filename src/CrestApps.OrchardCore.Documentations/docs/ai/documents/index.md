@@ -82,6 +82,9 @@ The orchestrator supports various document-related operations:
 5. Start using the Documents tab in your chat interactions.
 
 If no **AI Documents** index has been configured yet, the UI should warn you before uploads are treated as searchable knowledge. Uploads can still be stored, but vector retrieval does not become active until a compatible AI Documents index is selected.
+Changing the shared document index settings in Orchard Core now also shows a tenant reload warning and requests a shell release so refreshed `InteractionDocumentOptions` are applied consistently.
+For Orchard Core provider modules, the Azure AI Search and Elasticsearch document search services now resolve their search clients from Orchard Core's provider infrastructure rather than relying on the standalone framework provider registrations.
+Document index profiles now use the same shared `DataSourceIndexProfileMetadata` embedding-deployment record used by data sources, and the AI module migrates older document-specific metadata into that shared deployment-based format automatically.
 
 ## AI Documents for Profiles
 

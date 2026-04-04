@@ -59,16 +59,14 @@ public static class ServiceCollectionExtensions
             ProviderName,
             (sp, _) => new ElasticsearchDataSourceContentManager(
             sp.GetRequiredService<ElasticsearchClient>(),
+            sp.GetRequiredService<ILogger<ElasticsearchDataSourceContentManager>>()));
 
-        sp.GetRequiredService<ILogger<ElasticsearchDataSourceContentManager>>()));
         services.TryAddKeyedScoped<IDataSourceDocumentReader>(
             ProviderName,
             (sp, _) => new DataSourceElasticsearchDocumentReader(
-
             sp.GetRequiredService<ElasticsearchClient>()));
         services.TryAddKeyedSingleton<IODataFilterTranslator>(
             ProviderName,
-
             (_, _) => new ElasticsearchODataFilterTranslator());
 
         services.TryAddKeyedScoped<ISearchIndexManager>(
@@ -76,20 +74,19 @@ public static class ServiceCollectionExtensions
             (sp, _) => new ElasticsearchSearchIndexManager(
             sp.GetRequiredService<ElasticsearchClient>(),
             sp.GetRequiredService<IOptions<ElasticsearchConnectionOptions>>(),
+            sp.GetRequiredService<ILogger<ElasticsearchSearchIndexManager>>()));
 
-        sp.GetRequiredService<ILogger<ElasticsearchSearchIndexManager>>()));
         services.TryAddKeyedScoped<ISearchDocumentManager>(
             ProviderName,
             (sp, _) => new ElasticsearchSearchDocumentManager(
             sp.GetRequiredService<ElasticsearchClient>(),
+            sp.GetRequiredService<ILogger<ElasticsearchSearchDocumentManager>>()));
 
-        sp.GetRequiredService<ILogger<ElasticsearchSearchDocumentManager>>()));
         services.TryAddKeyedScoped<IVectorSearchService>(
             ProviderName,
             (sp, _) => new ElasticsearchVectorSearchService(
             sp.GetRequiredService<ElasticsearchClient>(),
-
-        sp.GetRequiredService<ILogger<ElasticsearchVectorSearchService>>()));
+            sp.GetRequiredService<ILogger<ElasticsearchVectorSearchService>>()));
 
         return services;
     }

@@ -1,5 +1,7 @@
-using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
+using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
@@ -10,34 +12,32 @@ public abstract class AIDocumentIndexProfileHandlerBase : IndexProfileHandlerBas
 {
     protected string ProviderName { get; }
 
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
 
-    public AIDocumentIndexProfileHandlerBase(string providerName, IAIClientFactory aiClientFactory)
+    public AIDocumentIndexProfileHandlerBase(
+        string providerName,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
     {
         ProviderName = providerName;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
     }
 
-    protected async Task<int> GetEmbeddingDimensionsAsync(ChatInteractionIndexProfileMetadata interactionMetadata)
+    protected async Task<int> GetEmbeddingDimensionsAsync(IndexProfile indexProfile)
     {
         // Default to 1536 (OpenAI text-embedding-ada-002) if we can't determine dynamically
         const int defaultDimensions = 1536;
 
-        // Use the embedding connection configured in the index profile
-
-        if (string.IsNullOrEmpty(interactionMetadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(interactionMetadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(interactionMetadata.EmbeddingDeploymentName))
-        {
-            return defaultDimensions;
-        }
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
 
         try
         {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                interactionMetadata.EmbeddingProviderName,
-                interactionMetadata.EmbeddingConnectionName,
-                interactionMetadata.EmbeddingDeploymentName);
+            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+                _deploymentManager,
+                _aiClientFactory,
+                metadata);
 
             if (embeddingGenerator == null)
             {

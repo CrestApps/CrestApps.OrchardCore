@@ -1,7 +1,7 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
@@ -13,8 +13,10 @@ namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 
 public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
-    public AIMemoryAzureAISearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-    : base(AzureAISearchConstants.ProviderName, aiClientFactory)
+    public AIMemoryAzureAISearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(AzureAISearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -35,8 +37,7 @@ public sealed class AIMemoryAzureAISearchIndexProfileHandler : AIMemoryIndexProf
         }
 
         var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
-        var memoryMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(memoryMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap
         {

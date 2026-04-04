@@ -29,7 +29,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.DataSources;
 
@@ -38,6 +37,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAIDataSourceServices();
+        services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
         services.AddPermissionProvider<AIDataSourcesPermissionProvider>();
@@ -48,16 +48,6 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-        services.AddScoped<IOptions<AIDataSourceOptions>>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptionsSnapshot<AIDataSourceOptions>>().Value.Clone();
-            var settings = sp.GetRequiredService<ISiteService>().GetSettings<AIDataSourceSettings>();
-            var overrides = AIDataSourceOptions.FromSettings(settings);
-            options.DefaultStrictness = overrides.DefaultStrictness;
-            options.DefaultTopNDocuments = overrides.DefaultTopNDocuments;
-            return Options.Create(options);
-        });
-
 
         services.AddDataSourceRagServices();
 

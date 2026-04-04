@@ -22,6 +22,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(ElasticsearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIDocumentElasticsearchIndexProfileHandler>();
 
         // Register Elasticsearch document index handler for AI document embeddings.

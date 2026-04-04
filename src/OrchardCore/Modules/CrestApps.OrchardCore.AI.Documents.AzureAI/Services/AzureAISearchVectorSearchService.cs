@@ -1,11 +1,11 @@
 using Azure;
 using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 
@@ -15,14 +15,14 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 /// </summary>
 public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 {
-    private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     public AzureAISearchVectorSearchService(
-        SearchIndexClient searchIndexClient,
+        AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchVectorSearchService> logger)
     {
-        _searchIndexClient = searchIndexClient;
+        _clientFactory = clientFactory;
         _logger = logger;
     }
     /// <inheritdoc />
@@ -46,7 +46,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 
         try
         {
-            var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+            var searchClient = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
 
             var vectorQuery = new VectorizedQuery(embedding)
             {

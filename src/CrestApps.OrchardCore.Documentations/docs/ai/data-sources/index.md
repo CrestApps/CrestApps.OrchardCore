@@ -46,6 +46,10 @@ Navigate to **Settings > Artificial Intelligence** to configure global data sour
 - **Strictness** — Default strictness level for search relevance (1–5).
 - **Enable Preemptive RAG** — When enabled, context is pre-fetched before AI completion for reduced latency.
 
+When you change these tenant-wide defaults in Orchard Core, the editor shows a tenant reload warning and requests a shell release so the updated `AIDataSourceOptions` values are picked up consistently.
+The Orchard Core provider modules now resolve knowledge-base reads, vector search, and framework-facing indexing adapters through Orchard Core's own index-profile store plus keyed provider services instead of registering the standalone framework provider bundles directly.
+The knowledge-base index editor now stores the selected **embedding deployment** as shared `DataSourceIndexProfileMetadata`, and the AI module migrates older document/memory index-profile metadata records to that shared format automatically when Orchard Core indexing is available.
+
 ### Data Source Settings
 
 Each data source can be configured with:
@@ -181,22 +185,22 @@ Version 2 introduces **Knowledge Base (KB) indexing** with vector embeddings. Du
 - Each data source now requires a **Knowledge Base Index** that stores chunked document embeddings for vector search.
 - The migration creates the KB index automatically, but it needs an **embedding deployment** (e.g. `text-embedding-ada-002`, `text-embedding-3-small`) to generate embeddings.
 
-### Required: Configure an embedding connection
+### Required: Configure an embedding deployment
 
-If you have not already configured an AI provider connection with an embedding deployment, the KB index will be created **without embedding support**. This means the AI Knowledge Base index will have no data to feed the AI models when a data source is selected.
+If you have not already configured an embedding deployment, the KB index will be created **without embedding support**. This means the AI Knowledge Base index will have no data to feed the AI models when a data source is selected.
 
 To fix this:
 
-1. **Configure an AI provider connection with an embedding deployment:**
-   - Navigate to **Artificial Intelligence > Connections** in the admin dashboard.
-   - Edit or create a connection (e.g. Azure OpenAI, OpenAI).
-   - Set the **Embedding Deployment Name** field to your embedding model deployment (e.g. `text-embedding-ada-002` or `text-embedding-3-small`).
-   - Save the connection.
+1. **Configure an embedding deployment:**
+    - Navigate to **Artificial Intelligence > Connections** in the admin dashboard.
+    - Edit or create a connection (e.g. Azure OpenAI, OpenAI).
+    - Set the **Embedding Deployment Name** field to your embedding model deployment (e.g. `text-embedding-ada-002` or `text-embedding-3-small`).
+    - Save the connection.
 
 2. **Update the AI Knowledge Base Warehouse index:**
    - Navigate to **Search > Indexing** in the admin dashboard.
    - Find the **AI Knowledge Base Warehouse** index.
-   - Edit it and select the embedding connection you configured in step 1.
+    - Edit it and select the embedding deployment you configured in step 1.
    - Save the index.
 
 3. **Trigger a sync:**
@@ -204,5 +208,5 @@ To fix this:
    - Click **Sync** on each data source to re-index documents with embeddings.
 
 :::note Note
-Without an embedding connection, data sources will appear configured but the KB index will remain empty. AI profiles using these data sources will not have any context documents to enhance their responses.
+Without an embedding deployment, data sources will appear configured but the KB index will remain empty. AI profiles using these data sources will not have any context documents to enhance their responses.
 :::

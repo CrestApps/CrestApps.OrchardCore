@@ -1,35 +1,28 @@
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Memory.Models;
+using CrestApps.AI.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
 public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {
-    private const char Separator = '|';
-    private const int ExpectedPartsCount = 3;
-
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly AIProviderOptions _providerOptions;
 
     internal readonly IStringLocalizer S;
 
     public AIMemoryIndexProfileDisplayDriver(
         IAIDeploymentManager deploymentManager,
-        IOptions<AIProviderOptions> providerOptions,
         IStringLocalizer<AIMemoryIndexProfileDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
-        _providerOptions = providerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -42,40 +35,12 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
 
         return Initialize<AIMemoryIndexProfileViewModel>("AIMemoryIndexProfile_Edit", async model =>
         {
-            var metadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-            var embeddingConnections = new List<SelectListItem>();
+            var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
+            var selectedDeployment = await EmbeddingDeploymentResolver.FindEmbeddingDeploymentAsync(_deploymentManager, metadata);
+            var deployments = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
 
-            foreach (var (providerName, provider) in _providerOptions.Providers)
-            {
-                foreach (var (connectionName, connection) in provider.Connections)
-                {
-                    var embeddingDeployment = await _deploymentManager.GetDefaultAsync(providerName, connectionName, AIDeploymentType.Embedding);
-                    var embeddingDeploymentName = embeddingDeployment?.Name;
-
-                    if (string.IsNullOrEmpty(embeddingDeploymentName))
-                    {
-                        continue;
-                    }
-
-                    var key = string.Join(Separator, providerName, connectionName, embeddingDeploymentName);
-                    var displayName = connection.TryGetValue("ConnectionNameAlias", out var alias)
-                    ? $"{alias} ({providerName})"
-                    : $"{connectionName} ({providerName})";
-
-                    var isSelected = metadata.EmbeddingProviderName == providerName &&
-                        metadata.EmbeddingConnectionName == connectionName &&
-                            metadata.EmbeddingDeploymentName == embeddingDeploymentName;
-
-                    if (isSelected)
-                    {
-                        model.EmbeddingConnection = key;
-                    }
-
-                    embeddingConnections.Add(new SelectListItem(displayName, key, isSelected));
-                }
-            }
-
-            model.EmbeddingConnections = embeddingConnections;
+            model.EmbeddingDeploymentId = selectedDeployment?.ItemId ?? metadata.EmbeddingDeploymentId;
+            model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentId);
         }).Location("Content:3");
     }
 
@@ -89,32 +54,59 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
         var model = new AIMemoryIndexProfileViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-        var isSet = false;
-
-        if (!string.IsNullOrEmpty(model.EmbeddingConnection))
+        if (string.IsNullOrEmpty(model.EmbeddingDeploymentId))
         {
-            var parts = model.EmbeddingConnection.Split(Separator);
-
-            if (parts.Length == ExpectedPartsCount)
-            {
-                metadata.EmbeddingProviderName = parts[0];
-                metadata.EmbeddingConnectionName = parts[1];
-                metadata.EmbeddingDeploymentName = parts[2];
-                isSet = true;
-            }
+            context.Updater.ModelState.AddModelError(Prefix, S["Embedding deployment is required."]);
+            return Edit(indexProfile, context);
         }
 
-        if (!isSet)
+        var deployment = await _deploymentManager.FindByIdAsync(model.EmbeddingDeploymentId);
+
+        if (deployment == null || !deployment.SupportsType(AIDeploymentType.Embedding))
         {
-            context.Updater.ModelState.AddModelError(Prefix, S["Embedding connection is required."]);
+            context.Updater.ModelState.AddModelError(Prefix, S["The selected embedding deployment could not be found."]);
+            return Edit(indexProfile, context);
         }
 
-        indexProfile.Put(metadata);
+        var metadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
+        metadata.EmbeddingDeploymentId = deployment.ItemId;
+
+        IndexProfileEmbeddingMetadataAccessor.StoreMetadata(indexProfile, metadata);
 
         return Edit(indexProfile, context);
     }
 
     private static bool CanHandle(IndexProfile indexProfile)
         => string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase);
+
+    private static IEnumerable<SelectListItem> BuildEmbeddingDeploymentItems(IEnumerable<AIDeployment> deployments, string selectedDeploymentId)
+    {
+        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
+
+        return deployments
+            .OrderBy(deployment => deployment.ConnectionNameAlias ?? deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(deployment =>
+            {
+                SelectListGroup group = null;
+                var groupKey = deployment.ConnectionNameAlias ?? deployment.ConnectionName;
+
+                if (!string.IsNullOrWhiteSpace(groupKey) && !groups.TryGetValue(groupKey, out group))
+                {
+                    group = new SelectListGroup { Name = groupKey };
+                    groups[groupKey] = group;
+                }
+
+                return new SelectListItem(GetDeploymentDisplayText(deployment), deployment.ItemId)
+                {
+                    Group = group,
+                    Selected = string.Equals(deployment.ItemId, selectedDeploymentId, StringComparison.OrdinalIgnoreCase),
+                };
+            });
+    }
+
+    private static string GetDeploymentDisplayText(AIDeployment deployment)
+        => string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase)
+            ? deployment.Name
+            : $"{deployment.Name} ({deployment.ModelName})";
 }

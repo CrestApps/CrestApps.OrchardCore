@@ -8,6 +8,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
@@ -19,6 +20,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer S;
 
@@ -28,16 +30,20 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IShellReleaseManager shellReleaseManager,
         IStringLocalizer<InteractionDocumentSettingsDisplayDriver> stringLocalizer)
     {
         _indexProfileStore = indexProfileStore;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite model, InteractionDocumentSettings section, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<InteractionDocumentSettingsViewModel>("InteractionDocumentSettings_Edit", async viewModel =>
         {
             viewModel.IndexProfileName = section.IndexProfileName;
@@ -62,9 +68,12 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.IndexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
-        ? null
-        : model.IndexProfileName;
+        var indexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
+            ? null
+            : model.IndexProfileName;
+        var settingsChanged = !string.Equals(settings.IndexProfileName, indexProfileName, StringComparison.Ordinal);
+
+        settings.IndexProfileName = indexProfileName;
 
         if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {
@@ -74,6 +83,11 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["Invalid index profile."]);
             }
+        }
+
+        if (settingsChanged && context.Updater.ModelState.IsValid)
+        {
+            _shellReleaseManager.RequestRelease();
         }
 
         return Edit(site, settings, context);

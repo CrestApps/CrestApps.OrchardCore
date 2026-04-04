@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
@@ -128,31 +129,19 @@ public sealed class DataSourceSearchTool : AIFunction
             }
 
             var aiClientFactory = arguments.Services.GetRequiredService<IAIClientFactory>();
-            var profileMetadata = masterIndexProfile.As<DataSourceIndexProfileMetadata>();
+            var deploymentManager = arguments.Services.GetRequiredService<IAIDeploymentManager>();
+            var profileMetadata = SearchIndexProfileEmbeddingMetadataAccessor.GetMetadata(masterIndexProfile);
 
-#pragma warning disable CS0618
-            if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
-                string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
-                    string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
+            var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+                deploymentManager,
+                aiClientFactory,
+                profileMetadata,
+                masterIndexProfile.EmbeddingDeploymentId);
 
+            if (embeddingGenerator == null)
             {
                 logger.LogWarning("AI tool '{ToolName}' failed: embedding configuration is missing for the knowledge base index.", Name);
                 return "Embedding configuration is missing for the knowledge base index.";
-            }
-
-            var embeddingGenerator = await aiClientFactory.CreateEmbeddingGeneratorAsync(
-
-                profileMetadata.EmbeddingProviderName,
-                profileMetadata.EmbeddingConnectionName,
-                profileMetadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618
-
-            if (embeddingGenerator == null)
-
-            {
-
-                logger.LogWarning("AI tool '{ToolName}' failed: could not create embedding generator.", Name);
-                return "Failed to create embedding generator for data source search.";
             }
 
             var embeddings = await embeddingGenerator.GenerateAsync([query], cancellationToken: cancellationToken);

@@ -17,10 +17,7 @@ internal sealed class DataSourceAICompletionContextBuilderHandler : IAICompletio
             // Store DataSourceId in the invocation context so the DataSourceSearchTool can access it.
             var invocationContext = AIInvocationScope.Current;
 
-            if (invocationContext is not null)
-            {
-                invocationContext.DataSourceId = dataSourceMetadata.DataSourceId;
-            }
+            invocationContext?.DataSourceId = dataSourceMetadata.DataSourceId;
         }
 
         return Task.CompletedTask;

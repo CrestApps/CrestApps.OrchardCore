@@ -1,5 +1,6 @@
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
@@ -22,6 +23,7 @@ namespace CrestApps.AI.Chat.Handlers;
 internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 {
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _templateService;
     private readonly InteractionDocumentOptions _options;
@@ -30,6 +32,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
     public DocumentPreemptiveRagHandler(
         IAIClientFactory aiClientFactory,
+        IAIDeploymentManager deploymentManager,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService templateService,
         IOptions<InteractionDocumentOptions> options,
@@ -37,6 +40,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         ILogger<DocumentPreemptiveRagHandler> logger)
     {
         _aiClientFactory = aiClientFactory;
+        _deploymentManager = deploymentManager;
         _indexProfileStore = indexProfileStore;
         _templateService = templateService;
         _options = options.Value;
@@ -109,32 +113,23 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
+        var metadata = SearchIndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
+        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+            _deploymentManager,
+            _aiClientFactory,
+            metadata,
+            indexProfile.EmbeddingDeploymentId);
 
-        if (string.IsNullOrEmpty(interactionMetadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(interactionMetadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(interactionMetadata.EmbeddingDeploymentName))
+        if (embeddingGenerator == null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Document Preemptive RAG: embedding configuration incomplete on index profile '{IndexProfileName}'. Provider={Provider}, Connection={Connection}, Deployment={Deployment}.",
+                    "Document Preemptive RAG: embedding deployment is not configured or could not be resolved on index profile '{IndexProfileName}'. DeploymentId={DeploymentId}.",
                     settings.IndexProfileName,
-                    interactionMetadata?.EmbeddingProviderName ?? "(null)",
-                    interactionMetadata?.EmbeddingConnectionName ?? "(null)",
-                    interactionMetadata?.EmbeddingDeploymentName ?? "(null)");
+                    metadata?.EmbeddingDeploymentId ?? indexProfile.EmbeddingDeploymentId ?? "(null)");
             }
 
-            return;
-        }
-
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            interactionMetadata.EmbeddingProviderName,
-            interactionMetadata.EmbeddingConnectionName,
-            interactionMetadata.EmbeddingDeploymentName);
-
-        if (embeddingGenerator == null)
-        {
             return;
         }
 

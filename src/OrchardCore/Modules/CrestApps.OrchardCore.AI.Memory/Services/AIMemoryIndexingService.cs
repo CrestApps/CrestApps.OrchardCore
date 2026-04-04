@@ -1,6 +1,9 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +21,7 @@ internal sealed class AIMemoryIndexingService
     private readonly IAIMemoryStore _memoryStore;
     private readonly AIMemoryOptions _memoryOptions;
     private readonly IIndexProfileStore _indexProfileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
@@ -27,6 +31,7 @@ internal sealed class AIMemoryIndexingService
         IAIMemoryStore memoryStore,
         IOptions<AIMemoryOptions> memoryOptions,
         IIndexProfileStore indexProfileStore,
+        IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         IServiceProvider serviceProvider,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
@@ -35,6 +40,7 @@ internal sealed class AIMemoryIndexingService
         _memoryStore = memoryStore;
         _memoryOptions = memoryOptions.Value;
         _indexProfileStore = indexProfileStore;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
         _serviceProvider = serviceProvider;
         _documentIndexHandlers = documentIndexHandlers;
@@ -217,18 +223,9 @@ internal sealed class AIMemoryIndexingService
 
     private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(IndexProfile indexProfile)
     {
-        var metadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-
-        if (string.IsNullOrEmpty(metadata?.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(metadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(metadata.EmbeddingDeploymentName))
-        {
-            return null;
-        }
-
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            metadata.EmbeddingProviderName,
-            metadata.EmbeddingConnectionName,
-            metadata.EmbeddingDeploymentName);
+        return await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+            _deploymentManager,
+            _aiClientFactory,
+            IndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile));
     }
 }

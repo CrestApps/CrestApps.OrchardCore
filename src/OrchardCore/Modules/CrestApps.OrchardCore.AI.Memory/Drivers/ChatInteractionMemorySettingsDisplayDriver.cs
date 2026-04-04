@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
@@ -16,21 +17,26 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISiteService _siteService;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
     public ChatInteractionMemorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        ISiteService siteService)
+        ISiteService siteService,
+        IShellReleaseManager shellReleaseManager)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _siteService = siteService;
+        _shellReleaseManager = shellReleaseManager;
     }
 
     public override IDisplayResult Edit(ISite site, ChatInteractionMemorySettings settings, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<ChatInteractionMemorySettingsViewModel>("ChatInteractionMemorySettings_Edit", async model =>
         {
             model.EnableUserMemory = settings.EnableUserMemory;
@@ -50,7 +56,13 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
         var model = new ChatInteractionMemorySettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        var settingsChanged = settings.EnableUserMemory != model.EnableUserMemory;
         settings.EnableUserMemory = model.EnableUserMemory;
+
+        if (settingsChanged)
+        {
+            _shellReleaseManager.RequestRelease();
+        }
 
         return Edit(site, settings, context);
     }

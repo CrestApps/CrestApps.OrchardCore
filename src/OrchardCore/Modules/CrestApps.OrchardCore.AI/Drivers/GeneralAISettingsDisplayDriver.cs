@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -17,6 +18,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly DefaultAIOptions _defaultAIOptions;
+    private readonly IShellReleaseManager _shellReleaseManager;
 
     internal readonly IStringLocalizer T;
 
@@ -25,17 +27,21 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
     public GeneralAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IShellReleaseManager shellReleaseManager,
         IOptions<DefaultAIOptions> defaultAIOptions,
         IStringLocalizer<GeneralAISettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _shellReleaseManager = shellReleaseManager;
         _defaultAIOptions = defaultAIOptions.Value;
         T = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, GeneralAISettings settings, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<GeneralAISettingsViewModel>("GeneralAISettings_Edit", model =>
         {
             model.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
@@ -69,6 +75,15 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         var model = new GeneralAISettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        var maximumIterationsPerRequest = Math.Min(model.MaximumIterationsPerRequest, _defaultAIOptions.AbsoluteMaximumIterationsPerRequest);
+        var settingsChanged =
+            settings.EnablePreemptiveMemoryRetrieval != model.EnablePreemptiveMemoryRetrieval ||
+            settings.OverrideMaximumIterationsPerRequest != model.OverrideMaximumIterationsPerRequest ||
+            settings.MaximumIterationsPerRequest != maximumIterationsPerRequest ||
+            settings.OverrideEnableDistributedCaching != model.OverrideEnableDistributedCaching ||
+            settings.EnableDistributedCaching != model.EnableDistributedCaching ||
+            settings.OverrideEnableOpenTelemetry != model.OverrideEnableOpenTelemetry ||
+            settings.EnableOpenTelemetry != model.EnableOpenTelemetry;
 
         if (model.OverrideMaximumIterationsPerRequest)
         {
@@ -90,11 +105,16 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
 
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.OverrideMaximumIterationsPerRequest = model.OverrideMaximumIterationsPerRequest;
-        settings.MaximumIterationsPerRequest = Math.Min(model.MaximumIterationsPerRequest, _defaultAIOptions.AbsoluteMaximumIterationsPerRequest);
+        settings.MaximumIterationsPerRequest = maximumIterationsPerRequest;
         settings.OverrideEnableDistributedCaching = model.OverrideEnableDistributedCaching;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
         settings.OverrideEnableOpenTelemetry = model.OverrideEnableOpenTelemetry;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
+
+        if (settingsChanged)
+        {
+            _shellReleaseManager.RequestRelease();
+        }
 
         return Edit(site, settings, context);
     }

@@ -1,4 +1,5 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
@@ -14,8 +15,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 
 internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
-    public DataSourceElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-    : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    public DataSourceElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -44,8 +47,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
-        var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = DataSourceConstants.ColumnNames.ChunkId;
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkId] = new KeywordProperty();

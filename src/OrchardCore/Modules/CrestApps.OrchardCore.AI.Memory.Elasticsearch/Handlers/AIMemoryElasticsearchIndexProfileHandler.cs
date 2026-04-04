@@ -1,7 +1,7 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
@@ -14,8 +14,10 @@ namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
 public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProfileHandlerBase
 {
-    public AIMemoryElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-    : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    public AIMemoryElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -44,8 +46,7 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
         metadata.IndexMappings.Mapping ??= new TypeMapping();
         metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
-        var profileMetadata = indexProfile.As<AIMemoryIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = MemoryConstants.ColumnNames.MemoryId;
         metadata.IndexMappings.Mapping.Properties[MemoryConstants.ColumnNames.MemoryId] = new KeywordProperty();

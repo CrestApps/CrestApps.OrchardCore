@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Memory\CrestApps.OrchardCore.AI.Memory.csproj" PrivateAssets="none" />
   </ItemGroup>
 

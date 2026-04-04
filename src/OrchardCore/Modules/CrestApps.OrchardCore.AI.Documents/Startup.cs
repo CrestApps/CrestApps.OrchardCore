@@ -1,9 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Endpoints;
-using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -26,7 +24,6 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 
@@ -34,6 +31,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddDefaultDocumentProcessingServices();
+        services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
@@ -44,15 +43,6 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
-        services.AddScoped<IOptions<InteractionDocumentOptions>>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptionsSnapshot<InteractionDocumentOptions>>().Value.Clone();
-            var settings = sp.GetRequiredService<ISiteService>().GetSettingsAsync<InteractionDocumentSettings>().GetAwaiter().GetResult();
-            var overrides = InteractionDocumentOptions.FromSettings(settings);
-            options.IndexProfileName = overrides.IndexProfileName;
-            options.TopN = overrides.TopN;
-            return Options.Create(options);
-        });
         services.AddScoped<IAIChatDocumentAuthorizationService, OrchardAIChatDocumentAuthorizationService>();
         services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
 
@@ -60,9 +50,6 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<AIDocumentChunkIndexProvider>();
         services.AddDataMigration<AIDocumentIndexMigrations>();
         services.AddDataMigration<AIDocumentChunkIndexMigrations>();
-
-        // Add document processing system tools and supporting services.
-        services.AddDefaultDocumentProcessingServices();
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());

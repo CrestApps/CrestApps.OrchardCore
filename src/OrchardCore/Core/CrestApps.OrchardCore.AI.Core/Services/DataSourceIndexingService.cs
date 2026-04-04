@@ -1,8 +1,10 @@
 using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
 using CrestApps.Infrastructure.Indexing.DataSources;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -25,6 +27,7 @@ public sealed class DataSourceIndexingService
 {
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly IServiceProvider _serviceProvider;
@@ -39,6 +42,7 @@ public sealed class DataSourceIndexingService
     public DataSourceIndexingService(
         IIndexProfileStore indexProfileStore,
         ICatalog<AIDataSource> dataSourceStore,
+        IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
@@ -48,6 +52,7 @@ public sealed class DataSourceIndexingService
     {
         _indexProfileStore = indexProfileStore;
         _dataSourceStore = dataSourceStore;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
         _documentIndexHandlers = documentIndexHandlers;
         _serviceProvider = serviceProvider;
@@ -437,23 +442,11 @@ public sealed class DataSourceIndexingService
 
         }
 
-        var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
-        {
-
-            return;
-        }
-
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            profileMetadata.EmbeddingProviderName,
-            profileMetadata.EmbeddingConnectionName,
-
-            profileMetadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618 // Type or member is obsolete
+        var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
+        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+            _deploymentManager,
+            _aiClientFactory,
+            profileMetadata);
 
         if (embeddingGenerator == null)
         {
@@ -702,29 +695,15 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        // Get the embedding configuration from the master index profile.
-        var profileMetadata = masterProfile.As<DataSourceIndexProfileMetadata>();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
-                string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
-        {
-            _logger.LogWarning("Embedding configuration is missing for master index '{IndexName}'.", masterProfile.IndexName);
-
-            return;
-        }
-
-        var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            profileMetadata.EmbeddingProviderName,
-            profileMetadata.EmbeddingConnectionName,
-
-            profileMetadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618 // Type or member is obsolete
+        var profileMetadata = IndexProfileEmbeddingMetadataAccessor.GetMetadata(masterProfile);
+        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+            _deploymentManager,
+            _aiClientFactory,
+            profileMetadata);
 
         if (embeddingGenerator == null)
         {
-            _logger.LogWarning("Failed to create embedding generator for master index '{IndexName}'.", masterProfile.IndexName);
+            _logger.LogWarning("Embedding deployment is missing for master index '{IndexName}'.", masterProfile.IndexName);
 
             return;
         }

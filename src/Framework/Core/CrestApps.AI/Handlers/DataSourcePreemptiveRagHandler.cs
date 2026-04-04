@@ -104,50 +104,19 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             return;
         }
 
-        var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
-        var embeddingDeploymentId = indexProfile.EmbeddingDeploymentId ?? profileMetadata.EmbeddingDeploymentId;
+        var profileMetadata = SearchIndexProfileEmbeddingMetadataAccessor.GetMetadata(indexProfile);
+        var embeddingGenerator = await EmbeddingDeploymentResolver.CreateEmbeddingGeneratorAsync(
+            _deploymentManager,
+            _aiClientFactory,
+            profileMetadata,
+            indexProfile.EmbeddingDeploymentId);
 
-        var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentType.Embedding,
-            deploymentName: embeddingDeploymentId);
-
-        if (embeddingDeployment != null)
-        {
-            var embeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                embeddingDeployment.ClientName,
-                embeddingDeployment.ConnectionName,
-                embeddingDeployment.Name);
-
-            if (embeddingGenerator == null)
-            {
-                return;
-            }
-
-            await SearchAndInjectContextAsync(context, ragMetadata, indexProfile, contentManager, embeddingGenerator);
-            return;
-        }
-
-#pragma warning disable CS0618
-        if (profileMetadata == null ||
-            string.IsNullOrEmpty(profileMetadata.EmbeddingProviderName) ||
-            string.IsNullOrEmpty(profileMetadata.EmbeddingConnectionName) ||
-            string.IsNullOrEmpty(profileMetadata.EmbeddingDeploymentName))
+        if (embeddingGenerator == null)
         {
             return;
         }
 
-        var legacyEmbeddingGenerator = await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-            profileMetadata.EmbeddingProviderName,
-            profileMetadata.EmbeddingConnectionName,
-            profileMetadata.EmbeddingDeploymentName);
-#pragma warning restore CS0618
-
-        if (legacyEmbeddingGenerator == null)
-        {
-            return;
-        }
-
-        await SearchAndInjectContextAsync(context, ragMetadata, indexProfile, contentManager, legacyEmbeddingGenerator);
+        await SearchAndInjectContextAsync(context, ragMetadata, indexProfile, contentManager, embeddingGenerator);
     }
 
     private async Task SearchAndInjectContextAsync(
