@@ -5,7 +5,6 @@ using CrestApps.AI.Models;
 using CrestApps.Templates.Models;
 using CrestApps.Templates.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;

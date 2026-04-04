@@ -224,6 +224,12 @@ If an administrator already deleted the remote index directly in Elasticsearch o
 
 `Articles` remains the only MVC-specific source registration. The sample app adds that descriptor directly in `Program.cs` and pairs it with `ArticleIndexProfileHandler`, because the article catalog and indexing logic belong only to the MVC sample rather than the reusable provider packages.
 
+MVC chat responses now also collect and surface data-source citations the same way Orchard Core does. The sample host registers an `IAIReferenceLinkResolver` keyed to `IndexProfileTypes.Articles`, then both AI Chat and Chat Interactions use an MVC citation collector to resolve `[doc:N]` references into public `/articles/{id}` links while streaming and when existing chat history is reloaded. Citation links now keep their resolved labels/URLs after hydration and open in a new browser tab. Article management remains behind the admin policy, but the article display route itself is anonymous so end users can open citation links without signing in.
+
+The MVC sample now also keeps article-backed knowledge bases synchronized the same way Orchard Core does. `AIDataSourceController` writes through `ICatalogManager<AIDataSource>` so lifecycle handlers run, article create/update/delete events queue knowledge-base reindex or removal work, and the background synchronization services now call the shared `IAIDataSourceIndexingService` instead of only logging placeholders. Each data source row in the admin list exposes a **Sync** action that queues a full rebuild immediately.
+
+Strict in-scope prompting is now enforced more aggressively too. When `IsInScope` is enabled for a chat interaction or AI profile data-source RAG configuration, the shared strict prompt templates explicitly forbid both answering from general knowledge and offering a general-knowledge fallback, so the MVC host matches the Orchard Core behavior more closely.
+
 ### Section 9 — Model Context Protocol (MCP)
 
 Full bidirectional MCP setup:

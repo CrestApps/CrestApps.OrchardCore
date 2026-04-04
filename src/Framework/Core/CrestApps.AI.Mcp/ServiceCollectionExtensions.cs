@@ -1,7 +1,7 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Mcp.Handlers;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;
-using CrestApps.AI.Completions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;

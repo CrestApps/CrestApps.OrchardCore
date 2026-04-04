@@ -87,6 +87,33 @@ window.openAIChatManager = function () {
         return span.innerHTML;
     }
 
+    function normalizeReference(reference) {
+        if (!reference || typeof reference !== 'object') {
+            return null;
+        }
+
+        const normalized = Object.assign({}, reference);
+        normalized.index = normalized.index ?? normalized.Index ?? 0;
+        normalized.text = normalized.text ?? normalized.Text ?? null;
+        normalized.link = normalized.link ?? normalized.Link ?? null;
+
+        return normalized;
+    }
+
+    function normalizeReferences(references) {
+        if (!references || typeof references !== 'object') {
+            return {};
+        }
+
+        const normalized = {};
+
+        for (const [key, value] of Object.entries(references)) {
+            normalized[key] = normalizeReference(value) ?? {};
+        }
+
+        return normalized;
+    }
+
     const renderer = new marked.Renderer();
 
     // Modify the link rendering to open in a new tab
@@ -928,6 +955,7 @@ window.openAIChatManager = function () {
 
                     if (message.content) {
                         let processedContent = message.content.trim();
+                        message.references = normalizeReferences(message.references);
 
                         if (message.references && typeof message.references === "object" && Object.keys(message.references).length) {
 
@@ -1205,7 +1233,7 @@ window.openAIChatManager = function () {
                                 if (chunk.references && typeof chunk.references === "object" && Object.keys(chunk.references).length) {
 
                                     for (const [key, value] of Object.entries(chunk.references)) {
-                                        references[key] = value;
+                                        references[key] = normalizeReference(value) ?? {};
                                     }
                                 }
 
@@ -1298,6 +1326,7 @@ window.openAIChatManager = function () {
                     return newMessage;
                 },
                 processReferences(references, messageIndex) {
+                    references = normalizeReferences(references);
 
                     if (Object.keys(references).length) {
 

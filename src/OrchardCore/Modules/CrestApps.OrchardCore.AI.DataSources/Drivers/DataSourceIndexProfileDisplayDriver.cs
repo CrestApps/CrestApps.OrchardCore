@@ -2,8 +2,8 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
-using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
 
 /// <summary>
 /// Display driver for DataSource knowledge base index profiles.
-    /// Handles embedding deployment selection and default field configuration.
+/// Handles embedding deployment selection and default field configuration.
 /// </summary>
 public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexProfile>
 {

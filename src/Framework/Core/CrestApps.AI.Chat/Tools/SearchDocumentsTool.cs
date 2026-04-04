@@ -56,7 +56,7 @@ public sealed class SearchDocumentsTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-            var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
+        var logger = arguments.Services.GetRequiredService<ILogger<SearchDocumentsTool>>();
 
         if (!arguments.TryGetFirstString("query", out var query))
         {

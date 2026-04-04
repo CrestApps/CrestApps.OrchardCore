@@ -1,8 +1,6 @@
 using CrestApps.AI;
-using CrestApps.AI.Completions;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
 using CrestApps.AI.Tooling;
 using CrestApps.Templates.Models;
 using CrestApps.Templates.Services;

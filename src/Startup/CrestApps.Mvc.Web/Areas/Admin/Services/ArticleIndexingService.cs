@@ -1,8 +1,8 @@
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
-using CrestApps.Support;
 using CrestApps.Services;
+using CrestApps.Support;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.Services;
 

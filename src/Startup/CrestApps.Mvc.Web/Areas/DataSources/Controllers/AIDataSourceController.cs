@@ -1,6 +1,8 @@
 using CrestApps.AI.DataSources;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;
+using CrestApps.Mvc.Web.Areas.DataSources.Services;
+using CrestApps.Services;
 using CrestApps.Mvc.Web.Areas.DataSources.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,20 +14,26 @@ namespace CrestApps.Mvc.Web.Areas.DataSources.Controllers;
 [Authorize(Policy = "Admin")]
 public sealed class AIDataSourceController : Controller
 {
-    private readonly IAIDataSourceStore _store;
+    private readonly ICatalogManager<AIDataSource> _manager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
+    private readonly IMvcAIDataSourceIndexingQueue _indexingQueue;
+    private readonly TimeProvider _timeProvider;
 
     public AIDataSourceController(
-        IAIDataSourceStore store,
-        ISearchIndexProfileStore indexProfileStore)
+        ICatalogManager<AIDataSource> manager,
+        ISearchIndexProfileStore indexProfileStore,
+        IMvcAIDataSourceIndexingQueue indexingQueue,
+        TimeProvider timeProvider)
     {
-        _store = store;
+        _manager = manager;
         _indexProfileStore = indexProfileStore;
+        _indexingQueue = indexingQueue;
+        _timeProvider = timeProvider;
     }
 
     public async Task<IActionResult> Index()
     {
-        var dataSources = await _store.GetAllAsync();
+        var dataSources = await _manager.GetAllAsync();
 
         return View(dataSources);
     }
@@ -51,22 +59,20 @@ public sealed class AIDataSourceController : Controller
             return View(model);
         }
 
-        var dataSource = new AIDataSource
-        {
-            CreatedUtc = DateTime.UtcNow,
-        };
+        var dataSource = await _manager.NewAsync();
+        dataSource.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         model.ApplyTo(dataSource);
 
-        await _store.CreateAsync(dataSource);
-        await _store.SaveChangesAsync();
+        await _manager.CreateAsync(dataSource);
+        TempData["SuccessMessage"] = "Data source created successfully. Initial synchronization has been queued.";
 
         return RedirectToAction(nameof(Index));
     }
 
     public async Task<IActionResult> Edit(string id)
     {
-        var dataSource = await _store.FindByIdAsync(id);
+        var dataSource = await _manager.FindByIdAsync(id);
 
         if (dataSource == null)
         {
@@ -83,7 +89,7 @@ public sealed class AIDataSourceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(AIDataSourceViewModel model)
     {
-        var dataSource = await _store.FindByIdAsync(model.ItemId);
+        var dataSource = await _manager.FindByIdAsync(model.ItemId);
 
         if (dataSource == null)
         {
@@ -101,8 +107,25 @@ public sealed class AIDataSourceController : Controller
 
         model.ApplyTo(dataSource);
 
-        await _store.UpdateAsync(dataSource);
-        await _store.SaveChangesAsync();
+        await _manager.UpdateAsync(dataSource);
+        TempData["SuccessMessage"] = "Data source updated successfully. Synchronization has been queued.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Sync(string id)
+    {
+        var dataSource = await _manager.FindByIdAsync(id);
+
+        if (dataSource == null)
+        {
+            return NotFound();
+        }
+
+        await _indexingQueue.QueueSyncDataSourceAsync(dataSource, HttpContext.RequestAborted);
+        TempData["SuccessMessage"] = "Data source synchronization has been queued.";
 
         return RedirectToAction(nameof(Index));
     }
@@ -111,12 +134,12 @@ public sealed class AIDataSourceController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string id)
     {
-        var dataSource = await _store.FindByIdAsync(id);
+        var dataSource = await _manager.FindByIdAsync(id);
 
         if (dataSource != null)
         {
-            await _store.DeleteAsync(dataSource);
-            await _store.SaveChangesAsync();
+            await _manager.DeleteAsync(dataSource);
+            TempData["SuccessMessage"] = "Data source deleted successfully. Knowledge-base cleanup has been queued.";
         }
 
         return RedirectToAction(nameof(Index));

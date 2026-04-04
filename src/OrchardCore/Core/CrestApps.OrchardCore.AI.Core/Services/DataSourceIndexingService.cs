@@ -4,11 +4,9 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Infrastructure;
 using CrestApps.Infrastructure.Indexing.DataSources;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 

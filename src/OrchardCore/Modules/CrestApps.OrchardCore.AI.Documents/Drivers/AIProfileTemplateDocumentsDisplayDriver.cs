@@ -1,6 +1,6 @@
 using CrestApps.AI;
-using CrestApps.AI.Clients;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;

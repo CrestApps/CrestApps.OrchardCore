@@ -1,6 +1,5 @@
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
 using CrestApps.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;

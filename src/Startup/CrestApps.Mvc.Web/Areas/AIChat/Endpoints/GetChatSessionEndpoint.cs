@@ -45,6 +45,7 @@ internal static class GetChatSessionEndpoint
                 role = message.Role.Value,
                 content = message.Content,
                 isGeneratedPrompt = message.IsGeneratedPrompt,
+                references = message.References,
             }),
         });
     }

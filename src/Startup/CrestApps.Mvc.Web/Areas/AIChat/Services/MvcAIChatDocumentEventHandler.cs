@@ -1,5 +1,4 @@
 using CrestApps.AI;
-using CrestApps.Mvc.Web.Areas.Indexing.Services;
 
 namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 

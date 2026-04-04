@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore;
 using CrestApps.AI.Memory;
+using CrestApps.OrchardCore;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(

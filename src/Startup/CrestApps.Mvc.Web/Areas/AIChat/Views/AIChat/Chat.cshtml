@@ -5,7 +5,13 @@
     var prompts = ViewData["Prompts"] as IReadOnlyList<CrestApps.AI.Models.AIChatSessionPrompt>;
     ViewData["Title"] = "Chat - " + (Model.DisplayText ?? Model.Name);
     var sessionId = session?.SessionId ?? "";
-    var messages = prompts?.Where(p => !p.IsGeneratedPrompt).Select(m => new { role = m.Role.Value, content = m.Content, id = m.ItemId }) ?? [];
+    var messages = prompts?.Where(p => !p.IsGeneratedPrompt).Select(m => new
+    {
+        role = m.Role.Value,
+        content = m.Content,
+        id = m.ItemId,
+        references = m.References,
+    }) ?? [];
     var sessionDocumentsMetadata = Model.As<CrestApps.AI.Models.AIProfileSessionDocumentsMetadata>();
     var allowSessionDocuments = sessionDocumentsMetadata?.AllowSessionDocuments ?? false;
     var existingDocuments = session?.Documents ?? [];

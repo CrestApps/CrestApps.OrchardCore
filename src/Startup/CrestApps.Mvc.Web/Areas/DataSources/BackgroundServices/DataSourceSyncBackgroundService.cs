@@ -1,8 +1,5 @@
-using CrestApps.AI.Clients;
 using CrestApps.AI.DataSources;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing;
-using ISession = YesSql.ISession;
+using CrestApps.AI.Services;
 
 namespace CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
 
@@ -57,12 +54,12 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
     /// </summary>
     private async Task SyncDataSourcesAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
-        var session = services.GetRequiredService<ISession>();
         var dataSourceStore = services.GetService<IAIDataSourceStore>();
+        var indexingService = services.GetService<IAIDataSourceIndexingService>();
 
-        if (dataSourceStore == null)
+        if (dataSourceStore == null || indexingService == null)
         {
-            _logger.LogDebug("No AI data source store is registered. Skipping sync.");
+            _logger.LogDebug("Data source synchronization is not fully configured. Skipping sync.");
 
             return;
         }
@@ -75,60 +72,11 @@ public sealed class DataSourceSyncBackgroundService : BackgroundService
             return;
         }
 
-        var indexProfileStore = services.GetService<ISearchIndexProfileStore>();
-
-        if (indexProfileStore == null)
-        {
-            _logger.LogDebug("No search index profile store is registered. Skipping sync.");
-
-            return;
-        }
-
-        var clientFactory = services.GetService<IAIClientFactory>();
-
-        if (clientFactory == null)
-        {
-            _logger.LogDebug("No AI client factory is registered. Skipping sync.");
-
-            return;
-        }
-
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Starting data source sync for {Count} data source(s).", dataSourceList.Count);
         }
 
-        foreach (var dataSource in dataSourceList)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-
-            try
-            {
-                // The actual sync logic requires indexing handlers, which are
-                // registered at the framework level via AddElasticsearchServices
-                // or AddAzureAISearchServices. If available, the service
-                // resolves them automatically when data sources are processed.
-
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Processed data source '{DisplayText}' (ID: {ItemId}).",
-                        dataSource.DisplayText,
-                        dataSource.ItemId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to sync data source '{DisplayText}' (ID: {ItemId}).",
-                    dataSource.DisplayText,
-                    dataSource.ItemId);
-            }
-        }
-
-        await session.SaveChangesAsync(cancellationToken);
+        await indexingService.SyncAllAsync(cancellationToken);
     }
 }

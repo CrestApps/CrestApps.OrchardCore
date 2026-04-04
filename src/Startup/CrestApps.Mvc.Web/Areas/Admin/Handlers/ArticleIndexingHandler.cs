@@ -2,19 +2,23 @@ using CrestApps.Handlers;
 using CrestApps.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.Services;
+using CrestApps.Mvc.Web.Areas.DataSources.Services;
 
 namespace CrestApps.Mvc.Web.Areas.Admin.Handlers;
 
 public sealed class ArticleIndexingHandler : CatalogEntryHandlerBase<Article>
 {
     private readonly ArticleIndexingService _indexingService;
+    private readonly IMvcAIDataSourceIndexingQueue _dataSourceIndexingQueue;
     private readonly ILogger<ArticleIndexingHandler> _logger;
 
     public ArticleIndexingHandler(
         ArticleIndexingService indexingService,
+        IMvcAIDataSourceIndexingQueue dataSourceIndexingQueue,
         ILogger<ArticleIndexingHandler> logger)
     {
         _indexingService = indexingService;
+        _dataSourceIndexingQueue = dataSourceIndexingQueue;
         _logger = logger;
     }
 
@@ -23,6 +27,7 @@ public sealed class ArticleIndexingHandler : CatalogEntryHandlerBase<Article>
         try
         {
             await _indexingService.IndexAsync(context.Model);
+            await _dataSourceIndexingQueue.QueueSyncSourceDocumentsAsync([context.Model.ItemId]);
         }
         catch (Exception ex)
         {
@@ -35,6 +40,7 @@ public sealed class ArticleIndexingHandler : CatalogEntryHandlerBase<Article>
         try
         {
             await _indexingService.IndexAsync(context.Model);
+            await _dataSourceIndexingQueue.QueueSyncSourceDocumentsAsync([context.Model.ItemId]);
         }
         catch (Exception ex)
         {
@@ -47,6 +53,7 @@ public sealed class ArticleIndexingHandler : CatalogEntryHandlerBase<Article>
         try
         {
             await _indexingService.DeleteAsync(context.Model.ItemId);
+            await _dataSourceIndexingQueue.QueueRemoveSourceDocumentsAsync([context.Model.ItemId]);
         }
         catch (Exception ex)
         {

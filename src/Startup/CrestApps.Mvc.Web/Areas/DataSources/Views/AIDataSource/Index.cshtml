@@ -10,6 +10,14 @@
     </a>
 </div>
 
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @message
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 @if (!Model.Any())
 {
     <div class="alert alert-info">
@@ -39,6 +47,13 @@ else
                         <td><code>@(item.AIKnowledgeBaseIndexProfileName ?? "—")</code></td>
                         <td>@(item.ContentFieldName ?? "—")</td>
                         <td>
+                            <form asp-action="Sync" asp-route-id="@item.ItemId"
+                                  method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-arrow-repeat"></i> Sync
+                                </button>
+                            </form>
                             <a asp-action="Edit" asp-route-id="@item.ItemId"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Edit

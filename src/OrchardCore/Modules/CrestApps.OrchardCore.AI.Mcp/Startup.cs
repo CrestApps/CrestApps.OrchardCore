@@ -1,5 +1,4 @@
 using CrestApps.AI;
-using CrestApps.AI.Completions;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Mcp.Services;

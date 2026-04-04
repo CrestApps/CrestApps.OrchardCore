@@ -4,10 +4,12 @@ using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Hubs;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
+using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using YesSql;
@@ -55,6 +57,7 @@ public sealed class ChatInteractionHubTests
             new Mock<IOrchestratorResolver>(MockBehavior.Strict).Object,
             [new PromptTemplateChatInteractionSettingsHandler()],
             TimeProvider.System,
+            CreateCitationCollector(),
             sessionMock.Object,
             NullLogger<ChatInteractionHub>.Instance)
         {
@@ -141,6 +144,7 @@ public sealed class ChatInteractionHubTests
             new Mock<IOrchestratorResolver>(MockBehavior.Strict).Object,
             [new DataSourceChatInteractionSettingsHandler(serviceProvider, NullLogger<DataSourceChatInteractionSettingsHandler>.Instance)],
             TimeProvider.System,
+            CreateCitationCollector(),
             sessionMock.Object,
             NullLogger<ChatInteractionHub>.Instance)
         {
@@ -174,4 +178,6 @@ public sealed class ChatInteractionHubTests
         callerMock.Verify(client => client.SettingsSaved(interaction.ItemId, interaction.Title), Times.Once);
     }
 
+    private static MvcCitationReferenceCollector CreateCitationCollector()
+        => new(new CompositeAIReferenceLinkResolver(new ServiceCollection().BuildServiceProvider()));
 }

@@ -566,7 +566,108 @@
             });
 
             function renderMarkdown(text) {
-                return DOMPurify.sanitize(marked.parse(text || ''));
+                return DOMPurify.sanitize(marked.parse(text || ''), { ADD_ATTR: ['target'] });
+            }
+
+            function normalizeReference(reference) {
+                if (!reference || typeof reference !== 'object') {
+                    return null;
+                }
+
+                var normalized = Object.assign({}, reference);
+                normalized.index = normalized.index ?? normalized.Index ?? 0;
+                normalized.text = normalized.text ?? normalized.Text ?? null;
+                normalized.link = normalized.link ?? normalized.Link ?? null;
+
+                return normalized;
+            }
+
+            function normalizeReferences(references) {
+                if (!references || typeof references !== 'object') {
+                    return {};
+                }
+
+                var normalized = {};
+
+                Object.entries(references).forEach(function (entry) {
+                    normalized[entry[0]] = normalizeReference(entry[1]) || {};
+                });
+
+                return normalized;
+            }
+
+            function mergeReferences(target, source) {
+                if (!source || typeof source !== 'object') {
+                    return target;
+                }
+
+                return Object.assign(target || {}, source);
+            }
+
+            function formatMessageContent(content, references) {
+                var processedContent = (content || '').trim();
+                var messageReferences = normalizeReferences(references);
+
+                if (!processedContent || !Object.keys(messageReferences).length) {
+                    return processedContent;
+                }
+
+                var citedRefs = Object.entries(messageReferences).filter(function (entry) {
+                    return processedContent.includes(entry[0]);
+                });
+
+                if (!citedRefs.length) {
+                    return processedContent;
+                }
+
+                citedRefs.sort(function (a, b) {
+                    return (a[1].index || 0) - (b[1].index || 0);
+                });
+
+                var displayIndex = 1;
+                citedRefs.forEach(function (entry) {
+                    var key = entry[0];
+                    var value = entry[1];
+                    var placeholder = '__CITE_' + (value.index || displayIndex) + '__';
+                    processedContent = processedContent.replaceAll(key, placeholder);
+                    value._displayIndex = displayIndex++;
+                    value._placeholder = placeholder;
+                });
+
+                citedRefs.forEach(function (entry) {
+                    var value = entry[1];
+                    processedContent = processedContent.replaceAll(value._placeholder, '<sup><strong>' + value._displayIndex + '</strong></sup>');
+                });
+
+                processedContent = processedContent.replaceAll('</strong></sup><sup>', '</strong></sup><sup>,</sup><sup>');
+                processedContent += '<br><br>';
+
+                citedRefs.forEach(function (entry) {
+                    var key = entry[0];
+                    var value = entry[1];
+                    var label = value.text || key;
+
+                    processedContent += value.link
+                        ? '**' + value._displayIndex + '**. [' + label + '](' + value.link + ')<br>'
+                        : '**' + value._displayIndex + '**. ' + label + '<br>';
+                });
+
+                return processedContent;
+            }
+
+            function createChatMessage(role, content, isStreaming, isSystem, references) {
+                var rawContent = content || '';
+                var messageReferences = normalizeReferences(references);
+
+                return {
+                    role: role,
+                    rawContent: rawContent,
+                    content: rawContent,
+                    references: messageReferences,
+                    htmlContent: renderMarkdown(formatMessageContent(rawContent, messageReferences)),
+                    isStreaming: isStreaming || false,
+                    isSystem: isSystem || false
+                };
             }
 
             function formatFileSize(bytes) {
@@ -1055,43 +1156,26 @@
 
             // --- Vue app for messages ---
             var app = Vue.createApp({
-                data: function () {
-                    return {
-                        messages: existingMessages.map(function (m) {
-                            return {
-                                role: m.role,
-                                content: m.content,
-                                htmlContent: renderMarkdown(m.content),
-                                isStreaming: false,
-                                isSystem: false
-                            };
-                        })
-                    };
-                },
                 methods: {
-                    addMessage: function (role, content, isStreaming, isSystem) {
-                        this.messages.push({
-                            role: role,
-                            content: content,
-                            htmlContent: renderMarkdown(content),
-                            isStreaming: isStreaming || false,
-                            isSystem: isSystem || false
-                        });
+                    addMessage: function (role, content, isStreaming, isSystem, references) {
+                        this.messages.push(createChatMessage(role, content, isStreaming, isSystem, references));
                         var self = this;
                         this.$nextTick(function () { self.scrollToBottom(); });
                     },
-                    appendToLast: function (token) {
+                    appendToLast: function (token, references) {
                         var last = this.messages[this.messages.length - 1];
                         if (last && last.role === 'assistant') {
-                            last.content += token;
-                            last.htmlContent = renderMarkdown(last.content);
+                            last.rawContent = (last.rawContent || '') + (token || '');
+                            last.content = last.rawContent;
+                            last.references = mergeReferences(last.references, references);
+                            last.htmlContent = renderMarkdown(formatMessageContent(last.rawContent, last.references));
                         }
                     },
                     finishStreaming: function () {
                         var last = this.messages[this.messages.length - 1];
                         if (last) {
                             last.isStreaming = false;
-                            last.htmlContent = renderMarkdown(last.content);
+                            last.htmlContent = renderMarkdown(formatMessageContent(last.rawContent, last.references));
                         }
                         var self = this;
                         this.$nextTick(function () { self.scrollToBottom(); });
@@ -1106,6 +1190,13 @@
                     copyResponse: function (content) {
                         navigator.clipboard.writeText(content);
                     }
+                },
+                data: function () {
+                    return {
+                        messages: existingMessages.map(function (m) {
+                            return createChatMessage(m.role, m.content, false, false, m.references || m.References);
+                        })
+                    };
                 },
                 template:
                     '<div class="ai-chat-messages">' +
@@ -1211,8 +1302,8 @@
                     var stream = connection.stream('SendMessage', itemId, prompt);
                     stream.subscribe({
                         next: function (chunk) {
-                            if (chunk && chunk.content) {
-                                vm.appendToLast(chunk.content);
+                            if (chunk && (chunk.content || (chunk.references && Object.keys(chunk.references).length))) {
+                                vm.appendToLast(chunk.content || '', chunk.references);
                             }
                         },
                         complete: function () {

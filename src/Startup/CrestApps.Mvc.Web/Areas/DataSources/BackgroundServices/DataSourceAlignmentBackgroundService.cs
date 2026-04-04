@@ -1,6 +1,5 @@
 using CrestApps.AI.DataSources;
-using CrestApps.AI.Models;
-using ISession = YesSql.ISession;
+using CrestApps.AI.Services;
 
 namespace CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
 
@@ -83,10 +82,11 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
     private async Task AlignDataSourcesAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var dataSourceStore = services.GetService<IAIDataSourceStore>();
+        var indexingService = services.GetService<IAIDataSourceIndexingService>();
 
-        if (dataSourceStore == null)
+        if (dataSourceStore == null || indexingService == null)
         {
-            _logger.LogDebug("No AI data source store is registered. Skipping alignment.");
+            _logger.LogDebug("Data source alignment is not fully configured. Skipping alignment.");
 
             return;
         }
@@ -104,35 +104,7 @@ public sealed class DataSourceAlignmentBackgroundService : BackgroundService
             _logger.LogInformation("Starting daily data source alignment for {Count} data source(s).", dataSourceList.Count);
         }
 
-        var session = services.GetRequiredService<ISession>();
-
-        foreach (var dataSource in dataSourceList)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-
-            try
-            {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(
-                        "Aligned data source '{DisplayText}' (ID: {ItemId}).",
-                        dataSource.DisplayText,
-                        dataSource.ItemId);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex,
-                    "Failed to align data source '{DisplayText}' (ID: {ItemId}).",
-                    dataSource.DisplayText,
-                    dataSource.ItemId);
-            }
-        }
-
-        await session.SaveChangesAsync(cancellationToken);
+        await indexingService.SyncAllAsync(cancellationToken);
 
         _logger.LogInformation("Daily data source alignment completed.");
     }

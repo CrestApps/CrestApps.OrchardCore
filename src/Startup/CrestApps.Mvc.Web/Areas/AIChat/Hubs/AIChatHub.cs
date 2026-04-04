@@ -1,4 +1,7 @@
 using CrestApps.AI.Chat.Hubs;
+using CrestApps.AI.Models;
+using CrestApps.AI.ResponseHandling;
+using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.Mvc.Web.Areas.AIChat.Hubs;
@@ -16,5 +19,23 @@ public sealed class AIChatHub : AIChatHubCore<IAIChatHubClient>
         ILogger<AIChatHub> logger)
         : base(services, timeProvider, logger)
     {
+    }
+
+    protected override void CollectStreamingReferences(
+        IServiceProvider services,
+        ChatResponseHandlerContext handlerContext,
+        Dictionary<string, AICompletionReference> references,
+        HashSet<string> contentItemIds)
+    {
+        var citationCollector = services.GetRequiredService<MvcCitationReferenceCollector>();
+
+        if (handlerContext.Properties.TryGetValue("OrchestrationContext", out var ctxObj) &&
+            ctxObj is OrchestrationContext orchestrationContext)
+        {
+            citationCollector.CollectPreemptiveReferences(orchestrationContext, references, contentItemIds);
+            handlerContext.Properties.Remove("OrchestrationContext");
+        }
+
+        citationCollector.CollectToolReferences(references, contentItemIds);
     }
 }

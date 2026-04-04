@@ -23,7 +23,6 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
-using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;

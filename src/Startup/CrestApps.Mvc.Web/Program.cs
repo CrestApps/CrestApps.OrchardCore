@@ -12,6 +12,8 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
+using CrestApps.AI.Profiles;
+using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
 using CrestApps.Azure.AISearch;
@@ -25,6 +27,7 @@ using CrestApps.Mvc.Web.Areas.AIChat.Hubs;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
 using CrestApps.Mvc.Web.Areas.DataSources.BackgroundServices;
+using CrestApps.Mvc.Web.Areas.DataSources.Services;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Mvc.Web.Tools;
 using CrestApps.Services;
@@ -110,6 +113,7 @@ builder.Services.AddMvcAppDataSettings(builder.Configuration);
 // =============================================================================
 builder.Services.AddLocalization();
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddCrestAppsSignalR();
 
 // =============================================================================
@@ -228,6 +232,10 @@ builder.Services
 
 // Add Articles support to show document support example.
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IIndexProfileHandler, ArticleIndexProfileHandler>());
+builder.Services.AddKeyedScoped<IAIReferenceLinkResolver, ArticleAIReferenceLinkResolver>(IndexProfileTypes.Articles);
+builder.Services.AddScoped<MvcCitationReferenceCollector>();
+builder.Services.AddScoped<CompositeAIReferenceLinkResolver>();
+builder.Services.AddScoped<IAIDataSourceIndexingService, DefaultAIDataSourceIndexingService>();
 builder.Services.Configure<IndexProfileSourceOptions>(options =>
     options.AddOrUpdate(CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName, "Elasticsearch", IndexProfileTypes.Articles, descriptor =>
     {
@@ -305,6 +313,9 @@ builder.Services.AddHostedService<AIChatSessionCloseBackgroundService>();
 builder.Services.AddSingleton<MvcAIChatDocumentIndexingQueue>();
 builder.Services.AddSingleton<IMvcAIChatDocumentIndexingQueue>(sp => sp.GetRequiredService<MvcAIChatDocumentIndexingQueue>());
 builder.Services.AddHostedService<AIChatDocumentIndexingBackgroundService>();
+builder.Services.AddSingleton<MvcAIDataSourceIndexingQueue>();
+builder.Services.AddSingleton<IMvcAIDataSourceIndexingQueue>(sp => sp.GetRequiredService<MvcAIDataSourceIndexingQueue>());
+builder.Services.AddHostedService<AIDataSourceIndexingBackgroundService>();
 builder.Services.AddHostedService<DataSourceSyncBackgroundService>();
 builder.Services.AddHostedService<DataSourceAlignmentBackgroundService>();
 

@@ -1,4 +1,3 @@
-using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;

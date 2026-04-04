@@ -23,7 +23,6 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
     internal static List<(string Kind, string Value)> BuildMustQueryDebug(string dataSourceId, string filter)
     {
         var list = new List<(string Kind, string Value)>
-
         {
             ("term", dataSourceId),
         };
@@ -34,7 +33,6 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
 
             var filterBase64 = Convert.ToBase64String(filterBytes);
             list.Add(("wrapper", filterBase64));
-
         }
 
         return list;
@@ -44,7 +42,6 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         ElasticsearchClient elasticClient,
         ILogger<ElasticsearchDataSourceContentManager> logger)
     {
-
         _elasticClient = elasticClient;
         _logger = logger;
     }
@@ -57,13 +54,11 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         string filter = null,
         CancellationToken cancellationToken = default)
     {
-
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentNullException.ThrowIfNull(embedding);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceId);
 
         if (embedding.Length == 0)
-
         {
             return [];
         }
@@ -72,19 +67,18 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         {
             var mustQueries = new List<Action<QueryDescriptor<JsonObject>>>();
 
-            foreach (var item in BuildMustQueryDebug(dataSourceId, filter))
+            foreach (var (kind, value) in BuildMustQueryDebug(dataSourceId, filter))
             {
-                if (item.Kind == "term")
+                if (kind == "term")
                 {
                     mustQueries.Add(m => m.Term(t => t
                         .Field(DataSourceConstants.ColumnNames.DataSourceId)
-                        .Value(item.Value)
+                        .Value(value)
                     ));
                 }
-                else if (item.Kind == "wrapper")
+                else if (kind == "wrapper")
                 {
-
-                    mustQueries.Add(m => m.Wrapper(w => w.Query(item.Value)));
+                    mustQueries.Add(m => m.Wrapper(w => w.Query(value)));
                 }
             }
 
@@ -95,19 +89,16 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                 .QueryVector(embedding)
                 .K(topN)
                 .NumCandidates(topN * 10)
-                .Filter(f => f
-                .Bool(b => b
-                .Must(mustQueries.ToArray())
-            )
-            )
-
-            )
-                .Size(topN)
+                    .Filter(f => f
+                        .Bool(b => b
+                        .Must(mustQueries.ToArray())
+                    )
+                )
+            ).Size(topN)
             , cancellationToken);
 
             if (!response.IsValidResponse)
             {
-
                 _logger.LogWarning("Elasticsearch data source vector search failed: {Error}", response.DebugInformation);
 
                 return [];
@@ -119,40 +110,37 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
             var hits = response.Hits.GetEnumerator();
 
             while (documents.MoveNext() && hits.MoveNext())
-
             {
                 var hit = hits.Current;
                 var document = documents.Current;
 
                 if (document == null)
-
                 {
                     continue;
                 }
 
                 var referenceId = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ReferenceId, out var refNode)
-                ? refNode?.GetValue<string>()
-                : null;
+                    ? refNode?.GetValue<string>()
+                    : null;
 
                 var title = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.Title, out var titleNode)
-                ? titleNode?.GetValue<string>()
-                : null;
+                    ? titleNode?.GetValue<string>()
+                    : null;
 
                 var content = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.Content, out var contentNode)
-                ? contentNode?.GetValue<string>()
-                : null;
+                    ? contentNode?.GetValue<string>()
+                    : null;
 
                 var chunkIndex = 0;
 
                 if (document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ChunkIndex, out var chunkIndexNode) && chunkIndexNode != null)
-
                 {
                     chunkIndex = chunkIndexNode.GetValue<int>();
                 }
 
                 var referenceType = document.TryGetPropertyValue(DataSourceConstants.ColumnNames.ReferenceType, out var refTypeNode)
-                ? refTypeNode?.GetValue<string>()
-                : null;
+                    ? refTypeNode?.GetValue<string>()
+                    : null;
 
                 if (!string.IsNullOrEmpty(content))
                 {
@@ -164,7 +152,6 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
                         ChunkIndex = chunkIndex,
                         ReferenceType = referenceType,
                         Score = (float)(hit.Score ?? 0.0),
-
                     });
                 }
             }
@@ -187,7 +174,6 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
         IIndexProfileInfo indexProfile,
         string dataSourceId,
         CancellationToken cancellationToken = default)
-
     {
         ArgumentNullException.ThrowIfNull(indexProfile);
         ArgumentException.ThrowIfNullOrWhiteSpace(dataSourceId);
@@ -197,15 +183,13 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
             var response = await _elasticClient.DeleteByQueryAsync<JsonObject>(indexProfile.IndexFullName, d => d
                 .Query(q => q
                 .Term(t => t
-                .Field(DataSourceConstants.ColumnNames.DataSourceId)
-                .Value(dataSourceId)
-
-            )
+                    .Field(DataSourceConstants.ColumnNames.DataSourceId)
+                    .Value(dataSourceId)
+                )
             ),
             cancellationToken);
 
             if (!response.IsValidResponse)
-
             {
                 _logger.LogWarning("Elasticsearch delete by data source ID failed for index '{IndexName}': {Error}",
 
@@ -217,13 +201,11 @@ internal sealed class ElasticsearchDataSourceContentManager : IDataSourceContent
             return response.Deleted ?? 0;
         }
         catch (Exception ex)
-
         {
             _logger.LogError(ex, "Error deleting documents by data source ID '{DataSourceId}' from Elasticsearch index '{IndexName}'.",
             dataSourceId, indexProfile.IndexFullName);
 
             return 0;
-
         }
     }
 }

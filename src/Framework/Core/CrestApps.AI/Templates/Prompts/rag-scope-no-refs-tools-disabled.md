@@ -9,4 +9,5 @@ Category: RAG
 No relevant content was found in the configured knowledge sources.
 CRITICAL: You MUST only answer based on the provided knowledge source content.
 DO NOT use your general knowledge or training data under any circumstances.
+DO NOT offer to answer from general knowledge or training data, even if the user requests it.
 You MUST inform the user that the answer is not available in the current knowledge sources.

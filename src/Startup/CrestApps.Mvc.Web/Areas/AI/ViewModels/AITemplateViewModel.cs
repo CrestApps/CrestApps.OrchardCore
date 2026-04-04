@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.AI;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
@@ -9,7 +10,6 @@ using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Text.Json;
 
 namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 

@@ -5,7 +5,6 @@ using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Models;
 using CrestApps.Mvc.Web.Areas.Indexing.Controllers;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
-using CrestApps.Mvc.Web.Models;
 using CrestApps.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

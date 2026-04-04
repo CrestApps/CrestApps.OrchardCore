@@ -4,7 +4,6 @@ using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
 using CrestApps.Infrastructure.Indexing.Models;
 using Elastic.Clients.Elasticsearch;
-using Elastic.Clients.Elasticsearch.QueryDsl;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 

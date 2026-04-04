@@ -90,6 +90,8 @@ Data sources integrate with the orchestration pipeline through three shared fram
 2. `DataSourceOrchestrationHandler` injects data-source availability instructions and keeps the search tool in scope
 3. `DataSourcePreemptiveRagHandler` performs preemptive retrieval and injects matching chunks into the system message
 
+The same shared framework layer now also exposes `IAIDataSourceIndexingService` for keeping knowledge-base indexes synchronized with their source indexes. MVC uses that service to rebuild data sources on demand, react to source-content changes, and run periodic background alignment.
+
 ```text
 User Query
     │
@@ -117,6 +119,7 @@ Each data source backend registers these services, keyed by its provider name:
 |---------|---------|
 | `IDataSourceContentManager` | Manages content in data source indices |
 | `IDataSourceDocumentReader` | Reads documents from data source indices |
+| `IAIDataSourceIndexingService` | Rebuilds and repairs knowledge-base indexes from source indexes |
 | `IODataFilterTranslator` | Translates OData filters to backend-native queries |
 | `ISearchIndexManager` | Creates, deletes, and manages search indices |
 | `ISearchDocumentManager` | Indexes and removes documents in search indices |
@@ -214,6 +217,23 @@ public interface IDataSourceContentManager
 ```
 
 The optional `filter` parameter accepts an OData expression that is translated to the backend-native query language via `IODataFilterTranslator`.
+
+### `IAIDataSourceIndexingService`
+
+Coordinates full and partial synchronization between a source index and its AI knowledge-base index.
+
+```csharp
+public interface IAIDataSourceIndexingService
+{
+    Task SyncAllAsync(CancellationToken cancellationToken = default);
+    Task SyncDataSourceAsync(AIDataSource dataSource, CancellationToken cancellationToken = default);
+    Task SyncSourceDocumentsAsync(IEnumerable<string> documentIds, CancellationToken cancellationToken = default);
+    Task RemoveSourceDocumentsAsync(IEnumerable<string> documentIds, CancellationToken cancellationToken = default);
+    Task DeleteDataSourceDocumentsAsync(AIDataSource dataSource, CancellationToken cancellationToken = default);
+}
+```
+
+`SyncDataSourceAsync()` performs a full rebuild for a data source by deleting that data source's existing chunk documents and re-reading the mapped source index through `IDataSourceDocumentReader`. `SyncSourceDocumentsAsync()` and `RemoveSourceDocumentsAsync()` are intended for source-level handlers so article or catalog updates can keep the knowledge-base index aligned without waiting for the next scheduled full sync.
 
 ### `IDataSourceDocumentReader`
 

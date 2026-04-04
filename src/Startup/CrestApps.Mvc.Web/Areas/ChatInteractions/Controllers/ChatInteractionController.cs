@@ -2,15 +2,14 @@ using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
-using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Profiles;
-using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
@@ -23,9 +22,7 @@ using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using CrestApps.Templates.Services;
 using Microsoft.AspNetCore.Authorization;
-
 using Microsoft.AspNetCore.Mvc;
-
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 
@@ -232,7 +229,7 @@ public sealed class ChatInteractionController : Controller
                 .ToList(),
             ExistingMessages = prompts
                 .Where(p => p.Role.Value is "user" or "assistant")
-                .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId })
+                .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId, references = m.References })
                 .ToArray(),
         };
 

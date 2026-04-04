@@ -55,6 +55,29 @@ window.openAIChatManager = function () {
     span.textContent = text;
     return span.innerHTML;
   }
+  function normalizeReference(reference) {
+    if (!reference || _typeof(reference) !== 'object') {
+      return null;
+    }
+    var normalized = Object.assign({}, reference);
+    normalized.index = normalized.index !== null && normalized.index !== void 0 ? normalized.index : normalized.Index !== null && normalized.Index !== void 0 ? normalized.Index : 0;
+    normalized.text = normalized.text !== null && normalized.text !== void 0 ? normalized.text : normalized.Text !== null && normalized.Text !== void 0 ? normalized.Text : null;
+    normalized.link = normalized.link !== null && normalized.link !== void 0 ? normalized.link : normalized.Link !== null && normalized.Link !== void 0 ? normalized.Link : null;
+    return normalized;
+  }
+  function normalizeReferences(references) {
+    if (!references || _typeof(references) !== 'object') {
+      return {};
+    }
+    var normalized = {};
+    for (var _i = 0, _Object$entries = Object.entries(references); _i < _Object$entries.length; _i++) {
+      var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        key = _Object$entries$_i[0],
+        value = _Object$entries$_i[1];
+      normalized[key] = normalizeReference(value) || {};
+    }
+    return normalized;
+  }
   var renderer = new marked.Renderer();
 
   // Modify the link rendering to open in a new tab
@@ -926,6 +949,7 @@ window.openAIChatManager = function () {
           }
           if (message.content) {
             var processedContent = message.content.trim();
+            message.references = normalizeReferences(message.references);
             if (message.references && _typeof(message.references) === "object" && Object.keys(message.references).length) {
               // Only include references that were actually cited in the response.
               var citedRefs = Object.entries(message.references).filter(function (_ref) {
@@ -1195,7 +1219,7 @@ window.openAIChatManager = function () {
                   var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
                     key = _Object$entries$_i[0],
                     value = _Object$entries$_i[1];
-                  references[key] = value;
+                  references[key] = normalizeReference(value) || {};
                 }
               }
               if (chunk.content) {
@@ -1276,6 +1300,7 @@ window.openAIChatManager = function () {
           return newMessage;
         },
         processReferences: function processReferences(references, messageIndex) {
+          references = normalizeReferences(references);
           if (Object.keys(references).length) {
             var message = this.messages[messageIndex];
             var content = message.content || '';

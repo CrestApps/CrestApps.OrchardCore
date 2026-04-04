@@ -1,12 +1,11 @@
 using CrestApps.AI;
-using CrestApps.AI.Clients;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
-
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.PostSession;

@@ -1,9 +1,7 @@
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure;
 using CrestApps.AI.Services;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Infrastructure;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;
 

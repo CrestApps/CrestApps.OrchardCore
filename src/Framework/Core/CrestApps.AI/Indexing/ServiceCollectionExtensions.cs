@@ -1,6 +1,6 @@
+using CrestApps.Infrastructure.Indexing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using CrestApps.Infrastructure.Indexing;
 
 namespace CrestApps.AI.Indexing;
 

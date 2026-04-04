@@ -1,10 +1,8 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
-using Microsoft.Extensions.DependencyInjection;
 using YesSql;
 using ISession = YesSql.ISession;
 

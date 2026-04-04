@@ -1,4 +1,3 @@
-using CrestApps;
 using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Chat;
@@ -11,7 +10,6 @@ using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.Data.YesSql;
-using CrestApps.Data.YesSql.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.Indexes;
 using CrestApps.Mvc.Web.Areas.Admin.Handlers;
@@ -24,6 +22,7 @@ using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Indexes;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Services;
+using CrestApps.Mvc.Web.Areas.DataSources.Handlers;
 using CrestApps.Mvc.Web.Areas.DataSources.Indexes;
 using CrestApps.Mvc.Web.Areas.DataSources.Services;
 using CrestApps.Mvc.Web.Areas.Indexing.Indexes;
@@ -99,6 +98,7 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
             .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
             .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
+            .AddScoped<ICatalogManager<AIDataSource>, CatalogManager<AIDataSource>>()
             .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
             .AddScoped<MvcAIDocumentIndexingService>()
             .AddScoped<ISearchIndexProfileManager, SearchIndexProfileManager>()
@@ -109,6 +109,7 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<IChatInteractionPromptStore, YesSqlChatInteractionPromptStore>()
             .AddDocumentCatalog<Article, ArticleIndex>()
             .AddScoped<ICatalogManager<Article>, CatalogManager<Article>>()
+            .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceIndexingHandler>()
             .AddScoped<ICatalogEntryHandler<Article>, ArticleIndexingHandler>()
             .AddScoped<ArticleIndexingService>();
 

@@ -1,9 +1,8 @@
 using CrestApps.AI;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
-using CrestApps.Models;
 using CrestApps.AI.Services;
-using CrestApps.Services;
+using CrestApps.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;

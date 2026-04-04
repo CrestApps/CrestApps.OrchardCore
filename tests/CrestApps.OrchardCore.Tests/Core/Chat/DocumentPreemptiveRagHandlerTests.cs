@@ -1,12 +1,9 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Clients;
-using CrestApps.AI.Completions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.Models;
 using CrestApps.Templates.Models;
