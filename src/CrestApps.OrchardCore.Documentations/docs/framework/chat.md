@@ -188,6 +188,22 @@ The framework now standardizes the post-close processing pipeline, but hosts sti
 | `ExtractedData` | `Dictionary<string, ExtractedFieldState>` | Extracted conversation fields |
 | `PostSessionProcessingStatus` | `PostSessionProcessingStatus` | Status of post-session tasks |
 
+### Extracted Data Reporting Snapshots
+
+Hosts can persist queryable extracted-data snapshots by implementing `IAIChatSessionExtractedDataRecorder`.
+
+```csharp
+public interface IAIChatSessionExtractedDataRecorder
+{
+    Task RecordExtractedDataAsync(
+        AIProfile profile,
+        AIChatSession session,
+        CancellationToken cancellationToken = default);
+}
+```
+
+The shared `DataExtractionChatSessionHandler` now calls these recorders whenever extraction produces new values or naturally closes the session, so hosts can upsert reporting documents such as `AIChatSessionExtractedDataRecord` without duplicating extraction logic.
+
 ## Session Management
 
 The framework defines `IAIChatSessionManager` for session CRUD. **You must provide an implementation** since session storage is application-specific. The MVC example uses a YesSql-backed implementation:
@@ -196,6 +212,8 @@ The framework defines `IAIChatSessionManager` for session CRUD. **You must provi
 builder.Services.AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>();
 builder.Services.AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>();
 ```
+
+The MVC sample also registers an `AIChatSessionCloseBackgroundService` that runs every 5 minutes, closes inactive sessions, retries pending post-close processing, and keeps analytics / extracted-data reporting records aligned with the final session state.
 
 ## Shared document endpoints
 

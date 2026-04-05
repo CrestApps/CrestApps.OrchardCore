@@ -19,6 +19,7 @@ using CrestApps.Mvc.Web.Areas.Admin.Services;
 using CrestApps.Mvc.Web.Areas.AI.Indexes;
 using CrestApps.Mvc.Web.Areas.AI.Services;
 using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
+using CrestApps.Mvc.Web.Areas.AIChat.Handlers;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Indexes;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Services;
@@ -63,6 +64,8 @@ internal static class YesSqlServiceCollectionExtensions
             store.RegisterIndexes<AIDeploymentIndexProvider>();
             store.RegisterIndexes<AIProfileTemplateIndexProvider>();
             store.RegisterIndexes<AIChatSessionIndexProvider>();
+            store.RegisterIndexes<AIChatSessionMetricsIndexProvider>();
+            store.RegisterIndexes<AIChatSessionExtractedDataIndexProvider>();
             store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
             store.RegisterIndexes<AIDocumentIndexProvider>();
             store.RegisterIndexes<AIDocumentChunkIndexProvider>();
@@ -92,9 +95,16 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<INamedSourceCatalogManager<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
             .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
             .AddScoped<AIProfileDocumentService>()
-            .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
-            .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
-            .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>()
+             .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
+             .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
+             .AddScoped<MvcAIChatSessionEventService>()
+             .AddScoped<MvcAIChatSessionEventPostCloseObserver>()
+             .AddScoped<MvcAIChatSessionExtractedDataService>()
+             .AddScoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionEventPostCloseObserver>())
+             .AddScoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionEventPostCloseObserver>())
+             .AddScoped<IAIChatSessionExtractedDataRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionExtractedDataService>())
+             .AddScoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>()
+             .AddScoped<IAIDocumentStore, YesSqlAIDocumentStore>()
             .AddScoped<IAIDocumentChunkStore, YesSqlAIDocumentChunkStore>()
             .AddScoped<ISearchIndexProfileStore, YesSqlSearchIndexProfileStore>()
             .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
@@ -192,6 +202,41 @@ internal static class YesSqlServiceCollectionExtensions
                 .Column<string>(nameof(AIChatSessionIndex.UserId), c => c.WithLength(255))
                 .Column<int>(nameof(AIChatSessionIndex.Status))
                 .Column<DateTime>(nameof(AIChatSessionIndex.LastActivityUtc))));
+
+        await TryCreateTableAsync(() =>
+            schemaBuilder.CreateMapIndexTableAsync<AIChatSessionMetricsIndex>(t => t
+                .Column<string>(nameof(AIChatSessionMetricsIndex.SessionId), c => c.WithLength(44))
+                .Column<string>(nameof(AIChatSessionMetricsIndex.ProfileId), c => c.WithLength(26))
+                .Column<string>(nameof(AIChatSessionMetricsIndex.VisitorId), c => c.WithLength(255))
+                .Column<string>(nameof(AIChatSessionMetricsIndex.UserId), c => c.WithLength(255))
+                .Column<bool>(nameof(AIChatSessionMetricsIndex.IsAuthenticated))
+                .Column<DateTime>(nameof(AIChatSessionMetricsIndex.SessionStartedUtc))
+                .Column<DateTime?>(nameof(AIChatSessionMetricsIndex.SessionEndedUtc))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.MessageCount))
+                .Column<double>(nameof(AIChatSessionMetricsIndex.HandleTimeSeconds))
+                .Column<bool>(nameof(AIChatSessionMetricsIndex.IsResolved))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.HourOfDay))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.DayOfWeek))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.TotalInputTokens))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.TotalOutputTokens))
+                .Column<double>(nameof(AIChatSessionMetricsIndex.AverageResponseLatencyMs))
+                .Column<bool?>(nameof(AIChatSessionMetricsIndex.UserRating))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsUpCount))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsDownCount))
+                .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionScore))
+                .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionMaxScore))
+                .Column<DateTime>(nameof(AIChatSessionMetricsIndex.CreatedUtc))));
+
+        await TryCreateTableAsync(() =>
+            schemaBuilder.CreateMapIndexTableAsync<AIChatSessionExtractedDataIndex>(t => t
+                .Column<string>(nameof(AIChatSessionExtractedDataIndex.SessionId), c => c.WithLength(44))
+                .Column<string>(nameof(AIChatSessionExtractedDataIndex.ProfileId), c => c.WithLength(26))
+                .Column<DateTime>(nameof(AIChatSessionExtractedDataIndex.SessionStartedUtc))
+                .Column<DateTime?>(nameof(AIChatSessionExtractedDataIndex.SessionEndedUtc))
+                .Column<int>(nameof(AIChatSessionExtractedDataIndex.FieldCount))
+                .Column<string>(nameof(AIChatSessionExtractedDataIndex.FieldNames), c => c.WithLength(4000))
+                .Column<string>(nameof(AIChatSessionExtractedDataIndex.ValuesText), c => c.WithLength(4000))
+                .Column<DateTime>(nameof(AIChatSessionExtractedDataIndex.UpdatedUtc))));
 
         await TryCreateTableAsync(() =>
             schemaBuilder.CreateMapIndexTableAsync<AIChatSessionPromptIndex>(t => t

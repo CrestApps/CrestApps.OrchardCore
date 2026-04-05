@@ -10,11 +10,14 @@ description: Comprehensive analytics and reporting for AI chat sessions in Orcha
 | **Feature Name** | AI Chat Session Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
-Provides comprehensive analytics and reporting for AI chat sessions. Track conversation metrics, user engagement, model performance, and user satisfaction through an admin dashboard.
+Provides comprehensive analytics and reporting for AI chat sessions. Track conversation metrics, user engagement, model performance, user satisfaction, and extracted structured session data through admin reports.
 
 ## Overview
 
-The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, and user feedback. All data is displayed through an interactive admin dashboard with filterable reports.
+The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, user feedback, and extracted structured values. Orchard Core exposes two reports under **Artificial Intelligence**:
+
+- **Chat Session Analytics** — session metrics, performance, conversion, and feedback.
+- **Chat Extracted Data** — extracted field snapshots grouped into dynamic report columns per AI Profile.
 
 ### Enabling Analytics
 
@@ -22,7 +25,7 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 2. Search for **AI Chat Session Analytics** and enable it.
 3. Open each **AI Profile** where you want to collect metrics.
 4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** in the admin menu.
+5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** or **Artificial Intelligence** > **Chat Extracted Data** in the admin menu.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 
@@ -168,9 +171,37 @@ When session metrics are enabled, thumbs up (👍) and thumbs down (👎) button
 
 ---
 
+## Extracted Data Report
+
+The **Chat Extracted Data** report is designed for structured-value reporting when an AI Profile uses **Data Extraction**.
+
+### Filters
+
+| Filter | Description |
+| --- | --- |
+| **AI Profile** | Required. The report always runs for a single AI chat profile. |
+| **From** | Optional lower bound based on `SessionStartedUtc`. |
+| **To** | Optional upper bound based on `SessionStartedUtc`. |
+
+### Output
+
+Each row represents one chat session. The report always includes:
+
+- **Session date** (`SessionStartedUtc`)
+- **Session ID**
+- one column per extracted field name found in the filtered result set
+
+If an extracted field captured multiple values, the report joins them with commas in the cell output and CSV export.
+
+### Storage
+
+Extracted values continue to live on `AIChatSession.ExtractedData`, but the reporting feature also persists a queryable snapshot document per session (`AIChatSessionExtractedDataRecord`) and indexes it with `AIChatSessionExtractedDataIndex`. This lets the report query extracted values without loading every live chat session.
+
+---
+
 ## CSV Export
 
-The analytics dashboard supports exporting filtered data as a CSV file for external analysis. Click **Export as CSV** after generating a report.
+Both the analytics dashboard and the extracted-data report support exporting filtered data as CSV files for external analysis. Click **Export as CSV** after generating a report.
 
 ### Exported Fields
 

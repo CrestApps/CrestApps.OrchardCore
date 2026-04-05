@@ -15,7 +15,7 @@ namespace CrestApps.Mvc.Web.Areas.AIChat.BackgroundServices;
 /// </summary>
 public sealed class AIChatSessionCloseBackgroundService : BackgroundService
 {
-    private static readonly TimeSpan _interval = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _defaultInactivityTimeout = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan _retryDelay = TimeSpan.FromMinutes(5);
 

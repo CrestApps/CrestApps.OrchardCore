@@ -24,9 +24,19 @@ public sealed class ChatAnalyticsAdminMenu : AdminNavigationProvider
             .Action("Index", "ChatAnalytics", new RouteValueDictionary
         {
             { "area", "CrestApps.OrchardCore.AI.Chat" },
+         })
+         .LocalNav()
+         )
+            .Add(S["Chat Extracted Data"], S["Chat Extracted Data"].PrefixPosition(), extractedData => extractedData
+            .AddClass("chat-extracted-data")
+            .Id("chatExtractedData")
+            .Permission(ChatAnalyticsPermissionProvider.ViewChatAnalytics)
+            .Action("Index", "ChatExtractedData", new RouteValueDictionary
+        {
+            { "area", "CrestApps.OrchardCore.AI.Chat" },
         })
         .LocalNav()
-        ));
+         ));
 
         return ValueTask.CompletedTask;
     }

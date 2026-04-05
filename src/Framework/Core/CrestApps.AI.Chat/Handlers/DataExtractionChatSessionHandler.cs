@@ -12,15 +12,18 @@ namespace CrestApps.AI.Chat.Handlers;
 public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly DataExtractionService _dataExtractionService;
+    private readonly IEnumerable<IAIChatSessionExtractedDataRecorder> _extractedDataRecorders;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DataExtractionChatSessionHandler> _logger;
 
     public DataExtractionChatSessionHandler(
         DataExtractionService dataExtractionService,
+        IEnumerable<IAIChatSessionExtractedDataRecorder> extractedDataRecorders,
         TimeProvider timeProvider,
         ILogger<DataExtractionChatSessionHandler> logger)
     {
         _dataExtractionService = dataExtractionService;
+        _extractedDataRecorders = extractedDataRecorders;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -49,6 +52,14 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
                 _logger.LogDebug(
                     "Session '{SessionId}' closed due to natural conversation ending.",
                     context.ChatSession.SessionId);
+            }
+        }
+
+        if (changeSet.NewFields.Count > 0 || changeSet.SessionEnded)
+        {
+            foreach (var recorder in _extractedDataRecorders)
+            {
+                await recorder.RecordExtractedDataAsync(context.Profile, context.ChatSession);
             }
         }
     }

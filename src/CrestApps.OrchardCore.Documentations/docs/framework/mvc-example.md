@@ -295,11 +295,11 @@ Three hosted services for ongoing maintenance:
 
 | Service | Purpose |
 |---------|---------|
-| `AIChatSessionCloseBackgroundService` | Closes idle/expired chat sessions |
+| `AIChatSessionCloseBackgroundService` | Runs every 5 minutes to close idle/expired chat sessions and trigger post-session/reporting work |
 | `DataSourceSyncBackgroundService` | Synchronizes vector search data |
 | `DataSourceAlignmentBackgroundService` | Aligns indices after config changes |
 
-The data-source hosted services treat timer cancellation as a normal shutdown path, and the alignment service safely handles an empty data-source store instead of dereferencing a null collection during a periodic run.
+The AI chat close service now also keeps the MVC chat analytics and extracted-data reports aligned with closed sessions, while the data-source hosted services treat timer cancellation as a normal shutdown path and the alignment service safely handles an empty data-source store instead of dereferencing a null collection during a periodic run.
 
 
 

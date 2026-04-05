@@ -1,6 +1,9 @@
+using CrestApps.AI;
+using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Hubs;
 using CrestApps.AI.Models;
 using CrestApps.AI.ResponseHandling;
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 
@@ -37,5 +40,32 @@ public sealed class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }
 
         citationCollector.CollectToolReferences(references, contentItemIds);
+    }
+
+    protected override async Task OnMessageRatedAsync(
+        IServiceProvider services,
+        AIChatSession chatSession,
+        IAIChatSessionPromptStore promptStore)
+    {
+        var eventService = services.GetService<MvcAIChatSessionEventService>();
+
+        if (eventService is null)
+        {
+            return;
+        }
+
+        var allPrompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+        var ratings = allPrompts
+            .Where(prompt => prompt.UserRating.HasValue)
+            .Select(prompt => prompt.UserRating.Value)
+            .ToList();
+
+        if (ratings.Count > 0)
+        {
+            await eventService.RecordUserRatingAsync(
+                chatSession.SessionId,
+                ratings.Count(rating => rating),
+                ratings.Count(rating => !rating));
+        }
     }
 }

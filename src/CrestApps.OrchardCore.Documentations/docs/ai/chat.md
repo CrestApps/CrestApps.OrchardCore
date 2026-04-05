@@ -173,6 +173,6 @@ A **frontend chat widget** is available to add to your site's public-facing page
 | **Feature Name** | AI Chat Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
-Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
+Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, feedback analysis, and a companion extracted-data report for profiles that use structured data extraction.
 
 For complete documentation, see the [AI Chat Analytics](./chat-analytics.md) guide.
