@@ -159,7 +159,7 @@ AI Memory is only available to authenticated users.
 
 - Anonymous users do not receive memory tools
 - Anonymous users cannot search, list, or save memories
-- All memory reads and writes are filtered by the current `ClaimTypes.NameIdentifier`
+- All memory reads and writes are filtered by the current authenticated user identity. The shared framework uses `ClaimTypes.NameIdentifier` first and falls back to `ClaimTypes.Name` when a host only issues name-based cookie identities.
 
 ## Clearing Your Memory
 

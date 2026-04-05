@@ -7,7 +7,6 @@ using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
-using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -80,7 +79,7 @@ public sealed class AIProfileViewModel
     public string DataSourceId { get; set; }
     public int? DataSourceStrictness { get; set; }
     public int? DataSourceTopNDocuments { get; set; }
-    public bool DataSourceIsInScope { get; set; } = true;
+    public bool DataSourceIsInScope { get; set; }
     public string DataSourceFilter { get; set; }
 
     // A2A Connections
@@ -171,7 +170,7 @@ public sealed class AIProfileViewModel
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
-        var memorySettings = profile.GetSettings<MemorySettings>();
+        var memoryMetadata = profile.GetMemoryMetadata();
         var a2aMetadata = profile.As<AIProfileA2AMetadata>();
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
         var promptMetadata = profile.As<PromptTemplateMetadata>();
@@ -280,7 +279,7 @@ public sealed class AIProfileViewModel
                 SelectedMcpConnectionIds = t.McpConnectionIds ?? [],
             }).ToList(),
 
-            EnableUserMemory = memorySettings.EnableUserMemory,
+            EnableUserMemory = memoryMetadata.EnableUserMemory ?? false,
         };
 
         // Load Copilot metadata if present
@@ -474,7 +473,7 @@ public sealed class AIProfileViewModel
             }).ToList();
         });
 
-        profile.AlterSettings<MemorySettings>(m =>
+        profile.AlterMemoryMetadata(m =>
         {
             m.EnableUserMemory = EnableUserMemory;
         });

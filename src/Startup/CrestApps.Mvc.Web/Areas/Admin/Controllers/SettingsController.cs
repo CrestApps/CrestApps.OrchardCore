@@ -30,7 +30,7 @@ public sealed class SettingsController : Controller
     private readonly AppDataSettingsService<AIDataSourceSettings> _aiDataSourceSettingsService;
     private readonly AppDataSettingsService<McpServerOptions> _mcpServerSettingsService;
     private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
-    private readonly AppDataSettingsService<ChatInteractionMemorySettings> _chatInteractionMemorySettingsService;
+    private readonly AppDataSettingsService<MemoryMetadata> _chatInteractionMemorySettingsService;
     private readonly AppDataSettingsService<CopilotSettings> _copilotSettingsService;
     private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
@@ -46,7 +46,7 @@ public sealed class SettingsController : Controller
         AppDataSettingsService<AIDataSourceSettings> aiDataSourceSettingsService,
         AppDataSettingsService<McpServerOptions> mcpServerSettingsService,
         AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
-        AppDataSettingsService<ChatInteractionMemorySettings> chatInteractionMemorySettingsService,
+        AppDataSettingsService<MemoryMetadata> chatInteractionMemorySettingsService,
         AppDataSettingsService<CopilotSettings> copilotSettingsService,
         AppDataSettingsService<PaginationSettings> paginationSettingsService,
         IAIDeploymentManager deploymentManager,
@@ -85,17 +85,14 @@ public sealed class SettingsController : Controller
         var model = new SettingsViewModel
         {
             EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
-            OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest,
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
-            OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching,
             EnableDistributedCaching = settings.EnableDistributedCaching,
-            OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
             DefaultOrchestratorEnablePreemptiveRag = defaultOrchestratorSettings.EnablePreemptiveRag,
             MemoryIndexProfileName = memorySettings.IndexProfileName,
             MemoryTopN = memorySettings.TopN,
 
-            ChatInteractionEnableUserMemory = chatInteractionMemorySettings.EnableUserMemory,
+            ChatInteractionEnableUserMemory = chatInteractionMemorySettings.EnableUserMemory ?? true,
 
             DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
             DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
@@ -193,11 +190,8 @@ public sealed class SettingsController : Controller
         var settings = await _settingsService.GetAsync();
 
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
-        settings.OverrideMaximumIterationsPerRequest = model.OverrideMaximumIterationsPerRequest;
         settings.MaximumIterationsPerRequest = model.MaximumIterationsPerRequest;
-        settings.OverrideEnableDistributedCaching = model.OverrideEnableDistributedCaching;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
-        settings.OverrideEnableOpenTelemetry = model.OverrideEnableOpenTelemetry;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
 
         await _settingsService.SaveAsync(settings);
@@ -253,7 +247,7 @@ public sealed class SettingsController : Controller
             EnableUserMemory = model.ChatInteractionEnableUserMemory,
         });
 
-        await _chatInteractionMemorySettingsService.SaveAsync(new ChatInteractionMemorySettings
+        await _chatInteractionMemorySettingsService.SaveAsync(new MemoryMetadata
         {
             EnableUserMemory = model.ChatInteractionEnableUserMemory,
         });

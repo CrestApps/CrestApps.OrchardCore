@@ -6,7 +6,6 @@ using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
-using CrestApps.Mvc.Web.Models;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 
@@ -56,7 +55,7 @@ public sealed class AIProfileViewModelTests
         {
             settings.EnablePostSessionProcessing = true;
         });
-        profile.AlterSettings<MemorySettings>(settings =>
+        profile.AlterMemoryMetadata(settings =>
         {
             settings.EnableUserMemory = true;
         });
@@ -250,7 +249,7 @@ public sealed class AIProfileViewModelTests
             option => Assert.Equal("one", option.Value),
             option => Assert.Equal("two", option.Value));
 
-        Assert.True(profile.GetSettings<MemorySettings>().EnableUserMemory);
+        Assert.True(profile.As<MemoryMetadata>().EnableUserMemory ?? false);
 
         Assert.False(profile.TryGet<CopilotSessionMetadata>(out _));
 
@@ -260,6 +259,20 @@ public sealed class AIProfileViewModelTests
         Assert.True(profile.TryGet<CopilotSessionMetadata>(out var copilotMetadata));
         Assert.Equal("gpt-5", copilotMetadata.CopilotModel);
         Assert.True(copilotMetadata.IsAllowAll);
+    }
+
+    [Fact]
+    public void FromProfile_WhenLegacyMvcMemorySettingsExist_ShouldFallbackToLegacyValue()
+    {
+        var profile = new AIProfile();
+        profile.AlterSettings<CrestApps.Mvc.Web.Models.MemorySettings>(settings =>
+        {
+            settings.EnableUserMemory = true;
+        });
+
+        var model = AIProfileViewModel.FromProfile(profile);
+
+        Assert.True(model.EnableUserMemory);
     }
 
     [Fact]

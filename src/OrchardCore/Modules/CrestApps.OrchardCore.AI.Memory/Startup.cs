@@ -35,6 +35,7 @@ public sealed class Startup : StartupBase
             .AddScoped<AIMemoryIndexingService>()
             .AddIndexProvider<AIMemoryEntryIndexProvider>()
             .AddDataMigration<AIMemoryEntryMigrations>()
+            .AddDataMigration<MemoryMetadataMigrations>()
             .AddDisplayDriver<AIProfile, AIProfileMemoryDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMemoryDisplayDriver>()
 

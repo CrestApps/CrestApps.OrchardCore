@@ -45,22 +45,10 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         return Initialize<GeneralAISettingsViewModel>("GeneralAISettings_Edit", model =>
         {
             model.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
-            model.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
-            model.MaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest
-            ? settings.MaximumIterationsPerRequest
-            : _defaultAIOptions.MaximumIterationsPerRequest;
-            model.AppSettingsMaximumIterationsPerRequest = _defaultAIOptions.MaximumIterationsPerRequest;
+            model.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
             model.AbsoluteMaximumIterationsPerRequest = _defaultAIOptions.AbsoluteMaximumIterationsPerRequest;
-            model.OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching;
-            model.EnableDistributedCaching = settings.OverrideEnableDistributedCaching
-            ? settings.EnableDistributedCaching
-            : _defaultAIOptions.EnableDistributedCaching;
-            model.AppSettingsEnableDistributedCaching = _defaultAIOptions.EnableDistributedCaching;
-            model.OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry;
-            model.EnableOpenTelemetry = settings.OverrideEnableOpenTelemetry
-            ? settings.EnableOpenTelemetry
-            : _defaultAIOptions.EnableOpenTelemetry;
-            model.AppSettingsEnableOpenTelemetry = _defaultAIOptions.EnableOpenTelemetry;
+            model.EnableDistributedCaching = settings.EnableDistributedCaching;
+            model.EnableOpenTelemetry = settings.EnableOpenTelemetry;
         }).Location("Content:1%General;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -78,24 +66,18 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         var maximumIterationsPerRequest = Math.Min(model.MaximumIterationsPerRequest, _defaultAIOptions.AbsoluteMaximumIterationsPerRequest);
         var settingsChanged =
             settings.EnablePreemptiveMemoryRetrieval != model.EnablePreemptiveMemoryRetrieval ||
-            settings.OverrideMaximumIterationsPerRequest != model.OverrideMaximumIterationsPerRequest ||
             settings.MaximumIterationsPerRequest != maximumIterationsPerRequest ||
-            settings.OverrideEnableDistributedCaching != model.OverrideEnableDistributedCaching ||
             settings.EnableDistributedCaching != model.EnableDistributedCaching ||
-            settings.OverrideEnableOpenTelemetry != model.OverrideEnableOpenTelemetry ||
             settings.EnableOpenTelemetry != model.EnableOpenTelemetry;
 
-        if (model.OverrideMaximumIterationsPerRequest)
+        if (model.MaximumIterationsPerRequest < 1)
         {
-            if (model.MaximumIterationsPerRequest < 1)
-            {
-                context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request must be at least {0}.", 1]);
-            }
+            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request must be at least {0}.", 1]);
+        }
 
-            if (model.MaximumIterationsPerRequest > _defaultAIOptions.AbsoluteMaximumIterationsPerRequest)
-            {
-                context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
-            }
+        if (model.MaximumIterationsPerRequest > _defaultAIOptions.AbsoluteMaximumIterationsPerRequest)
+        {
+            context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.MaximumIterationsPerRequest)}", T["Maximum iterations per request cannot exceed the absolute maximum of {0}.", _defaultAIOptions.AbsoluteMaximumIterationsPerRequest]);
         }
 
         if (!context.Updater.ModelState.IsValid)
@@ -104,11 +86,8 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         }
 
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
-        settings.OverrideMaximumIterationsPerRequest = model.OverrideMaximumIterationsPerRequest;
         settings.MaximumIterationsPerRequest = maximumIterationsPerRequest;
-        settings.OverrideEnableDistributedCaching = model.OverrideEnableDistributedCaching;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
-        settings.OverrideEnableOpenTelemetry = model.OverrideEnableOpenTelemetry;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
 
         if (settingsChanged)

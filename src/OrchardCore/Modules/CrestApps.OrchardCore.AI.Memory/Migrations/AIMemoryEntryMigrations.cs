@@ -69,4 +69,5 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
 
         return 2;
     }
+
 }

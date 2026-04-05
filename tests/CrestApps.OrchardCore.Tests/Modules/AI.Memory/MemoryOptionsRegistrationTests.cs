@@ -18,7 +18,7 @@ public sealed class MemoryOptionsRegistrationTests
                 IndexProfileName = " memory-index ",
                 TopN = 8,
             },
-            new ChatInteractionMemorySettings());
+            new MemoryMetadata());
 
         new CrestApps.OrchardCore.AI.Memory.Startup().ConfigureServices(services);
 
@@ -34,7 +34,7 @@ public sealed class MemoryOptionsRegistrationTests
     {
         var services = CreateServices(
             new AIMemorySettings(),
-            new ChatInteractionMemorySettings
+            new MemoryMetadata
             {
                 EnableUserMemory = false,
             });
@@ -49,7 +49,7 @@ public sealed class MemoryOptionsRegistrationTests
 
     private static ServiceCollection CreateServices(
         AIMemorySettings memorySettings,
-        ChatInteractionMemorySettings chatInteractionMemorySettings)
+        MemoryMetadata chatInteractionMemorySettings)
     {
         var services = new ServiceCollection();
         services.AddSingleton(CreateSiteService(memorySettings, chatInteractionMemorySettings));
@@ -59,12 +59,12 @@ public sealed class MemoryOptionsRegistrationTests
 
     private static ISiteService CreateSiteService(
         AIMemorySettings memorySettings,
-        ChatInteractionMemorySettings chatInteractionMemorySettings)
+        MemoryMetadata chatInteractionMemorySettings)
     {
         var site = new Mock<ISite>();
         site.Setup(x => x.As<AIMemorySettings>())
             .Returns(memorySettings);
-        site.Setup(x => x.As<ChatInteractionMemorySettings>())
+        site.Setup(x => x.As<MemoryMetadata>())
             .Returns(chatInteractionMemorySettings);
 
         var siteService = new Mock<ISiteService>();

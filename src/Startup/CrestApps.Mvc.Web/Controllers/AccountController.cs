@@ -33,6 +33,7 @@ public sealed class AccountController : Controller
         {
             var claims = new List<Claim>
             {
+                new(ClaimTypes.NameIdentifier, username),
                 new(ClaimTypes.Name, username),
                 new(ClaimTypes.Role, "Administrator"),
             };

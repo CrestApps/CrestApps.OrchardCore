@@ -146,7 +146,7 @@ There are no separate API endpoints for profile document management — everythi
 3. Use the **Knowledge** tab to upload text-based documents.
 4. Configure the **Top N Results** setting to control how many matching chunks are included as context.
 
-For MVC hosts that use the shared framework services, configure the default AI Documents index first so uploaded profile documents are embedded into the expected search backend instead of remaining as unindexed attachments only.
+For MVC hosts that use the shared framework services, configure the default AI Documents index first so uploaded profile documents are embedded into the expected search backend instead of remaining as unindexed attachments only. MVC profile-document uploads now resolve embeddings against the profile's active chat or utility deployment first, then fall back to the global embedding deployment, and profile document removals delete their indexed chunks so the knowledge base stays aligned with the saved profile.
 
 ## AI Documents for Chat Sessions
 

@@ -136,18 +136,18 @@ The following configuration format using `ChatDeploymentName`, `UtilityDeploymen
 | `EnableOpenTelemetry` | Enables OpenTelemetry tracing for AI requests. | `false` |
 | `EnableDistributedCaching` | Enables distributed caching for AI responses. | `true` |
 
-### Site-level General AI overrides
+### Site-level General AI settings
 
-In addition to `appsettings.json`, administrators can override selected AI defaults per tenant from **Settings → Artificial Intelligence → General**.
+Administrators can set selected AI defaults per tenant from **Settings → Artificial Intelligence → General**.
 
 The **General** card currently supports:
 
 - enabling or disabling **Preemptive Memory Retrieval**
-- overriding `MaximumIterationsPerRequest`
-- overriding `EnableDistributedCaching`
-- overriding `EnableOpenTelemetry`
+- setting `MaximumIterationsPerRequest`
+- setting `EnableDistributedCaching`
+- setting `EnableOpenTelemetry`
 
-The appsettings-based `DefaultParameters` still provide the base values. Site settings only replace a value when the matching override toggle is enabled. `AbsoluteMaximumIterationsPerRequest` always stays configuration-owned and the effective `MaximumIterationsPerRequest` is always `Math.Min(MaximumIterationsPerRequest, AbsoluteMaximumIterationsPerRequest)`.
+These site settings are used directly. `AbsoluteMaximumIterationsPerRequest` always stays configuration-owned and the effective `MaximumIterationsPerRequest` is always `Math.Min(MaximumIterationsPerRequest, AbsoluteMaximumIterationsPerRequest)`.
 
 Orchard Core shows a tenant reload warning on this editor. When one of these values changes, the module requests a shell release so refreshed `IOptions<GeneralAIOptions>` values are applied consistently across the tenant.
 

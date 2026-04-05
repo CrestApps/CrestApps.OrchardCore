@@ -60,20 +60,9 @@ public sealed class DefaultAIOptions
             return options;
         }
 
-        if (settings.OverrideMaximumIterationsPerRequest)
-        {
-            options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
-        }
-
-        if (settings.OverrideEnableDistributedCaching)
-        {
-            options.EnableDistributedCaching = settings.EnableDistributedCaching;
-        }
-
-        if (settings.OverrideEnableOpenTelemetry)
-        {
-            options.EnableOpenTelemetry = settings.EnableOpenTelemetry;
-        }
+        options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
+        options.EnableDistributedCaching = settings.EnableDistributedCaching;
+        options.EnableOpenTelemetry = settings.EnableOpenTelemetry;
 
         return options.Normalize();
     }

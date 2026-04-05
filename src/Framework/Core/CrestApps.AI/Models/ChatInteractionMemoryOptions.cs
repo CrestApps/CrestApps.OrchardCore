@@ -10,11 +10,9 @@ public sealed class ChatInteractionMemoryOptions
             EnableUserMemory = EnableUserMemory,
         };
 
-    public static ChatInteractionMemoryOptions FromSettings(ChatInteractionMemorySettings settings)
-        => settings == null
-            ? new ChatInteractionMemoryOptions()
-            : new ChatInteractionMemoryOptions
-            {
-                EnableUserMemory = settings.EnableUserMemory,
-            };
+    public static ChatInteractionMemoryOptions FromMetadata(MemoryMetadata metadata)
+        => new()
+        {
+            EnableUserMemory = metadata?.EnableUserMemory ?? true,
+        };
 }

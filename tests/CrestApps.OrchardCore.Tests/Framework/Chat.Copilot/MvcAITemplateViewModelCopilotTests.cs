@@ -70,4 +70,38 @@ public sealed class MvcAITemplateViewModelCopilotTests
 
         Assert.False(template.TryGet<CopilotSessionMetadata>(out _));
     }
+
+    [Fact]
+    public void FromTemplate_WhenLegacyMvcMemorySettingsExist_ShouldFallbackToLegacyValue()
+    {
+        var template = new AIProfileTemplate
+        {
+            Source = AITemplateSources.Profile,
+        };
+        template.Put(new CrestApps.Mvc.Web.Models.MemorySettings
+        {
+            EnableUserMemory = true,
+        });
+
+        var model = AITemplateViewModel.FromTemplate(template);
+
+        Assert.True(model.EnableUserMemory);
+    }
+
+    [Fact]
+    public void ApplyTo_WhenProfileSource_ShouldPersistSharedMemorySettings()
+    {
+        var model = new AITemplateViewModel
+        {
+            Name = "support-template",
+            Source = AITemplateSources.Profile,
+            EnableUserMemory = true,
+        };
+
+        var template = new AIProfileTemplate();
+
+        model.ApplyTo(template);
+
+        Assert.True(template.As<MemoryMetadata>().EnableUserMemory ?? false);
+    }
 }

@@ -33,7 +33,7 @@ else
                 <tr>
                     <th>Title</th>
                     <th>Created</th>
-                    <th style="width: 180px;">Actions</th>
+                    <th style="min-width: 250px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,6 +45,13 @@ else
                             <small class="text-muted">@article.CreatedUtc.ToString("g")</small>
                         </td>
                         <td>
+                            <a asp-area=""
+                               asp-controller="Articles"
+                               asp-action="Display"
+                               asp-route-id="@article.ItemId"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i> Display
+                            </a>
                             <a asp-action="Edit" asp-route-id="@article.ItemId"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Edit

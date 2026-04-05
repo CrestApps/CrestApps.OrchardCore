@@ -12,7 +12,7 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Drivers;
 
-public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriver<ChatInteractionMemorySettings>
+public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriver<MemoryMetadata>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -33,20 +33,20 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
         _shellReleaseManager = shellReleaseManager;
     }
 
-    public override IDisplayResult Edit(ISite site, ChatInteractionMemorySettings settings, BuildEditorContext context)
+    public override IDisplayResult Edit(ISite site, MemoryMetadata settings, BuildEditorContext context)
     {
         context.AddTenantReloadWarningWrapper();
 
         return Initialize<ChatInteractionMemorySettingsViewModel>("ChatInteractionMemorySettings_Edit", async model =>
         {
-            model.EnableUserMemory = settings.EnableUserMemory;
+            model.EnableUserMemory = settings.EnableUserMemory ?? true;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
         }).Location("Content:4.6%Chat Interactions;2")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(ISite site, ChatInteractionMemorySettings settings, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, MemoryMetadata settings, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings))
         {
@@ -56,7 +56,7 @@ public sealed class ChatInteractionMemorySettingsDisplayDriver : SiteDisplayDriv
         var model = new ChatInteractionMemorySettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settingsChanged = settings.EnableUserMemory != model.EnableUserMemory;
+        var settingsChanged = (settings.EnableUserMemory ?? true) != model.EnableUserMemory;
         settings.EnableUserMemory = model.EnableUserMemory;
 
         if (settingsChanged)

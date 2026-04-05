@@ -204,14 +204,10 @@
                     </div>
 
                     <div class="mb-3">
-                        <div class="form-check form-switch mb-2">
-                            <input asp-for="OverrideMaximumIterationsPerRequest" class="form-check-input" type="checkbox" />
-                            <label asp-for="OverrideMaximumIterationsPerRequest" class="form-check-label">Override maximum iterations per request</label>
-                        </div>
                         <label asp-for="MaximumIterationsPerRequest" class="form-label">Maximum iterations per request</label>
                         <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="100" style="max-width: 200px;" />
                         <span asp-validation-for="MaximumIterationsPerRequest" class="text-danger"></span>
-                        <div class="form-text">When the override is enabled, this caps the number of orchestrator iterations allowed per request. Default is 10.</div>
+                        <div class="form-text">This caps the number of orchestrator iterations allowed per request. Default is 10.</div>
                     </div>
                 </div>
             </div>
@@ -222,10 +218,6 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <div class="form-check form-switch mb-2">
-                            <input asp-for="OverrideEnableDistributedCaching" class="form-check-input" type="checkbox" />
-                            <label asp-for="OverrideEnableDistributedCaching" class="form-check-label">Override distributed caching</label>
-                        </div>
                         <div class="form-check form-switch">
                             <input asp-for="EnableDistributedCaching" class="form-check-input" type="checkbox" />
                             <label asp-for="EnableDistributedCaching" class="form-check-label">Enable distributed caching</label>
@@ -241,10 +233,6 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <div class="form-check form-switch mb-2">
-                            <input asp-for="OverrideEnableOpenTelemetry" class="form-check-input" type="checkbox" />
-                            <label asp-for="OverrideEnableOpenTelemetry" class="form-check-label">Override OpenTelemetry</label>
-                        </div>
                         <div class="form-check form-switch">
                             <input asp-for="EnableOpenTelemetry" class="form-check-input" type="checkbox" />
                             <label asp-for="EnableOpenTelemetry" class="form-check-label">Enable OpenTelemetry</label>

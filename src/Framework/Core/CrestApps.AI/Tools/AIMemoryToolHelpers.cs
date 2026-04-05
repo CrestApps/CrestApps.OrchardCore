@@ -21,6 +21,11 @@ internal static class AIMemoryToolHelpers
             .GetService<IHttpContextAccessor>()?
             .HttpContext?
             .User?
-            .FindFirstValue(ClaimTypes.NameIdentifier);
+            .FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? services?
+                .GetService<IHttpContextAccessor>()?
+                .HttpContext?
+                .User?
+                .FindFirstValue(ClaimTypes.Name);
     }
 }

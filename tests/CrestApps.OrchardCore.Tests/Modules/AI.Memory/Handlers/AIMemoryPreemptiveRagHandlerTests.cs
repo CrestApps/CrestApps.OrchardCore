@@ -20,7 +20,7 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
     {
         var handler = CreateHandler();
         var profile = new AIProfile();
-        profile.AlterSettings<AIProfileMemorySettings>(settings => settings.EnableUserMemory = true);
+        profile.AlterMemoryMetadata(settings => settings.EnableUserMemory = true);
 
         var canHandle = await handler.CanHandleAsync(new OrchestrationContextBuiltContext(profile, new OrchestrationContext()));
 
@@ -32,7 +32,7 @@ public sealed class AIMemoryPreemptiveRagHandlerTests
     {
         var handler = CreateHandler(enablePreemptiveMemoryRetrieval: false);
         var profile = new AIProfile();
-        profile.AlterSettings<AIProfileMemorySettings>(settings => settings.EnableUserMemory = true);
+        profile.AlterMemoryMetadata(settings => settings.EnableUserMemory = true);
 
         var canHandle = await handler.CanHandleAsync(new OrchestrationContextBuiltContext(profile, new OrchestrationContext()));
 

@@ -71,6 +71,7 @@ All memory operations are scoped to the authenticated user. The user ID is resol
 
 1. `AIInvocationScope.Current.Items[MemoryConstants.CompletionContextKeys.UserId]` (set during orchestration)
 2. `HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)` (fallback)
+3. `HttpContext.User.FindFirstValue(ClaimTypes.Name)` (final fallback for hosts that only issue name-based cookie identities)
 
 Anonymous users cannot create, search, or manage memories.
 
@@ -493,21 +494,22 @@ Configured via the Orchard Core admin panel under **Settings → Artificial Inte
 | `IndexProfileName` | `string` | `null` | Name of the index profile to use for vector search |
 | `TopN` | `int` | `5` | Default number of results for vector search |
 
-### Per-Profile Settings (`AIProfileMemorySettings`)
+### Shared Memory Metadata (`MemoryMetadata`)
 
-Each AI profile can independently enable or disable memory:
-
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `EnableUserMemory` | `bool` | `false` | Whether memory tools are available for this profile |
-
-### Chat Interaction Settings (`ChatInteractionMemorySettings`)
-
-Controls memory for the chat interactions feature:
+The same metadata shape now backs both AI Profiles and chat-interaction memory defaults:
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `EnableUserMemory` | `bool` | `true` | Whether memory is active during chat interactions |
+| `EnableUserMemory` | `bool?` | `null` | Enables memory when explicitly set; hosts interpret an unset value with context-specific defaults |
+
+### Effective Defaults
+
+`MemoryMetadata` is interpreted differently depending on where it is attached:
+
+| Attachment | Default when unset | Description |
+|------------|--------------------|-------------|
+| `AIProfile` / profile-source `AIProfileTemplate` | `false` | Memory stays opt-in for profiles |
+| Chat Interaction site settings | `true` | Chat interactions keep user memory enabled by default |
 
 ### Index Profile Metadata (`AIMemoryIndexProfileMetadata`)
 

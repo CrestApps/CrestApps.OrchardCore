@@ -15,8 +15,8 @@ internal sealed class ChatInteractionMemoryOptionsConfiguration : IConfigureOpti
 
     public void Configure(ChatInteractionMemoryOptions options)
     {
-        var settings = _siteService.GetSettings<ChatInteractionMemorySettings>();
+        var settings = _siteService.GetSettings<MemoryMetadata>();
 
-        options.EnableUserMemory = ChatInteractionMemoryOptions.FromSettings(settings).EnableUserMemory;
+        options.EnableUserMemory = ChatInteractionMemoryOptions.FromMetadata(settings).EnableUserMemory;
     }
 }

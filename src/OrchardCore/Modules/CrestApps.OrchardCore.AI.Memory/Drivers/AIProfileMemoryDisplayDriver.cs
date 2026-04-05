@@ -20,7 +20,7 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditAIProfileMemoryViewModel>("AIProfileMemory_Edit", async model =>
         {
-            model.EnableUserMemory = profile.GetSettings<AIProfileMemorySettings>().EnableUserMemory;
+            model.EnableUserMemory = profile.GetMemoryMetadata().EnableUserMemory ?? false;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
         }).Location("Content:20%Knowledge;2");
     }
@@ -30,7 +30,7 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
         var model = new EditAIProfileMemoryViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        profile.AlterSettings<AIProfileMemorySettings>(settings =>
+        profile.AlterMemoryMetadata(settings =>
         {
             settings.EnableUserMemory = model.EnableUserMemory;
         });

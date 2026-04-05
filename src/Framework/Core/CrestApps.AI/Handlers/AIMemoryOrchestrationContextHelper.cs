@@ -10,6 +10,7 @@ internal static class AIMemoryOrchestrationContextHelper
     public static string GetAuthenticatedUserId(IHttpContextAccessor httpContextAccessor)
         => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated == true
             ? httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Name)
             : null;
 
     public static bool IsEnabled(
@@ -18,7 +19,7 @@ internal static class AIMemoryOrchestrationContextHelper
     {
         if (resource is AIProfile profile)
         {
-            return profile.GetSettings<AIProfileMemorySettings>().EnableUserMemory;
+            return profile.GetMemoryMetadata().EnableUserMemory ?? false;
         }
 
         if (resource is ChatInteraction)

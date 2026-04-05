@@ -7,7 +7,6 @@ using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
-using CrestApps.Mvc.Web.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -81,7 +80,7 @@ public sealed class AITemplateViewModel
     public string DataSourceId { get; set; }
     public int? DataSourceStrictness { get; set; }
     public int? DataSourceTopNDocuments { get; set; }
-    public bool DataSourceIsInScope { get; set; } = true;
+    public bool DataSourceIsInScope { get; set; }
     public string DataSourceFilter { get; set; }
 
     // Prompt Templates.
@@ -229,7 +228,7 @@ public sealed class AITemplateViewModel
             model.DataSourceId = dataSourceMetadata?.DataSourceId;
             model.DataSourceStrictness = ragMetadata?.Strictness;
             model.DataSourceTopNDocuments = ragMetadata?.TopNDocuments;
-            model.DataSourceIsInScope = ragMetadata?.IsInScope ?? true;
+            model.DataSourceIsInScope = ragMetadata?.IsInScope ?? false;
             model.DataSourceFilter = ragMetadata?.Filter;
 
             var sessionDocMetadata = template.As<AIProfileSessionDocumentsMetadata>();
@@ -303,12 +302,7 @@ public sealed class AITemplateViewModel
                 .ToList();
             }
 
-            var memorySettings = template.As<MemorySettings>();
-
-            if (memorySettings != null)
-            {
-                model.EnableUserMemory = memorySettings.EnableUserMemory;
-            }
+            model.EnableUserMemory = template.GetMemoryMetadata().EnableUserMemory ?? false;
 
             var profileSettings = template.As<AIProfileSettings>();
 
@@ -508,7 +502,7 @@ public sealed class AITemplateViewModel
                 .ToList(),
             });
 
-            template.Put(new MemorySettings
+            template.WithMemoryMetadata(new MemoryMetadata
             {
                 EnableUserMemory = EnableUserMemory,
             });

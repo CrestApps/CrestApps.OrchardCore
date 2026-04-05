@@ -43,7 +43,7 @@ public static class AppDataSettingsServiceCollectionExtensions
             .AddAppDataSettings<InteractionDocumentSettings>(configuration, AppDataConfigurationSections.InteractionDocuments)
             .AddAppDataSettings<AIDataSourceSettings>(configuration, AppDataConfigurationSections.AIDataSources)
             .AddAppDataSettings<ChatInteractionSettings>(configuration, AppDataConfigurationSections.ChatInteraction)
-            .AddAppDataSettings<ChatInteractionMemorySettings>(configuration, AppDataConfigurationSections.ChatInteractionMemory)
+            .AddAppDataSettings<MemoryMetadata>(configuration, AppDataConfigurationSections.ChatInteractionMemory)
             .AddAppDataSettings<CopilotSettings>(configuration, AppDataConfigurationSections.Copilot)
             .AddAppDataSettings<McpServerOptions>(configuration, AppDataConfigurationSections.McpServer)
             .AddAppDataSettings<A2AHostOptions>(configuration, AppDataConfigurationSections.A2AHost)

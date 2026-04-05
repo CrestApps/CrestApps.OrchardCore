@@ -21,7 +21,7 @@ public sealed class AIProfileTemplateMemoryDisplayDriver : DisplayDriver<AIProfi
     {
         return Initialize<EditAIProfileMemoryViewModel>("AIProfileMemory_Edit", async model =>
         {
-            model.EnableUserMemory = template.As<AIProfileMemorySettings>().EnableUserMemory;
+            model.EnableUserMemory = template.GetMemoryMetadata().EnableUserMemory ?? false;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
         }).Location("Content:20%Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -37,9 +37,10 @@ public sealed class AIProfileTemplateMemoryDisplayDriver : DisplayDriver<AIProfi
         var model = new EditAIProfileMemoryViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = template.As<AIProfileMemorySettings>();
-        settings.EnableUserMemory = model.EnableUserMemory;
-        template.Put(settings);
+        template.WithMemoryMetadata(new MemoryMetadata
+        {
+            EnableUserMemory = model.EnableUserMemory,
+        });
 
         return Edit(template, context);
     }
