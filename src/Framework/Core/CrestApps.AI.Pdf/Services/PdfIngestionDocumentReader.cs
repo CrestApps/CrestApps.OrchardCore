@@ -4,7 +4,7 @@ using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
-namespace CrestApps.AI.Chat.Services;
+namespace CrestApps.AI.Pdf.Services;
 
 /// <summary>
 /// Reads PDF files into an <see cref="IngestionDocument"/> using PdfPig.

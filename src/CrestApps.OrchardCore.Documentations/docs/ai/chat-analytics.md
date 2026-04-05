@@ -14,9 +14,10 @@ Provides comprehensive analytics and reporting for AI chat sessions. Track conve
 
 ## Overview
 
-The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, user feedback, and extracted structured values. Orchard Core exposes two reports under **Artificial Intelligence**:
+The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, user feedback, conversion-goal scoring, and extracted structured values. Orchard Core exposes three reports under **Artificial Intelligence**:
 
 - **Chat Session Analytics** — session metrics, performance, conversion, and feedback.
+- **Chat Conversion Goals** — one row per session with total conversion points plus one dynamic column per configured goal.
 - **Chat Extracted Data** — extracted field snapshots grouped into dynamic report columns per AI Profile.
 
 ### Enabling Analytics
@@ -25,7 +26,7 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 2. Search for **AI Chat Session Analytics** and enable it.
 3. Open each **AI Profile** where you want to collect metrics.
 4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Session Analytics** or **Artificial Intelligence** > **Chat Extracted Data** in the admin menu.
+5. Navigate to **Artificial Intelligence** > **Chat Session Analytics**, **Chat Conversion Goals**, or **Chat Extracted Data** in the admin menu.
 
 > **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
 
@@ -147,6 +148,29 @@ A progress bar visualizes the **overall conversion progress** as a ratio of tota
 :::note
 Resolution and conversion metrics require enabling **Resolution Detection** and/or **Conversion Metrics** in the profile's analytics settings. Data only appears after sessions have been closed and processed.
 :::
+
+### Conversion Goals Report
+
+The **Chat Conversion Goals** report is designed for session-by-session inspection of the individual goal scores that make up the aggregate conversion metrics.
+
+#### Filters
+
+| Filter | Description |
+| --- | --- |
+| **AI Profile** | Required. The report always runs for a single AI chat profile. |
+| **From** | Optional lower bound based on `SessionStartedUtc`. |
+| **To** | Optional upper bound based on `SessionStartedUtc`. |
+
+#### Output
+
+Each row represents one chat session. The report always includes:
+
+- **Session date** (`SessionStartedUtc`)
+- **Session ID**
+- **Total points** (aggregate conversion score for the session)
+- one column per conversion goal name found in the filtered result set
+
+Each goal column shows the AI-assigned score together with the goal's maximum score for that session.
 
 ### 😊 User Feedback
 

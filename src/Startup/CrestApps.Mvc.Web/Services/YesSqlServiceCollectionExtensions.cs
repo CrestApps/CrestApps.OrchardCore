@@ -30,6 +30,7 @@ using CrestApps.Mvc.Web.Areas.Indexing.Indexes;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Areas.Mcp.Indexes;
 using CrestApps.Services;
+using Microsoft.AspNetCore.Authorization;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -110,11 +111,12 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<IAIDataSourceStore, YesSqlAIDataSourceStore>()
             .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<IAIDataSourceStore>())
             .AddScoped<ICatalogManager<AIDataSource>, CatalogManager<AIDataSource>>()
-            .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
-            .AddScoped<MvcAIDocumentIndexingService>()
-            .AddScoped<ISearchIndexProfileManager, SearchIndexProfileManager>()
-            .AddScoped<IAIChatDocumentAuthorizationService, MvcAIChatDocumentAuthorizationService>()
-            .AddScoped<IAIChatDocumentEventHandler, MvcAIChatDocumentEventHandler>()
+             .AddScoped<IAIMemoryStore, YesSqlAIMemoryStore>()
+             .AddScoped<MvcAIDocumentIndexingService>()
+             .AddScoped<ISearchIndexProfileManager, SearchIndexProfileManager>()
+             .AddScoped<IAuthorizationHandler, MvcChatInteractionDocumentAuthorizationHandler>()
+             .AddScoped<IAuthorizationHandler, MvcAIChatSessionDocumentAuthorizationHandler>()
+             .AddScoped<IAIChatDocumentEventHandler, MvcAIChatDocumentEventHandler>()
             .AddDocumentCatalog<ChatInteraction, ChatInteractionIndex>()
             .AddScoped<ICatalogManager<ChatInteraction>, CatalogManager<ChatInteraction>>()
             .AddScoped<IChatInteractionPromptStore, YesSqlChatInteractionPromptStore>()

@@ -1,3 +1,5 @@
+using CrestApps.AI.Ftp.Models;
+using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using FluentFTP;
 using Microsoft.AspNetCore.DataProtection;
@@ -5,7 +7,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 
-namespace CrestApps.AI.Mcp.Handlers;
+namespace CrestApps.AI.Ftp.Handlers;
 
 public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
 {
@@ -17,7 +19,7 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
     public FtpResourceTypeHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<FtpResourceTypeHandler> logger)
-    : base(FtpResourceConstants.Type)
+        : base(FtpResourceConstants.Type)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
@@ -114,9 +116,9 @@ public sealed class FtpResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Text = content,
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
                     }
                 ]
             };

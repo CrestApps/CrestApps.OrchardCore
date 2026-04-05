@@ -1,5 +1,8 @@
 @using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels
+@using CrestApps.AI.Models
+@using Microsoft.Extensions.Options
 @model ChatInteractionChatViewModel
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
 @{
     ViewData["Title"] = "Chat - " + (Model.Title ?? "Untitled Chat");
     const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
@@ -8,6 +11,8 @@
     const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
     const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
+    var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
@@ -477,8 +482,8 @@
                     <div class="mb-2">
                         <label class="form-label"><i class="bi bi-paperclip"></i> Upload documents</label>
                         <input type="file" class="form-control" id="chat-doc-upload" multiple
-                               accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
-                        <div class="form-text">Supported: Text, Markdown, JSON, XML, HTML, PDF, Office docs.</div>
+                               accept="@supportedExtensionsAccept" />
+                        <div class="form-text">Supported formats: @supportedExtensionsDisplay</div>
                         <div id="chat-doc-upload-status" class="small mt-2 d-none"></div>
                         <div id="chat-doc-upload-progress" class="progress mt-2 d-none" role="progressbar" aria-label="Document upload progress" aria-valuemin="0" aria-valuemax="100">
                             <div id="chat-doc-upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>

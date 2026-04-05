@@ -14,12 +14,14 @@ description: Create custom MCP resource type handlers for FTP, SFTP, databases, 
 ```csharp
 builder.Services
     .AddCrestAppsMcpServer()
+    .AddFtpMcpResourceServices()
+    .AddSftpMcpResourceServices()
     .AddMcpResourceType<MyDatabaseResourceHandler>("database");
 ```
 
 ## Problem & Solution
 
-MCP resources represent files, URLs, or data that clients can read. The framework provides built-in handlers for FTP and SFTP, but applications often need to serve resources from databases, APIs, blob storage, or custom protocols. Resource type handlers provide a pluggable extension point.
+MCP resources represent files, URLs, or data that clients can read. FTP and SFTP handlers are available as optional packages (`CrestApps.AI.Ftp` and `CrestApps.AI.Sftp`), and applications often need additional resource types for databases, APIs, blob storage, or custom protocols. Resource type handlers provide a pluggable extension point.
 
 ## Built-in Resource Types
 
@@ -28,7 +30,7 @@ MCP resources represent files, URLs, or data that clients can read. The framewor
 | `ftp` | `FtpResourceTypeHandler` | FTP/FTPS |
 | `sftp` | `SftpResourceTypeHandler` | SFTP |
 
-These are registered automatically by `AddCrestAppsMcpServer()`.
+Register them explicitly with `AddFtpMcpResourceServices()` and `AddSftpMcpResourceServices()`.
 
 ## Registration
 

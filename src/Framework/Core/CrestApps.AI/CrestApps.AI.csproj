@@ -22,16 +22,14 @@
 
   <ItemGroup>
     <PackageReference Include="Lucene.Net.Analysis.Common" />
-    <PackageReference Include="Markdig" />
     <PackageReference Include="Microsoft.Extensions.AI" />
     <PackageReference Include="Microsoft.Extensions.DataIngestion" />
-    <PackageReference Include="Microsoft.Extensions.DataIngestion.Markdig" />
-    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
     <PackageReference Include="ZString" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
     <ProjectReference Include="../CrestApps.Core/CrestApps.Core.csproj" />
     <ProjectReference Include="../CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
     <ProjectReference Include="../CrestApps.Templates/CrestApps.Templates.csproj" />

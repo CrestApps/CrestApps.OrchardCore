@@ -1,9 +1,11 @@
+using CrestApps.AI;
 using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -78,7 +80,7 @@ public static class AIChatDocumentEndpoints
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
         [FromServices] IAIDocumentProcessingService documentProcessingService,
-        [FromServices] IAIChatDocumentAuthorizationService authorizationService,
+        [FromServices] IAuthorizationService authorizationService,
         [FromServices] IEnumerable<IAIChatDocumentEventHandler> eventHandlers,
         [FromServices] IOptions<ChatDocumentsOptions> documentOptions,
         [FromServices] ILoggerFactory loggerFactory,
@@ -104,7 +106,12 @@ public static class AIChatDocumentEndpoints
             return TypedResults.NotFound();
         }
 
-        if (!await authorizationService.CanManageChatInteractionDocumentsAsync(request.HttpContext.User, interaction))
+        var authorization = await authorizationService.AuthorizeAsync(
+            request.HttpContext.User,
+            interaction,
+            [AIChatDocumentOperations.ManageDocuments]);
+
+        if (!authorization.Succeeded)
         {
             return TypedResults.Forbid();
         }
@@ -191,7 +198,7 @@ public static class AIChatDocumentEndpoints
         [FromServices] ICatalogManager<ChatInteraction> interactionManager,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
-        [FromServices] IAIChatDocumentAuthorizationService authorizationService,
+        [FromServices] IAuthorizationService authorizationService,
         [FromServices] IEnumerable<IAIChatDocumentEventHandler> eventHandlers)
     {
         if (requestModel == null)
@@ -210,7 +217,12 @@ public static class AIChatDocumentEndpoints
             return TypedResults.NotFound();
         }
 
-        if (!await authorizationService.CanManageChatInteractionDocumentsAsync(httpContext.User, interaction))
+        var authorization = await authorizationService.AuthorizeAsync(
+            httpContext.User,
+            interaction,
+            [AIChatDocumentOperations.ManageDocuments]);
+
+        if (!authorization.Succeeded)
         {
             return TypedResults.Forbid();
         }
@@ -261,7 +273,7 @@ public static class AIChatDocumentEndpoints
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
         [FromServices] IAIDocumentProcessingService documentProcessingService,
-        [FromServices] IAIChatDocumentAuthorizationService authorizationService,
+        [FromServices] IAuthorizationService authorizationService,
         [FromServices] IEnumerable<IAIChatDocumentEventHandler> eventHandlers,
         [FromServices] IOptions<ChatDocumentsOptions> documentOptions,
         [FromServices] ILoggerFactory loggerFactory,
@@ -327,7 +339,12 @@ public static class AIChatDocumentEndpoints
             return TypedResults.BadRequest("Session document uploads are not enabled for this AI profile.");
         }
 
-        if (!await authorizationService.CanManageChatSessionDocumentsAsync(request.HttpContext.User, profile, session))
+        var authorization = await authorizationService.AuthorizeAsync(
+            request.HttpContext.User,
+            new AIChatSessionDocumentAuthorizationContext(profile, session),
+            [AIChatDocumentOperations.ManageDocuments]);
+
+        if (!authorization.Succeeded)
         {
             return TypedResults.Forbid();
         }
@@ -419,7 +436,7 @@ public static class AIChatDocumentEndpoints
         [FromServices] IAIProfileManager profileManager,
         [FromServices] IAIDocumentStore documentStore,
         [FromServices] IAIDocumentChunkStore chunkStore,
-        [FromServices] IAIChatDocumentAuthorizationService authorizationService,
+        [FromServices] IAuthorizationService authorizationService,
         [FromServices] IEnumerable<IAIChatDocumentEventHandler> eventHandlers)
     {
         if (requestModel == null)
@@ -444,7 +461,12 @@ public static class AIChatDocumentEndpoints
             return TypedResults.NotFound();
         }
 
-        if (!await authorizationService.CanManageChatSessionDocumentsAsync(httpContext.User, profile, session))
+        var authorization = await authorizationService.AuthorizeAsync(
+            httpContext.User,
+            new AIChatSessionDocumentAuthorizationContext(profile, session),
+            [AIChatDocumentOperations.ManageDocuments]);
+
+        if (!authorization.Succeeded)
         {
             return TypedResults.Forbid();
         }

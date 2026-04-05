@@ -1,12 +1,14 @@
 using System.Text;
+using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
+using CrestApps.AI.Sftp.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using Renci.SshNet;
 
-namespace CrestApps.AI.Mcp.Handlers;
+namespace CrestApps.AI.Sftp.Handlers;
 
 public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
 {
@@ -17,7 +19,7 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
     public SftpResourceTypeHandler(
         IDataProtectionProvider dataProtectionProvider,
         ILogger<SftpResourceTypeHandler> logger)
-    : base(SftpResourceConstants.Type)
+        : base(SftpResourceConstants.Type)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
@@ -48,8 +50,8 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
         {
             using var keyStream = new MemoryStream(Encoding.UTF8.GetBytes(privateKey));
             var privateKeyFile = string.IsNullOrEmpty(passphrase)
-            ? new PrivateKeyFile(keyStream)
-            : new PrivateKeyFile(keyStream, passphrase);
+                ? new PrivateKeyFile(keyStream)
+                : new PrivateKeyFile(keyStream, passphrase);
             authMethods.Add(new PrivateKeyAuthenticationMethod(username, privateKeyFile));
         }
 
@@ -105,9 +107,9 @@ public sealed class SftpResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Text = content,
+                        Uri = resource.Resource.Uri,
+                        MimeType = mimeType,
+                        Text = content,
                     }
                 ]
             };

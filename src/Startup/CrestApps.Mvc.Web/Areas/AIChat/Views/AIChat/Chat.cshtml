@@ -1,17 +1,25 @@
 @using CrestApps.Services
+@using Microsoft.Extensions.Options
 @model CrestApps.AI.Models.AIProfile
+@inject IOptions<CrestApps.AI.Models.ChatDocumentsOptions> ChatDocumentOptions
 @{
     var session = ViewData["Session"] as CrestApps.AI.Models.AIChatSession;
     var prompts = ViewData["Prompts"] as IReadOnlyList<CrestApps.AI.Models.AIChatSessionPrompt>;
     ViewData["Title"] = "Chat - " + (Model.DisplayText ?? Model.Name);
     var sessionId = session?.SessionId ?? "";
-    var messages = prompts?.Where(p => !p.IsGeneratedPrompt).Select(m => new
+    var messages = prompts?.Select(m => new
     {
         role = m.Role.Value,
         content = m.Content,
         id = m.ItemId,
+        title = m.Title,
         references = m.References,
     }) ?? [];
+    var placeholderMessage = !string.IsNullOrWhiteSpace(Model.WelcomeMessage)
+        ? Model.WelcomeMessage
+        : "What do you want to know?";
+    var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
     var sessionDocumentsMetadata = Model.As<CrestApps.AI.Models.AIProfileSessionDocumentsMetadata>();
     var allowSessionDocuments = sessionDocumentsMetadata?.AllowSessionDocuments ?? false;
     var existingDocuments = session?.Documents ?? [];
@@ -65,12 +73,9 @@
     <div class="border rounded flex-grow-1 d-flex flex-column">
         <div id="chat-container" class="flex-grow-1 overflow-auto">
             <div id="chat-placeholder">
-                @if (!string.IsNullOrEmpty(Model.WelcomeMessage))
-                {
-                    <div class="p-3 text-muted">
-                        <i class="bi bi-robot"></i> @Model.WelcomeMessage
-                    </div>
-                }
+                <div class="p-3 text-muted">
+                    <i class="bi bi-robot"></i> @placeholderMessage
+                </div>
             </div>
             <div id="chat-app"></div>
         </div>
@@ -114,7 +119,8 @@
                 documentBarSelector: '#chat-document-bar',
                 uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
                 removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
-                allowedExtensions: '.txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx'
+                allowedExtensions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsAccept)),
+                supportedExtensionsText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsDisplay))
             });
         });
     </script>

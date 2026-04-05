@@ -1,9 +1,13 @@
 @using CrestApps.AI
 @using CrestApps.AI.Models
 @using CrestApps.AI.Profiles
+@using Microsoft.Extensions.Options
 @inject IAIProfileManager ProfileManager
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
 
 @{
+    var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
     var profiles = (await ProfileManager.GetAsync(AIProfileType.Chat))
         .Where(p => p.GetSettings<AIProfileSettings>().IsListable)
         .Select(p => new
@@ -110,37 +114,11 @@
         </div>
 
 
-
-        @if (profiles.Length > 1)
-
-        {
-
-            <div class="ai-chat-widget-profile-select">
-
-                <select id="widget-profile-select">
-
-                    @foreach (var p in profiles)
-
-                    {
-
-                        <option value="@p.id">@p.displayText</option>
-
-                    }
-
-                </select>
-
-            </div>
-
-        }
-
-
-
         <div id="widget-chat-container" class="ai-chat-widget-messages">
             <div id="widget-placeholder">
                 <div class="ai-chat-widget-welcome">
                     <i class="bi bi-robot" style="font-size: 2rem;"></i><br>
-
-                    Start chatting with AI!
+                    @(string.IsNullOrWhiteSpace(profiles[0].welcomeMessage) ? "What do you want to know?" : profiles[0].welcomeMessage)
 
                 </div>
 
@@ -184,116 +162,73 @@
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
-        var profiles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profiles));
-        var panel = document.getElementById('widget-panel');
-        var toggle = document.getElementById('widget-toggle');
-        var closeBtn = document.getElementById('widget-close');
+            var profiles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profiles));
+            var selectedProfile = profiles[0];
+            var panel = document.getElementById('widget-panel');
+            var toggle = document.getElementById('widget-toggle');
+            var closeBtn = document.getElementById('widget-close');
+            var newChatBtn = document.getElementById('widget-new-chat');
+            var chatInput = document.getElementById('widget-chat-input');
+            var placeholder = document.getElementById('widget-placeholder');
+            var widgetStateName = 'mvc-admin-chat-widget';
+            var widgetOpenStateKey = widgetStateName + 'Open';
 
-        var newChatBtn = document.getElementById('widget-new-chat');
+            function setPlaceholder(profile) {
+                if (!placeholder) {
+                    return;
+                }
 
-        var profileSelect = document.getElementById('widget-profile-select');
+                var welcome = profile && profile.welcomeMessage ? profile.welcomeMessage : 'What do you want to know?';
+                placeholder.innerHTML = '<div class="ai-chat-widget-welcome"><i class="bi bi-robot" style="font-size: 2rem;"></i><br>' + welcome + '</div>';
+            }
 
-        var chatInput = document.getElementById('widget-chat-input');
+            function setPanelOpen(isOpen) {
+                panel.classList.toggle('open', isOpen);
+                toggle.innerHTML = isOpen
+                    ? '<i class="bi bi-x-lg"></i>'
+                    : '<i class="bi bi-chat-dots-fill"></i>';
+                localStorage.setItem(widgetOpenStateKey, isOpen ? 'true' : 'false');
+            }
 
-        var isOpen = false;
+            setPlaceholder(selectedProfile);
+            chatInput.setAttribute('data-profile-id', selectedProfile.id);
 
-        var initialized = false;
+            var widgetApp = window.openAIChatManager.initialize({
+                signalRHubUrl: '/hubs/ai-chat',
+                appElementSelector: '#widget-chat-app',
+                chatContainerElementSelector: '#widget-chat-container',
+                inputElementSelector: '#widget-chat-input',
+                sendButtonElementSelector: '#widget-send-btn',
+                placeholderElementSelector: '#widget-placeholder',
+                messages: [],
+                metricsEnabled: false,
+                sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
+                existingDocuments: [],
+                documentBarSelector: '#widget-chat-document-bar',
+                uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
+                removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
+                allowedExtensions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsAccept)),
+                supportedExtensionsText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsDisplay)),
+                widget: {
+                    chatWidgetContainer: '#widget-panel',
+                    chatWidgetStateName: widgetStateName
+                }
+            });
 
-        function initChat() {
-        var selectedProfileId = profileSelect ? profileSelect.value : '@profiles[0].id';
-        var selectedProfile = profiles.find(function (profile) {
-        return profile.id === selectedProfileId;
-        }) || profiles[0];
-        var appEl = document.getElementById('widget-chat-app');
-        appEl.innerHTML = '';
-        chatInput.setAttribute('data-session-id', '');
-        chatInput.setAttribute('data-profile-id', selectedProfile.id);
+            setPanelOpen(localStorage.getItem(widgetOpenStateKey) === 'true');
 
-        var placeholder = document.getElementById('widget-placeholder');
-        if (placeholder) {
-        placeholder.style.display = '';
-        }
+            toggle.addEventListener('click', function () {
+                setPanelOpen(!panel.classList.contains('open'));
+            });
 
+            closeBtn.addEventListener('click', function () {
+                setPanelOpen(false);
+            });
 
-        window.openAIChatManager.initialize({
-
-        signalRHubUrl: '/hubs/ai-chat',
-
-        appElementSelector: '#widget-chat-app',
-
-        chatContainerElementSelector: '#widget-chat-container',
-
-        inputElementSelector: '#widget-chat-input',
-
-        sendButtonElementSelector: '#widget-send-btn',
-        placeholderElementSelector: '#widget-placeholder',
-        messages: [],
-        metricsEnabled: false,
-        sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
-        existingDocuments: [],
-        documentBarSelector: '#widget-chat-document-bar',
-        uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
-        removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
-        allowedExtensions: '.txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx'
-        });
-
-        initialized = true;
-        }
-
-
-
-        toggle.addEventListener('click', function () {
-
-        isOpen = !isOpen;
-
-        panel.classList.toggle('open', isOpen);
-
-        toggle.innerHTML = isOpen
-
-        ? '<i class="bi bi-x-lg"></i>'
-
-        : '<i class="bi bi-chat-dots-fill"></i>';
-
-
-
-        if (isOpen && !initialized) {
-
-        initChat();
-
-        }
-
-        });
-
-
-
-        closeBtn.addEventListener('click', function () {
-
-        isOpen = false;
-
-        panel.classList.remove('open');
-
-        toggle.innerHTML = '<i class="bi bi-chat-dots-fill"></i>';
-
-        });
-
-
-
-        newChatBtn.addEventListener('click', function () {
-
-        initialized = false;
-
-        initChat();
-
-        });
-
-
-
-        if (profileSelect) {
-        profileSelect.addEventListener('change', function () {
-        initialized = false;
-        initChat();
-        });
-        }
+            newChatBtn.addEventListener('click', function () {
+                setPlaceholder(selectedProfile);
+                widgetApp.resetSession();
+            });
         });
     </script>
 

@@ -24,7 +24,7 @@ public sealed class DataExtractionServiceTests
             ];
         });
 
-        var result = await service.ProcessAsync(profile, new AIChatSession(), CreatePrompts("hello"));
+        var result = await service.ProcessAsync(profile, new AIChatSession(), CreatePrompts("hello"), TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
@@ -43,7 +43,7 @@ public sealed class DataExtractionServiceTests
             ];
         });
 
-        var result = await service.ProcessAsync(profile, new AIChatSession(), CreatePrompts("first"));
+        var result = await service.ProcessAsync(profile, new AIChatSession(), CreatePrompts("first"), TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
@@ -77,7 +77,7 @@ public sealed class DataExtractionServiceTests
             },
         };
 
-        var result = await service.ProcessAsync(profile, session, CreatePrompts("hello"));
+        var result = await service.ProcessAsync(profile, session, CreatePrompts("hello"), TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }

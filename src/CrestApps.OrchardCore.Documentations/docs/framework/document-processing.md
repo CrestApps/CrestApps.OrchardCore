@@ -17,6 +17,8 @@ builder.Services
     .AddOrchestrationServices()
     .AddChatInteractionServices()
     .AddDefaultDocumentProcessingServices()
+    .AddOpenXmlDocumentProcessingServices()
+    .AddPdfDocumentProcessingServices()
     .AddOpenAIProvider();
 ```
 
@@ -42,6 +44,8 @@ The document processing system handles the full pipeline from upload to retrieva
 | `DocumentOrchestrationHandler` | — | Scoped | Injects document context into orchestration |
 
 ### Built-in Document Readers
+
+`AddDefaultDocumentProcessingServices()` registers the plain-text and tabular readers. OpenXml and PDF readers now live in the dedicated `CrestApps.AI.OpenXml` and `CrestApps.AI.Pdf` packages, so hosts opt into those dependencies explicitly with `AddOpenXmlDocumentProcessingServices()` and `AddPdfDocumentProcessingServices()`. Markdown-aware normalization for `RagTextNormalizer` now also lives in its own `CrestApps.AI.Markdown` package, which exposes `AddMarkdownServices()` and keeps the Markdig dependency out of the core `CrestApps.AI` project.
 
 | Reader | Supported Extensions | Embeddable |
 |--------|---------------------|------------|
@@ -122,6 +126,13 @@ services.Configure<ChatDocumentsOptions>(options =>
 
 - **AllowedFileExtensions** — Complete set of uploadable extensions
 - **EmbeddableFileExtensions** — Subset that gets vector-embedded (non-embeddable files use direct read tools instead)
+
+Use the registered option values to drive your upload UI as well as validation:
+
+- **AI Profile / AI Template knowledge uploads** should use `EmbeddableFileExtensions`
+- **Chat interaction / chat session uploads** should use `AllowedFileExtensions`
+
+That keeps file pickers, visible supported-format text, and server-side processing aligned with the readers actually registered in the app.
 
 ### Limits
 

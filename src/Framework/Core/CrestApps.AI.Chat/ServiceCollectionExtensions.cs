@@ -86,17 +86,15 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
     /// <summary>
     /// Adds the default document processing system tools and supporting services.
     /// </summary>
-
     public static IServiceCollection AddDefaultDocumentProcessingServices(this IServiceCollection services)
     {
-
         services.TryAddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
 
         // Register the tabular batch processor (used by heavy processing tools)
-
         services.TryAddScoped<ITabularBatchProcessor, TabularBatchProcessor>();
 
         // Register the tabular batch result cache (uses IDistributedCache)
@@ -115,26 +113,20 @@ public static class ServiceCollectionExtensions
             ".htm",
             ".log",
             ".yaml",
-
             ".yml");
-        services.AddIngestionDocumentReader<OpenXmlIngestionDocumentReader>(".docx", new ExtractorExtension(".xlsx", false), ".pptx");
-        services.AddIngestionDocumentReader<PdfIngestionDocumentReader>(".pdf");
 
         // Register document system tools (available when documents are attached).
         services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
-
             .WithTitle("Search Documents")
             .WithDescription("Searches uploaded or attached documents using semantic vector search.")
             .WithPurpose(AIToolPurposes.DocumentProcessing);
 
         services.AddAITool<ReadDocumentTool>(ReadDocumentTool.TheName)
-
             .WithTitle("Read Document")
             .WithDescription("Reads the full text content of a specific document.")
             .WithPurpose(AIToolPurposes.DocumentProcessing);
 
         services.AddAITool<ReadTabularDataTool>(ReadTabularDataTool.TheName)
-
             .WithTitle("Read Tabular Data")
             .WithDescription("Reads and parses tabular data (CSV, TSV, Excel) from a document.")
             .WithPurpose(AIToolPurposes.DocumentProcessing);

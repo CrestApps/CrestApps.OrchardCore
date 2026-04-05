@@ -562,7 +562,8 @@ window.openAIChatManager = function () {
 
                     this.documentBar.classList.remove('d-none');
 
-                    var html = '<div class="ai-chat-doc-bar d-flex flex-wrap align-items-center gap-1 p-2">';
+                    var html = '<div class="ai-chat-doc-bar p-2">';
+                    html += '<div class="d-flex flex-wrap align-items-center gap-1">';
 
                     for (var i = 0; i < this.documents.length; i++) {
                         var doc = this.documents[i];
@@ -599,6 +600,10 @@ window.openAIChatManager = function () {
                         html += ' <span>Attach files</span>';
                     }
                     html += '</button>';
+                    html += '</div>';
+                    if (config.supportedExtensionsText) {
+                        html += '<div class="small text-muted mt-2">Supported formats: ' + this.escapeHtml(config.supportedExtensionsText) + '</div>';
+                    }
 
                     html += '</div>';
 

@@ -1,3 +1,4 @@
+using CrestApps.AI.OpenXml;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
@@ -7,5 +8,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOpenXmlDocumentProcessingServices();
     }
 }

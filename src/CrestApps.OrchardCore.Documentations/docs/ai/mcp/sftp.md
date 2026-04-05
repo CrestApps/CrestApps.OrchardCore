@@ -14,7 +14,7 @@ Provides SFTP resource support for the MCP Server, allowing remote files to be e
 
 ## Overview
 
-This module implements the `IMcpResourceTypeHandler` interface to handle `sftp://` URIs. It uses the [SSH.NET](https://github.com/sshnet/SSH.NET) library to connect to SFTP servers and retrieve file content.
+This module wires Orchard Core's SFTP resource UI and deployment integration on top of the shared `CrestApps.AI.Sftp` framework package. The shared handler uses the [SSH.NET](https://github.com/sshnet/SSH.NET) library to connect to SFTP servers and retrieve file content.
 
 ## Features
 

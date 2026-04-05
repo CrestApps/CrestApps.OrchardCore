@@ -6,14 +6,18 @@ using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
+using CrestApps.AI.Ftp;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Ollama;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Azure;
+using CrestApps.AI.OpenXml;
+using CrestApps.AI.Pdf;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
+using CrestApps.AI.Sftp;
 using CrestApps.AI.Tooling;
 using CrestApps.AI.Tools;
 using CrestApps.Azure.AISearch;
@@ -160,6 +164,8 @@ builder.Services
 
     // Shared document ingestion, extraction, tabular processing, and RAG over attachments.
     .AddDefaultDocumentProcessingServices()
+    .AddOpenXmlDocumentProcessingServices()
+    .AddPdfDocumentProcessingServices()
 
     // Shared user-memory orchestration, tools, and preemptive retrieval behavior.
     .AddAIMemoryServices()
@@ -172,6 +178,8 @@ builder.Services
 
     // MCP server support for exposing prompts, tools, and resources from this app.
     .AddCrestAppsMcpServer()
+    .AddFtpMcpResourceServices()
+    .AddSftpMcpResourceServices()
 
     // A2A host support for exposing AI Agent profiles via Agent-to-Agent protocol.
     .AddA2AHost()
@@ -278,6 +286,12 @@ builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
     .WithTitle("Calculator")
     .WithDescription("Performs basic arithmetic: add, subtract, multiply, or divide two numbers.")
     .WithCategory("Utilities")
+    .Selectable();
+
+builder.Services.AddAITool<SendEmailTool>(SendEmailTool.TheName)
+    .WithTitle("Send email")
+    .WithDescription("Logs an email request with the supplied recipient, subject, and message.")
+    .WithCategory("Communications")
     .Selectable();
 
 builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)

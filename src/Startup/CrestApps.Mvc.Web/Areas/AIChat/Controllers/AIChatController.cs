@@ -78,7 +78,6 @@ public sealed class AIChatController : Controller
         var session = await _sessionManager.NewAsync(profile, new NewAIChatSessionContext());
 
         session.Title = profile.DisplayText ?? profile.Name;
-        session.UserId = User.Identity?.Name ?? "anonymous";
 
         await _sessionManager.SaveAsync(session);
 

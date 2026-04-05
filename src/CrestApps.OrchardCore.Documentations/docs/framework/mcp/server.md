@@ -15,10 +15,12 @@ description: Expose your application's tools, prompts, and resources as an MCP s
 builder.Services
     .AddCrestAppsAI()
     .AddOrchestrationServices()
-    .AddCrestAppsMcpServer();
+    .AddCrestAppsMcpServer()
+    .AddFtpMcpResourceServices()
+    .AddSftpMcpResourceServices();
 ```
 
-This registers prompt and resource services and built-in FTP/SFTP resource type handlers.
+`AddCrestAppsMcpServer()` registers the shared prompt and resource services. FTP and SFTP resource handlers now live in the optional `CrestApps.AI.Ftp` and `CrestApps.AI.Sftp` packages, so hosts opt into those transport dependencies explicitly.
 
 ## Problem & Solution
 
@@ -40,8 +42,13 @@ The MCP server framework:
 |---------|---------------|----------|---------|
 | `IMcpServerPromptService` | `DefaultMcpServerPromptService` | Scoped | Lists and retrieves server prompts |
 | `IMcpServerResourceService` | `DefaultMcpServerResourceService` | Scoped | Lists, templates, and reads server resources |
-| `IMcpResourceTypeHandler` | `FtpResourceTypeHandler` | Scoped | Reads content from FTP/FTPS servers |
-| `IMcpResourceTypeHandler` | `SftpResourceTypeHandler` | Scoped | Reads content from SFTP servers |
+
+### Optional transport resource packages
+
+| Extension | Package | Purpose |
+|-----------|---------|---------|
+| `AddFtpMcpResourceServices()` | `CrestApps.AI.Ftp` | Registers the FTP/FTPS MCP resource type handler |
+| `AddSftpMcpResourceServices()` | `CrestApps.AI.Sftp` | Registers the SFTP MCP resource type handler |
 
 ## Server Endpoint Setup
 
@@ -186,12 +193,12 @@ When a client requests `ftp://my-resource/reports/2024/sales.csv`, the framework
 
 ## Resource Type Handlers
 
-Built-in resource type handlers registered by `AddCrestAppsMcpServer()`:
+Optional transport resource handlers:
 
 | Type | Handler | Description |
 |------|---------|-------------|
-| `ftp` | `FtpResourceTypeHandler` | Reads content from FTP/FTPS servers |
-| `sftp` | `SftpResourceTypeHandler` | Reads content from SFTP servers |
+| `ftp` | `FtpResourceTypeHandler` | Registered by `AddFtpMcpResourceServices()` from `CrestApps.AI.Ftp` |
+| `sftp` | `SftpResourceTypeHandler` | Registered by `AddSftpMcpResourceServices()` from `CrestApps.AI.Sftp` |
 
 ### Registering Custom Resource Types
 

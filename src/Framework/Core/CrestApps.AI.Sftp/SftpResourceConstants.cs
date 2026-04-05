@@ -1,4 +1,4 @@
-namespace CrestApps.AI.Mcp;
+namespace CrestApps.AI.Sftp;
 
 public static class SftpResourceConstants
 {

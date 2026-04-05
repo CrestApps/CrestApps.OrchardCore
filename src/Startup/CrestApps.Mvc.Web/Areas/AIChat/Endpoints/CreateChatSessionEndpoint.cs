@@ -18,7 +18,6 @@ internal static class CreateChatSessionEndpoint
 
     private static async Task<IResult> HandleAsync(
         [FromBody] CreateChatSessionRequest request,
-        HttpContext httpContext,
         IAIProfileManager profileManager,
         IAIChatSessionManager sessionManager)
     {
@@ -36,7 +35,6 @@ internal static class CreateChatSessionEndpoint
 
         var session = await sessionManager.NewAsync(profile, new NewAIChatSessionContext());
         session.Title = profile.DisplayText ?? profile.Name;
-        session.UserId = httpContext.User.Identity?.Name ?? "anonymous";
 
         await sessionManager.SaveAsync(session);
 

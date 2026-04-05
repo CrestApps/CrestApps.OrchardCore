@@ -1,4 +1,4 @@
-namespace CrestApps.AI.Mcp;
+namespace CrestApps.AI.Ftp;
 
 public static class FtpResourceConstants
 {

@@ -4,6 +4,7 @@ using CrestApps.AI.Completions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Memory;
+using CrestApps.AI.Markdown;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.ResponseHandling;
@@ -119,6 +120,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services
+            .AddMarkdownServices()
             .AddAITemplating()
             .AddCrestAppsCoreServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>();

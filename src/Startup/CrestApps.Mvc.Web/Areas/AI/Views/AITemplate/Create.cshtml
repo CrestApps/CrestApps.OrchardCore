@@ -1,5 +1,8 @@
 @using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@using CrestApps.AI.Models
+@using Microsoft.Extensions.Options
 @model AITemplateViewModel
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
 @{
     ViewData["Title"] = "Create AI Template";
     const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
@@ -8,7 +11,17 @@
     const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
     const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
+    var embeddableExtensionsDisplay = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsDisplayValue();
 }
+
+<style>
+    .attached-documents-panel {
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.75rem;
+        background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
+        padding: 1rem;
+    }
+</style>
 
 <h2><i class="bi bi-plus-lg"></i> Create AI Template</h2>
 <hr />
@@ -564,6 +577,10 @@
                                     <div class="form-text">Number of top matching document chunks to include as AI context.</div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="attached-documents-panel">
+                            <h6 class="mb-1"><i class="bi bi-paperclip"></i> Attach Documents</h6>
+                            <p class="text-muted small mb-0">Uploaded files become hidden knowledge for profiles created from this template after the template is applied. Supported knowledge formats: @embeddableExtensionsDisplay</p>
                         </div>
                     </div>
 

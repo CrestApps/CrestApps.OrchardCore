@@ -1,8 +1,5 @@
-namespace CrestApps.AI.Mcp.Models;
+namespace CrestApps.AI.Ftp.Models;
 
-/// <summary>
-/// Metadata for FTP connection settings stored in an MCP resource.
-/// </summary>
 public sealed class FtpConnectionMetadata
 {
     public string Host { get; set; }

@@ -14,23 +14,10 @@ namespace CrestApps.AI.Services;
 /// </summary>
 public static partial class RagTextNormalizer
 {
-    private static readonly MarkdownReader _reader = new();
+    private static readonly MarkdownReader _reader = CreateMarkdownReader();
 
-    private static readonly DocumentTokenChunker _defaultChunker = new(
-        new IngestionChunkerOptions(TiktokenTokenizer.CreateForModel("gpt-4o"))
-        {
-            MaxTokensPerChunk = 500,
-            OverlapTokens = 50,
-        });
+    private static readonly DocumentTokenChunker _defaultChunker = CreateDefaultChunker();
 
-    /// <summary>
-    /// Normalizes content text for RAG by stripping HTML, parsing Markdown via
-    /// <see cref="MarkdownReader"/>, and normalizing whitespace. Preserves meaningful
-    /// paragraph breaks while removing all formatting artifacts.
-    /// </summary>
-    /// <param name="text">The raw text that may contain HTML, Markdown, or escaped HTML.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>Clean plain text suitable for chunking and embedding, or the original value if null/empty.</returns>
     public static async Task<string> NormalizeContentAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -44,13 +31,6 @@ public static partial class RagTextNormalizer
         return NormalizeContentWhitespace(normalized).Trim();
     }
 
-    /// <summary>
-    /// Normalizes content text and splits it into embedding-ready chunks using
-    /// <see cref="DocumentTokenChunker"/> with token-aware boundaries.
-    /// </summary>
-    /// <param name="text">The raw text that may contain HTML, Markdown, or escaped HTML.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A list of normalized text chunks suitable for embedding, or an empty list if the input is null/empty.</returns>
     public static async Task<List<string>> NormalizeAndChunkAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -72,12 +52,6 @@ public static partial class RagTextNormalizer
         return chunks;
     }
 
-    /// <summary>
-    /// Normalizes a title by stripping HTML and collapsing to a single line.
-    /// This is a synchronous operation suitable for short text like titles.
-    /// </summary>
-    /// <param name="title">The raw title that may contain HTML or Markdown.</param>
-    /// <returns>Clean single-line plain text title, or the original value if null/empty.</returns>
     public static string NormalizeTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -93,23 +67,24 @@ public static partial class RagTextNormalizer
 
     internal static string StripHtml(string text)
     {
-        // Convert <br> variants to newlines.
         text = BrTagRegex().Replace(text, "\n");
-
-        // Add newlines for block-level closing tags.
         text = BlockCloseTagRegex().Replace(text, "\n");
-
-        // Strip all remaining HTML tags.
         text = HtmlTagRegex().Replace(text, string.Empty);
-
-        // Decode HTML entities (e.g., &amp; → &, &#x00B6; → ¶).
         text = WebUtility.HtmlDecode(text);
-
-        // Remove pilcrow signs (¶) commonly left over from Markdown headerlink anchors.
         text = text.Replace("\u00B6", string.Empty);
 
         return text;
     }
+
+    internal static MarkdownReader CreateMarkdownReader() => new();
+
+    internal static DocumentTokenChunker CreateDefaultChunker()
+        => new(
+            new IngestionChunkerOptions(TiktokenTokenizer.CreateForModel("gpt-4o"))
+            {
+                MaxTokensPerChunk = 500,
+                OverlapTokens = 50,
+            });
 
     private static async Task<IngestionDocument> ParseDocumentAsync(string text, CancellationToken cancellationToken)
     {
@@ -119,18 +94,13 @@ public static partial class RagTextNormalizer
     }
 
     private static string JoinDocumentText(IngestionDocument document)
-    {
-        return string.Join("\n", document.EnumerateContent()
+        => string.Join("\n", document.EnumerateContent()
             .Select(e => e.Text)
             .Where(t => !string.IsNullOrWhiteSpace(t)));
-    }
 
     private static string NormalizeContentWhitespace(string text)
     {
-        // Collapse runs of horizontal whitespace (spaces, tabs) to single spaces.
         text = HorizontalSpacesRegex().Replace(text, " ");
-
-        // Collapse 3+ consecutive newlines to double newline (preserve paragraph breaks).
         text = MultipleNewlinesRegex().Replace(text, "\n\n");
 
         return text;

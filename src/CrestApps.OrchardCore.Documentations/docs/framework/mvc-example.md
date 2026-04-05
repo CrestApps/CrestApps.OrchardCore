@@ -46,7 +46,7 @@ The sample now keeps feature-specific controllers, Razor views, and related MVC-
 
 MVC admin forms also keep placeholder dropdown options in the Razor views instead of injecting fake empty `SelectListItem` entries from controllers. The option collections now contain only real persisted values, while the views render plain placeholders such as `Select provider`, `Use default orchestrator`, or `None` when an empty selection is allowed.
 
-The MVC admin AI settings screen now exposes the full shared `GeneralAISettings` surface used by the framework runtime, including preemptive memory retrieval plus the override flags for maximum iterations, distributed caching, and OpenTelemetry. Profile and profile-template editors also use the same **Data Processing & Metrics** tab layout so session inactivity, extraction rules, analytics, conversion goals, and post-session processing stay aligned across both editors.
+The MVC admin AI settings screen now exposes the shared `GeneralAISettings` values used by the framework runtime, including preemptive memory retrieval. Profile and profile-template editors also use the same **Data Processing & Metrics** tab layout so session inactivity, extraction rules, analytics, conversion goals, and post-session processing stay aligned across both editors.
 
 Because the MVC sample stores runtime state under `App_Data`, the project now excludes `App_Data/**` from `.NET 10` `dotnet watch` input discovery. That prevents Aspire and other watch-based local runs from restarting `MvcWeb` when uploads create files under `App_Data/Documents` or runtime services update logs and local data files.
 
@@ -106,6 +106,8 @@ builder.Services
     .AddCrestAppsA2AClient()
     .AddCrestAppsMcpClient()
     .AddCrestAppsMcpServer()
+    .AddFtpMcpResourceServices()
+    .AddSftpMcpResourceServices()
     .AddCrestAppsSignalR();
 ```
 
@@ -230,13 +232,17 @@ The MVC sample now also keeps article-backed knowledge bases synchronized the sa
 
 Strict in-scope prompting is now enforced more aggressively too. When `IsInScope` is enabled for a chat interaction or AI profile data-source RAG configuration, the shared strict prompt templates explicitly forbid both answering from general knowledge and offering a general-knowledge fallback, so the MVC host matches the Orchard Core behavior more closely.
 
+The MVC admin chat widget now stays bound to the configured admin-chat profile instead of exposing a profile picker, restores its open/closed state and active session across page navigation, and reuses the stored session automatically when the next admin page loads. The dedicated AI Chat page now renders saved initial assistant prompts immediately and falls back to **What do you want to know?** when no welcome message is configured.
+
+`Program.cs` also registers a sample `sendEmail` AI function in the MVC host. The sample tool does not deliver real mail — it logs the requested recipient, subject, and message so you can see how host-specific tools plug into the shared framework.
+
 ### Section 9 — Model Context Protocol (MCP)
 
 Full bidirectional MCP setup:
 
 - **Client**: `AddCrestAppsMcpClient()` for connecting to remote MCP servers
 
-- **Server**: `AddCrestAppsMcpServer()` plus `MapMcp("mcp")` and `AddMcpServer(...)` handlers for tools, prompts, and resources
+- **Server**: `AddCrestAppsMcpServer()` plus `AddFtpMcpResourceServices()`, `AddSftpMcpResourceServices()`, and `MapMcp("mcp")` / `AddMcpServer(...)` handlers for tools, prompts, and resources
 
 The MCP server endpoint at `/mcp` includes configurable authentication middleware supporting API key, cookie auth, and admin role checks.
 

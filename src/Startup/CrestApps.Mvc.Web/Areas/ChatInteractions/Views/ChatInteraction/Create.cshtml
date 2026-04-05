@@ -1,5 +1,8 @@
 @using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels
+@using CrestApps.AI.Models
+@using Microsoft.Extensions.Options
 @model ChatInteractionViewModel
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
 @{
     ViewData["Title"] = "New Chat Interaction";
     const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
@@ -8,6 +11,8 @@
     const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
     const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
+    var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
 }
 
 <h2><i class="bi bi-plus-lg"></i> New Chat Interaction</h2>
@@ -474,9 +479,9 @@
                     <div id="pending-docs-list" class="mb-3"></div>
                     <div class="input-group">
                         <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
-                               accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
+                               accept="@supportedExtensionsAccept" />
                     </div>
-                    <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
+                    <div class="form-text">Supported formats: @supportedExtensionsDisplay</div>
                 </div>
             </div>
 

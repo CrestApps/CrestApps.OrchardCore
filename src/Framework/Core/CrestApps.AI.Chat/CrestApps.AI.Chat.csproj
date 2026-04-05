@@ -21,11 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DocumentFormat.OpenXml" />
-    <PackageReference Include="PdfPig" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="../CrestApps.AI/CrestApps.AI.csproj" />
   </ItemGroup>
 

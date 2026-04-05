@@ -57,26 +57,6 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IMcpServerPromptService, DefaultMcpServerPromptService>();
         services.TryAddScoped<IMcpServerResourceService, DefaultMcpServerResourceService>();
 
-        services.AddMcpResourceType<FtpResourceTypeHandler>(FtpResourceConstants.Type, entry =>
-        {
-            entry.DisplayName = new LocalizedString("FTP", "FTP/FTPS");
-            entry.Description = new LocalizedString("FTP Description", "Reads content from FTP/FTPS servers.");
-            entry.SupportedVariables =
-            [
-                new McpResourceVariable("path") { Description = new LocalizedString("FTP Path", "The remote file path on the FTP server.") },
-            ];
-        });
-
-        services.AddMcpResourceType<SftpResourceTypeHandler>(SftpResourceConstants.Type, entry =>
-        {
-            entry.DisplayName = new LocalizedString("SFTP", "SFTP");
-            entry.Description = new LocalizedString("SFTP Description", "Reads content from SFTP servers.");
-            entry.SupportedVariables =
-            [
-                new McpResourceVariable("path") { Description = new LocalizedString("SFTP Path", "The remote file path on the SFTP server.") },
-            ];
-        });
-
         return services;
     }
 

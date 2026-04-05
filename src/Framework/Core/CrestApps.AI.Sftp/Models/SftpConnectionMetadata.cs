@@ -1,8 +1,5 @@
-namespace CrestApps.AI.Mcp.Models;
+namespace CrestApps.AI.Sftp.Models;
 
-/// <summary>
-/// Metadata for SFTP connection settings stored in an MCP resource.
-/// </summary>
 public sealed class SftpConnectionMetadata
 {
     public string Host { get; set; }

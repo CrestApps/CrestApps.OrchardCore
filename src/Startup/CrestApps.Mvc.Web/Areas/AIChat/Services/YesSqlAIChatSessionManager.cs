@@ -1,6 +1,11 @@
+using System.Security.Claims;
+using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
+using CrestApps.AI.ResponseHandling;
 using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -8,11 +13,21 @@ namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 
 public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ISession _session;
+    private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly TimeProvider _timeProvider;
 
-    public YesSqlAIChatSessionManager(ISession session)
+    public YesSqlAIChatSessionManager(
+        IHttpContextAccessor httpContextAccessor,
+        ISession session,
+        IAIChatSessionPromptStore promptStore,
+        TimeProvider timeProvider)
     {
+        _httpContextAccessor = httpContextAccessor;
         _session = session;
+        _promptStore = promptStore;
+        _timeProvider = timeProvider;
     }
 
     public async Task<AIChatSession> FindByIdAsync(string id)
@@ -59,27 +74,62 @@ public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
         };
     }
 
-    public Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
+    public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var session = new AIChatSession
         {
-            SessionId = Guid.NewGuid().ToString("N"),
+            SessionId = UniqueId.GenerateId(),
             ProfileId = profile.ItemId,
-            CreatedUtc = DateTime.UtcNow,
-            LastActivityUtc = DateTime.UtcNow,
+            CreatedUtc = now,
+            LastActivityUtc = now,
             Status = ChatSessionStatus.Active,
         };
 
-        return Task.FromResult(session);
+        var user = _httpContextAccessor.HttpContext?.User;
+        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? user?.Identity?.Name;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            session.UserId = userId;
+        }
+
+        if (profile.Type == AIProfileType.Chat)
+        {
+            var profileMetadata = profile.As<AIProfileMetadata>();
+
+            if (!string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt))
+            {
+                await _promptStore.CreateAsync(new AIChatSessionPrompt
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    SessionId = session.SessionId,
+                    Role = ChatRole.Assistant,
+                    Title = profile.PromptSubject,
+                    Content = profileMetadata.InitialPrompt,
+                    CreatedUtc = now,
+                    IsGeneratedPrompt = true,
+                });
+            }
+
+            var handlerSettings = profile.GetSettings<ResponseHandlerProfileSettings>();
+
+            if (!string.IsNullOrEmpty(handlerSettings.InitialResponseHandlerName))
+            {
+                session.ResponseHandlerName = handlerSettings.InitialResponseHandlerName;
+            }
+        }
+
+        return session;
     }
 
     public async Task SaveAsync(AIChatSession chatSession)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        chatSession.LastActivityUtc = DateTime.UtcNow;
+        chatSession.LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime;
         await _session.SaveAsync(chatSession);
         await _session.SaveChangesAsync();
     }

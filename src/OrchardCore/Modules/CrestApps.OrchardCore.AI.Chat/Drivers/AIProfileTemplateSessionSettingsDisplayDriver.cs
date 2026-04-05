@@ -23,10 +23,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         return Initialize<EditAIProfileSessionSettingsViewModel>("AIProfileSessionSettings_Edit", model =>
         {
             var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
-            var analyticsMetadata = template.As<AnalyticsMetadata>();
-
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
-            model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
         }).Location("Content:1#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
@@ -50,10 +47,6 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
         var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
         dataExtractionSettings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
         template.Put(dataExtractionSettings);
-
-        var analyticsMetadata = template.As<AnalyticsMetadata>();
-        analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
-        template.Put(analyticsMetadata);
 
         return Edit(template, context);
     }

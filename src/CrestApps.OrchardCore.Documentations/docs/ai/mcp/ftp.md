@@ -14,7 +14,7 @@ Provides FTP/FTPS resource support for the MCP Server, allowing remote files to 
 
 ## Overview
 
-This module implements the `IMcpResourceTypeHandler` interface to handle `ftp://` URIs. It uses the [FluentFTP](https://github.com/robinrodricks/FluentFTP) library to connect to FTP servers and retrieve file content.
+This module wires Orchard Core's FTP resource UI and deployment integration on top of the shared `CrestApps.AI.Ftp` framework package. The shared handler uses the [FluentFTP](https://github.com/robinrodricks/FluentFTP) library to connect to FTP servers and retrieve file content.
 
 ## Features
 

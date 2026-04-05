@@ -180,7 +180,7 @@
     <script src="~/js/technical-name-generator.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 
-    @if (User.Identity.IsAuthenticated)
+    @if (User.Identity.IsAuthenticated && !string.Equals(ViewContext.RouteData.Values["area"]?.ToString(), "AIChat", StringComparison.OrdinalIgnoreCase))
     {
         @await Html.PartialAsync("~/Areas/AIChat/Views/Shared/_ChatWidget.cshtml")
     }

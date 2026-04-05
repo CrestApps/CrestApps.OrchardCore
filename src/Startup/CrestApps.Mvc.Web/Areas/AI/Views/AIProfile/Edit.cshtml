@@ -1,5 +1,8 @@
 @using CrestApps.Mvc.Web.Areas.AI.ViewModels
+@using CrestApps.AI.Models
+@using Microsoft.Extensions.Options
 @model AIProfileViewModel
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
 @{
     ViewData["Title"] = "Edit AI Profile";
     const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
@@ -8,7 +11,65 @@
     const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
     const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
+    var embeddableExtensionsAccept = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsAcceptValue();
+    var embeddableExtensionsDisplay = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsDisplayValue();
 }
+
+<style>
+    .attached-documents-panel {
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.75rem;
+        background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
+        padding: 1rem;
+    }
+
+    .attached-documents-list {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .attached-document-card {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border: 1px solid var(--bs-border-color, #dee2e6);
+        border-radius: 0.75rem;
+        background-color: #fff;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.04);
+    }
+
+    .attached-document-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.75rem;
+        background-color: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+        font-size: 1.1rem;
+    }
+
+    .attached-document-meta {
+        min-width: 0;
+    }
+
+    .attached-document-name {
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .attached-document-size {
+        display: inline-flex;
+        margin-top: 0.25rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        background-color: rgba(108, 117, 125, 0.12);
+        color: #495057;
+        font-size: 0.8rem;
+    }
+</style>
 
 <h2><i class="bi bi-pencil"></i> Edit AI Profile</h2>
 <hr />
@@ -542,25 +603,36 @@
                         </div>
                     </div>
 
-                    <h6 class="mt-3 mb-2"><i class="bi bi-file-earmark-text"></i> Attached Documents</h6>
-                    <div id="existing-docs-list">
-                        @foreach (var doc in Model.AttachedDocuments)
-                        {
-                            <div class="d-flex align-items-center mb-2 existing-doc-row" data-doc-id="@doc.DocumentId">
-                                <i class="bi bi-file-earmark me-2"></i>
-                                <span class="flex-grow-1">@doc.FileName <small class="text-muted">(@(doc.FileSize < 1024 ? doc.FileSize + " B" : doc.FileSize < 1048576 ? (doc.FileSize / 1024.0).ToString("F1") + " KB" : (doc.FileSize / 1048576.0).ToString("F1") + " MB"))</small></span>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-existing-doc-btn" title="Remove">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                    <div class="attached-documents-panel mt-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h6 class="mb-1"><i class="bi bi-file-earmark-text"></i> Attached Documents</h6>
+                                <p class="text-muted small mb-0">These files are indexed as background knowledge for this profile and remain hidden from end users. Supported knowledge formats: @embeddableExtensionsDisplay</p>
                             </div>
-                        }
-                    </div>
-                    <div id="removed-docs-container"></div>
-                    <div id="pending-docs-list" class="mb-2"></div>
-                    <div class="mb-3">
-                        <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
-                               accept=".txt,.md,.csv,.json,.xml,.html,.pdf,.docx,.xlsx,.pptx" />
-                        <div class="form-text">Supported formats: Plain text, Markdown, JSON, XML, HTML, PDF, and Office documents (when matching readers are configured).</div>
+                            <span class="badge text-bg-primary rounded-pill">@Model.AttachedDocuments.Count existing</span>
+                        </div>
+                        <div id="existing-docs-list" class="attached-documents-list mb-3">
+                            @foreach (var doc in Model.AttachedDocuments)
+                            {
+                                <div class="attached-document-card existing-doc-row" data-doc-id="@doc.DocumentId">
+                                    <span class="attached-document-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                    <div class="attached-document-meta flex-grow-1">
+                                        <div class="attached-document-name">@doc.FileName</div>
+                                        <span class="attached-document-size">@(doc.FileSize < 1024 ? doc.FileSize + " B" : doc.FileSize < 1048576 ? (doc.FileSize / 1024.0).ToString("F1") + " KB" : (doc.FileSize / 1048576.0).ToString("F1") + " MB")</span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-existing-doc-btn" title="Remove">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <div id="removed-docs-container"></div>
+                        <div id="pending-docs-list" class="mb-2"></div>
+                        <div class="mb-0">
+                            <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
+                                   accept="@embeddableExtensionsAccept" />
+                            <div class="form-text">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                        </div>
                     </div>
                 </div>
 

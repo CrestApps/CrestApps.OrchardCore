@@ -111,25 +111,16 @@ public sealed class MyChatInteractionHandler : CatalogEntryHandlerBase<ChatInter
 }
 ```
 
-### `IAIChatDocumentAuthorizationService`
+### Chat document authorization
 
-Applications register this service to decide who may upload or remove chat documents.
+The shared document endpoints use standard ASP.NET Core resource authorization through `IAuthorizationService`.
 
-```csharp
-public interface IAIChatDocumentAuthorizationService
-{
-    Task<bool> CanManageChatInteractionDocumentsAsync(
-        ClaimsPrincipal user,
-        ChatInteraction interaction);
+Hosts register `IAuthorizationHandler` implementations for:
 
-    Task<bool> CanManageChatSessionDocumentsAsync(
-        ClaimsPrincipal user,
-        AIProfile profile,
-        AIChatSession session);
-}
-```
+- `AIChatDocumentOperations.ManageDocuments` on `ChatInteraction`
+- `AIChatDocumentOperations.ManageDocuments` on `AIChatSessionDocumentAuthorizationContext`
 
-Use this when your host needs different authorization rules for admin-managed interaction documents versus end-user session uploads.
+`AIChatSessionDocumentAuthorizationContext` carries both the `AIProfile` and `AIChatSession`, so hosts can apply different rules for admin-managed interaction documents versus end-user session uploads without introducing a separate chat-specific authorization abstraction.
 
 ### `IAIChatDocumentEventHandler`
 
@@ -231,6 +222,7 @@ These endpoints:
 - process files through `IAIDocumentProcessingService`
 - persist `AIDocument` and `AIDocumentChunk` records through the configured stores
 - update `ChatInteraction.Documents` or `AIChatSession.Documents`
+- authorize upload and remove operations through `IAuthorizationService`
 - invoke `IAIChatDocumentEventHandler` so the host can index chunks or save original files
 
 Session uploads are also gated by `AIProfileSessionDocumentsMetadata.AllowSessionDocuments`, which keeps profile-level session upload behavior explicit.

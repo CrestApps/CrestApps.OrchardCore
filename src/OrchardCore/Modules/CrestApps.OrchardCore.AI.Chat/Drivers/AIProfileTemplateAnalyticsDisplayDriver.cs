@@ -24,6 +24,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
         {
             var analyticsMetadata = template.As<AnalyticsMetadata>();
             model.EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics;
+            model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics;
             model.ConversionGoals = analyticsMetadata.ConversionGoals
             .Select(g => new ConversionGoalViewModel
@@ -110,6 +111,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
 
         var analyticsMetadata = template.As<AnalyticsMetadata>();
         analyticsMetadata.EnableSessionMetrics = model.EnableSessionMetrics;
+        analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         analyticsMetadata.EnableConversionMetrics = model.EnableConversionMetrics;
         analyticsMetadata.ConversionGoals = goals.Select(g => new ConversionGoal
         {

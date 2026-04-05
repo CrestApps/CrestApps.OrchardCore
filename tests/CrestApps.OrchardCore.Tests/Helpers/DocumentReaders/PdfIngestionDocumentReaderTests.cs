@@ -1,4 +1,4 @@
-using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Pdf.Services;
 using UglyToad.PdfPig.Writer;
 
 namespace CrestApps.OrchardCore.Tests.Helpers.DocumentReaders;
