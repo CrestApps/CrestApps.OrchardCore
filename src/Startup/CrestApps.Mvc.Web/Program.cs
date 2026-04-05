@@ -7,6 +7,7 @@ using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Endpoints;
 using CrestApps.AI.Copilot;
 using CrestApps.AI.Ftp;
+using CrestApps.AI.Markdown;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
@@ -149,6 +150,7 @@ builder.Services
 
     // Core AI services: client factory, completion service, context builders, and AI options.
     .AddCrestAppsAI()
+    .AddMarkdownServices()
 
     // Orchestration pipeline: IOrchestrator, tool registry, response handlers, and RAG flow.
     .AddOrchestrationServices()

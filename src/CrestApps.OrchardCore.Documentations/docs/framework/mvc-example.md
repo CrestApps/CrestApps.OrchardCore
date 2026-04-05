@@ -95,6 +95,7 @@ The core framework registration chain:
 builder.Services
     .AddCrestAppsCoreServices()
     .AddCrestAppsAI()
+    .AddMarkdownServices()
 
     .AddOrchestrationServices()
 
@@ -114,6 +115,8 @@ builder.Services
 `AddChatInteractionHandlers()` now registers the shared `DataSourceChatInteractionSettingsHandler`, so Chat Interactions persist the selected data source and RAG metadata through the framework settings pipeline instead of MVC-only wiring. The provider service blocks also pull in `AddDataSourceRagServices()`, which now registers both `DataSourceOrchestrationHandler` and `DataSourcePreemptiveRagHandler` at the framework level so source availability instructions and preemptive RAG stay aligned with the saved chat settings.
 
 Documents, memory, and data sources now remain fully independent orchestration sources in the shared framework. Each source injects its own availability instructions and preemptive-RAG context, so the orchestrator can compose them together without the document prompts needing to know whether memory or data sources are also attached.
+
+The MVC sample explicitly calls `AddMarkdownServices()` after `AddCrestAppsAI()`. That keeps Markdown-aware normalization opt-in at the host level instead of making `CrestApps.AI` depend on the Markdig-backed package automatically.
 
 ### Section 6 — AI Providers
 

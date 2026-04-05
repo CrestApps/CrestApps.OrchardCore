@@ -5,7 +5,6 @@ using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Models;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Models;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +28,6 @@ public sealed class SettingsController : Controller
     private readonly AppDataSettingsService<InteractionDocumentSettings> _interactionDocumentSettingsService;
     private readonly AppDataSettingsService<AIDataSourceSettings> _aiDataSourceSettingsService;
     private readonly AppDataSettingsService<McpServerOptions> _mcpServerSettingsService;
-    private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
     private readonly AppDataSettingsService<MemoryMetadata> _chatInteractionMemorySettingsService;
     private readonly AppDataSettingsService<CopilotSettings> _copilotSettingsService;
     private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
@@ -45,7 +43,6 @@ public sealed class SettingsController : Controller
         AppDataSettingsService<InteractionDocumentSettings> interactionDocumentSettingsService,
         AppDataSettingsService<AIDataSourceSettings> aiDataSourceSettingsService,
         AppDataSettingsService<McpServerOptions> mcpServerSettingsService,
-        AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
         AppDataSettingsService<MemoryMetadata> chatInteractionMemorySettingsService,
         AppDataSettingsService<CopilotSettings> copilotSettingsService,
         AppDataSettingsService<PaginationSettings> paginationSettingsService,
@@ -60,7 +57,6 @@ public sealed class SettingsController : Controller
         _interactionDocumentSettingsService = interactionDocumentSettingsService;
         _aiDataSourceSettingsService = aiDataSourceSettingsService;
         _mcpServerSettingsService = mcpServerSettingsService;
-        _chatInteractionSettingsService = chatInteractionSettingsService;
         _chatInteractionMemorySettingsService = chatInteractionMemorySettingsService;
         _copilotSettingsService = copilotSettingsService;
         _paginationSettingsService = paginationSettingsService;
@@ -91,8 +87,7 @@ public sealed class SettingsController : Controller
             DefaultOrchestratorEnablePreemptiveRag = defaultOrchestratorSettings.EnablePreemptiveRag,
             MemoryIndexProfileName = memorySettings.IndexProfileName,
             MemoryTopN = memorySettings.TopN,
-
-            ChatInteractionEnableUserMemory = chatInteractionMemorySettings.EnableUserMemory ?? true,
+            EnableUserMemoryByDefault = chatInteractionMemorySettings.EnableUserMemory ?? true,
 
             DefaultChatDeploymentName = deploymentDefaults.DefaultChatDeploymentName,
             DefaultUtilityDeploymentName = deploymentDefaults.DefaultUtilityDeploymentName,
@@ -242,14 +237,9 @@ public sealed class SettingsController : Controller
             RequireAccessPermission = model.McpServerRequireAccessPermission,
         });
 
-        await _chatInteractionSettingsService.SaveAsync(new ChatInteractionSettings
-        {
-            EnableUserMemory = model.ChatInteractionEnableUserMemory,
-        });
-
         await _chatInteractionMemorySettingsService.SaveAsync(new MemoryMetadata
         {
-            EnableUserMemory = model.ChatInteractionEnableUserMemory,
+            EnableUserMemory = model.EnableUserMemoryByDefault,
         });
 
         // Save Copilot settings.

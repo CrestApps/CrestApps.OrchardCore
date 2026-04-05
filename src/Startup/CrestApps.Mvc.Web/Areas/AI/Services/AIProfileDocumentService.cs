@@ -5,7 +5,6 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.Mvc.Web.Areas.AI.Services;

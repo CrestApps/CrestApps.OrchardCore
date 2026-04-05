@@ -4,7 +4,6 @@ using CrestApps.AI.Completions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Memory;
-using CrestApps.AI.Markdown;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.ResponseHandling;
@@ -120,11 +119,11 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services
-            .AddMarkdownServices()
             .AddAITemplating()
             .AddCrestAppsCoreServices()
             .AddScoped<IAIClientFactory, DefaultAIClientFactory>();
 
+        services.TryAddSingleton<IAITextNormalizer, DefaultAITextNormalizer>();
         services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>());
         services.TryAddScoped<IAICompletionService, DefaultAICompletionService>();
         services.TryAddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>();
@@ -134,7 +133,6 @@ public static class ServiceCollectionExtensions
         return services;
 
     }
-
 
     public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
 
@@ -212,6 +210,7 @@ public static class ServiceCollectionExtensions
         services.AddOptions<AIMemoryOptions>();
         services.AddOptions<GeneralAIOptions>();
         services.AddOptions<ChatInteractionMemoryOptions>();
+        services.TryAddScoped<AIMemoryIndexingService>();
         services.TryAddScoped<IAIMemorySafetyService, DefaultAIMemorySafetyService>();
         services.TryAddScoped<IAIMemorySearchService, AIMemorySearchService>();
         services.TryAdd(ServiceDescriptor.Scoped<ICatalog<AIMemoryEntry>>(sp => sp.GetRequiredService<IAIMemoryStore>()));

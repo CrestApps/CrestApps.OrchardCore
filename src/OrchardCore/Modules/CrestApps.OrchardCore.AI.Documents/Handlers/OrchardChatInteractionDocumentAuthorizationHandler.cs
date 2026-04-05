@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 

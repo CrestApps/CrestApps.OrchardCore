@@ -14,17 +14,23 @@ namespace CrestApps.AI.Services;
 public sealed class AIMemorySearchService : IAIMemorySearchService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ISearchIndexProfileStore _indexProfileStore;
+    private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly AIMemoryOptions _memoryOptions;
     private readonly ILogger<AIMemorySearchService> _logger;
 
     public AIMemorySearchService(
         IServiceProvider serviceProvider,
+        ISearchIndexProfileStore indexProfileStore,
+        IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         IOptions<AIMemoryOptions> memoryOptions,
         ILogger<AIMemorySearchService> logger)
     {
         _serviceProvider = serviceProvider;
+        _indexProfileStore = indexProfileStore;
+        _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
         _memoryOptions = memoryOptions.Value;
         _logger = logger;
@@ -38,6 +44,7 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
+            _logger.LogDebug("Skipping AI memory search because the user ID is missing.");
             return [];
         }
 
@@ -49,25 +56,27 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
 
         if (normalizedQueries is not { Length: > 0 })
         {
+            _logger.LogDebug("Skipping AI memory search because no non-empty queries were provided.");
             return [];
         }
 
         if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
         {
+            _logger.LogDebug("Skipping AI memory search because no AI Memory index profile is configured.");
             return [];
         }
 
-        var indexProfileStore = _serviceProvider.GetService<ISearchIndexProfileStore>();
-
-        if (indexProfileStore is null)
-        {
-            return [];
-        }
-
-        var indexProfile = await indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, IndexProfileTypes.AIMemory, StringComparison.OrdinalIgnoreCase))
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipping AI memory search because configured index profile '{IndexProfileName}' was not found or is not of type '{IndexProfileType}'.",
+                    _memoryOptions.IndexProfileName,
+                    IndexProfileTypes.AIMemory);
+            }
             return [];
         }
 
@@ -75,10 +84,16 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
 
         if (searchService is null)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Skipping AI memory search because provider '{ProviderName}' does not have a registered memory vector-search service.",
+                    indexProfile.ProviderName);
+            }
             return [];
         }
 
-        var embeddingGenerator = await CreateEmbeddingGeneratorAsync(indexProfile);
+        var embeddingGenerator = await CreateEmbeddingGeneratorAsync(indexProfile, _deploymentManager, _aiClientFactory);
 
         if (embeddingGenerator is null)
         {
@@ -89,6 +104,12 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
 
         if (embeddings is null || embeddings.Count == 0)
         {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "AI memory search produced no embeddings for configured index profile '{IndexProfileName}'.",
+                    indexProfile.Name);
+            }
             return [];
         }
 
@@ -98,9 +119,18 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
 
         var aggregatedResults = new Dictionary<string, AIMemorySearchResult>(StringComparer.OrdinalIgnoreCase);
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Running AI memory search against profile '{IndexProfileName}' using provider '{ProviderName}' for {QueryCount} query candidate(s).",
+                indexProfile.Name,
+                indexProfile.ProviderName,
+                normalizedQueries.Length);
+        }
+
         foreach (var embedding in embeddings)
         {
-            if (embedding?.Vector is null)
+            if (embedding.Vector.IsEmpty)
             {
                 continue;
             }
@@ -131,18 +161,14 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
             .ToList();
     }
 
-    private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(SearchIndexProfile indexProfile)
+    private async Task<IEmbeddingGenerator<string, Embedding<float>>> CreateEmbeddingGeneratorAsync(
+        SearchIndexProfile indexProfile,
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
     {
         if (string.IsNullOrWhiteSpace(indexProfile.EmbeddingDeploymentId))
         {
             _logger.LogWarning("AI memory index profile '{IndexProfileName}' is missing an embedding deployment.", indexProfile.Name);
-            return null;
-        }
-
-        var deploymentManager = _serviceProvider.GetService<IAIDeploymentManager>();
-
-        if (deploymentManager is null)
-        {
             return null;
         }
 
@@ -160,7 +186,7 @@ public sealed class AIMemorySearchService : IAIMemorySearchService
             return null;
         }
 
-        return await _aiClientFactory.CreateEmbeddingGeneratorAsync(
+        return await aiClientFactory.CreateEmbeddingGeneratorAsync(
             deployment.ClientName,
             deployment.ConnectionName,
             deployment.ModelName);

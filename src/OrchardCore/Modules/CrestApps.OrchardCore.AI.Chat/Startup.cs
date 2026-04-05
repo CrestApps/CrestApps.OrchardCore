@@ -1,10 +1,10 @@
 using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
-using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.Services;

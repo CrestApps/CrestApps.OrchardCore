@@ -129,7 +129,7 @@ The knowledge panel also surfaces inline document-upload feedback so users can s
 
 In both Orchard Core and the MVC sample, the Chat Interaction **Knowledge** tab now appears before **Capabilities** and groups the selected data source, the RAG controls (`Strictness`, `Retrieved documents`, `Restrict answers to retrieved data only`, and `Filter`), and the uploaded-document `Document Top N` control together with the same `(?)` tooltip affordances used on the model-parameter editors.
 
-The MVC sample's **Settings → AI Settings** page now also exposes the same high-level knobs used by the Orchard Core admin experience: AI Memory defaults (index profile and Top N), AI Data Source defaults (strictness and retrieved documents), default orchestrator preemptive RAG, and chat-interaction memory defaults.
+The MVC sample's **Settings → AI Settings** page now also exposes the same high-level knobs used by the Orchard Core admin experience: the **Memory** card now groups the default AI Memory index, memory Top N, **Enable user memory by default**, and **Enable preemptive memory retrieval** together, while the other cards continue to cover AI Data Source defaults and default orchestrator preemptive RAG.
 
 ## Image and Chart Generation
 

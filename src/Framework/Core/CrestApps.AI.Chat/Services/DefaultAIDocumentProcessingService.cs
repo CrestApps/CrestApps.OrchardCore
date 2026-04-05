@@ -18,17 +18,20 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
     private const int MaxEmbeddingTotalChars = 25000;
 
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAITextNormalizer _textNormalizer;
     private readonly IOptions<ChatDocumentsOptions> _extractorOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DefaultAIDocumentProcessingService> _logger;
 
     public DefaultAIDocumentProcessingService(
         IServiceProvider serviceProvider,
+        IAITextNormalizer textNormalizer,
         IOptions<ChatDocumentsOptions> extractorOptions,
         TimeProvider timeProvider,
         ILogger<DefaultAIDocumentProcessingService> logger)
     {
         _serviceProvider = serviceProvider;
+        _textNormalizer = textNormalizer;
         _extractorOptions = extractorOptions;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -90,7 +93,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
                 extension);
         }
 
-        text = await RagTextNormalizer.NormalizeContentAsync(text);
+        text = await _textNormalizer.NormalizeContentAsync(text);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var document = new AIDocument
@@ -108,7 +111,7 @@ public sealed class DefaultAIDocumentProcessingService : IAIDocumentProcessingSe
 
         if (ShouldGenerateEmbeddings(extension, text.Length, embeddingGenerator, options))
         {
-            var textChunks = await RagTextNormalizer.NormalizeAndChunkAsync(text);
+            var textChunks = await _textNormalizer.NormalizeAndChunkAsync(text);
             textChunks = LimitChunksForEmbedding(textChunks);
 
             if (_logger.IsEnabled(LogLevel.Debug))

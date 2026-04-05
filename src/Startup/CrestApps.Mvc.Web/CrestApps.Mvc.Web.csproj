@@ -22,6 +22,7 @@
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Ftp/CrestApps.AI.Ftp.csproj" />
+    <ProjectReference Include="../../Framework/Core/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Sftp/CrestApps.AI.Sftp.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
     <ProjectReference Include="../../Framework/Core/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />

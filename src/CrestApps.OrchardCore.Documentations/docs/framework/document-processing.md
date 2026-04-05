@@ -14,6 +14,7 @@ description: Document readers, semantic search, and tabular data extraction for 
 ```csharp
 builder.Services
     .AddCrestAppsAI()
+    .AddMarkdownServices()
     .AddOrchestrationServices()
     .AddChatInteractionServices()
     .AddDefaultDocumentProcessingServices()
@@ -45,7 +46,7 @@ The document processing system handles the full pipeline from upload to retrieva
 
 ### Built-in Document Readers
 
-`AddDefaultDocumentProcessingServices()` registers the plain-text and tabular readers. OpenXml and PDF readers now live in the dedicated `CrestApps.AI.OpenXml` and `CrestApps.AI.Pdf` packages, so hosts opt into those dependencies explicitly with `AddOpenXmlDocumentProcessingServices()` and `AddPdfDocumentProcessingServices()`. Markdown-aware normalization for `RagTextNormalizer` now also lives in its own `CrestApps.AI.Markdown` package, which exposes `AddMarkdownServices()` and keeps the Markdig dependency out of the core `CrestApps.AI` project.
+`AddDefaultDocumentProcessingServices()` registers the plain-text and tabular readers. OpenXml and PDF readers now live in the dedicated `CrestApps.AI.OpenXml` and `CrestApps.AI.Pdf` packages, so hosts opt into those dependencies explicitly with `AddOpenXmlDocumentProcessingServices()` and `AddPdfDocumentProcessingServices()`. Markdown-aware normalization now also lives in its own `CrestApps.AI.Markdown` package. `AddCrestAppsAI()` does not register it automatically, so hosts that want Markdig-backed normalization and chunking must opt in with `AddMarkdownServices()`.
 
 | Reader | Supported Extensions | Embeddable |
 |--------|---------------------|------------|
@@ -64,6 +65,8 @@ These tools are automatically available to the orchestrator when documents are a
 | `SearchDocumentsTool` | Semantic vector search across uploaded documents |
 | `ReadDocumentTool` | Reads full text of a specific document |
 | `ReadTabularDataTool` | Reads and parses CSV/TSV/Excel data |
+
+Preemptive document RAG uses the shared `document-context-header` template from the framework assembly, so Orchard Core and `CrestApps.Mvc.Web` inject the same uploaded-document and profile-knowledge instructions before generation starts.
 
 ## Key Interfaces
 

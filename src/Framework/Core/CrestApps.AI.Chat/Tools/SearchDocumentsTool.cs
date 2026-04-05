@@ -67,6 +67,7 @@ public sealed class SearchDocumentsTool : AIFunction
         try
         {
             var invocationContext = AIInvocationScope.Current;
+            var textNormalizer = arguments.Services.GetRequiredService<IAITextNormalizer>();
             var executionContext = invocationContext?.ToolExecutionContext;
             var searchScopes = new List<(string ResourceId, string ReferenceType)>();
 
@@ -255,7 +256,7 @@ public sealed class SearchDocumentsTool : AIFunction
                     var documentKey = result.DocumentKey;
                     if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
                     {
-                        seenDocuments[documentKey] = (invocationContext.NextReferenceIndex(), RagTextNormalizer.NormalizeTitle(result.FileName));
+                        seenDocuments[documentKey] = (invocationContext.NextReferenceIndex(), textNormalizer.NormalizeTitle(result.FileName));
                     }
 
                     var refIdx = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)

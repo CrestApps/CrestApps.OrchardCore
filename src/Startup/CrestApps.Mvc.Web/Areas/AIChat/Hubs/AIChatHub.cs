@@ -1,5 +1,4 @@
 using CrestApps.AI;
-using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Hubs;
 using CrestApps.AI.Models;
 using CrestApps.AI.ResponseHandling;

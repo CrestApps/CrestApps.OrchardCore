@@ -2,7 +2,6 @@ using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Templates.Services;
-using J2N.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -129,7 +128,7 @@ public sealed class DataExtractionService
             return ([], false);
         }
 
-        var prompt = BuildExtractionPrompt(fieldsToExtract, session, prompts);
+        var prompt = await BuildExtractionPromptAsync(fieldsToExtract, session, prompts);
 
         if (string.IsNullOrEmpty(prompt))
         {
@@ -267,55 +266,8 @@ public sealed class DataExtractionService
         return null;
     }
 
-    private static string BuildExtractionPrompt(List<DataExtractionEntry> fieldsToExtract, AIChatSession session, IReadOnlyList<AIChatSessionPrompt> prompts)
+    private async Task<string> BuildExtractionPromptAsync(List<DataExtractionEntry> fieldsToExtract, AIChatSession session, IReadOnlyList<AIChatSessionPrompt> prompts)
     {
-        var builder = new StringBuffer("Extract the following fields from the user's latest message.");
-        builder.AppendLine("Fields to extract:");
-
-        foreach (var field in fieldsToExtract)
-        {
-            builder.AppendLine();
-            builder.Append("- ");
-            builder.Append(field.Name);
-            builder.Append(": ");
-
-            if (!string.IsNullOrEmpty(field.Description))
-            {
-                builder.Append(field.Description);
-                builder.Append(" ");
-            }
-
-            builder.Append("(multiple: ");
-            builder.Append(field.AllowMultipleValues.ToString().ToLowerInvariant());
-            builder.Append(")");
-        }
-
-        if (session.ExtractedData?.Count > 0)
-        {
-            builder.AppendLine();
-            builder.Append("Current extracted state:");
-
-            foreach (var (key, state) in session.ExtractedData)
-            {
-                if (state.Values.Count == 0)
-                {
-                    continue;
-                }
-
-                builder.Append("- ");
-                builder.Append(key);
-                builder.Append(": [");
-
-                foreach (var value in state.Values)
-                {
-                    builder.Append(value);
-                    builder.Append(", ");
-                }
-
-                builder.Append("]");
-            }
-        }
-
         string lastUserMessage = null;
         string lastAssistantMessage = null;
 
@@ -343,18 +295,32 @@ public sealed class DataExtractionService
             return null;
         }
 
+        var arguments = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["fields"] = fieldsToExtract.Select(field => new
+            {
+                field.Name,
+                field.Description,
+                field.AllowMultipleValues,
+                field.IsUpdatable,
+            }).ToList(),
+            ["currentState"] = session.ExtractedData?
+                .Where(entry => entry.Value?.Values.Count > 0)
+                .Select(entry => new
+                {
+                    Name = entry.Key,
+                    Values = entry.Value.Values,
+                })
+                .ToList() ?? [],
+            ["lastUserMessage"] = lastUserMessage,
+        };
+
         if (!string.IsNullOrEmpty(lastAssistantMessage))
         {
-            builder.AppendLine();
-            builder.Append("Last assistant message: ");
-            builder.Append(lastAssistantMessage);
+            arguments["lastAssistantMessage"] = lastAssistantMessage;
         }
 
-        builder.AppendLine();
-        builder.Append("Latest user message: ");
-        builder.Append(lastUserMessage);
-
-        return builder.ToString();
+        return await _aiTemplateService.RenderAsync(AITemplateIds.DataExtractionPrompt, arguments);
     }
 
     private sealed class ExtractionResponse

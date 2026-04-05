@@ -4,7 +4,6 @@ using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.AI.ResponseHandling;
 using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using YesSql;
 using ISession = YesSql.ISession;

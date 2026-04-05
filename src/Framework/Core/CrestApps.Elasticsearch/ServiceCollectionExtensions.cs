@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Indexing;
+using CrestApps.AI.Memory;
 using CrestApps.Elasticsearch.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
@@ -87,6 +88,12 @@ public static class ServiceCollectionExtensions
             (sp, _) => new ElasticsearchVectorSearchService(
             sp.GetRequiredService<ElasticsearchClient>(),
             sp.GetRequiredService<ILogger<ElasticsearchVectorSearchService>>()));
+
+        services.TryAddKeyedScoped<IMemoryVectorSearchService>(
+            ProviderName,
+            (sp, _) => new ElasticsearchMemoryVectorSearchService(
+                sp.GetRequiredService<ElasticsearchClient>(),
+                sp.GetRequiredService<ILogger<ElasticsearchMemoryVectorSearchService>>()));
 
         return services;
     }

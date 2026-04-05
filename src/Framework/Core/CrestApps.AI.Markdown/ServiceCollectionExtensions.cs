@@ -1,3 +1,4 @@
+using CrestApps.AI.Markdown.Services;
 using CrestApps.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,8 +10,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton(_ => RagTextNormalizer.CreateMarkdownReader());
-        services.AddSingleton(_ => RagTextNormalizer.CreateDefaultChunker());
+        services.AddSingleton<IAITextNormalizer, MarkdownAITextNormalizer>();
 
         return services;
     }

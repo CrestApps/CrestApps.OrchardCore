@@ -22,7 +22,7 @@ public sealed class SettingsViewModel
 
     public int MemoryTopN { get; set; } = 5;
 
-    public bool ChatInteractionEnableUserMemory { get; set; } = true;
+    public bool EnableUserMemoryByDefault { get; set; } = true;
 
     public string DocumentIndexProfileName { get; set; }
 

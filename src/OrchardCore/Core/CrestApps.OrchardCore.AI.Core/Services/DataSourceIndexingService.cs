@@ -27,6 +27,7 @@ public sealed class DataSourceIndexingService
     private readonly ICatalog<AIDataSource> _dataSourceStore;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAITextNormalizer _textNormalizer;
     private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly IDistributedLock _distributedLock;
@@ -42,6 +43,7 @@ public sealed class DataSourceIndexingService
         ICatalog<AIDataSource> dataSourceStore,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
+        IAITextNormalizer textNormalizer,
         IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
         IDistributedLock distributedLock,
@@ -52,6 +54,7 @@ public sealed class DataSourceIndexingService
         _dataSourceStore = dataSourceStore;
         _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
+        _textNormalizer = textNormalizer;
         _documentIndexHandlers = documentIndexHandlers;
         _serviceProvider = serviceProvider;
         _distributedLock = distributedLock;
@@ -482,11 +485,11 @@ public sealed class DataSourceIndexingService
 
             // Normalize content and title, then chunk using token-aware splitter.
 
-            var normalizedTitle = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
+            var normalizedTitle = _textNormalizer.NormalizeTitle(sourceDoc.Title);
 
             sourceDoc.Title = normalizedTitle;
 
-            var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
+            var chunkTexts = await _textNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
 
             if (chunkTexts.Count == 0)
             {
@@ -754,8 +757,8 @@ public sealed class DataSourceIndexingService
 
             // Normalize content and title, then chunk using token-aware splitter.
 
-            sourceDoc.Title = RagTextNormalizer.NormalizeTitle(sourceDoc.Title);
-            var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
+            sourceDoc.Title = _textNormalizer.NormalizeTitle(sourceDoc.Title);
+            var chunkTexts = await _textNormalizer.NormalizeAndChunkAsync(sourceDoc.Content, cancellationToken);
 
             if (chunkTexts.Count == 0)
             {

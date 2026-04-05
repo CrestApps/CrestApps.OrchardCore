@@ -26,6 +26,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _templateService;
     private readonly InteractionDocumentOptions _options;
+    private readonly IAITextNormalizer _textNormalizer;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
@@ -35,6 +36,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService templateService,
         IOptions<InteractionDocumentOptions> options,
+        IAITextNormalizer textNormalizer,
         IServiceProvider serviceProvider,
         ILogger<DocumentPreemptiveRagHandler> logger)
     {
@@ -43,6 +45,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
         _indexProfileStore = indexProfileStore;
         _templateService = templateService;
         _options = options.Value;
+        _textNormalizer = textNormalizer;
         _serviceProvider = serviceProvider;
         _logger = logger;
     }
@@ -293,7 +296,7 @@ internal sealed class DocumentPreemptiveRagHandler : IPreemptiveRagHandler
 
                 if (!string.IsNullOrEmpty(documentKey) && !seenDocuments.ContainsKey(documentKey))
                 {
-                    seenDocuments[documentKey] = (invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1, RagTextNormalizer.NormalizeTitle(result.FileName));
+                    seenDocuments[documentKey] = (invocationContext?.NextReferenceIndex() ?? seenDocuments.Count + 1, _textNormalizer.NormalizeTitle(result.FileName));
                 }
 
                 var referenceIndex = !string.IsNullOrEmpty(documentKey) && seenDocuments.TryGetValue(documentKey, out var entry)

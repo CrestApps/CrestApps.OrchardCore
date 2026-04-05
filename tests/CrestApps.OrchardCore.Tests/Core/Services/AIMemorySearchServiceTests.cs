@@ -109,13 +109,18 @@ public sealed class AIMemorySearchServiceTests
         Action<IServiceCollection> configureServices = null)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(aiClientFactory ?? Mock.Of<IAIClientFactory>());
+        services.AddSingleton(Mock.Of<ISearchIndexProfileStore>());
+        services.AddSingleton(Mock.Of<IAIDeploymentManager>());
         configureServices?.Invoke(services);
 
         var serviceProvider = services.BuildServiceProvider();
 
         return new AIMemorySearchService(
             serviceProvider,
-            aiClientFactory ?? Mock.Of<IAIClientFactory>(),
+            serviceProvider.GetRequiredService<ISearchIndexProfileStore>(),
+            serviceProvider.GetRequiredService<IAIDeploymentManager>(),
+            serviceProvider.GetRequiredService<IAIClientFactory>(),
             Options.Create(options),
             NullLogger<AIMemorySearchService>.Instance);
     }

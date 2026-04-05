@@ -1,10 +1,9 @@
 using System.Text;
-using CrestApps.AI;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

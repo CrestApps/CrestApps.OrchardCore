@@ -4,11 +4,11 @@
     <RootNamespace>CrestApps.AI</RootNamespace>
     <Title>CrestApps AI Core</Title>
     <Description>
-			$(CrestAppsDescription)
+      $(CrestAppsDescription)
 
-			Core AI service implementations including orchestration, tool registry, and completion services.
-			Framework-independent, usable in any ASP.NET Core application.
-		</Description>
+      Core AI service implementations including orchestration, tool registry, and completion services.
+      Framework-independent, usable in any ASP.NET Core application.
+    </Description>
     <PackageTags>$(PackageTags) AI Core</PackageTags>
   </PropertyGroup>
 
@@ -29,7 +29,6 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
-    <ProjectReference Include="../CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
     <ProjectReference Include="../CrestApps.Core/CrestApps.Core.csproj" />
     <ProjectReference Include="../CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
     <ProjectReference Include="../CrestApps.Templates/CrestApps.Templates.csproj" />

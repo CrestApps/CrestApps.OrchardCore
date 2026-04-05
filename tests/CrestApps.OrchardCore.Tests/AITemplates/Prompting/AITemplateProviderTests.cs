@@ -248,4 +248,18 @@ public sealed class EmbeddedResourceAITemplateProviderTests
             Assert.Equal("MyFeature", t.FeatureId);
         });
     }
+
+    [Fact]
+    public async Task GetTemplatesAsync_FrameworkAssemblyIncludesDocumentContextHeader()
+    {
+        var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
+        var assembly = typeof(CrestApps.AI.AITemplateIds).Assembly;
+        var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
+
+        var templates = await provider.GetTemplatesAsync();
+
+        var template = Assert.Single(templates, t => t.Id == CrestApps.AI.AITemplateIds.DocumentContextHeader);
+        Assert.Equal("Document Context Header", template.Metadata.Title);
+        Assert.Contains("[Uploaded Document Context]", template.Content);
+    }
 }

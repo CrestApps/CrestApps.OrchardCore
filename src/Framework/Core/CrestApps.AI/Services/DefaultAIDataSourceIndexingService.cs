@@ -21,6 +21,7 @@ public sealed class DefaultAIDataSourceIndexingService : IAIDataSourceIndexingSe
     private readonly ISearchIndexProfileManager _indexProfileManager;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAITextNormalizer _textNormalizer;
     private readonly IServiceProvider _serviceProvider;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DefaultAIDataSourceIndexingService> _logger;
@@ -30,6 +31,7 @@ public sealed class DefaultAIDataSourceIndexingService : IAIDataSourceIndexingSe
         ISearchIndexProfileManager indexProfileManager,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
+        IAITextNormalizer textNormalizer,
         IServiceProvider serviceProvider,
         TimeProvider timeProvider,
         ILogger<DefaultAIDataSourceIndexingService> logger)
@@ -38,6 +40,7 @@ public sealed class DefaultAIDataSourceIndexingService : IAIDataSourceIndexingSe
         _indexProfileManager = indexProfileManager;
         _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
+        _textNormalizer = textNormalizer;
         _serviceProvider = serviceProvider;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -187,8 +190,8 @@ public sealed class DefaultAIDataSourceIndexingService : IAIDataSourceIndexingSe
                 continue;
             }
 
-            var normalizedTitle = RagTextNormalizer.NormalizeTitle(sourceDocument.Title);
-            var chunkTexts = await RagTextNormalizer.NormalizeAndChunkAsync(sourceDocument.Content, cancellationToken);
+            var normalizedTitle = _textNormalizer.NormalizeTitle(sourceDocument.Title);
+            var chunkTexts = await _textNormalizer.NormalizeAndChunkAsync(sourceDocument.Content, cancellationToken);
 
             if (chunkTexts.Count == 0)
             {

@@ -1,9 +1,8 @@
-using CrestApps.AI.DataSources;
 using CrestApps.AI.Models;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.DataSources.Services;
-using CrestApps.Services;
 using CrestApps.Mvc.Web.Areas.DataSources.ViewModels;
+using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;

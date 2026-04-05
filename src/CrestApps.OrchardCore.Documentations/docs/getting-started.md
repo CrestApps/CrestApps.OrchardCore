@@ -25,6 +25,7 @@ Choose the path that matches your project:
 ```bash
 dotnet add package CrestApps.AI
 dotnet add package CrestApps.AI.Chat
+dotnet add package CrestApps.AI.Markdown
 dotnet add package CrestApps.AI.OpenAI        # or another provider
 dotnet add package CrestApps.Data.YesSql       # or your preferred storage
 ```
@@ -35,6 +36,7 @@ dotnet add package CrestApps.Data.YesSql       # or your preferred storage
 builder.Services
     .AddCrestAppsCoreServices()
     .AddCrestAppsAI()
+    .AddMarkdownServices()
     .AddOrchestrationServices()
     .AddChatInteractionHandlers()
     .AddDefaultDocumentProcessingServices()

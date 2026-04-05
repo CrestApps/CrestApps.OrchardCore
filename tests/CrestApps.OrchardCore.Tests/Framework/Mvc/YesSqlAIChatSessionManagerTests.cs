@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.AI;
-using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
 using CrestApps.AI.ResponseHandling;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;

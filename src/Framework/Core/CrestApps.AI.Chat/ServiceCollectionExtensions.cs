@@ -6,6 +6,7 @@ using CrestApps.AI.Handlers;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Services;
 using CrestApps.Templates.Extensions;
@@ -92,6 +93,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddDefaultDocumentProcessingServices(this IServiceCollection services)
     {
+        services.TryAddSingleton<IAITextNormalizer, DefaultAITextNormalizer>();
         services.TryAddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
 
         // Register the tabular batch processor (used by heavy processing tools)

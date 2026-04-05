@@ -48,6 +48,8 @@ A **provider connection** stores credentials and endpoint information for a spec
 
 It also chains `AddAITemplating()` and `AddCrestAppsCoreServices()` automatically.
 
+Optional format-specific packages stay opt-in. For example, Markdown-aware normalization lives in `CrestApps.AI.Markdown`, so hosts that want Markdig-backed RAG normalization should register `AddMarkdownServices()` explicitly instead of expecting `AddCrestAppsAI()` to pull it in automatically.
+
 ## Key Interfaces
 
 ### `IAIClientFactory`

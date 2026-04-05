@@ -1,5 +1,6 @@
 using CrestApps.AI;
 using CrestApps.AI.Deployments;
+using CrestApps.AI.Markdown;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddCrestAppsAI()
+            .AddMarkdownServices()
             .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<ISpeechVoiceResolver, DefaultSpeechVoiceResolver>()

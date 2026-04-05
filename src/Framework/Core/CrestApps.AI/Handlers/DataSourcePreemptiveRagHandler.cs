@@ -24,6 +24,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
     private readonly IAIClientFactory _aiClientFactory;
     private readonly ITemplateService _templateService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAITextNormalizer _textNormalizer;
     private readonly AIDataSourceOptions _options;
     private readonly ILogger _logger;
 
@@ -32,6 +33,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         IAIClientFactory aiClientFactory,
         ITemplateService templateService,
         IAIDeploymentManager deploymentManager,
+        IAITextNormalizer textNormalizer,
         IOptions<AIDataSourceOptions> options,
         ILogger<DataSourcePreemptiveRagHandler> logger)
     {
@@ -39,6 +41,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
         _aiClientFactory = aiClientFactory;
         _templateService = templateService;
         _deploymentManager = deploymentManager;
+        _textNormalizer = textNormalizer;
         _options = options.Value;
         _logger = logger;
     }
@@ -235,7 +238,7 @@ internal sealed class DataSourcePreemptiveRagHandler : IPreemptiveRagHandler
             {
                 seenReferences[result.ReferenceId] = (
                     invocationContext?.NextReferenceIndex() ?? seenReferences.Count + 1,
-                    RagTextNormalizer.NormalizeTitle(result.Title),
+                    _textNormalizer.NormalizeTitle(result.Title),
                     result.ReferenceType);
             }
 

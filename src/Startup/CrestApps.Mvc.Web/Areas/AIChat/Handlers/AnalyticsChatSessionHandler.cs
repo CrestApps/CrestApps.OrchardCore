@@ -3,7 +3,6 @@ using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
 
 namespace CrestApps.Mvc.Web.Areas.AIChat.Handlers;
 

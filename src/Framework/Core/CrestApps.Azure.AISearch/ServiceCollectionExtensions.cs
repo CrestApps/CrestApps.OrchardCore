@@ -3,6 +3,7 @@ using Azure.Identity;
 using Azure.Search.Documents.Indexes;
 using CrestApps.AI;
 using CrestApps.AI.Indexing;
+using CrestApps.AI.Memory;
 using CrestApps.Azure.AISearch.Services;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Infrastructure.Indexing.DataSources;
@@ -81,6 +82,12 @@ public static class ServiceCollectionExtensions
             ProviderName,
             (sp, _) => new AzureAISearchVectorSearchService(
             sp.GetRequiredService<SearchIndexClient>(), sp.GetRequiredService<ILogger<AzureAISearchVectorSearchService>>()));
+
+        services.TryAddKeyedScoped<IMemoryVectorSearchService>(
+            ProviderName,
+            (sp, _) => new AzureAISearchMemoryVectorSearchService(
+                sp.GetRequiredService<SearchIndexClient>(),
+                sp.GetRequiredService<ILogger<AzureAISearchMemoryVectorSearchService>>()));
 
         return services;
     }
