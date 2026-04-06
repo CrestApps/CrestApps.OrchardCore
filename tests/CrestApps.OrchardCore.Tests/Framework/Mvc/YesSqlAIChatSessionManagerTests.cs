@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 public sealed class YesSqlAIChatSessionManagerTests
 {
     [Fact]
-    public async Task NewAsync_WithInitialPrompt_ShouldCreateGeneratedAssistantPrompt()
+    public async Task NewAsync_WithInitialPrompt_ShouldCreateAssistantPromptThatParticipatesInHistory()
     {
         var promptStore = new Mock<IAIChatSessionPromptStore>();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -54,7 +54,8 @@ public sealed class YesSqlAIChatSessionManagerTests
             prompt.Role == ChatRole.Assistant &&
             prompt.Title == "Welcome" &&
             prompt.Content == "Hello there" &&
-            prompt.IsGeneratedPrompt)),
+            !prompt.IsGeneratedPrompt &&
+            prompt.CreatedUtc != default)),
             Times.Once);
     }
 }

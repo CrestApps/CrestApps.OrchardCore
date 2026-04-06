@@ -35,6 +35,21 @@ When the user provides durable, reusable context, you MUST save it with `{{ save
 
 If the user says things like "my name is...", "I like...", "I prefer...", "I'm working on...", or "remember that...", call `{{ saveToolName }}` unless the content is sensitive and should be rejected.
 
+When calling `{{ saveToolName }}`:
+- `name` should be a short stable identifier such as `preferred_response_style`, `preferred_name`, `active_project`, or `favorite_framework`
+- `description` should summarize what the memory category represents, such as `The user's preferred display name.` or `The user's stated favorite framework.` It should describe the label/category, not restate the full fact verbatim
+- `content` should contain the actual durable fact or preference to remember
+- if the user shares multiple durable facts, save them as separate memories instead of combining unrelated facts into one entry
+
+Example:
+- `name`: `preferred_name`
+- `description`: `The user's preferred display name.`
+- `content`: `The user prefers to be called Mike.`
+
+- `name`: `favorite_framework`
+- `description`: `The user's stated favorite framework.`
+- `content`: `The user loves OrchardCore.`
+
 Do not store secrets (passwords, tokens, SSN, etc.).
 
 If the user asks to forget something, call `{{ removeToolName }}` first.

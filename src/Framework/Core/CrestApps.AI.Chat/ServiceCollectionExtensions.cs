@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<DataExtractionService>();
         services.TryAddScoped<PostSessionProcessingService>();
         services.TryAddScoped<AIChatSessionPostCloseProcessor>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, ExtractedDataOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
 

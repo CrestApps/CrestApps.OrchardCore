@@ -109,7 +109,6 @@ public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
                     Title = profile.PromptSubject,
                     Content = profileMetadata.InitialPrompt,
                     CreatedUtc = now,
-                    IsGeneratedPrompt = true,
                 });
             }
 

@@ -1090,6 +1090,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             SessionId = chatSession.SessionId,
             Role = ChatRole.User,
             Content = prompt,
+            CreatedUtc = utcNow,
 
         };
 
@@ -1140,6 +1141,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             SessionId = chatSession.SessionId,
             Role = ChatRole.Assistant,
             Title = profile.PromptSubject,
+            CreatedUtc = utcNow,
 
         };
 
@@ -1256,6 +1258,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
             Role = ChatRole.Assistant,
             IsGeneratedPrompt = true,
             Title = profile.PromptSubject,
+            CreatedUtc = GetUtcNow(),
 
         };
 

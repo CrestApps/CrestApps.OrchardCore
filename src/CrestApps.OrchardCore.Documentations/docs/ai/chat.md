@@ -38,6 +38,8 @@ Profile-source AI Templates now follow the same top-level card grouping:
 
 Additional advanced sections such as capabilities, response handling, analytics, and post-session processing continue to appear below these cards in their existing sections. In the **Knowledge** tab, AI Profiles now group the selected data source, the same data-source RAG controls used by chat interactions (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), uploaded profile documents, and session-document upload settings in one place. The model-parameter editors in both MVC and Orchard Core now also use consistent `(?)` hover help for Temperature, Top P, penalties, token limits, and past-message settings so profile editing matches the chat and template UX.
 
+When **Data Extraction** is enabled for an AI Profile, the live chat session now feeds any already extracted field values back into the model prompt. This helps scripted assistants avoid re-asking for values they already collected in the same session unless the user is correcting them.
+
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using OpenAI service.
@@ -49,7 +51,7 @@ Additional advanced sections such as capabilities, response handling, analytics,
 
 When an AI profile has a **Welcome Message** configured, it is displayed as placeholder text for new sessions. It is not automatically added to the model conversation history.
 
-If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started.
+If **Add initial prompt** is enabled on the profile, the welcome message is ignored for new sessions. Instead, the session is created immediately with an assistant message from the configured **Initial prompt**, and that message appears in chat history when the page loads or when a new session is started. That initial assistant turn also participates in the live chat transcript, so follow-up user replies are grounded on it just like any other assistant message.
 
 ### Chat Mode
 

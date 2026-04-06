@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CrestApps.AI.Tools;
 
-public sealed class SaveUserMemoryTool : AIFunction
+public sealed partial class SaveUserMemoryTool : AIFunction
 {
     public const string TheName = "save_user_memory";
 
@@ -24,7 +24,7 @@ public sealed class SaveUserMemoryTool : AIFunction
         },
         "description": {
           "type": "string",
-          "description": "A short semantic description of what this memory represents. Do not repeat the content verbatim."
+          "description": "A short semantic description of the memory category or label, such as 'The user's preferred display name.' or 'The user's Orchard Core interest.'. This describes what the memory means, not the full stored fact."
         },
         "content": {
           "type": "string",

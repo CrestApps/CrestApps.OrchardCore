@@ -23,7 +23,7 @@ builder.Services
 
 `AddAIMemoryServices()` registers the shared framework behavior — safety validation, memory tools, orchestration handlers, preemptive memory retrieval, the shared memory-indexing service, and the default semantic memory search service. Hosts still provide the durable store plus any provider-specific vector-search adapters (`IAIMemoryStore`, `ISearchIndexProfileStore`, and keyed `IMemoryVectorSearchService`) while configuring runtime options such as `AIMemoryOptions`, `GeneralAIOptions`, and `ChatInteractionMemoryOptions` through standard `IOptions<>` registration.
 
-The shared memory search service resolves its runtime dependencies inside a fresh DI scope per request, so preemptive memory retrieval, `search_user_memories`, and `remove_user_memory` all work correctly in both Orchard Core and `CrestApps.Mvc.Web` without leaking disposed scoped services across chat requests.
+The shared memory search service now reuses the active request scope, so preemptive memory retrieval, `search_user_memories`, and `remove_user_memory` work in both Orchard Core and `CrestApps.Mvc.Web` without opening a nested YesSql scope that can trigger SQLite locking.
 
 The Orchard Core memory module layers its YesSql storage, indexing, and admin UI on top of that shared framework registration. Once enabled, authenticated users gain four AI-callable memory tools out of the box.
 
@@ -158,7 +158,7 @@ Creates or updates a durable memory for the authenticated user.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `name` | `string` | Yes | Short identifier (max 256 chars) |
-| `description` | `string` | Yes | Semantic summary (max 1000 chars) |
+| `description` | `string` | Yes | Semantic summary of the memory category/name, not a duplicate of the stored value (max 1000 chars) |
 | `content` | `string` | Yes | Memory data (max 4000 chars) |
 
 **Behavior:**
@@ -168,7 +168,9 @@ Creates or updates a durable memory for the authenticated user.
 4. Creates a new entry or updates the existing one
 5. Returns the saved memory with `ItemId`, timestamps, and a `created` flag
 
-The default memory-availability prompt also tells the model to save durable facts proactively. Names, preferences, likes/dislikes, roles, active projects, and recurring interests should trigger `save_user_memory` automatically unless the content is sensitive and must be rejected.
+The tool stores the provided `description` as-is. Prompt guidance should keep `description` category-oriented and `content` value-oriented.
+
+The default memory-availability prompt also tells the model to save durable facts proactively. Names, preferences, likes/dislikes, roles, active projects, and recurring interests should trigger `save_user_memory` automatically unless the content is sensitive and must be rejected. When a user shares multiple durable facts, the model should save them as separate memories instead of bundling unrelated facts into one entry.
 
 ### `search_user_memories`
 

@@ -27,6 +27,8 @@ public static class AITemplateIds
 
     public const string DataExtractionPrompt = "data-extraction-prompt";
 
+    public const string ExtractedDataAvailability = "extracted-data-availability";
+
     public const string UseMarkdownSyntax = "use-markdown-syntax";
 
     public const string TaskPlanning = "task-planning";
