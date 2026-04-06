@@ -37,13 +37,9 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
                 await _eventService.RecordSessionStartedAsync(context.ChatSession);
             }
 
-            if (context.InputTokenCount > 0 || context.OutputTokenCount > 0 || context.ResponseLatencyMs > 0)
+            if (context.ResponseLatencyMs > 0)
             {
-                await _eventService.RecordCompletionMetricsAsync(
-                    context.ChatSession.SessionId,
-                    context.InputTokenCount,
-                    context.OutputTokenCount,
-                    context.ResponseLatencyMs);
+                await _eventService.RecordResponseLatencyAsync(context.ChatSession.SessionId, context.ResponseLatencyMs);
             }
         }
         catch (Exception ex)

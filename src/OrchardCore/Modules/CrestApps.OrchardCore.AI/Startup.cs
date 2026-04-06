@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Services;
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
@@ -296,8 +297,12 @@ public sealed class ChatAnalyticsStartup : StartupBase
     {
         services
             .AddScoped<AIChatSessionEventService>()
+            .AddScoped<AICompletionUsageService>()
+            .AddScoped<IAICompletionUsageObserver>(sp => sp.GetRequiredService<AICompletionUsageService>())
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
-            .AddIndexProvider<AIChatSessionMetricsIndexProvider>();
+            .AddDataMigration<AICompletionUsageIndexMigrations>()
+            .AddIndexProvider<AIChatSessionMetricsIndexProvider>()
+            .AddIndexProvider<AICompletionUsageIndexProvider>();
 
         services.TryAddScoped<AIChatSessionEventPostCloseObserver>();
         services.TryAddScoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<AIChatSessionEventPostCloseObserver>());

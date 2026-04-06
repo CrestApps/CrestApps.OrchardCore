@@ -14,9 +14,10 @@ Provides comprehensive analytics and reporting for AI chat sessions. Track conve
 
 ## Overview
 
-The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, user feedback, conversion-goal scoring, and extracted structured values. Orchard Core exposes three reports under **Artificial Intelligence**:
+The **AI Chat Session Analytics** feature captures detailed metrics about every chat session — including session duration, message counts, resolution outcomes, response latency, token usage, user feedback, conversion-goal scoring, and extracted structured values. Orchard Core exposes four reports under **Artificial Intelligence**:
 
 - **Chat Session Analytics** — session metrics, performance, conversion, and feedback.
+- **AI Usage Analytics** — provider-call usage grouped by user, client, and model across chat sessions and chat interactions.
 - **Chat Conversion Goals** — one row per session with total conversion points plus one dynamic column per configured goal.
 - **Chat Extracted Data** — extracted field snapshots grouped into dynamic report columns per AI Profile.
 
@@ -24,11 +25,12 @@ The **AI Chat Session Analytics** feature captures detailed metrics about every 
 
 1. Go to **Tools** > **Features** in the admin menu.
 2. Search for **AI Chat Session Analytics** and enable it.
-3. Open each **AI Profile** where you want to collect metrics.
-4. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
-5. Navigate to **Artificial Intelligence** > **Chat Session Analytics**, **Chat Conversion Goals**, or **Chat Extracted Data** in the admin menu.
+3. If you want the **AI Usage Analytics** report, open **Settings** > **Artificial Intelligence** and check **Enable AI usage tracking**.
+4. Open each **AI Profile** where you want to collect session metrics.
+5. In the **Analytics** section of the profile editor, check **Enable Session Metrics**.
+6. Navigate to **Artificial Intelligence** > **Chat Session Analytics**, **AI Usage Analytics**, **Chat Conversion Goals**, or **Chat Extracted Data** in the admin menu.
 
-> **Note:** Session metrics collection is disabled by default. You must enable it per-profile in the profile editor.
+> **Note:** Session metrics are disabled by default per AI profile. The site-level **Enable AI usage tracking** setting is also disabled by default, but it only affects the **AI Usage Analytics** report and does not control chat-session analytics.
 
 ### Prerequisites
 
@@ -121,6 +123,18 @@ Metrics about AI model response speed and resource consumption. These are captur
 :::note
 Performance metrics are only available when the AI provider reports token usage. Not all providers return this data for streaming responses.
 :::
+
+### AI Usage Analytics
+
+The **AI Usage Analytics** report aggregates every tracked provider completion by:
+
+- **User** — authenticated username when available, otherwise **Anonymous**
+- **Client** — the completion client/provider implementation that handled the call
+- **Model** — the resolved model or deployment name used for the call
+
+For each row, the report shows total provider calls, distinct chat sessions, distinct chat interactions, input/output/total tokens, and average response latency. Usage is captured at the shared `IChatClient` factory layer, so direct `IAIClientFactory` consumers and tool-driven follow-up calls remain attributable to the originating session or chat interaction instead of only the top-level assistant turn.
+
+When site-level **AI usage tracking** is disabled, the **AI Usage Analytics** report shows a warning banner so administrators know they must turn usage tracking back on before new provider usage data can be captured.
 
 ### Resolution and Conversion Metrics
 

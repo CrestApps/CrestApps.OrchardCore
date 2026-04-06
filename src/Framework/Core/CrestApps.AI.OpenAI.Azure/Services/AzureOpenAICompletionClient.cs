@@ -1,5 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Azure.AI.OpenAI;
@@ -13,6 +14,7 @@ using CrestApps.Azure;
 using CrestApps.Azure.Models;
 using CrestApps.Infrastructure;
 using CrestApps.Templates.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
@@ -127,6 +129,7 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         var allFunctions = systemFunctions.Count > 0 ? functions.Concat(systemFunctions) : functions;
         try
         {
+            var stopwatch = Stopwatch.StartNew();
             var data = await chatClient.CompleteChatAsync(prompts, chatOptions, cancellationToken);
 
             if (data is null)
@@ -174,6 +177,18 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                     TotalTokenCount = data.Value.Usage.TotalTokenCount,
                 },
             };
+
+            stopwatch.Stop();
+            await RecordUsageAsync(
+                context,
+                connectionName,
+                deploymentName,
+                result.ModelId,
+                result.ResponseId,
+                result.Usage,
+                stopwatch.Elapsed.TotalMilliseconds,
+                false,
+                cancellationToken);
 
             return result;
         }
@@ -262,6 +277,10 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
         // Key is the tool call index, value contains the accumulated tool call data.
         var accumulatedToolCalls = new Dictionary<int, (string ToolCallId, string FunctionName, List<byte> ArgumentBytes)>();
         var iterations = 0;
+        var stopwatch = Stopwatch.StartNew();
+        Microsoft.Extensions.AI.UsageDetails usage = null;
+        string responseId = null;
+        string modelId = null;
 
         while (iterations <= _defaultOptions.MaximumIterationsPerRequest)
         {
@@ -343,6 +362,19 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                         result.Role = new Microsoft.Extensions.AI.ChatRole(update.Role.ToString().ToLowerInvariant());
                     }
 
+                    responseId ??= result.ResponseId;
+                    modelId ??= result.ModelId;
+
+                    if (update.Usage is not null)
+                    {
+                        usage = new Microsoft.Extensions.AI.UsageDetails
+                        {
+                            InputTokenCount = update.Usage.InputTokenCount,
+                            OutputTokenCount = update.Usage.OutputTokenCount,
+                            TotalTokenCount = update.Usage.TotalTokenCount,
+                        };
+                    }
+
                     yield return result;
                 }
             }
@@ -352,6 +384,18 @@ public sealed class AzureOpenAICompletionClient : AICompletionServiceBase, IAICo
                 break;
             }
         }
+
+        stopwatch.Stop();
+        await RecordUsageAsync(
+            context,
+            connectionName,
+            deploymentName,
+            modelId,
+            responseId,
+            usage,
+            stopwatch.Elapsed.TotalMilliseconds,
+            true,
+            cancellationToken);
 
         // Notify the user when the maximum iteration limit was reached while the model still wanted to make tool calls.
         if (iterations > _defaultOptions.MaximumIterationsPerRequest)
@@ -572,5 +616,40 @@ omit optional fields, or split the operation into multiple smaller calls.
         }
 
         return prompts;
+    }
+
+    private async Task RecordUsageAsync(
+        AICompletionContext context,
+        string connectionName,
+        string deploymentName,
+        string modelName,
+        string responseId,
+        Microsoft.Extensions.AI.UsageDetails usage,
+        double responseLatencyMs,
+        bool isStreaming,
+        CancellationToken cancellationToken)
+    {
+        var observers = _serviceProvider.GetServices<IAICompletionUsageObserver>().ToArray();
+
+        if (observers.Length == 0)
+        {
+            return;
+        }
+
+        var record = AICompletionUsageRecordFactory.Create(
+            context,
+            AzureOpenAIConstants.ClientName,
+            Name,
+            connectionName,
+            deploymentName,
+            modelName,
+            responseId,
+            usage?.InputTokenCount ?? 0,
+            usage?.OutputTokenCount ?? 0,
+            usage?.TotalTokenCount ?? 0,
+            responseLatencyMs,
+            isStreaming);
+
+        await observers.InvokeHandlersAsync((observer, usageRecord) => observer.UsageRecordedAsync(usageRecord, cancellationToken), record, _logger);
     }
 }

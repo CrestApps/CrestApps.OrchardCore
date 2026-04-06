@@ -1,6 +1,7 @@
 using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Chat;
+using CrestApps.AI.Completions;
 using CrestApps.AI.DataSources;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Indexing;
@@ -67,6 +68,7 @@ internal static class YesSqlServiceCollectionExtensions
             store.RegisterIndexes<AIProfileTemplateIndexProvider>();
             store.RegisterIndexes<AIChatSessionIndexProvider>();
             store.RegisterIndexes<AIChatSessionMetricsIndexProvider>();
+            store.RegisterIndexes<AICompletionUsageIndexProvider>();
             store.RegisterIndexes<AIChatSessionExtractedDataIndexProvider>();
             store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
             store.RegisterIndexes<AIDocumentIndexProvider>();
@@ -100,8 +102,10 @@ internal static class YesSqlServiceCollectionExtensions
              .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
              .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
              .AddScoped<MvcAIChatSessionEventService>()
+             .AddScoped<MvcAICompletionUsageService>()
              .AddScoped<MvcAIChatSessionEventPostCloseObserver>()
              .AddScoped<MvcAIChatSessionExtractedDataService>()
+             .AddScoped<IAICompletionUsageObserver>(sp => sp.GetRequiredService<MvcAICompletionUsageService>())
              .AddScoped<IAIChatSessionAnalyticsRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionEventPostCloseObserver>())
              .AddScoped<IAIChatSessionConversionGoalRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionEventPostCloseObserver>())
              .AddScoped<IAIChatSessionExtractedDataRecorder>(sp => sp.GetRequiredService<MvcAIChatSessionExtractedDataService>())
@@ -224,12 +228,43 @@ internal static class YesSqlServiceCollectionExtensions
                 .Column<int>(nameof(AIChatSessionMetricsIndex.TotalInputTokens))
                 .Column<int>(nameof(AIChatSessionMetricsIndex.TotalOutputTokens))
                 .Column<double>(nameof(AIChatSessionMetricsIndex.AverageResponseLatencyMs))
+                .Column<int>(nameof(AIChatSessionMetricsIndex.CompletionCount))
                 .Column<bool?>(nameof(AIChatSessionMetricsIndex.UserRating))
                 .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsUpCount))
                 .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsDownCount))
                 .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionScore))
                 .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionMaxScore))
                 .Column<DateTime>(nameof(AIChatSessionMetricsIndex.CreatedUtc))));
+
+        await TryAlterTableAsync(() =>
+            schemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
+            {
+                table.AddColumn<int>(nameof(AIChatSessionMetricsIndex.CompletionCount));
+            }));
+
+        await TryCreateTableAsync(() =>
+            schemaBuilder.CreateMapIndexTableAsync<AICompletionUsageIndex>(t => t
+                .Column<string>(nameof(AICompletionUsageIndex.ContextType), c => c.WithLength(64))
+                .Column<string>(nameof(AICompletionUsageIndex.SessionId), c => c.WithLength(44))
+                .Column<string>(nameof(AICompletionUsageIndex.ProfileId), c => c.WithLength(26))
+                .Column<string>(nameof(AICompletionUsageIndex.InteractionId), c => c.WithLength(26))
+                .Column<string>(nameof(AICompletionUsageIndex.UserId), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.UserName), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.VisitorId), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.ClientId), c => c.WithLength(255))
+                .Column<bool>(nameof(AICompletionUsageIndex.IsAuthenticated))
+                .Column<string>(nameof(AICompletionUsageIndex.ProviderName), c => c.WithLength(128))
+                .Column<string>(nameof(AICompletionUsageIndex.ClientName), c => c.WithLength(128))
+                .Column<string>(nameof(AICompletionUsageIndex.ConnectionName), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.DeploymentName), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.ModelName), c => c.WithLength(255))
+                .Column<string>(nameof(AICompletionUsageIndex.ResponseId), c => c.WithLength(255))
+                .Column<bool>(nameof(AICompletionUsageIndex.IsStreaming))
+                .Column<int>(nameof(AICompletionUsageIndex.InputTokenCount))
+                .Column<int>(nameof(AICompletionUsageIndex.OutputTokenCount))
+                .Column<int>(nameof(AICompletionUsageIndex.TotalTokenCount))
+                .Column<double>(nameof(AICompletionUsageIndex.ResponseLatencyMs))
+                .Column<DateTime>(nameof(AICompletionUsageIndex.CreatedUtc))));
 
         await TryCreateTableAsync(() =>
             schemaBuilder.CreateMapIndexTableAsync<AIChatSessionExtractedDataIndex>(t => t
@@ -308,6 +343,12 @@ internal static class YesSqlServiceCollectionExtensions
     {
         try { await createTable(); }
         catch { /* Table already exists. */ }
+    }
+
+    private static async Task TryAlterTableAsync(Func<Task> alterTable)
+    {
+        try { await alterTable(); }
+        catch { /* Column already exists or table is missing. */ }
     }
 
     /// <summary>

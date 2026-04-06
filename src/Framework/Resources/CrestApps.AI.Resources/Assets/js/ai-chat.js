@@ -24,7 +24,7 @@ window.openAIChatManager = function () {
                         <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
                         {{ getAssistantLabel(message) }}
                     </div>
-                    <div class="lh-base">
+                    <div class="ai-chat-message-body lh-base">
                         <h4 v-if="message.title">{{ message.title }}</h4>
                         <div v-html="message.htmlContent"></div>
                         <span class="message-buttons-container" v-if="!isIndicator(message)">

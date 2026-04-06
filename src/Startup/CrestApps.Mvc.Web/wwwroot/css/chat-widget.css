@@ -1,6 +1,6 @@
 /* CrestApps AI Chat Widget */
 :root {
-    --ai-widget-primary: #41b670;
+    --ai-widget-primary: var(--bs-secondary, #6c757d);
     --ai-widget-width: 380px;
     --ai-widget-height: 520px;
 }

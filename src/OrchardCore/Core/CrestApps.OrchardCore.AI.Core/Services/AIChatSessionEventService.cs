@@ -40,6 +40,7 @@ public sealed class AIChatSessionEventService
             MessageCount = 0,
             HandleTimeSeconds = 0,
             IsResolved = false,
+            CompletionCount = 0,
             CreatedUtc = now,
         };
 
@@ -70,6 +71,7 @@ public sealed class AIChatSessionEventService
                 MessageCount = promptCount,
                 HandleTimeSeconds = ((chatSession.ClosedAtUtc ?? now) - chatSession.CreatedUtc).TotalSeconds,
                 IsResolved = isResolved,
+                CompletionCount = 0,
                 CreatedUtc = now,
             };
 
@@ -90,7 +92,7 @@ public sealed class AIChatSessionEventService
     /// Accumulates token usage and response latency metrics for the session.
     /// Called after each message completion to update running totals.
     /// </summary>
-    public async Task RecordCompletionMetricsAsync(string sessionId, int inputTokens, int outputTokens, double responseLatencyMs)
+    public async Task RecordCompletionUsageAsync(string sessionId, int inputTokens, int outputTokens)
     {
         var evt = await FindEventBySessionIdAsync(sessionId);
 
@@ -102,10 +104,21 @@ public sealed class AIChatSessionEventService
         evt.TotalInputTokens += inputTokens;
         evt.TotalOutputTokens += outputTokens;
 
-        // Compute running average latency.
-        var completionCount = evt.MessageCount > 0 ? evt.MessageCount : 1;
+        await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
+    }
+
+    public async Task RecordResponseLatencyAsync(string sessionId, double responseLatencyMs)
+    {
+        var evt = await FindEventBySessionIdAsync(sessionId);
+
+        if (evt is null || responseLatencyMs <= 0)
+        {
+            return;
+        }
+
+        evt.CompletionCount++;
         evt.AverageResponseLatencyMs =
-            ((evt.AverageResponseLatencyMs * (completionCount - 1)) + responseLatencyMs) / completionCount;
+            ((evt.AverageResponseLatencyMs * (evt.CompletionCount - 1)) + responseLatencyMs) / evt.CompletionCount;
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }

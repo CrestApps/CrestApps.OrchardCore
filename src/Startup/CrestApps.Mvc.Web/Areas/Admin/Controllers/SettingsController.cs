@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
+using CrestApps.AI.Profiles;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
@@ -31,7 +33,9 @@ public sealed class SettingsController : Controller
     private readonly AppDataSettingsService<MemoryMetadata> _chatInteractionMemorySettingsService;
     private readonly AppDataSettingsService<CopilotSettings> _copilotSettingsService;
     private readonly AppDataSettingsService<PaginationSettings> _paginationSettingsService;
+    private readonly AppDataSettingsService<AIChatAdminWidgetSettings> _adminWidgetSettingsService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIProfileManager _profileManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
@@ -46,7 +50,9 @@ public sealed class SettingsController : Controller
         AppDataSettingsService<MemoryMetadata> chatInteractionMemorySettingsService,
         AppDataSettingsService<CopilotSettings> copilotSettingsService,
         AppDataSettingsService<PaginationSettings> paginationSettingsService,
+        AppDataSettingsService<AIChatAdminWidgetSettings> adminWidgetSettingsService,
         IAIDeploymentManager deploymentManager,
+        IAIProfileManager profileManager,
         ISearchIndexProfileStore indexProfileStore,
         IDataProtectionProvider dataProtectionProvider)
     {
@@ -60,7 +66,9 @@ public sealed class SettingsController : Controller
         _chatInteractionMemorySettingsService = chatInteractionMemorySettingsService;
         _copilotSettingsService = copilotSettingsService;
         _paginationSettingsService = paginationSettingsService;
+        _adminWidgetSettingsService = adminWidgetSettingsService;
         _deploymentManager = deploymentManager;
+        _profileManager = profileManager;
         _indexProfileStore = indexProfileStore;
         _dataProtectionProvider = dataProtectionProvider;
     }
@@ -77,9 +85,11 @@ public sealed class SettingsController : Controller
         var chatInteractionMemorySettings = await _chatInteractionMemorySettingsService.GetAsync();
         var copilotSettings = await _copilotSettingsService.GetAsync();
         var paginationSettings = await _paginationSettingsService.GetAsync();
+        var adminWidgetSettings = await _adminWidgetSettingsService.GetAsync();
 
         var model = new SettingsViewModel
         {
+            EnableAIUsageTracking = settings.EnableAIUsageTracking,
             EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
             EnableDistributedCaching = settings.EnableDistributedCaching,
@@ -116,10 +126,15 @@ public sealed class SettingsController : Controller
             CopilotAzureApiVersion = copilotSettings.AzureApiVersion,
             CopilotCallbackUrl = Url.Action("OAuthCallback", "CopilotAuth", new { area = "AIChat" }, Request.Scheme),
             AdminPageSize = paginationSettings.AdminPageSize,
+            AdminWidgetProfileId = adminWidgetSettings.ProfileId,
+            AdminWidgetPrimaryColor = string.IsNullOrWhiteSpace(adminWidgetSettings.PrimaryColor)
+                ? AIChatAdminWidgetSettings.DefaultSecondaryColor
+                : adminWidgetSettings.PrimaryColor,
         };
 
         await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDeploymentDropdownsAsync(model);
+        await PopulateAdminWidgetProfilesAsync(model);
 
         return View(model);
     }
@@ -164,6 +179,26 @@ public sealed class SettingsController : Controller
             ModelState.AddModelError(nameof(model.AdminPageSize), "Page size must be between 1 and 200.");
         }
 
+        if (!string.IsNullOrWhiteSpace(model.AdminWidgetPrimaryColor) &&
+            !Regex.IsMatch(
+                model.AdminWidgetPrimaryColor,
+                "^#(?:[0-9a-fA-F]{3}){1,2}$",
+                RegexOptions.CultureInvariant,
+                TimeSpan.FromMilliseconds(100)))
+        {
+            ModelState.AddModelError(nameof(model.AdminWidgetPrimaryColor), "Color must be a valid hex value such as #6c757d.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.AdminWidgetProfileId))
+        {
+            var profile = await _profileManager.FindByIdAsync(model.AdminWidgetProfileId);
+
+            if (profile is null || profile.Type != AIProfileType.Chat)
+            {
+                ModelState.AddModelError(nameof(model.AdminWidgetProfileId), "Invalid admin widget profile.");
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(model.MemoryIndexProfileName))
         {
             var indexProfile = await _indexProfileStore.FindByNameAsync(model.MemoryIndexProfileName);
@@ -177,6 +212,7 @@ public sealed class SettingsController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateDeploymentDropdownsAsync(model);
+            await PopulateAdminWidgetProfilesAsync(model);
 
             return View(nameof(Index), model);
         }
@@ -185,6 +221,7 @@ public sealed class SettingsController : Controller
         var settings = await _settingsService.GetAsync();
 
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
+        settings.EnableAIUsageTracking = model.EnableAIUsageTracking;
         settings.MaximumIterationsPerRequest = model.MaximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
@@ -277,6 +314,14 @@ public sealed class SettingsController : Controller
             AdminPageSize = model.AdminPageSize,
         });
 
+        await _adminWidgetSettingsService.SaveAsync(new AIChatAdminWidgetSettings
+        {
+            ProfileId = string.IsNullOrWhiteSpace(model.AdminWidgetProfileId) ? null : model.AdminWidgetProfileId.Trim(),
+            PrimaryColor = string.IsNullOrWhiteSpace(model.AdminWidgetPrimaryColor)
+                ? AIChatAdminWidgetSettings.DefaultSecondaryColor
+                : model.AdminWidgetPrimaryColor.Trim(),
+        });
+
         TempData["SuccessMessage"] = "Settings saved successfully.";
 
         return RedirectToAction(nameof(Index));
@@ -309,6 +354,16 @@ public sealed class SettingsController : Controller
         model.MemoryIndexProfiles = (await _indexProfileStore.GetByTypeAsync(MemoryIndexProfileType))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
             .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name));
+    }
+
+    private async Task PopulateAdminWidgetProfilesAsync(SettingsViewModel model)
+    {
+        model.AdminWidgetProfiles = (await _profileManager.GetAsync(AIProfileType.Chat))
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(
+                profile.DisplayText ?? profile.Name,
+                profile.ItemId,
+                profile.ItemId == model.AdminWidgetProfileId));
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)

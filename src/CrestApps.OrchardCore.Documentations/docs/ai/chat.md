@@ -116,6 +116,8 @@ Text-to-speech synthesis occurs after the full response text has been received â
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
 
+When **Enable session metrics** is turned on for a chat profile, the MVC and Orchard chat UIs both surface the same hover actions on assistant messages: the copy button plus thumbs up/down feedback controls. The action tray stays tucked into the lower-right corner of the message until hover/focus so long responses do not waste vertical space, and recent admin chat sessions are listed newest first. The MVC **Chat Analytics** feedback card now mirrors Orchard Core with separate positive/negative count tiles plus the same stacked satisfaction bar.
+
 ---
 
 ### Admin Chat Widget
@@ -175,6 +177,6 @@ A **frontend chat widget** is available to add to your site's public-facing page
 | **Feature Name** | AI Chat Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
-Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, feedback analysis, and a companion extracted-data report for profiles that use structured data extraction.
+Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, feedback analysis, per-user/model AI usage, and a companion extracted-data report for profiles that use structured data extraction.
 
 For complete documentation, see the [AI Chat Analytics](./chat-analytics.md) guide.

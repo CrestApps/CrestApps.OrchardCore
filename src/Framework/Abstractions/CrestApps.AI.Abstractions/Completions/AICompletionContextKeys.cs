@@ -9,6 +9,16 @@ namespace CrestApps.AI.Completions;
 /// </summary>
 public static class AICompletionContextKeys
 {
+    public const string CompletionContext = "CompletionContext";
+
+    public const string Session = "Session";
+
+    public const string Interaction = "Interaction";
+
+    public const string InteractionId = "InteractionId";
+
+    public const string ClientName = "ClientName";
+
     /// <summary>
     /// When set to <see langword="true"/> in <see cref="Models.AICompletionContext.AdditionalProperties"/>,
     /// indicates that documents are available for the current session. This enables

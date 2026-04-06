@@ -34,8 +34,7 @@ else
                     <th>Title</th>
                     <th>Source Index</th>
                     <th>Knowledge Base Index</th>
-                    <th>Content Field</th>
-                    <th style="width: 180px;">Actions</th>
+                    <th style="width: 250px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,7 +44,6 @@ else
                         <td><strong>@item.DisplayText</strong></td>
                         <td><code>@(item.SourceIndexProfileName ?? "—")</code></td>
                         <td><code>@(item.AIKnowledgeBaseIndexProfileName ?? "—")</code></td>
-                        <td>@(item.ContentFieldName ?? "—")</td>
                         <td>
                             <form asp-action="Sync" asp-route-id="@item.ItemId"
                                   method="post" class="d-inline">

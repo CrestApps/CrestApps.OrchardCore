@@ -309,6 +309,8 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
                 .ToList();
             });
 
+            AIInvocationScope.Current.CompletionContext = orchestratorContext.CompletionContext;
+            AIInvocationScope.Current.ChatInteraction = interaction;
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
             var orchestrator = OrchestratorResolver.Resolve(interaction.OrchestratorName);

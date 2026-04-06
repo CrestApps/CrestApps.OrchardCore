@@ -40,6 +40,8 @@ public sealed class AIChatSessionMetricsIndex : MapIndex
 
     public double AverageResponseLatencyMs { get; set; }
 
+    public int CompletionCount { get; set; }
+
     public bool? UserRating { get; set; }
 
     public int ThumbsUpCount { get; set; }

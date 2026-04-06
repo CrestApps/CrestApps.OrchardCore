@@ -1,6 +1,7 @@
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.ResponseHandling;
+using CrestApps.AI.Completions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.AI.Services;
@@ -36,12 +37,14 @@ public sealed class AIChatResponseHandler : IChatResponseHandler
             {
                 ctx.UserMessage = context.Prompt;
                 ctx.ConversationHistory = context.ConversationHistory;
-                ctx.CompletionContext.AdditionalProperties["Session"] = context.ChatSession;
+                ctx.CompletionContext.AdditionalProperties[AICompletionContextKeys.Session] = context.ChatSession;
             });
 
             orchestratorName = context.Profile.OrchestratorName;
 
             // Store the session in the invocation context so document tools can resolve session documents.
+            AIInvocationScope.Current.CompletionContext = orchestratorContext.CompletionContext;
+            AIInvocationScope.Current.ChatSession = context.ChatSession;
             AIInvocationScope.Current.Items[nameof(AIChatSession)] = context.ChatSession;
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
         }
@@ -55,6 +58,8 @@ public sealed class AIChatResponseHandler : IChatResponseHandler
 
             orchestratorName = context.Interaction.OrchestratorName;
 
+            AIInvocationScope.Current.CompletionContext = orchestratorContext.CompletionContext;
+            AIInvocationScope.Current.ChatInteraction = context.Interaction;
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
         }
 

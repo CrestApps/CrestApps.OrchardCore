@@ -63,6 +63,10 @@ public sealed class AIChatSessionEvent : ExtensibleEntity
     /// </summary>
     public double AverageResponseLatencyMs { get; set; }
     /// <summary>
+    /// Gets or sets the number of assistant responses that contributed to <see cref="AverageResponseLatencyMs"/>.
+    /// </summary>
+    public int CompletionCount { get; set; }
+    /// <summary>
     /// Gets or sets the user's feedback rating for this session.
     /// Null means no feedback was provided, true means positive (thumbs up), false means negative (thumbs down).
     /// </summary>

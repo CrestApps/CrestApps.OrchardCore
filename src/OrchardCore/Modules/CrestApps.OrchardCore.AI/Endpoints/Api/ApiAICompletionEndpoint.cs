@@ -212,10 +212,12 @@ internal static class ApiAICompletionEndpoint
                 ctx.UserMessage = userPrompt;
 
                 ctx.ConversationHistory = transcript.ToList();
-                ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
+                ctx.CompletionContext.AdditionalProperties[AICompletionContextKeys.Session] = chatSession;
             });
 
             // Store the session in the invocation context so document tools can resolve session documents.
+            AIInvocationScope.Current.CompletionContext = orchestratorContext.CompletionContext;
+            AIInvocationScope.Current.ChatSession = chatSession;
             AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
 
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;

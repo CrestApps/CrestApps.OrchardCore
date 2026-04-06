@@ -35,6 +35,7 @@ internal sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSe
                     TotalInputTokens = evt.TotalInputTokens,
                     TotalOutputTokens = evt.TotalOutputTokens,
                     AverageResponseLatencyMs = evt.AverageResponseLatencyMs,
+                    CompletionCount = evt.CompletionCount,
                     UserRating = evt.UserRating,
                     ThumbsUpCount = evt.ThumbsUpCount,
                     ThumbsDownCount = evt.ThumbsDownCount,

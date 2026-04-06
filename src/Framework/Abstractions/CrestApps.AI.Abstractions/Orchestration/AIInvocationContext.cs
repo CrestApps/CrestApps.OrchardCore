@@ -38,6 +38,21 @@ public sealed class AIInvocationContext
     public AIToolExecutionContext ToolExecutionContext { get; set; }
 
     /// <summary>
+    /// Gets or sets the completion context for the current invocation.
+    /// </summary>
+    public AICompletionContext CompletionContext { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chat session for the current invocation.
+    /// </summary>
+    public AIChatSession ChatSession { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chat interaction for the current invocation.
+    /// </summary>
+    public ChatInteraction ChatInteraction { get; set; }
+
+    /// <summary>
     /// Gets or sets the data source identifier for the current invocation.
     /// Used by <c>DataSourceSearchTool</c> to scope searches to the correct data source.
     /// </summary>

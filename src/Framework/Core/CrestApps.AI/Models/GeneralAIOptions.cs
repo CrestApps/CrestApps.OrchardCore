@@ -2,6 +2,15 @@ namespace CrestApps.AI.Models;
 
 public sealed class GeneralAIOptions
 {
+    public bool EnableAIUsageTracking { get; set; }
+
+    [Obsolete("Use EnableAIUsageTracking instead.")]
+    public bool EnableAnalytics
+    {
+        get => EnableAIUsageTracking;
+        set => EnableAIUsageTracking = value;
+    }
+
     public bool EnablePreemptiveMemoryRetrieval { get; set; } = true;
 
     public bool OverrideMaximumIterationsPerRequest { get; set; }
@@ -19,6 +28,7 @@ public sealed class GeneralAIOptions
     public GeneralAIOptions Clone()
         => new()
         {
+            EnableAIUsageTracking = EnableAIUsageTracking,
             EnablePreemptiveMemoryRetrieval = EnablePreemptiveMemoryRetrieval,
             OverrideMaximumIterationsPerRequest = OverrideMaximumIterationsPerRequest,
             MaximumIterationsPerRequest = MaximumIterationsPerRequest,
@@ -33,6 +43,7 @@ public sealed class GeneralAIOptions
             ? new GeneralAIOptions()
             : new GeneralAIOptions
             {
+                EnableAIUsageTracking = settings.EnableAIUsageTracking,
                 EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval,
                 OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest,
                 MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,

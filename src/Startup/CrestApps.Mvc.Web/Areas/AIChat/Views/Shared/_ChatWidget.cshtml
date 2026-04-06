@@ -4,27 +4,36 @@
 @using Microsoft.Extensions.Options
 @inject IAIProfileManager ProfileManager
 @inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
+@inject CrestApps.Mvc.Web.Services.AppDataSettingsService<CrestApps.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings> AdminWidgetSettingsService
 
 @{
+    var adminWidgetSettings = await AdminWidgetSettingsService.GetAsync();
+    var selectedProfile = string.IsNullOrWhiteSpace(adminWidgetSettings.ProfileId)
+        ? null
+        : await ProfileManager.FindByIdAsync(adminWidgetSettings.ProfileId);
     var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
     var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
-    var profiles = (await ProfileManager.GetAsync(AIProfileType.Chat))
-        .Where(p => p.GetSettings<AIProfileSettings>().IsListable)
-        .Select(p => new
+    var profile = selectedProfile is null || selectedProfile.Type != AIProfileType.Chat
+        ? null
+        : new
         {
-            id = p.ItemId,
-            name = p.Name,
-            displayText = p.DisplayText ?? p.Name,
-            welcomeMessage = p.WelcomeMessage,
-            allowSessionDocuments = p.As<AIProfileSessionDocumentsMetadata>()?.AllowSessionDocuments ?? false,
-        })
-        .ToArray();
+            id = selectedProfile.ItemId,
+            name = selectedProfile.Name,
+            displayText = selectedProfile.DisplayText ?? selectedProfile.Name,
+            welcomeMessage = selectedProfile.WelcomeMessage,
+            enableSessionMetrics = selectedProfile.As<AnalyticsMetadata>()?.EnableSessionMetrics ?? false,
+            allowSessionDocuments = selectedProfile.As<AIProfileSessionDocumentsMetadata>()?.AllowSessionDocuments ?? false,
+        };
+    var widgetStyle = string.IsNullOrWhiteSpace(adminWidgetSettings.PrimaryColor)
+        ? null
+        : $"--ai-widget-primary: {adminWidgetSettings.PrimaryColor.Trim()};";
 }
 
 
-@if (profiles.Length > 0)
+@if (profile != null)
 
 {
+    <div class="ai-chat-admin-widget-shell" style="@widgetStyle">
 
     <link rel="stylesheet" href="~/css/chat-widget.css" />
 
@@ -41,8 +50,17 @@
         }
 
         .ai-chat-message-item {
-            margin-bottom: 0.75rem;
+            position: relative;
+            padding: 0.5rem 0;
         }
+
+            .ai-chat-message-item + .ai-chat-message-item::before {
+                content: '';
+                display: block;
+                width: 100%;
+                margin-bottom: 0.5rem;
+                border-top: 1px solid rgba(33, 37, 41, 0.08);
+            }
 
         .ai-chat-msg-role {
             font-size: 0.7rem;
@@ -66,10 +84,39 @@
                 color: #6f42c1;
             }
 
+        .ai-chat-message-body {
+            padding: 0 5.5rem 1.75rem 0;
+        }
+
         .message-buttons-container {
+            position: absolute;
+            right: 0;
+            bottom: 0.25rem;
             display: inline-flex;
-            gap: 4px;
-            margin-top: 4px;
+            gap: 0.35rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease-in-out;
+        }
+
+        .ai-chat-message-item:hover .message-buttons-container,
+        .ai-chat-message-item:focus-within .message-buttons-container {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .message-buttons-container > .button-message-toolbox {
+            color: var(--bs-secondary-color, #6c757d) !important;
+            text-decoration: none;
+        }
+
+            .message-buttons-container > .button-message-toolbox:hover,
+            .message-buttons-container > .button-message-toolbox:focus {
+                color: var(--bs-body-color, #212529) !important;
+            }
+
+        .ai-chat-message-item p:last-child {
+            margin-bottom: 0;
         }
 
         @@keyframes pulse {
@@ -118,7 +165,7 @@
             <div id="widget-placeholder">
                 <div class="ai-chat-widget-welcome">
                     <i class="bi bi-robot" style="font-size: 2rem;"></i><br>
-                    @(string.IsNullOrWhiteSpace(profiles[0].welcomeMessage) ? "What do you want to know?" : profiles[0].welcomeMessage)
+                    @(string.IsNullOrWhiteSpace(profile.welcomeMessage) ? "What do you want to know?" : profile.welcomeMessage)
 
                 </div>
 
@@ -133,7 +180,7 @@
                       placeholder="Type a message..."
                       rows="1"
                       data-session-id=""
-                      data-profile-id="@profiles[0].id"></textarea>
+                      data-profile-id="@profile.id"></textarea>
 
             <button type="button" id="widget-send-btn">
 
@@ -162,15 +209,14 @@
     <script>
 
         document.addEventListener('DOMContentLoaded', function () {
-            var profiles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profiles));
-            var selectedProfile = profiles[0];
+            var selectedProfile = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profile));
             var panel = document.getElementById('widget-panel');
             var toggle = document.getElementById('widget-toggle');
             var closeBtn = document.getElementById('widget-close');
             var newChatBtn = document.getElementById('widget-new-chat');
             var chatInput = document.getElementById('widget-chat-input');
             var placeholder = document.getElementById('widget-placeholder');
-            var widgetStateName = 'mvc-admin-chat-widget';
+            var widgetStateName = 'mvc-admin-chat-widget-' + selectedProfile.id;
             var widgetOpenStateKey = widgetStateName + 'Open';
 
             function setPlaceholder(profile) {
@@ -201,7 +247,8 @@
                 sendButtonElementSelector: '#widget-send-btn',
                 placeholderElementSelector: '#widget-placeholder',
                 messages: [],
-                metricsEnabled: false,
+                autoCreateSession: true,
+                metricsEnabled: selectedProfile.enableSessionMetrics,
                 sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
                 existingDocuments: [],
                 documentBarSelector: '#widget-chat-document-bar',
@@ -214,6 +261,8 @@
                     chatWidgetStateName: widgetStateName
                 }
             });
+
+            widgetApp.metricsEnabled = !!selectedProfile.enableSessionMetrics;
 
             setPanelOpen(localStorage.getItem(widgetOpenStateKey) === 'true');
 
@@ -231,5 +280,6 @@
             });
         });
     </script>
+    </div>
 
 }

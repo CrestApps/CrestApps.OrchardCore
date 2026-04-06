@@ -101,7 +101,7 @@ public sealed class PreemptiveSearchQueryProvider
             {
                 Temperature = 0.2f,
                 MaxOutputTokens = 200,
-            };
+            }.AddUsageTracking(context.CompletionContext);
 
             var response = await chatClient.GetResponseAsync(messages, chatOptions);
 

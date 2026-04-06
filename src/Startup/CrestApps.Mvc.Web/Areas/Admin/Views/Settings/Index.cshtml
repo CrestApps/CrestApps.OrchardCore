@@ -130,6 +130,14 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <div class="form-check form-switch">
+                            <input asp-for="EnableAIUsageTracking" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableAIUsageTracking" class="form-check-label">Enable AI usage tracking</label>
+                        </div>
+                        <div class="form-text">Disabled by default to avoid extra provider-call tracking overhead. Enable this to capture future AI usage data for the AI Usage Analytics report. This does not affect per-profile session metrics.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
                             <input asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-input" type="checkbox" />
                             <label asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-label">Enable preemptive retrieval-augmented generation (RAG)</label>
                         </div>
@@ -164,6 +172,37 @@
                         <input asp-for="AdminPageSize" class="form-control" type="number" min="1" max="200" style="max-width: 200px;" />
                         <span asp-validation-for="AdminPageSize" class="text-danger"></span>
                         <div class="form-text">Controls pagination size for admin lists throughout the MVC application.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Admin widget</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AdminWidgetProfileId" class="form-label">Chat profile</label>
+                        <select asp-for="AdminWidgetProfileId" asp-items="Model.AdminWidgetProfiles" class="form-select" data-admin-widget-profile-select="true">
+                            <option value="">No profile (Disable)</option>
+                        </select>
+                        <span asp-validation-for="AdminWidgetProfileId" class="text-danger"></span>
+                        <div class="form-text">Select the chat profile used by the floating admin widget. Leave this empty to disable the widget completely.</div>
+                    </div>
+
+                    <div class="mb-3" data-admin-widget-options="true">
+                        <label asp-for="AdminWidgetPrimaryColor" class="form-label">Widget accent color override</label>
+                        <div class="input-group">
+                            <input type="color"
+                                   class="form-control form-control-color"
+                                   value="@(string.IsNullOrWhiteSpace(Model.AdminWidgetPrimaryColor) ? CrestApps.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor : Model.AdminWidgetPrimaryColor)"
+                                   oninput="document.getElementById('@Html.IdFor(m => m.AdminWidgetPrimaryColor)').value = this.value" />
+                            <input asp-for="AdminWidgetPrimaryColor"
+                                   class="form-control"
+                                   placeholder="@CrestApps.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor" />
+                        </div>
+                        <span asp-validation-for="AdminWidgetPrimaryColor" class="text-danger"></span>
+                        <div class="form-text">Defaults to the admin theme secondary color (<code>@CrestApps.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor</code>).</div>
                     </div>
                 </div>
             </div>
@@ -473,6 +512,26 @@
         if (copilotProviderType) {
             copilotProviderType.addEventListener('change', toggleCopilotProviderHints);
             toggleCopilotProviderHints();
+        }
+
+        var adminWidgetProfileSelect = document.querySelector('[data-admin-widget-profile-select="true"]');
+        var adminWidgetOptionBlocks = document.querySelectorAll('[data-admin-widget-options="true"]');
+
+        function toggleAdminWidgetOptions() {
+            if (!adminWidgetProfileSelect) {
+                return;
+            }
+
+            var isEnabled = !!adminWidgetProfileSelect.value && adminWidgetProfileSelect.value.trim() !== '';
+
+            adminWidgetOptionBlocks.forEach(function (element) {
+                element.classList.toggle('d-none', !isEnabled);
+            });
+        }
+
+        if (adminWidgetProfileSelect) {
+            adminWidgetProfileSelect.addEventListener('change', toggleAdminWidgetOptions);
+            toggleAdminWidgetOptions();
         }
     });
 </script>

@@ -54,7 +54,11 @@ public sealed class YesSqlAIChatSessionManager : IAIChatSessionManager
 
         var skip = (page - 1) * pageSize;
         var total = await query.CountAsync();
-        var items = await query.Skip(skip).Take(pageSize).ListAsync();
+        var items = (await query.ListAsync())
+            .OrderByDescending(x => x.CreatedUtc)
+            .ThenByDescending(x => x.LastActivityUtc)
+            .Skip(skip)
+            .Take(pageSize);
 
         return new AIChatSessionResult
         {

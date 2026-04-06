@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Orchestration;
+using CrestApps.AI.Services;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -85,7 +87,7 @@ public sealed class PostSessionProcessingService
         var response = await chatClient.GetResponseAsync<ResolutionAnalysisResponse>(messages, new ChatOptions
         {
             Temperature = 0f,
-        }, null, cancellationToken);
+        }.AddUsageTracking(session: AIInvocationScope.Current?.ChatSession), null, cancellationToken);
 
         return response.Result?.Resolved ?? false;
     }
@@ -141,7 +143,7 @@ public sealed class PostSessionProcessingService
         var response = await chatClient.GetResponseAsync<ConversionGoalEvaluationResponse>(messages, new ChatOptions
         {
             Temperature = 0f,
-        }, null, cancellationToken);
+        }.AddUsageTracking(session: AIInvocationScope.Current?.ChatSession), null, cancellationToken);
 
         if (response.Result?.Goals is null || response.Result.Goals.Count == 0)
         {
@@ -300,7 +302,7 @@ public sealed class PostSessionProcessingService
                     string.Join(", ", tools.Select(t => t.Name)));
             }
 
-            return await ProcessWithToolsAsync(session.SessionId, chatClient, messages, tools, tasksToProcess, cancellationToken);
+            return await ProcessWithToolsAsync(session, chatClient, messages, tools, tasksToProcess, cancellationToken);
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -313,7 +315,7 @@ public sealed class PostSessionProcessingService
         var response = await chatClient.GetResponseAsync<PostSessionProcessingResponse>(messages, new ChatOptions
         {
             Temperature = 0f,
-        }, null, cancellationToken);
+        }.AddUsageTracking(session: session), null, cancellationToken);
 
         if (response.Result?.Tasks == null || response.Result.Tasks.Count == 0)
         {
@@ -342,7 +344,7 @@ public sealed class PostSessionProcessingService
     }
 
     private async Task<Dictionary<string, PostSessionResult>> ProcessWithToolsAsync(
-        string sessionId,
+        AIChatSession session,
         IChatClient chatClient,
         List<ChatMessage> messages,
         IList<AITool> tools,
@@ -364,7 +366,7 @@ public sealed class PostSessionProcessingService
             Temperature = 0f,
 
             Tools = tools,
-        }, cancellationToken);
+        }.AddUsageTracking(session: session), cancellationToken);
 
         // Log tool invocation details from the response messages.
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -381,7 +383,7 @@ public sealed class PostSessionProcessingService
 
             _logger.LogDebug(
                 "Post-session tools response for session '{SessionId}': MessageCount={MessageCount}, ToolCalls={ToolCallCount}, ToolResults={ToolResultCount}.",
-                sessionId,
+                session.SessionId,
                 response.Messages?.Count ?? 0,
                 toolCallCount,
 
@@ -401,14 +403,14 @@ public sealed class PostSessionProcessingService
         {
             _logger.LogDebug(
                 "Post-session tools raw response for session '{SessionId}': '{ResponseText}'.",
-                sessionId,
+                session.SessionId,
 
                 CreateResponseLogPreview(responseText));
         }
 
         if (!string.IsNullOrEmpty(responseText))
         {
-            var result = TryParsePostSessionResponse(sessionId, responseText);
+            var result = TryParsePostSessionResponse(session.SessionId, responseText);
 
             if (result?.Tasks != null && result.Tasks.Count > 0)
             {
@@ -420,11 +422,11 @@ public sealed class PostSessionProcessingService
             _logger.LogDebug(
                 "Post-session tools response for session '{SessionId}' has no final text content. Attempting structured recovery from tool messages.",
 
-                sessionId);
+                session.SessionId);
         }
 
         var recoveredResults = await TryRecoverStructuredToolsResponseAsync(
-            sessionId,
+            session.SessionId,
             chatClient,
             messages,
             response.Messages,
@@ -438,7 +440,7 @@ public sealed class PostSessionProcessingService
             return recoveredResults;
         }
 
-        return CreateFailedResults(sessionId, tasks, responseText);
+        return CreateFailedResults(session.SessionId, tasks, responseText);
     }
     /// <summary>
     /// Attempts to parse the AI response text as a <see cref="PostSessionProcessingResponse"/>

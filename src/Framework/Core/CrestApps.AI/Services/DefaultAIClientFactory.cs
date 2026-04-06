@@ -2,7 +2,7 @@ using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.AI;
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.AI.Services;
@@ -13,19 +13,24 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
     private readonly IEnumerable<IAIClientProvider> _clientProviders;
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<DefaultAIClientFactory> _logger;
 
     public DefaultAIClientFactory(
         IEnumerable<IAIClientProvider> clientProviders,
         IDataProtectionProvider dataProtectionProvider,
+        IServiceProvider serviceProvider,
+        ILogger<DefaultAIClientFactory> logger,
         IOptions<AIProviderOptions> options)
     {
         _options = options.Value;
         _clientProviders = clientProviders;
         _dataProtectionProvider = dataProtectionProvider;
-
+        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
-    public ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName = null)
+    public async ValueTask<IChatClient> CreateChatClientAsync(string providerName, string connectionName, string deploymentName = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(providerName);
 
@@ -48,10 +53,18 @@ public sealed class DefaultAIClientFactory : IAIClientFactory
             if (!clientProvider.CanHandle(providerName))
             {
                 continue;
-
             }
 
-            return clientProvider.GetChatClientAsync(connection, deploymentName);
+            var client = await clientProvider.GetChatClientAsync(connection, deploymentName);
+
+            return new AICompletionUsageTrackingChatClient(
+                client,
+                providerName,
+                providerName,
+                connectionName,
+                deploymentName,
+                _serviceProvider,
+                _logger);
 
         }
 

@@ -35,6 +35,8 @@ public sealed class AIChatSessionMetricsIndex : MapIndex
 
     public double AverageResponseLatencyMs { get; set; }
 
+    public int CompletionCount { get; set; }
+
     public bool? UserRating { get; set; }
 
     public int ThumbsUpCount { get; set; }
@@ -70,6 +72,7 @@ public sealed class AIChatSessionMetricsIndexProvider : IndexProvider<AIChatSess
                 TotalInputTokens = evt.TotalInputTokens,
                 TotalOutputTokens = evt.TotalOutputTokens,
                 AverageResponseLatencyMs = evt.AverageResponseLatencyMs,
+                CompletionCount = evt.CompletionCount,
                 UserRating = evt.UserRating,
                 ThumbsUpCount = evt.ThumbsUpCount,
                 ThumbsDownCount = evt.ThumbsDownCount,

@@ -135,7 +135,7 @@ else
         </div>
         <div class="col-lg-6">
             <div class="card h-100">
-                <div class="card-header">Feedback</div>
+                <div class="card-header">User feedback</div>
                 <div class="card-body">
                     @if (!Model.HasFeedbackData)
                     {
@@ -143,12 +143,52 @@ else
                     }
                     else
                     {
-                        <dl class="row mb-0">
-                            <dt class="col-sm-7">Thumbs up</dt><dd class="col-sm-5">@Model.ThumbsUpCount (@Model.ThumbsUpPercent%)</dd>
-                            <dt class="col-sm-7">Thumbs down</dt><dd class="col-sm-5">@Model.ThumbsDownCount (@Model.ThumbsDownPercent%)</dd>
-                            <dt class="col-sm-7">No feedback</dt><dd class="col-sm-5">@Model.NoFeedbackCount</dd>
-                            <dt class="col-sm-7">Feedback rate</dt><dd class="col-sm-5">@Model.FeedbackRatePercent%</dd>
-                        </dl>
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-success">
+                                        <i class="bi bi-hand-thumbs-up me-1"></i>@Model.ThumbsUpCount
+                                    </div>
+                                    <div class="text-muted">Positive ratings</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-danger">
+                                        <i class="bi bi-hand-thumbs-down me-1"></i>@Model.ThumbsDownCount
+                                    </div>
+                                    <div class="text-muted">Negative ratings</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-success">@Model.ThumbsUpPercent%</div>
+                                    <div class="text-muted">Satisfaction rate</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-info">@Model.FeedbackRatePercent%</div>
+                                    <div class="text-muted">Feedback rate</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.TotalRatings > 0)
+                        {
+                            <div class="progress mb-3" style="height: 40px;">
+                                <div class="progress-bar bg-success d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsUpPercent)%">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                    <span>@Model.ThumbsUpPercent%</span>
+                                </div>
+                                <div class="progress-bar bg-danger d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsDownPercent)%">
+                                    <i class="bi bi-hand-thumbs-down"></i>
+                                    <span>@Model.ThumbsDownPercent%</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="text-muted small">No feedback: @Model.NoFeedbackCount</div>
                     }
                 </div>
             </div>

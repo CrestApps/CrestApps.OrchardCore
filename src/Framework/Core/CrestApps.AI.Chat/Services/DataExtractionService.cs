@@ -1,6 +1,7 @@
 using CrestApps.AI.Clients;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.AI.Services;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -157,7 +158,7 @@ public sealed class DataExtractionService
             {
                 Temperature = 0f,
                 MaxOutputTokens = 1024,
-            }, null, cancellationToken);
+            }.AddUsageTracking(session: session), null, cancellationToken);
 
             if (response.Result?.Fields == null || response.Result.Fields.Count == 0)
             {

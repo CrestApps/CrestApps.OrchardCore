@@ -8,6 +8,8 @@ namespace CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 
 public sealed class SettingsViewModel
 {
+    public bool EnableAIUsageTracking { get; set; }
+
     public bool EnablePreemptiveMemoryRetrieval { get; set; } = true;
 
     public int MaximumIterationsPerRequest { get; set; } = 10;
@@ -79,6 +81,10 @@ public sealed class SettingsViewModel
     // Pagination settings.
     public int AdminPageSize { get; set; } = 25;
 
+    public string AdminWidgetProfileId { get; set; }
+
+    public string AdminWidgetPrimaryColor { get; set; }
+
     [BindNever]
     public string CopilotCallbackUrl { get; set; }
 
@@ -106,4 +112,7 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> MemoryIndexProfiles { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> AdminWidgetProfiles { get; set; } = [];
 }

@@ -2,6 +2,8 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 
 public class GeneralAISettingsViewModel
 {
+    public bool EnableAIUsageTracking { get; set; }
+
     public bool EnablePreemptiveMemoryRetrieval { get; set; }
 
     public int MaximumIterationsPerRequest { get; set; }

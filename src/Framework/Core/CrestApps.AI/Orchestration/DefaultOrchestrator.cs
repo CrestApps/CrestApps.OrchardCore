@@ -5,6 +5,7 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
 using CrestApps.AI.Speech;
+using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Templates.Services;
 using Cysharp.Text;
@@ -182,7 +183,7 @@ public sealed class DefaultOrchestrator : IOrchestrator
                 {
                     Temperature = 0.1f,
                     MaxOutputTokens = 300,
-                };
+                }.AddUsageTracking(context.CompletionContext);
 
                 var response = await chatClient.GetResponseAsync(messages, chatOptions, cancellationToken);
                 plan = response?.Text;

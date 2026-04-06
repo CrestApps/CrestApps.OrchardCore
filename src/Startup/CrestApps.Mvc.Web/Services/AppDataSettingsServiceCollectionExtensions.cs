@@ -47,6 +47,7 @@ public static class AppDataSettingsServiceCollectionExtensions
             .AddAppDataSettings<CopilotSettings>(configuration, AppDataConfigurationSections.Copilot)
             .AddAppDataSettings<McpServerOptions>(configuration, AppDataConfigurationSections.McpServer)
             .AddAppDataSettings<A2AHostOptions>(configuration, AppDataConfigurationSections.A2AHost)
-            .AddAppDataSettings<PaginationSettings>(configuration, AppDataConfigurationSections.Pagination);
+            .AddAppDataSettings<PaginationSettings>(configuration, AppDataConfigurationSections.Pagination)
+            .AddAppDataSettings<AIChatAdminWidgetSettings>(configuration, AppDataConfigurationSections.AdminWidget);
     }
 }
