@@ -6,6 +6,7 @@ using CrestApps.AI.Handlers;
 using CrestApps.AI.Memory;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Profiles;
 using CrestApps.AI.ResponseHandling;
 using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
@@ -14,6 +15,7 @@ using CrestApps.AI.Tools;
 using CrestApps.Services;
 using CrestApps.Templates;
 using CrestApps.Templates.Extensions;
+using CrestApps.Templates.Parsing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DataIngestion;
@@ -121,9 +123,21 @@ public static class ServiceCollectionExtensions
         services
             .AddAITemplating()
             .AddCrestAppsCoreServices()
-            .AddScoped<IAIClientFactory, DefaultAIClientFactory>();
+            .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
+            .AddScoped<ISpeechVoiceResolver, DefaultSpeechVoiceResolver>();
 
         services.TryAddSingleton<IAITextNormalizer, DefaultAITextNormalizer>();
+
+        if (!services.Any(descriptor => descriptor.ServiceType == typeof(EmbeddedResourceAIProfileTemplateProvider)))
+        {
+            services.AddSingleton(sp =>
+                new EmbeddedResourceAIProfileTemplateProvider(
+                    typeof(ServiceCollectionExtensions).Assembly,
+                    sp.GetServices<ITemplateParser>()));
+            services.AddSingleton<IAIProfileTemplateProvider>(sp =>
+                sp.GetRequiredService<EmbeddedResourceAIProfileTemplateProvider>());
+        }
+
         services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>());
         services.TryAddScoped<IAICompletionService, DefaultAICompletionService>();
         services.TryAddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>();
@@ -200,6 +214,8 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, DataSourceOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPreemptiveRagHandler, DataSourcePreemptiveRagHandler>());
+        services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
+            .WithPurpose(AIToolPurposes.DataSourceSearch);
 
         return services;
     }

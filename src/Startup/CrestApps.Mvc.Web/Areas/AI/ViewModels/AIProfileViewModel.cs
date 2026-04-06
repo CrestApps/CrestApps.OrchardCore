@@ -46,6 +46,10 @@ public sealed class AIProfileViewModel
 
     public string InitialPrompt { get; set; }
 
+    public ChatMode ChatMode { get; set; }
+
+    public string VoiceName { get; set; }
+
     // AI Parameters (from AIProfileMetadata)
     public string SystemMessage { get; set; }
 
@@ -171,6 +175,7 @@ public sealed class AIProfileViewModel
         var analyticsMetadata = profile.As<AnalyticsMetadata>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
         var memoryMetadata = profile.GetMemoryMetadata();
+        profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
         var a2aMetadata = profile.As<AIProfileA2AMetadata>();
         var mcpMetadata = profile.As<AIProfileMcpMetadata>();
         var promptMetadata = profile.As<PromptTemplateMetadata>();
@@ -194,6 +199,8 @@ public sealed class AIProfileViewModel
 
             AddInitialPrompt = !string.IsNullOrEmpty(metadata.InitialPrompt),
             InitialPrompt = metadata.InitialPrompt,
+            ChatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput,
+            VoiceName = chatModeSettings?.VoiceName,
 
             SystemMessage = metadata.SystemMessage,
             Temperature = metadata.Temperature,
@@ -327,6 +334,14 @@ public sealed class AIProfileViewModel
             s.LockSystemMessage = LockSystemMessage;
             s.IsListable = IsListable;
             s.IsRemovable = IsRemovable;
+        });
+
+        profile.AlterSettings<ChatModeProfileSettings>(settings =>
+        {
+            settings.ChatMode = ChatMode;
+            settings.VoiceName = ChatMode == ChatMode.Conversation
+                ? VoiceName?.Trim()
+                : null;
         });
 
         var toolNames = SelectedToolNames?.Where(n => !string.IsNullOrWhiteSpace(n)).ToArray();

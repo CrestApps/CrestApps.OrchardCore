@@ -1,7 +1,5 @@
 using CrestApps.AI;
 using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
-using CrestApps.AI.Tools;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
@@ -56,9 +54,6 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, DataSourceSyncBackgroundTask>();
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
-
-        services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
-            .WithPurpose(AIToolPurposes.DataSourceSearch);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

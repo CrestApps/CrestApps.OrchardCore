@@ -134,10 +134,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     protected override string GetNotificationActionErrorMessage()
         => S["An error occurred while processing your action. Please try again."].Value;
 
-    protected override string GetTranscriptionErrorMessage()
+    protected override string GetTranscriptionErrorMessage(Exception ex = null)
         => S["An error occurred while transcribing the audio. Please try again."].Value;
 
-    protected override string GetSpeechSynthesisErrorMessage()
+    protected override string GetSpeechSynthesisErrorMessage(Exception ex = null)
         => S["An error occurred while synthesizing speech. Please try again."].Value;
 
     // ────────────── Citation collection ──────────────

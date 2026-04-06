@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using Azure.Core;
 using Azure.Identity;
 using CrestApps.Azure.Models;
+using CrestApps.AI.Services;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.Extensions.AI;
@@ -76,7 +77,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         var traceId = Guid.NewGuid().ToString("N")[..8];
         var sw = Stopwatch.StartNew();
-        var language = options?.SpeechLanguage ?? "en-US";
+        var language = SpeechLanguageHelper.NormalizeOrDefault(options?.SpeechLanguage);
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
@@ -173,7 +174,7 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         var traceId = Guid.NewGuid().ToString("N")[..8];
         var sw = Stopwatch.StartNew();
-        var language = options?.SpeechLanguage ?? "en-US";
+        var language = SpeechLanguageHelper.NormalizeOrDefault(options?.SpeechLanguage);
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
@@ -428,7 +429,19 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
     {
         SpeechConfig config;
 
-        if (_region != null)
+        if (_authType == AzureAuthenticationType.ApiKey)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Using endpoint-based SDK configuration for API key authentication. Endpoint: {Endpoint}, Region: {Region}",
+                    _endpoint,
+                    _region ?? "(unknown)");
+            }
+
+            config = await CreateEndpointBasedConfigAsync(cancellationToken);
+        }
+        else if (_region != null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -458,7 +471,12 @@ public sealed class AzureSpeechServiceSpeechToTextClient : ISpeechToTextClient
 
         if (_logger.IsEnabled(LogLevel.Trace))
         {
-            _logger.LogTrace("SpeechConfig created. Language: {Language}, Region: {Region}", language, _region ?? "(from endpoint)");
+            _logger.LogTrace(
+                "SpeechConfig created. Language: {Language}, AuthType: {AuthType}, Endpoint: {Endpoint}, Region: {Region}",
+                language,
+                _authType,
+                _endpoint,
+                _region ?? "(from endpoint)");
         }
 
         return config;

@@ -17,7 +17,9 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
     private readonly ILoggerFactory _loggerFactory;
     private readonly TimeProvider _timeProvider;
 
-    public AzureSpeechClientProvider(ILoggerFactory loggerFactory, TimeProvider timeProvider)
+    public AzureSpeechClientProvider(
+        ILoggerFactory loggerFactory,
+        TimeProvider timeProvider)
     {
         _loggerFactory = loggerFactory;
         _timeProvider = timeProvider;
@@ -34,7 +36,7 @@ public sealed class AzureSpeechClientProvider : IAIClientProvider
 
 #pragma warning disable MEAI001
     public ValueTask<IImageGenerator> GetImageGeneratorAsync(AIProviderConnectionEntry connection, string deploymentName = null)
-    => throw new NotSupportedException("Azure AI Speech deployments only support speech services.");
+        => throw new NotSupportedException("Azure AI Speech deployments only support speech services.");
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
     public ValueTask<ISpeechToTextClient> GetSpeechToTextClientAsync(AIProviderConnectionEntry connection, string deploymentName = null)

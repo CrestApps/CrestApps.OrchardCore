@@ -133,12 +133,15 @@ public class AIChatHubCore<TClient> : Hub<TClient>
     protected virtual string GetNotificationActionErrorMessage()
         => "An error occurred while processing your action. Please try again.";
 
-    protected virtual string GetTranscriptionErrorMessage()
+    protected virtual string GetTranscriptionErrorMessage(Exception ex = null)
+        => IsSpeechAuthenticationFailure(ex)
+            ? "Speech-to-text authentication failed. Check the configured speech deployment credentials and region."
+            : "An error occurred while transcribing the audio. Please try again.";
 
-        => "An error occurred while transcribing the audio. Please try again.";
-
-    protected virtual string GetSpeechSynthesisErrorMessage()
-        => "An error occurred while synthesizing speech. Please try again.";
+    protected virtual string GetSpeechSynthesisErrorMessage(Exception ex = null)
+        => IsSpeechAuthenticationFailure(ex)
+            ? "Text-to-speech authentication failed. Check the configured speech deployment credentials and region."
+            : "An error occurred while synthesizing speech. Please try again.";
 
     // ───────────────────────── Authorization hooks ─────────────────────────
     /// <summary>
@@ -208,6 +211,20 @@ public class AIChatHubCore<TClient> : Hub<TClient>
         => string.IsNullOrEmpty(value) || value.Length <= maxLength
     ? value
     : value[..maxLength];
+
+    private static bool IsSpeechAuthenticationFailure(Exception ex)
+    {
+        var message = ex?.ToString();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        return message.Contains("AuthenticationFailure", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Authentication error (401)", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("check subscription information and region name", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static async Task<string> GetAIGeneratedTitleAsync(
         IServiceProvider services,
@@ -818,7 +835,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
             try
             {
-                await Clients.Caller.ReceiveError(GetTranscriptionErrorMessage());
+                await Clients.Caller.ReceiveError(GetTranscriptionErrorMessage(ex));
             }
             catch (Exception writeEx)
             {
@@ -933,7 +950,7 @@ public class AIChatHubCore<TClient> : Hub<TClient>
 
             try
             {
-                await Clients.Caller.ReceiveError(GetSpeechSynthesisErrorMessage());
+                await Clients.Caller.ReceiveError(GetSpeechSynthesisErrorMessage(ex));
             }
             catch (Exception writeEx)
             {

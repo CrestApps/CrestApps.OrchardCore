@@ -3,11 +3,14 @@ using System.Threading.Channels;
 using CrestApps.AI.Chat.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
+using CrestApps.AI.Services;
 using CrestApps.Services;
 using Cysharp.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+
+#pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 
 namespace CrestApps.AI.Chat.Hubs;
 
@@ -18,6 +21,7 @@ namespace CrestApps.AI.Chat.Hubs;
 /// </summary>
 public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
 {
+    private const string ConversationCtsKey = "ConversationCts";
     private readonly TimeProvider _timeProvider;
 
     protected ChatInteractionHubBase(
@@ -86,6 +90,16 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
     /// </summary>
     protected virtual string GetInteractionNotFoundMessage()
         => "Interaction not found.";
+
+    public virtual Task StopConversation()
+    {
+        if (Context.Items.TryGetValue(ConversationCtsKey, out var value) && value is CancellationTokenSource cts)
+        {
+            cts.Cancel();
+        }
+
+        return Task.CompletedTask;
+    }
 
     public virtual ChannelReader<CompletionPartialMessage> SendMessage(string itemId, string prompt, CancellationToken cancellationToken)
     {
@@ -393,6 +407,91 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         }
     }
 
+    protected void SetConversationCancellation(CancellationTokenSource cancellationTokenSource)
+        => Context.Items[ConversationCtsKey] = cancellationTokenSource;
+
+    protected void ClearConversationCancellation()
+        => Context.Items.Remove(ConversationCtsKey);
+
+    protected async Task StreamSpeechAsync(
+        ITextToSpeechClient textToSpeechClient,
+        string identifier,
+        string text,
+        string voiceName,
+        CancellationToken cancellationToken)
+    {
+        var options = new TextToSpeechOptions();
+
+        if (!string.IsNullOrWhiteSpace(voiceName))
+        {
+            options.VoiceId = voiceName;
+        }
+
+        var speechText = SpeechTextSanitizer.Sanitize(text);
+
+        if (string.IsNullOrWhiteSpace(speechText))
+        {
+            await Clients.Caller.ReceiveAudioComplete(identifier);
+            return;
+        }
+
+        await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+        {
+            var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+
+            if (audioContent?.Data is not { Length: > 0 } audioData)
+            {
+                continue;
+            }
+
+            var base64Audio = Convert.ToBase64String(audioData.ToArray());
+            await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
+        }
+
+        await Clients.Caller.ReceiveAudioComplete(identifier);
+    }
+
+    protected async Task StreamSentencesAsSpeechAsync(
+        ITextToSpeechClient textToSpeechClient,
+        Func<string> getIdentifier,
+        ChannelReader<string> sentenceReader,
+        string voiceName,
+        CancellationToken cancellationToken)
+    {
+        var options = new TextToSpeechOptions();
+
+        if (!string.IsNullOrWhiteSpace(voiceName))
+        {
+            options.VoiceId = voiceName;
+        }
+
+        await foreach (var sentence in sentenceReader.ReadAllAsync(cancellationToken))
+        {
+            var identifier = getIdentifier();
+            var speechText = SpeechTextSanitizer.Sanitize(sentence);
+
+            if (string.IsNullOrWhiteSpace(speechText))
+            {
+                continue;
+            }
+
+            await foreach (var update in textToSpeechClient.GetStreamingAudioAsync(speechText, options, cancellationToken))
+            {
+                var audioContent = update.Contents.OfType<DataContent>().FirstOrDefault();
+
+                if (audioContent?.Data is not { Length: > 0 } audioData)
+                {
+                    continue;
+                }
+
+                var base64Audio = Convert.ToBase64String(audioData.ToArray());
+                await Clients.Caller.ReceiveAudioChunk(identifier, base64Audio, audioContent.MediaType ?? "audio/mp3");
+            }
+
+            await Clients.Caller.ReceiveAudioComplete(identifier);
+        }
+    }
+
     /// <summary>
     /// Applies core settings from a JSON payload to a <see cref="ChatInteraction"/>.
     /// Override to apply additional module-specific settings.
@@ -515,3 +614,5 @@ public abstract class ChatInteractionHubBase : Hub<IChatInteractionHubClient>
         }
     }
 }
+
+#pragma warning restore MEAI001

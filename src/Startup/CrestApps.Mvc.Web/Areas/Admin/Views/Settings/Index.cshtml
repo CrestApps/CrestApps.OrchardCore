@@ -78,8 +78,10 @@
 
                     <div class="mb-3">
                         <label asp-for="DefaultTextToSpeechVoiceId" class="form-label">Default text-to-speech voice</label>
-                        <input asp-for="DefaultTextToSpeechVoiceId" class="form-control" placeholder="e.g. alloy" />
-                        <div class="form-text">The default voice used for text-to-speech when a profile does not specify one.</div>
+                        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select">
+                            <option value="">Default voice</option>
+                        </select>
+                        <div class="form-text">The default voice used for text-to-speech when a profile does not specify one. Available voices depend on the selected text-to-speech deployment.</div>
                     </div>
                 </div>
             </div>
@@ -142,6 +144,13 @@
                             <label asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-label">Enable preemptive retrieval-augmented generation (RAG)</label>
                         </div>
                         <div class="form-text">When enabled, the default orchestrator retrieves relevant context from connected knowledge sources before the main AI call.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ChatInteractionChatMode" class="form-label">Chat Interactions mode</label>
+                        <select asp-for="ChatInteractionChatMode" asp-items="Model.ChatInteractionModes" class="form-select">
+                        </select>
+                        <div class="form-text">Controls whether Chat Interactions use text input only, microphone dictation, or full two-way conversation mode.</div>
                     </div>
 
                     <div class="mb-3">
@@ -533,5 +542,69 @@
             adminWidgetProfileSelect.addEventListener('change', toggleAdminWidgetOptions);
             toggleAdminWidgetOptions();
         }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ttsDeploymentSelect = document.getElementById('@Html.IdFor(m => m.DefaultTextToSpeechDeploymentName)');
+        const voiceSelect = document.getElementById('@Html.IdFor(m => m.DefaultTextToSpeechVoiceId)');
+        const voicesUrl = '@Url.Action("GetVoices", "Settings", new { area = "Admin" })';
+        let selectedVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? string.Empty)';
+
+        if (!ttsDeploymentSelect || !voiceSelect) {
+            return;
+        }
+
+        function resetVoiceOptions() {
+            voiceSelect.innerHTML = '<option value="">Default voice</option>';
+        }
+
+        async function loadVoiceOptions() {
+            resetVoiceOptions();
+
+            if (!ttsDeploymentSelect.value) {
+                return;
+            }
+
+            const response = await fetch(voicesUrl + '?deploymentName=' + encodeURIComponent(ttsDeploymentSelect.value), { credentials: 'same-origin' });
+            const result = await response.json();
+
+            if (!result || !Array.isArray(result.voices)) {
+                return;
+            }
+
+            const groupedVoices = new Map();
+            for (const voice of result.voices) {
+                const groupName = voice.languageDisplayName || voice.language || 'Unknown';
+                if (!groupedVoices.has(groupName)) {
+                    groupedVoices.set(groupName, []);
+                }
+
+                groupedVoices.get(groupName).push(voice);
+            }
+
+            Array.from(groupedVoices.keys()).sort((a, b) => a.localeCompare(b)).forEach(groupName => {
+                const group = document.createElement('optgroup');
+                group.label = groupName;
+
+                groupedVoices.get(groupName).forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    option.selected = voice.id === selectedVoiceId;
+                    group.appendChild(option);
+                });
+
+                voiceSelect.appendChild(group);
+            });
+        }
+
+        ttsDeploymentSelect.addEventListener('change', function () {
+            selectedVoiceId = '';
+            loadVoiceOptions();
+        });
+
+        loadVoiceOptions();
     });
 </script>

@@ -410,6 +410,7 @@ window.openAIChatManager = function () {
                     conversationModeEnabled: config.chatMode === 'Conversation',
                     conversationButton: null,
                     isConversationMode: false,
+                    notificationDismissTimers: {},
                 };
             },
             computed: {
@@ -1144,9 +1145,9 @@ window.openAIChatManager = function () {
                                 pendingChunk.then(() => subject.complete());
                             });
 
-                            var language = document.documentElement.lang || 'en-US';
+                            var language = navigator.language || document.documentElement.lang || 'en-US';
                             this.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
-                            this.mediaRecorder.start(1000);
+                            this.mediaRecorder.start(250);
                             this.isRecording = true;
                             this.updateMicButton();
                         })
@@ -1612,10 +1613,10 @@ window.openAIChatManager = function () {
 
                             var profileId = this.getProfileId();
                             var sessionId = this.getSessionId() || '';
-                            var language = document.documentElement.lang || 'en-US';
+                            var language = navigator.language || document.documentElement.lang || 'en-US';
 
                             this.connection.send("StartConversation", profileId, sessionId, this._conversationSubject, mimeType, language);
-                            this.mediaRecorder.start(1000);
+                            this.mediaRecorder.start(250);
                             this.isRecording = true;
                         })
                         .catch(err => {
@@ -1674,7 +1675,8 @@ window.openAIChatManager = function () {
                         type: 'conversation-ended',
                         content: 'Conversation ended.',
                         icon: 'fa-solid fa-circle-check',
-                        dismissible: true
+                        dismissible: true,
+                        autoDismissMs: 5000
                     });
                 },
                 updateConversationButton() {
@@ -1684,7 +1686,7 @@ window.openAIChatManager = function () {
 
                     if (this.isConversationMode) {
                         this.conversationButton.classList.add('active', 'btn-primary');
-                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
                         this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
                         var endHtml = this.conversationButton.getAttribute('data-end-html');
                         if (endHtml) {
@@ -1692,7 +1694,9 @@ window.openAIChatManager = function () {
                         }
                     } else {
                         this.conversationButton.classList.remove('active', 'btn-primary');
-                        this.conversationButton.classList.add('btn-dark');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.classList.add('btn-outline-dark');
+                        this.conversationButton.blur();
                         this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
                         var startHtml = this.conversationButton.getAttribute('data-start-html');
                         if (startHtml) {
@@ -1753,12 +1757,14 @@ window.openAIChatManager = function () {
                     if (!notification || !notification.type) {
                         return;
                     }
+                    this.clearNotificationDismiss(notification.type);
                     var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
                     if (existingIndex >= 0) {
                         this.notifications.splice(existingIndex, 1, notification);
                     } else {
                         this.notifications.push(notification);
                     }
+                    this.scheduleNotificationDismiss(notification);
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
@@ -1767,12 +1773,31 @@ window.openAIChatManager = function () {
                     if (!notification || !notification.type) {
                         return;
                     }
+                    this.clearNotificationDismiss(notification.type);
                     var existingIndex = this.notifications.findIndex(n => n.type === notification.type);
                     if (existingIndex >= 0) {
                         this.notifications.splice(existingIndex, 1, notification);
+                        this.scheduleNotificationDismiss(notification);
                     }
                 },
+                scheduleNotificationDismiss(notification) {
+                    if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+                        return;
+                    }
+                    this.notificationDismissTimers[notification.type] = setTimeout(() => {
+                        this.removeNotification(notification.type);
+                    }, notification.autoDismissMs);
+                },
+                clearNotificationDismiss(notificationType) {
+                    var timerId = this.notificationDismissTimers[notificationType];
+                    if (!timerId) {
+                        return;
+                    }
+                    clearTimeout(timerId);
+                    delete this.notificationDismissTimers[notificationType];
+                },
                 removeNotification(notificationType) {
+                    this.clearNotificationDismiss(notificationType);
                     this.notifications = this.notifications.filter(n => n.type !== notificationType);
                 },
                 dismissNotification(notificationType) {

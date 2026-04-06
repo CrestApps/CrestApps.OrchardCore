@@ -20,6 +20,8 @@ public sealed class SettingsViewModel
 
     public bool DefaultOrchestratorEnablePreemptiveRag { get; set; } = true;
 
+    public ChatMode ChatInteractionChatMode { get; set; }
+
     public string MemoryIndexProfileName { get; set; }
 
     public int MemoryTopN { get; set; } = 5;
@@ -106,6 +108,9 @@ public sealed class SettingsViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; } = [];
+
+    [BindNever]
+    public IEnumerable<SelectListItem> ChatInteractionModes { get; set; } = [];
 
     [BindNever]
     public IEnumerable<SelectListItem> DocumentIndexProfiles { get; set; } = [];

@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Templates\Prompts\**\*" />
+    <EmbeddedResource Include="Templates\Profiles\**\*" />
   </ItemGroup>
 
   <ItemGroup>

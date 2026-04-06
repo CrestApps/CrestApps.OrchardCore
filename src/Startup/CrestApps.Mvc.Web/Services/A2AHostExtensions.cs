@@ -7,6 +7,8 @@ using CrestApps.AI.Completions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +16,8 @@ namespace CrestApps.Mvc.Web.Services;
 
 internal static class A2AHostExtensions
 {
+    private const string A2AHostPolicyName = "MvcA2AHostPolicy";
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -22,6 +26,20 @@ internal static class A2AHostExtensions
 
     public static IServiceCollection AddA2AHost(this IServiceCollection services)
     {
+        services.AddScoped<IAuthorizationHandler, A2AHostAuthorizationHandler>();
+        services.AddAuthentication()
+            .AddScheme<A2AApiKeyAuthenticationOptions, A2AApiKeyAuthenticationHandler>(
+                A2AApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
+
+        services.AddAuthorizationBuilder()
+            .AddPolicy(A2AHostPolicyName, policy =>
+            {
+                policy.AddAuthenticationSchemes(
+                    A2AApiKeyAuthenticationDefaults.AuthenticationScheme,
+                    CookieAuthenticationDefaults.AuthenticationScheme);
+                policy.AddRequirements(new A2AHostAuthorizationRequirement());
+            });
+
         services.AddSingleton<ITaskManager>(CreateTaskManager);
 
         return services;
@@ -32,7 +50,8 @@ internal static class A2AHostExtensions
         endpoints.MapGet("/.well-known/agent-card.json", HandleWellKnownEndpointAsync);
 
         var taskManager = endpoints.ServiceProvider.GetRequiredService<ITaskManager>();
-        endpoints.MapA2A(taskManager, "a2a");
+        endpoints.MapA2A(taskManager, "a2a")
+            .RequireAuthorization(A2AHostPolicyName);
 
         return endpoints;
     }

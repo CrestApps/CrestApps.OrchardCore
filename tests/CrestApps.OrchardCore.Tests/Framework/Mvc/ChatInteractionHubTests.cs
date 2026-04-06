@@ -2,13 +2,17 @@ using System.Text.Json;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Hubs;
+using CrestApps.AI.Clients;
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -59,6 +63,11 @@ public sealed class ChatInteractionHubTests
             TimeProvider.System,
             CreateCitationCollector(),
             sessionMock.Object,
+            new Mock<IAIDeploymentManager>(MockBehavior.Strict).Object,
+            new Mock<IAIClientFactory>(MockBehavior.Strict).Object,
+            CreateSettingsService<ChatInteractionSettings>(AppDataConfigurationSections.ChatInteraction),
+            CreateSettingsService<DefaultAIDeploymentSettings>(AppDataConfigurationSections.DefaultDeployments),
+            new Mock<IServiceScopeFactory>(MockBehavior.Strict).Object,
             NullLogger<ChatInteractionHub>.Instance)
         {
             Clients = clientsMock.Object,
@@ -146,6 +155,11 @@ public sealed class ChatInteractionHubTests
             TimeProvider.System,
             CreateCitationCollector(),
             sessionMock.Object,
+            new Mock<IAIDeploymentManager>(MockBehavior.Strict).Object,
+            new Mock<IAIClientFactory>(MockBehavior.Strict).Object,
+            CreateSettingsService<ChatInteractionSettings>(AppDataConfigurationSections.ChatInteraction),
+            CreateSettingsService<DefaultAIDeploymentSettings>(AppDataConfigurationSections.DefaultDeployments),
+            new Mock<IServiceScopeFactory>(MockBehavior.Strict).Object,
             NullLogger<ChatInteractionHub>.Instance)
         {
             Clients = clientsMock.Object,
@@ -180,4 +194,15 @@ public sealed class ChatInteractionHubTests
 
     private static MvcCitationReferenceCollector CreateCitationCollector()
         => new(new CompositeAIReferenceLinkResolver(new ServiceCollection().BuildServiceProvider()));
+
+    private static AppDataSettingsService<T> CreateSettingsService<T>(string sectionKey)
+        where T : new()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        var appDataPath = Path.Combine(Path.GetTempPath(), "copilot-chatinteractionhubtests", Guid.NewGuid().ToString("N"));
+        var configurationFileService = new AppDataConfigurationFileService(appDataPath);
+        var sectionResolver = new AppDataSettingsSectionResolver([new(typeof(T), sectionKey)]);
+
+        return new AppDataSettingsService<T>(configuration, configurationFileService, sectionResolver);
+    }
 }

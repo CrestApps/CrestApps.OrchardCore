@@ -1,12 +1,15 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
+using CrestApps.AI.Speech;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.Admin.Models;
 using CrestApps.Mvc.Web.Areas.Admin.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Models;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Models;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +27,7 @@ public sealed class SettingsController : Controller
     private const string MemoryIndexProfileType = "AIMemory";
 
     private readonly AppDataSettingsService<GeneralAISettings> _settingsService;
+    private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
     private readonly AppDataSettingsService<DefaultOrchestratorSettings> _defaultOrchestratorSettingsService;
     private readonly AppDataSettingsService<DefaultAIDeploymentSettings> _deploymentDefaultsService;
     private readonly AppDataSettingsService<AIMemorySettings> _memorySettingsService;
@@ -38,9 +42,11 @@ public sealed class SettingsController : Controller
     private readonly IAIProfileManager _profileManager;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ISpeechVoiceResolver _speechVoiceResolver;
 
     public SettingsController(
         AppDataSettingsService<GeneralAISettings> settingsService,
+        AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
         AppDataSettingsService<DefaultOrchestratorSettings> defaultOrchestratorSettingsService,
         AppDataSettingsService<DefaultAIDeploymentSettings> deploymentDefaultsService,
         AppDataSettingsService<AIMemorySettings> memorySettingsService,
@@ -54,9 +60,11 @@ public sealed class SettingsController : Controller
         IAIDeploymentManager deploymentManager,
         IAIProfileManager profileManager,
         ISearchIndexProfileStore indexProfileStore,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        ISpeechVoiceResolver speechVoiceResolver)
     {
         _settingsService = settingsService;
+        _chatInteractionSettingsService = chatInteractionSettingsService;
         _defaultOrchestratorSettingsService = defaultOrchestratorSettingsService;
         _deploymentDefaultsService = deploymentDefaultsService;
         _memorySettingsService = memorySettingsService;
@@ -71,11 +79,13 @@ public sealed class SettingsController : Controller
         _profileManager = profileManager;
         _indexProfileStore = indexProfileStore;
         _dataProtectionProvider = dataProtectionProvider;
+        _speechVoiceResolver = speechVoiceResolver;
     }
 
     public async Task<IActionResult> Index()
     {
         var settings = await _settingsService.GetAsync();
+        var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
         var defaultOrchestratorSettings = await _defaultOrchestratorSettingsService.GetAsync();
         var deploymentDefaults = await _deploymentDefaultsService.GetAsync();
         var memorySettings = await _memorySettingsService.GetAsync();
@@ -94,6 +104,7 @@ public sealed class SettingsController : Controller
             MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest,
             EnableDistributedCaching = settings.EnableDistributedCaching,
             EnableOpenTelemetry = settings.EnableOpenTelemetry,
+            ChatInteractionChatMode = chatInteractionSettings.ChatMode,
             DefaultOrchestratorEnablePreemptiveRag = defaultOrchestratorSettings.EnablePreemptiveRag,
             MemoryIndexProfileName = memorySettings.IndexProfileName,
             MemoryTopN = memorySettings.TopN,
@@ -228,6 +239,11 @@ public sealed class SettingsController : Controller
 
         await _settingsService.SaveAsync(settings);
 
+        var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
+        chatInteractionSettings.ChatMode = model.ChatInteractionChatMode;
+
+        await _chatInteractionSettingsService.SaveAsync(chatInteractionSettings);
+
         await _defaultOrchestratorSettingsService.SaveAsync(new DefaultOrchestratorSettings
         {
             EnablePreemptiveRag = model.DefaultOrchestratorEnablePreemptiveRag,
@@ -347,6 +363,13 @@ public sealed class SettingsController : Controller
         model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
             await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
 
+        model.ChatInteractionModes =
+        [
+            new SelectListItem("Text input", nameof(ChatMode.TextInput)),
+            new SelectListItem("Audio input", nameof(ChatMode.AudioInput)),
+            new SelectListItem("Conversation", nameof(ChatMode.Conversation)),
+        ];
+
         model.DocumentIndexProfiles = (await _indexProfileStore.GetByTypeAsync(IndexProfileTypes.AIDocuments))
             .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
             .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.Name));
@@ -414,5 +437,52 @@ public sealed class SettingsController : Controller
         var deployment = await _deploymentManager.FindByIdAsync(selector);
 
         return deployment?.Name ?? selector;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetVoices(string deploymentName)
+    {
+        if (string.IsNullOrWhiteSpace(deploymentName))
+        {
+            return Json(new { voices = Array.Empty<object>() });
+        }
+
+        var deployment = await _deploymentManager.FindByNameAsync(deploymentName);
+
+        if (deployment is null)
+        {
+            return Json(new { voices = Array.Empty<object>() });
+        }
+
+        var voices = (await _speechVoiceResolver.GetSpeechVoicesAsync(deployment))
+            .OrderBy(voice => voice.Language, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(voice => voice.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(voice => new
+            {
+                voice.Id,
+                voice.Name,
+                voice.Language,
+                LanguageDisplayName = GetCultureDisplayName(voice.Language),
+                Gender = voice.Gender.ToString(),
+            });
+
+        return Json(new { voices });
+    }
+
+    private static string GetCultureDisplayName(string language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            return "Unknown";
+        }
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(language).DisplayName;
+        }
+        catch (CultureNotFoundException)
+        {
+            return language;
+        }
     }
 }

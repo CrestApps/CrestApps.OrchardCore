@@ -316,7 +316,8 @@ window.chatInteractionManager = function () {
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false,
-          notifications: []
+          notifications: [],
+          notificationDismissTimers: {}
         };
       },
       computed: {
@@ -1197,9 +1198,9 @@ window.chatInteractionManager = function () {
               });
             });
             var itemId = _this8.getItemId();
-            var language = document.documentElement.lang || 'en-US';
+            var language = navigator.language || document.documentElement.lang || 'en-US';
             _this8.connection.send("StartConversation", itemId, _this8._conversationSubject, mimeType, language);
-            _this8.mediaRecorder.start(1000);
+            _this8.mediaRecorder.start(250);
             _this8.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
@@ -1254,7 +1255,8 @@ window.chatInteractionManager = function () {
             type: 'conversation-ended',
             content: 'Conversation ended.',
             icon: 'fa-solid fa-circle-check',
-            dismissible: true
+            dismissible: true,
+            autoDismissMs: 5000
           });
         },
         updateConversationButton: function updateConversationButton() {
@@ -1263,7 +1265,7 @@ window.chatInteractionManager = function () {
           }
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
-            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
             this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
             var endHtml = this.conversationButton.getAttribute('data-end-html');
             if (endHtml) {
@@ -1273,7 +1275,9 @@ window.chatInteractionManager = function () {
             }
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
-            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.add('btn-outline-dark');
+            this.conversationButton.blur();
             this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
             var startHtml = this.conversationButton.getAttribute('data-start-html');
             if (startHtml) {
@@ -1320,6 +1324,10 @@ window.chatInteractionManager = function () {
           return this.inputElement.getAttribute('data-interaction-id');
         },
         receiveNotification: function receiveNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           // Replace existing notification with same type, or add new one.
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
@@ -1329,18 +1337,42 @@ window.chatInteractionManager = function () {
           } else {
             this.notifications.push(notification);
           }
+          this.scheduleNotificationDismiss(notification);
           this.scrollToBottom();
         },
         updateNotification: function updateNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
           });
           if (idx >= 0) {
             this.notifications.splice(idx, 1, notification);
+            this.scheduleNotificationDismiss(notification);
             this.scrollToBottom();
           }
         },
+        scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
+          var _this0 = this;
+          if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+            return;
+          }
+          this.notificationDismissTimers[notification.type] = setTimeout(function () {
+            _this0.removeNotification(notification.type);
+          }, notification.autoDismissMs);
+        },
+        clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
+          var timerId = this.notificationDismissTimers[notificationType];
+          if (!timerId) {
+            return;
+          }
+          clearTimeout(timerId);
+          delete this.notificationDismissTimers[notificationType];
+        },
         removeNotification: function removeNotification(notificationType) {
+          this.clearNotificationDismiss(notificationType);
           this.notifications = this.notifications.filter(function (n) {
             return n.type !== notificationType;
           });
@@ -1367,7 +1399,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this0 = this;
+          var _this1 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1379,59 +1411,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this0.stream) {
+            if (!_this1.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight - _this0.chatContainer.scrollTop <= threshold;
-            _this0.autoScroll = atBottom;
+            var atBottom = _this1.chatContainer.scrollHeight - _this1.chatContainer.clientHeight - _this1.chatContainer.scrollTop <= threshold;
+            _this1.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this0.stream != null) {
+            if (_this1.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this0.buttonElement.click();
+              _this1.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this0.handleUserInput(e);
+            _this1.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this0.buttonElement.removeAttribute('disabled');
+              _this1.buttonElement.removeAttribute('disabled');
             } else {
-              _this0.buttonElement.setAttribute('disabled', true);
+              _this1.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this0.prompt = _this0.inputElement.value;
-              if (_this0.inputElement.value.trim()) {
-                _this0.buttonElement.removeAttribute('disabled');
+              _this1.prompt = _this1.inputElement.value;
+              if (_this1.inputElement.value.trim()) {
+                _this1.buttonElement.removeAttribute('disabled');
               } else {
-                _this0.buttonElement.setAttribute('disabled', true);
+                _this1.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this0.stream != null) {
-              _this0.stream.dispose();
-              _this0.stream = null;
-              _this0.streamingFinished();
-              _this0.hideTypingIndicator();
+            if (_this1.stream != null) {
+              _this1.stream.dispose();
+              _this1.stream = null;
+              _this1.streamingFinished();
+              _this1.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this0.messages.length > 0) {
-                var lastMsg = _this0.messages[_this0.messages.length - 1];
+              if (_this1.messages.length > 0) {
+                var lastMsg = _this1.messages[_this1.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this0.messages.pop();
+                  _this1.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this0.sendMessage();
+            _this1.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -1442,7 +1474,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this0.loadInteraction(itemId);
+              _this1.loadInteraction(itemId);
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1482,24 +1514,24 @@ window.chatInteractionManager = function () {
             // Checkboxes & selects save immediately
             if (isCheckbox || isSelect) {
               input.addEventListener('change', function () {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
+                _this1.settingsDirty = true;
+                _this1.debouncedSaveSettings();
               });
               return;
             }
 
             // Text / textarea / number inputs → save on blur if changed
             input.addEventListener('focus', function () {
-              _this0.initialFieldValues.set(input, input.value);
+              _this1.initialFieldValues.set(input, input.value);
             });
             input.addEventListener('blur', function () {
-              var initialValue = _this0.initialFieldValues.get(input);
+              var initialValue = _this1.initialFieldValues.get(input);
               var hasChanged = initialValue !== undefined && input.value !== initialValue;
               if (hasChanged) {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
+                _this1.settingsDirty = true;
+                _this1.debouncedSaveSettings();
               }
-              _this0.initialFieldValues["delete"](input);
+              _this1.initialFieldValues["delete"](input);
             });
           });
 
@@ -1507,8 +1539,8 @@ window.chatInteractionManager = function () {
           var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
           toolCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
+              _this1.settingsDirty = true;
+              _this1.debouncedSaveSettings();
             });
           });
 
@@ -1516,8 +1548,8 @@ window.chatInteractionManager = function () {
           var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
           groupToggleCheckboxes.forEach(function (toggle) {
             toggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
+              _this1.settingsDirty = true;
+              _this1.debouncedSaveSettings();
             });
           });
 
@@ -1525,8 +1557,8 @@ window.chatInteractionManager = function () {
           var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
           mcpCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
+              _this1.settingsDirty = true;
+              _this1.debouncedSaveSettings();
             });
           });
 
@@ -1534,8 +1566,8 @@ window.chatInteractionManager = function () {
           var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
           agentCheckboxes.forEach(function (checkbox) {
             checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
+              _this1.settingsDirty = true;
+              _this1.debouncedSaveSettings();
             });
           });
 
@@ -1543,8 +1575,8 @@ window.chatInteractionManager = function () {
           var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
           if (agentGlobalToggle) {
             agentGlobalToggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
+              _this1.settingsDirty = true;
+              _this1.debouncedSaveSettings();
             });
           }
 
@@ -1554,7 +1586,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this0.clearHistory(itemId);
+                _this1.clearHistory(itemId);
               }
             });
           }
@@ -1565,7 +1597,7 @@ window.chatInteractionManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this0.toggleRecording();
+                _this1.toggleRecording();
               });
             }
           }
@@ -1575,7 +1607,7 @@ window.chatInteractionManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this0.toggleConversationMode();
+                _this1.toggleConversationMode();
               });
             }
           }
@@ -1615,7 +1647,7 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this1 = this;
+          var _this10 = this;
           // Clear any existing timeout to reset the debounce timer
           if (this.saveSettingsTimeout) {
             clearTimeout(this.saveSettingsTimeout);
@@ -1628,11 +1660,11 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this1.settingsDirty) {
-              _this1.saveSettings();
-              _this1.settingsDirty = false;
+            if (_this10.settingsDirty) {
+              _this10.saveSettings();
+              _this10.settingsDirty = false;
             }
-            _this1.saveSettingsTimeout = null;
+            _this10.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
@@ -1734,7 +1766,7 @@ window.chatInteractionManager = function () {
           navigator.clipboard.writeText(message);
         },
         startRecording: function startRecording() {
-          var _this10 = this;
+          var _this11 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1746,16 +1778,16 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this10.mediaRecorder = new MediaRecorder(stream, {
+            _this11.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this10.preRecordingPrompt = _this10.prompt;
-            _this10._audioInputSent = false;
+            _this11.preRecordingPrompt = _this11.prompt;
+            _this11._audioInputSent = false;
             var subject = new signalR.Subject();
-            var itemId = _this10.getItemId();
+            var itemId = _this11.getItemId();
             var pendingChunk = Promise.resolve();
-            _this10.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this11.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                   var data, uint8Array, binaryString, base64;
@@ -1779,7 +1811,7 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this10.mediaRecorder.addEventListener('stop', function () {
+            _this11.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
@@ -1787,11 +1819,11 @@ window.chatInteractionManager = function () {
                 return subject.complete();
               });
             });
-            var language = document.documentElement.lang || 'en-US';
-            _this10.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-            _this10.mediaRecorder.start(1000);
-            _this10.isRecording = true;
-            _this10.updateMicButton();
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this11.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this11.mediaRecorder.start(250);
+            _this11.isRecording = true;
+            _this11.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
@@ -1845,15 +1877,15 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this11 = this;
+        var _this12 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
           return _regenerator().w(function (_context5) {
             while (1) switch (_context5.n) {
               case 0:
                 _context5.n = 1;
-                return _this11.startConnection();
+                return _this12.startConnection();
               case 1:
-                _this11.initializeApp();
+                _this12.initializeApp();
               case 2:
                 return _context5.a(2);
             }

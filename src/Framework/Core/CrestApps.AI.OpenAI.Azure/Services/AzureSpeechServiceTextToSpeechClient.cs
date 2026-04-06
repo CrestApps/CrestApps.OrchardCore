@@ -257,7 +257,19 @@ public sealed class AzureSpeechServiceTextToSpeechClient : ITextToSpeechClient
     {
         SpeechConfig config;
 
-        if (_region != null)
+        if (_authType == AzureAuthenticationType.ApiKey)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Using endpoint-based SDK configuration for API key authentication. Endpoint: {Endpoint}, Region: {Region}",
+                    _endpoint,
+                    _region ?? "(unknown)");
+            }
+
+            config = await CreateEndpointBasedConfigAsync(cancellationToken);
+        }
+        else if (_region != null)
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {

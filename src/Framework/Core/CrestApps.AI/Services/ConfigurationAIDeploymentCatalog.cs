@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.Models;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,13 +15,10 @@ namespace CrestApps.AI.Services;
 /// </summary>
 public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
 {
-    private const string _connectionProtectorName = "AIProviderConnection";
-
     private readonly IAIDeploymentStore _inner;
     private readonly IConfiguration _configuration;
     private readonly AIProviderOptions _providerOptions;
     private readonly AIOptions _aiOptions;
-    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly ILogger _logger;
 
     private IReadOnlyCollection<AIDeployment> _configDeployments;
@@ -32,14 +28,12 @@ public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
         IConfiguration configuration,
         IOptions<AIProviderOptions> providerOptions,
         IOptions<AIOptions> aiOptions,
-        IDataProtectionProvider dataProtectionProvider,
         ILogger<ConfigurationAIDeploymentCatalog> logger)
     {
         _inner = inner;
         _configuration = configuration;
         _providerOptions = providerOptions.Value;
         _aiOptions = aiOptions.Value;
-        _dataProtectionProvider = dataProtectionProvider;
         _logger = logger;
     }
 
@@ -406,11 +400,6 @@ public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
             return null;
         }
 
-        if (entry.Properties?.Count > 0)
-        {
-            ProtectApiKeys(entry.Properties, entry.ProviderName, entry.Name);
-        }
-
         return new AIDeployment
         {
             ItemId = AIConfigurationRecordIds.CreateDeploymentId(entry.ProviderName, connectionName: null, entry.Name),
@@ -549,38 +538,6 @@ public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
         }
 
         return properties;
-    }
-
-    private void ProtectApiKeys(JsonObject properties, string providerName, string deploymentName)
-    {
-        foreach (var (key, value) in properties)
-        {
-            if (value is JsonObject nestedObject)
-            {
-                ProtectApiKeys(nestedObject, providerName, deploymentName);
-                continue;
-            }
-
-            if (!string.Equals(key, "ApiKey", StringComparison.OrdinalIgnoreCase) || value is not JsonValue apiKeyValue)
-            {
-                continue;
-            }
-
-            if (!apiKeyValue.TryGetValue<string>(out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                continue;
-            }
-
-            try
-            {
-                var protector = _dataProtectionProvider.CreateProtector(_connectionProtectorName);
-                properties[key] = protector.Protect(apiKey);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to protect API key for deployment '{Name}' of provider '{ProviderName}'.", deploymentName, providerName);
-            }
-        }
     }
 
     private static bool IsStandaloneDeploymentMetadataKey(string key)

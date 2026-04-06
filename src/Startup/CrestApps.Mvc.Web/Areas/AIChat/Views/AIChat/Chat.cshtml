@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Options
 @model CrestApps.AI.Models.AIProfile
 @inject IOptions<CrestApps.AI.Models.ChatDocumentsOptions> ChatDocumentOptions
+@inject CrestApps.Mvc.Web.Services.AppDataSettingsService<CrestApps.AI.Models.DefaultAIDeploymentSettings> DefaultDeploymentSettingsService
 @{
     var session = ViewData["Session"] as CrestApps.AI.Models.AIChatSession;
     var prompts = ViewData["Prompts"] as IReadOnlyList<CrestApps.AI.Models.AIChatSessionPrompt>;
@@ -25,6 +26,21 @@
     var allowSessionDocuments = sessionDocumentsMetadata?.AllowSessionDocuments ?? false;
     var metricsEnabled = Model.As<AnalyticsMetadata>()?.EnableSessionMetrics ?? false;
     var existingDocuments = session?.Documents ?? [];
+    var defaultDeploymentSettings = await DefaultDeploymentSettingsService.GetAsync();
+    ChatModeProfileSettings chatModeSettings = null;
+    Model.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
+    var configuredChatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
+    var speechToTextEnabled = !string.IsNullOrWhiteSpace(defaultDeploymentSettings.DefaultSpeechToTextDeploymentName);
+    var textToSpeechEnabled = !string.IsNullOrWhiteSpace(defaultDeploymentSettings.DefaultTextToSpeechDeploymentName);
+    var chatMode = configuredChatMode switch
+    {
+        ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
+        ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
+        ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
+        _ => ChatMode.TextInput,
+    };
+    var conversationModeEnabled = chatMode == ChatMode.Conversation;
+    var ttsVoiceName = chatModeSettings?.VoiceName ?? defaultDeploymentSettings.DefaultTextToSpeechVoiceId;
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
@@ -76,6 +92,40 @@
     .ai-chat-messages .message-buttons-container > .button-message-toolbox:focus {
         color: var(--bs-body-color, #212529) !important;
     }
+    #chat-conversation-btn:not(.active) {
+        background-color: transparent !important;
+        border-color: var(--bs-dark, #212529) !important;
+        color: var(--bs-dark, #212529) !important;
+    }
+    .ai-chat-notification {
+        margin: 0.75rem 1rem 0;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid rgba(33, 37, 41, 0.12);
+        border-radius: 0.5rem;
+        background: rgba(248, 249, 250, 0.95);
+    }
+    .ai-chat-notification-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .ai-chat-notification-icon {
+        margin-top: 0.1rem;
+        color: var(--bs-secondary-color, #6c757d);
+    }
+    .ai-chat-notification-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .ai-chat-notification-dismiss {
+        margin-left: auto !important;
+        color: var(--bs-secondary-color, #6c757d) !important;
+    }
+    .ai-chat-notification-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
     @@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 </style>
 
@@ -105,8 +155,24 @@
                           placeholder="Type a message..."
                           data-session-id="@sessionId"
                           data-profile-id="@Model.ItemId"></textarea>
-                <button type="button" id="send-btn" class="btn btn-primary">
-                    <i class="bi bi-send"></i> Send
+                <button type="button" id="chat-mic-btn" class="btn btn-outline-secondary" title="Voice input" style="display: none;">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+                @if (conversationModeEnabled)
+                {
+                    <button type="button"
+                            id="chat-conversation-btn"
+                            class="btn btn-outline-dark"
+                            title="Start Conversation"
+                            data-start-title="Start Conversation"
+                            data-end-title="End Conversation"
+                            data-start-html="<i class='bi bi-soundwave'></i>"
+                            data-end-html="<i class='bi bi-stop-fill me-1'></i> End Conversation">
+                        <i class="bi bi-soundwave"></i>
+                    </button>
+                }
+                <button type="button" id="send-btn" class="btn btn-primary" data-start-icon="<i class='bi bi-send'></i>" data-stop-icon="<i class='bi bi-stop-fill'></i>">
+                    <i class="bi bi-send"></i>
                 </button>
             </div>
         </div>
@@ -131,6 +197,10 @@
                 placeholderElementSelector: '#chat-placeholder',
                 messages: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(messages)),
                 metricsEnabled: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(metricsEnabled)),
+                chatMode: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chatMode.ToString())),
+                micButtonElementSelector: '#chat-mic-btn',
+                conversationButtonElementSelector: '#chat-conversation-btn',
+                ttsVoiceName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ttsVoiceName)),
                 sessionDocumentsEnabled: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allowSessionDocuments)),
                 existingDocuments: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(existingDocuments)),
                 documentBarSelector: '#chat-document-bar',

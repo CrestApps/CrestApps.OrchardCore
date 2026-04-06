@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Options
 @model AIProfileViewModel
 @inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
+@inject CrestApps.Mvc.Web.Services.AppDataSettingsService<CrestApps.AI.Models.DefaultAIDeploymentSettings> DefaultDeploymentSettingsService
 @{
     ViewData["Title"] = "Edit AI Profile";
     const string maxTokensHelp = "The maximum number of tokens (roughly words or word fragments) the AI can generate in a single response. Lower values produce shorter responses and reduce costs. Higher values allow for more detailed answers.";
@@ -13,6 +14,8 @@
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
     var embeddableExtensionsAccept = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsAcceptValue();
     var embeddableExtensionsDisplay = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsDisplayValue();
+    var defaultDeploymentSettings = await DefaultDeploymentSettingsService.GetAsync();
+    var defaultTextToSpeechDeploymentName = defaultDeploymentSettings.DefaultTextToSpeechDeploymentName;
 }
 
 <style>
@@ -143,6 +146,25 @@
                                 <div class="form-text">How the chat session title is determined.</div>
                             </div>
                         </div>
+                        <div class="col-md-4 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")">
+                            <div class="mb-3">
+                                <label asp-for="ChatMode" class="form-label">Chat mode</label>
+                                <select asp-for="ChatMode" class="form-select" id="profileChatModeSelector">
+                                    <option value="@ChatMode.TextInput">Text input</option>
+                                    <option value="@ChatMode.AudioInput">Audio input</option>
+                                    <option value="@ChatMode.Conversation">Conversation</option>
+                                </select>
+                                <div class="form-text">Controls whether this profile uses text input only, microphone dictation, or full two-way conversation mode.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 profile-type profile-type-chat@(Model.Type != CrestApps.AI.Models.AIProfileType.Chat ? " d-none" : "")" id="profileVoiceSelectorGroup">
+                        <label asp-for="VoiceName" class="form-label">Voice</label>
+                        <select asp-for="VoiceName" class="form-select">
+                            <option value="">Default voice</option>
+                        </select>
+                        <div class="form-text">Select a voice for conversation mode. Leave this empty to use the site's default voice.</div>
                     </div>
 
                     <!-- Agent-only: Description -->
@@ -998,6 +1020,12 @@
             var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
             var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             var initialPromptGroup = document.getElementById('initialPromptGroup');
+            var profileChatModeSelector = document.getElementById('profileChatModeSelector');
+            var profileVoiceSelectorGroup = document.getElementById('profileVoiceSelectorGroup');
+            var profileVoiceSelector = document.getElementById('@Html.IdFor(m => m.VoiceName)');
+            var profileVoicesUrl = '@Url.Action("GetVoices", "Settings", new { area = "Admin" })';
+            var selectedProfileVoiceId = '@(Model.VoiceName ?? string.Empty)';
+            var defaultTextToSpeechDeploymentName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(defaultTextToSpeechDeploymentName));
 
             function normalizeProfileType(str) {
                 return (str || '')
@@ -1029,6 +1057,7 @@
                     el.classList.toggle('d-none', !el.classList.contains(className));
                 });
                 toggleInitialPromptFields();
+                toggleProfileVoiceField();
             }
 
             function toggleInitialPromptFields() {
@@ -1039,6 +1068,63 @@
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
             }
 
+            function toggleProfileVoiceField() {
+                if (!profileChatModeSelector || !profileVoiceSelectorGroup) {
+                    return;
+                }
+
+                var isConversationMode = profileChatModeSelector.value === '@nameof(ChatMode.Conversation)';
+                profileVoiceSelectorGroup.classList.toggle('d-none', !isConversationMode || getSelectedProfileTypeClassName() !== 'profile-type-chat');
+            }
+
+            function resetVoiceOptions() {
+                if (!profileVoiceSelector) {
+                    return;
+                }
+
+                profileVoiceSelector.innerHTML = '<option value="">Default voice</option>';
+            }
+
+            async function loadVoiceOptions() {
+                resetVoiceOptions();
+
+                if (!profileVoiceSelector || !defaultTextToSpeechDeploymentName) {
+                    return;
+                }
+
+                const response = await fetch(profileVoicesUrl + '?deploymentName=' + encodeURIComponent(defaultTextToSpeechDeploymentName), { credentials: 'same-origin' });
+                const result = await response.json();
+
+                if (!result || !Array.isArray(result.voices)) {
+                    return;
+                }
+
+                const groupedVoices = new Map();
+                for (const voice of result.voices) {
+                    const groupName = voice.languageDisplayName || voice.language || 'Unknown';
+                    if (!groupedVoices.has(groupName)) {
+                        groupedVoices.set(groupName, []);
+                    }
+
+                    groupedVoices.get(groupName).push(voice);
+                }
+
+                Array.from(groupedVoices.keys()).sort((a, b) => a.localeCompare(b)).forEach(groupName => {
+                    const group = document.createElement('optgroup');
+                    group.label = groupName;
+
+                    groupedVoices.get(groupName).forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        option.selected = voice.id === selectedProfileVoiceId;
+                        group.appendChild(option);
+                    });
+
+                    profileVoiceSelector.appendChild(group);
+                });
+            }
+
             if (profileTypeSelect) {
                 profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
                 toggleProfileTypeFields();
@@ -1046,6 +1132,11 @@
             if (addInitialPromptCheck) {
                 addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
             }
+            if (profileChatModeSelector) {
+                profileChatModeSelector.addEventListener('change', toggleProfileVoiceField);
+            }
+
+            loadVoiceOptions();
 
             var enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');
             var dataExtractionSettings = document.getElementById('dataExtractionSettings');

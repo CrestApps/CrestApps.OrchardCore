@@ -24,6 +24,7 @@ Templates can come from three discovery locations:
 
 - **Database-stored templates** — Created and managed through the admin UI at runtime.
 - **File-based templates (Modules)** — Discovered from `Templates/Profiles/` directories embedded in modules, using the same markdown front-matter format as [AI Prompt Templates](prompt-templates).
+- **File-based templates (Framework/MVC assemblies)** — Standalone hosts such as `CrestApps.Mvc.Web` also merge embedded `Templates/Profiles/**/*.md` resources from registered CrestApps AI assemblies, including the built-in templates shipped in `CrestApps.AI`.
 - **File-based templates (App_Data)** — Discovered from `App_Data/Templates/Profiles/` (global) and `App_Data/Sites/{tenantName}/Templates/Profiles/` (tenant-specific) directories on the filesystem.
 
 Both file-based and database sources are merged by a unified service, with database templates taking precedence when names conflict.
@@ -130,6 +131,8 @@ MyModule/
 ```
 
 The filename (without extension) becomes the template name. For example, `customer-support.md` registers a template with the name `customer-support`.
+
+For standalone framework hosts, make sure the profile markdown files are embedded resources so `AddCrestAppsAI()` can discover them at runtime.
 
 ### App_Data Templates
 

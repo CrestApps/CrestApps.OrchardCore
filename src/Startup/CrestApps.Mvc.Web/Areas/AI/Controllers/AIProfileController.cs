@@ -30,7 +30,7 @@ public sealed class AIProfileController : Controller
 {
     private readonly IAIProfileManager _profileManager;
     private readonly ICatalog<AIDeployment> _deploymentCatalog;
-    private readonly ICatalog<AIProfileTemplate> _templateCatalog;
+    private readonly IAIProfileTemplateManager _templateManager;
     private readonly ICatalog<A2AConnection> _a2aConnectionCatalog;
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
     private readonly IAIDocumentStore _documentStore;
@@ -48,7 +48,7 @@ public sealed class AIProfileController : Controller
     public AIProfileController(
         IAIProfileManager profileManager,
         ICatalog<AIDeployment> deploymentCatalog,
-        ICatalog<AIProfileTemplate> templateCatalog,
+        IAIProfileTemplateManager templateManager,
         ICatalog<A2AConnection> a2aConnectionCatalog,
         ICatalog<McpConnection> mcpConnectionCatalog,
         IAIDocumentStore documentStore,
@@ -64,7 +64,7 @@ public sealed class AIProfileController : Controller
     {
         _profileManager = profileManager;
         _deploymentCatalog = deploymentCatalog;
-        _templateCatalog = templateCatalog;
+        _templateManager = templateManager;
         _a2aConnectionCatalog = a2aConnectionCatalog;
         _mcpConnectionCatalog = mcpConnectionCatalog;
         _documentStore = documentStore;
@@ -94,7 +94,7 @@ public sealed class AIProfileController : Controller
 
         if (!string.IsNullOrWhiteSpace(templateId))
         {
-            var template = await _templateCatalog.FindByIdAsync(templateId);
+            var template = await _templateManager.FindByIdAsync(templateId);
 
             if (template != null)
             {
@@ -295,12 +295,13 @@ public sealed class AIProfileController : Controller
 
         }
 
-        var templates = await _templateCatalog.GetAllAsync();
+        var templates = await _templateManager.GetAllAsync();
+        var listableTemplates = await _templateManager.GetListableAsync();
         model.Templates = templates
             .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId))
             .ToList();
 
-        model.AvailableProfileTemplates = templates
+        model.AvailableProfileTemplates = listableTemplates
             .Where(t => string.Equals(t.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase))
             .Select(t => new SelectListItem(t.DisplayText ?? t.Name, t.ItemId))
             .ToList();

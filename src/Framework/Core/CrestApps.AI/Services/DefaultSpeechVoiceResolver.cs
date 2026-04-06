@@ -1,11 +1,10 @@
 using CrestApps.AI.Clients;
 using CrestApps.AI.Models;
-using CrestApps.AI.Services;
 using CrestApps.AI.Speech;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.AI.Core.Services;
+namespace CrestApps.AI.Services;
 
 public sealed class DefaultSpeechVoiceResolver : ISpeechVoiceResolver
 {

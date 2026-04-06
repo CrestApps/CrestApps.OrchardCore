@@ -1,7 +1,7 @@
+using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.ResponseHandling;
-using CrestApps.AI.Completions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.AI.Services;

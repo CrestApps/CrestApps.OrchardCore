@@ -363,6 +363,7 @@ window.chatInteractionManager = function () {
                     conversationButton: null,
                     isConversationMode: false,
                     notifications: [],
+                    notificationDismissTimers: {},
                 };
             },
             computed: {
@@ -1176,9 +1177,9 @@ window.chatInteractionManager = function () {
 
                             var itemId = this.getItemId();
 
-                            var language = document.documentElement.lang || 'en-US';
+                            var language = navigator.language || document.documentElement.lang || 'en-US';
                             this.connection.send("StartConversation", itemId, this._conversationSubject, mimeType, language);
-                            this.mediaRecorder.start(1000);
+                            this.mediaRecorder.start(250);
                             this.isRecording = true;
                         })
                         .catch(err => {
@@ -1237,7 +1238,8 @@ window.chatInteractionManager = function () {
                         type: 'conversation-ended',
                         content: 'Conversation ended.',
                         icon: 'fa-solid fa-circle-check',
-                        dismissible: true
+                        dismissible: true,
+                        autoDismissMs: 5000
                     });
                 },
                 updateConversationButton() {
@@ -1247,7 +1249,7 @@ window.chatInteractionManager = function () {
 
                     if (this.isConversationMode) {
                         this.conversationButton.classList.add('active', 'btn-primary');
-                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
                         this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
                         var endHtml = this.conversationButton.getAttribute('data-end-html');
                         if (endHtml) {
@@ -1255,7 +1257,9 @@ window.chatInteractionManager = function () {
                         }
                     } else {
                         this.conversationButton.classList.remove('active', 'btn-primary');
-                        this.conversationButton.classList.add('btn-dark');
+                        this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+                        this.conversationButton.classList.add('btn-outline-dark');
+                        this.conversationButton.blur();
                         this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
                         var startHtml = this.conversationButton.getAttribute('data-start-html');
                         if (startHtml) {
@@ -1297,6 +1301,10 @@ window.chatInteractionManager = function () {
                     return this.inputElement.getAttribute('data-interaction-id');
                 },
                 receiveNotification(notification) {
+                    if (!notification || !notification.type) {
+                        return;
+                    }
+                    this.clearNotificationDismiss(notification.type);
                     // Replace existing notification with same type, or add new one.
                     var idx = this.notifications.findIndex(n => n.type === notification.type);
                     if (idx >= 0) {
@@ -1304,16 +1312,39 @@ window.chatInteractionManager = function () {
                     } else {
                         this.notifications.push(notification);
                     }
+                    this.scheduleNotificationDismiss(notification);
                     this.scrollToBottom();
                 },
                 updateNotification(notification) {
+                    if (!notification || !notification.type) {
+                        return;
+                    }
+                    this.clearNotificationDismiss(notification.type);
                     var idx = this.notifications.findIndex(n => n.type === notification.type);
                     if (idx >= 0) {
                         this.notifications.splice(idx, 1, notification);
+                        this.scheduleNotificationDismiss(notification);
                         this.scrollToBottom();
                     }
                 },
+                scheduleNotificationDismiss(notification) {
+                    if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+                        return;
+                    }
+                    this.notificationDismissTimers[notification.type] = setTimeout(() => {
+                        this.removeNotification(notification.type);
+                    }, notification.autoDismissMs);
+                },
+                clearNotificationDismiss(notificationType) {
+                    var timerId = this.notificationDismissTimers[notificationType];
+                    if (!timerId) {
+                        return;
+                    }
+                    clearTimeout(timerId);
+                    delete this.notificationDismissTimers[notificationType];
+                },
                 removeNotification(notificationType) {
+                    this.clearNotificationDismiss(notificationType);
                     this.notifications = this.notifications.filter(n => n.type !== notificationType);
                 },
                 dismissNotification(notificationType) {
@@ -1782,9 +1813,9 @@ window.chatInteractionManager = function () {
                                 pendingChunk.then(() => subject.complete());
                             });
 
-                            var language = document.documentElement.lang || 'en-US';
+                            var language = navigator.language || document.documentElement.lang || 'en-US';
                             this.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-                            this.mediaRecorder.start(1000);
+                            this.mediaRecorder.start(250);
                             this.isRecording = true;
                             this.updateMicButton();
                         })

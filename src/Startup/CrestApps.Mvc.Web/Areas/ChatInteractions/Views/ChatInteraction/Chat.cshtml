@@ -95,6 +95,11 @@
         color: var(--bs-secondary-color, #6c757d);
         cursor: help;
     }
+    #conversation-btn.active {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: #fff;
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -526,6 +531,25 @@
                           rows="1"
                           placeholder="Type a message..."
                           data-item-id="@Model.ItemId"></textarea>
+                @if (Model.SpeechToTextEnabled)
+                {
+                    <button type="button" id="mic-btn" class="btn btn-outline-secondary" title="Record audio">
+                        <i class="bi bi-mic"></i>
+                    </button>
+                }
+                @if (Model.ConversationModeEnabled)
+                {
+                    <button type="button"
+                            id="conversation-btn"
+                            class="btn btn-outline-dark"
+                            title="Start Conversation"
+                            data-start-title="Start Conversation"
+                            data-end-title="End Conversation"
+                            data-start-html="<i class='bi bi-soundwave'></i>"
+                            data-end-html="<i class='bi bi-stop-fill me-1'></i> End Conversation">
+                        <i class="bi bi-soundwave"></i>
+                    </button>
+                }
                 <button type="button" id="send-btn" class="btn btn-primary">
                     <i class="bi bi-send"></i> Send
                 </button>
@@ -554,6 +578,11 @@
             var interactionDocuments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Documents));
             var uploadDocumentUrl = '@Url.Content("~/ai/chat-interactions/upload-document")';
             var removeDocumentUrl = '@Url.Content("~/ai/chat-interactions/remove-document")';
+            var audioChunkIntervalMs = 250;
+            var speechToTextEnabled = @Model.SpeechToTextEnabled.ToString().ToLowerInvariant();
+            var conversationModeEnabled = @Model.ConversationModeEnabled.ToString().ToLowerInvariant();
+            var textToSpeechEnabled = @Model.TextToSpeechEnabled.ToString().ToLowerInvariant();
+            var ttsVoiceName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TextToSpeechVoiceName));
 
             // --- Markdown rendering ---
             var renderer = new marked.Renderer();
@@ -1238,6 +1267,21 @@
 
             var isSending = false;
             var connectionStartPromise = null;
+            var mediaRecorder = null;
+            var isRecording = false;
+            var isConversationMode = false;
+            var preRecordingPrompt = '';
+            var audioInputSent = false;
+            var conversationSubject = null;
+            var conversationStream = null;
+            var conversationAudioContext = null;
+            var conversationAnalyser = null;
+            var conversationPartialMessage = null;
+            var conversationAssistantMessage = null;
+            var audioChunks = [];
+            var audioPlayQueue = [];
+            var isPlayingAudio = false;
+            var currentAudioElement = null;
 
             function ensureConnectionStarted() {
                 if (connection.state === signalR.HubConnectionState.Connected) {
@@ -1265,8 +1309,230 @@
                 showSaveIndicator('Connection failed', 'text-danger');
             });
 
+            function updateMicButton() {
+                var micBtn = document.getElementById('mic-btn');
+                if (!micBtn) {
+                    return;
+                }
+
+                micBtn.classList.toggle('btn-danger', isRecording);
+                micBtn.classList.toggle('btn-outline-secondary', !isRecording);
+                micBtn.title = isRecording ? 'Stop recording' : 'Record audio';
+                micBtn.innerHTML = isRecording
+                    ? '<i class="bi bi-stop-circle"></i>'
+                    : '<i class="bi bi-mic"></i>';
+            }
+
+            function updateConversationButton() {
+                var conversationBtn = document.getElementById('conversation-btn');
+                if (!conversationBtn) {
+                    return;
+                }
+
+                conversationBtn.classList.toggle('active', isConversationMode);
+                conversationBtn.classList.toggle('btn-primary', isConversationMode);
+                conversationBtn.classList.toggle('btn-outline-dark', !isConversationMode);
+                conversationBtn.title = isConversationMode
+                    ? (conversationBtn.getAttribute('data-end-title') || 'End Conversation')
+                    : (conversationBtn.getAttribute('data-start-title') || 'Start Conversation');
+                var buttonHtml = isConversationMode
+                    ? (conversationBtn.getAttribute('data-end-html') || '<i class="bi bi-stop-fill me-1"></i> End Conversation')
+                    : (conversationBtn.getAttribute('data-start-html') || '<i class="bi bi-soundwave"></i>');
+                conversationBtn.replaceChildren(DOMPurify.sanitize(buttonHtml, { RETURN_DOM_FRAGMENT: true }));
+
+                if (!isConversationMode) {
+                    conversationBtn.blur();
+                }
+            }
+
+            function updateConversationInputButtons() {
+                var micBtn = document.getElementById('mic-btn');
+                if (micBtn) {
+                    micBtn.hidden = isConversationMode;
+                }
+
+                if (sendBtn) {
+                    sendBtn.hidden = isConversationMode;
+                }
+            }
+
+            function stopAudio() {
+                if (currentAudioElement) {
+                    currentAudioElement.pause();
+                    currentAudioElement.currentTime = 0;
+                    currentAudioElement = null;
+                }
+
+                audioChunks = [];
+                audioPlayQueue = [];
+                isPlayingAudio = false;
+            }
+
+            function playAudioBlob(blob) {
+                var url = URL.createObjectURL(blob);
+                var audio = new Audio(url);
+
+                currentAudioElement = audio;
+                isPlayingAudio = true;
+
+                function onEnded() {
+                    URL.revokeObjectURL(url);
+                    currentAudioElement = null;
+
+                    if (audioPlayQueue.length > 0) {
+                        playAudioBlob(audioPlayQueue.shift());
+                        return;
+                    }
+
+                    isPlayingAudio = false;
+                }
+
+                audio.addEventListener('ended', onEnded);
+                audio.addEventListener('error', onEnded);
+                audio.play().catch(function () {
+                    onEnded();
+                });
+            }
+
+            function playCollectedAudio() {
+                if (!audioChunks.length) {
+                    if (!currentAudioElement) {
+                        isPlayingAudio = false;
+                    }
+
+                    return;
+                }
+
+                var totalLength = audioChunks.reduce(function (sum, chunk) { return sum + chunk.length; }, 0);
+                var combined = new Uint8Array(totalLength);
+                var offset = 0;
+
+                audioChunks.forEach(function (chunk) {
+                    combined.set(chunk, offset);
+                    offset += chunk.length;
+                });
+
+                audioChunks = [];
+
+                var blob = new Blob([combined], { type: 'audio/mp3' });
+
+                if (currentAudioElement) {
+                    audioPlayQueue.push(blob);
+                    return;
+                }
+
+                playAudioBlob(blob);
+            }
+
             connection.on('ReceiveError', function (error) {
                 vm.addMessage('assistant', '\u26a0\ufe0f ' + error);
+            });
+
+            connection.on('ReceiveTranscript', function (identifier, text, isFinal) {
+                if (identifier !== itemId) {
+                    return;
+                }
+
+                if (isConversationMode) {
+                    if (!text || isFinal) {
+                        return;
+                    }
+
+                    if (!conversationPartialMessage) {
+                        conversationPartialMessage = createChatMessage('user', text, false, false);
+                        conversationPartialMessage.htmlContent = '<p class="ai-partial-transcript">' + DOMPurify.sanitize(text) + '</p>';
+                        conversationPartialMessage.isPartial = true;
+                        vm.messages.push(conversationPartialMessage);
+                    } else {
+                        conversationPartialMessage.rawContent = text;
+                        conversationPartialMessage.content = text;
+                        conversationPartialMessage.htmlContent = '<p class="ai-partial-transcript">' + DOMPurify.sanitize(text) + '</p>';
+                    }
+
+                    vm.scrollToBottom();
+                    return;
+                }
+
+                if (!text || audioInputSent) {
+                    return;
+                }
+
+                inputEl.value = preRecordingPrompt + text;
+                inputEl.dispatchEvent(new Event('input'));
+            });
+
+            connection.on('ReceiveConversationUserMessage', function (identifier, text) {
+                if (identifier !== itemId || !text) {
+                    return;
+                }
+
+                stopAudio();
+
+                if (conversationAssistantMessage) {
+                    conversationAssistantMessage.isStreaming = false;
+                    conversationAssistantMessage = null;
+                }
+
+                if (conversationPartialMessage) {
+                    conversationPartialMessage.rawContent = text;
+                    conversationPartialMessage.content = text;
+                    conversationPartialMessage.htmlContent = renderMarkdown(text);
+                    conversationPartialMessage.isPartial = false;
+                    conversationPartialMessage = null;
+                } else {
+                    vm.addMessage('user', text);
+                }
+            });
+
+            connection.on('ReceiveConversationAssistantToken', function (identifier, messageId, token) {
+                if (identifier !== itemId || !token) {
+                    return;
+                }
+
+                if (!conversationAssistantMessage) {
+                    vm.addMessage('assistant', '', true);
+                    conversationAssistantMessage = vm.messages[vm.messages.length - 1];
+                    conversationAssistantMessage.id = messageId;
+                }
+
+                conversationAssistantMessage.rawContent = (conversationAssistantMessage.rawContent || '') + token;
+                conversationAssistantMessage.content = conversationAssistantMessage.rawContent;
+                conversationAssistantMessage.htmlContent = renderMarkdown(formatMessageContent(conversationAssistantMessage.rawContent, conversationAssistantMessage.references));
+                vm.scrollToBottom();
+            });
+
+            connection.on('ReceiveConversationAssistantComplete', function (identifier) {
+                if (identifier !== itemId || !conversationAssistantMessage) {
+                    return;
+                }
+
+                conversationAssistantMessage.isStreaming = false;
+                conversationAssistantMessage.htmlContent = renderMarkdown(formatMessageContent(conversationAssistantMessage.rawContent, conversationAssistantMessage.references));
+                conversationAssistantMessage = null;
+                vm.scrollToBottom();
+            });
+
+            connection.on('ReceiveAudioChunk', function (identifier, base64Audio) {
+                if (identifier !== itemId || !base64Audio) {
+                    return;
+                }
+
+                var binary = atob(base64Audio);
+                var buffer = new Uint8Array(binary.length);
+
+                for (var i = 0; i < binary.length; i++) {
+                    buffer[i] = binary.charCodeAt(i);
+                }
+
+                audioChunks.push(buffer);
+            });
+
+            connection.on('ReceiveAudioComplete', function (identifier) {
+                if (identifier !== itemId) {
+                    return;
+                }
+
+                playCollectedAudio();
             });
 
             connection.on('SettingsSaved', function (savedItemId, title) {
@@ -1291,9 +1557,14 @@
             var placeholder = document.getElementById('chat-placeholder');
 
             function sendMessage() {
+                if (isConversationMode) {
+                    return;
+                }
+
                 var prompt = inputEl.value.trim();
                 if (!prompt || isSending) return;
 
+                audioInputSent = true;
                 isSending = true;
                 sendBtn.disabled = true;
                 inputEl.value = '';
@@ -1313,6 +1584,14 @@
                         },
                         complete: function () {
                             vm.finishStreaming();
+                            if (textToSpeechEnabled && !isConversationMode) {
+                                var last = vm.messages[vm.messages.length - 1];
+                                if (last && last.role === 'assistant' && last.rawContent) {
+                                    connection.invoke('SynthesizeSpeech', itemId, last.rawContent, ttsVoiceName).catch(function (err) {
+                                        console.error('Failed to synthesize response:', err);
+                                    });
+                                }
+                            }
                             isSending = false;
                             sendBtn.disabled = false;
                             inputEl.focus();
@@ -1334,7 +1613,227 @@
                 }
             }
 
+            function stopRecording() {
+                if (!isRecording || !mediaRecorder) {
+                    return;
+                }
+
+                mediaRecorder.stop();
+                isRecording = false;
+                updateMicButton();
+            }
+
+            function startRecording() {
+                if (isRecording || !speechToTextEnabled) {
+                    return;
+                }
+
+                navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+                    .then(function (stream) {
+                        var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                            ? 'audio/ogg;codecs=opus'
+                            : (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm');
+
+                        mediaRecorder = new MediaRecorder(stream, {
+                            mimeType: mimeType,
+                            audioBitsPerSecond: 128000
+                        });
+
+                        preRecordingPrompt = inputEl.value;
+                        audioInputSent = false;
+
+                        var subject = new signalR.Subject();
+                        var pendingChunk = Promise.resolve();
+
+                        mediaRecorder.addEventListener('dataavailable', function (e) {
+                            if (!e.data || e.data.size <= 0) {
+                                return;
+                            }
+
+                            pendingChunk = pendingChunk.then(function () {
+                                return e.data.arrayBuffer().then(function (data) {
+                                    var uint8Array = new Uint8Array(data);
+                                    var binaryString = uint8Array.reduce(function (str, byte) {
+                                        return str + String.fromCharCode(byte);
+                                    }, '');
+                                    subject.next(btoa(binaryString));
+                                });
+                            });
+                        });
+
+                        mediaRecorder.addEventListener('stop', function () {
+                            stream.getTracks().forEach(function (track) { track.stop(); });
+                            pendingChunk.then(function () { subject.complete(); });
+                        });
+
+                        ensureConnectionStarted()
+                            .then(function () {
+                                connection.send('SendAudioStream', itemId, subject, mimeType, navigator.language || document.documentElement.lang || 'en-US');
+                                mediaRecorder.start(audioChunkIntervalMs);
+                                isRecording = true;
+                                updateMicButton();
+                            })
+                            .catch(function (err) {
+                                console.error('Failed to start audio input:', err);
+                            });
+                    })
+                    .catch(function (err) {
+                        console.error('Microphone access denied:', err);
+                    });
+            }
+
+            function toggleRecording() {
+                if (isRecording) {
+                    stopRecording();
+                    return;
+                }
+
+                startRecording();
+            }
+
+            function stopConversationMode() {
+                if (!isConversationMode) {
+                    return;
+                }
+
+                isConversationMode = false;
+                updateConversationButton();
+                updateConversationInputButtons();
+
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    connection.invoke('StopConversation').catch(function () { });
+                }
+
+                if (isRecording && mediaRecorder) {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                }
+
+                updateMicButton();
+
+                stopAudio();
+                conversationPartialMessage = null;
+
+                if (conversationAudioContext) {
+                    conversationAudioContext.close().catch(function () { });
+                    conversationAudioContext = null;
+                    conversationAnalyser = null;
+                }
+            }
+
+            function startConversationMode() {
+                if (!conversationModeEnabled || isConversationMode) {
+                    return;
+                }
+
+                if (isRecording) {
+                    stopRecording();
+                }
+
+                navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+                    .then(function (stream) {
+                        var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+                            ? 'audio/ogg;codecs=opus'
+                            : (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm');
+
+                        mediaRecorder = new MediaRecorder(stream, {
+                            mimeType: mimeType,
+                            audioBitsPerSecond: 128000
+                        });
+
+                        isConversationMode = true;
+                        updateConversationButton();
+                        updateConversationInputButtons();
+                        conversationPartialMessage = null;
+                        conversationAssistantMessage = null;
+                        conversationSubject = new signalR.Subject();
+                        conversationStream = stream;
+
+                        var AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+                        if (AudioContextCtor) {
+                            conversationAudioContext = new AudioContextCtor();
+                            conversationAnalyser = conversationAudioContext.createAnalyser();
+                            conversationAnalyser.fftSize = 256;
+                            var micSource = conversationAudioContext.createMediaStreamSource(stream);
+                            micSource.connect(conversationAnalyser);
+                        }
+
+                        var pendingChunk = Promise.resolve();
+
+                        mediaRecorder.addEventListener('dataavailable', function (e) {
+                            if (!e.data || e.data.size <= 0) {
+                                return;
+                            }
+
+                            if (isPlayingAudio && conversationAnalyser) {
+                                var freqData = new Uint8Array(conversationAnalyser.frequencyBinCount);
+                                conversationAnalyser.getByteFrequencyData(freqData);
+                                var sum = 0;
+
+                                for (var j = 0; j < freqData.length; j++) {
+                                    sum += freqData[j];
+                                }
+
+                                if ((sum / freqData.length) >= 30) {
+                                    stopAudio();
+                                }
+                            }
+
+                            pendingChunk = pendingChunk.then(function () {
+                                return e.data.arrayBuffer().then(function (data) {
+                                    var uint8Array = new Uint8Array(data);
+                                    var binaryString = uint8Array.reduce(function (str, byte) {
+                                        return str + String.fromCharCode(byte);
+                                    }, '');
+                                    conversationSubject.next(btoa(binaryString));
+                                });
+                            });
+                        });
+
+                        mediaRecorder.addEventListener('stop', function () {
+                            stream.getTracks().forEach(function (track) { track.stop(); });
+                            pendingChunk.then(function () { conversationSubject.complete(); });
+                        });
+
+                        ensureConnectionStarted()
+                            .then(function () {
+                                connection.send('StartConversation', itemId, conversationSubject, mimeType, navigator.language || document.documentElement.lang || 'en-US');
+                                mediaRecorder.start(audioChunkIntervalMs);
+                                isRecording = true;
+                                updateMicButton();
+                            })
+                            .catch(function (err) {
+                                console.error('Failed to start conversation mode:', err);
+                                stopConversationMode();
+                            });
+                    })
+                    .catch(function (err) {
+                        console.error('Microphone access denied:', err);
+                    });
+            }
+
+            function toggleConversationMode() {
+                if (isConversationMode) {
+                    stopConversationMode();
+                    return;
+                }
+
+                startConversationMode();
+            }
+
             sendBtn.addEventListener('click', sendMessage);
+            var micBtn = document.getElementById('mic-btn');
+            if (micBtn) {
+                micBtn.addEventListener('click', toggleRecording);
+                updateMicButton();
+            }
+
+            var conversationBtn = document.getElementById('conversation-btn');
+            if (conversationBtn) {
+                conversationBtn.addEventListener('click', toggleConversationMode);
+                updateConversationButton();
+            }
+            updateConversationInputButtons();
             if (documentUploadInput) {
                 documentUploadInput.addEventListener('change', function () {
                     uploadDocuments(documentUploadInput.files).finally(function () {
@@ -1343,6 +1842,11 @@
                 });
             }
             inputEl.addEventListener('keydown', function (e) {
+                if (isConversationMode) {
+                    e.preventDefault();
+                    return;
+                }
+
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();

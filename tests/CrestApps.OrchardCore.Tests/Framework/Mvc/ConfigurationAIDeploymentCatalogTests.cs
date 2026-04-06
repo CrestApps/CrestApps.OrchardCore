@@ -3,7 +3,6 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Services;
 using CrestApps.Models;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -47,7 +46,6 @@ public sealed class ConfigurationAIDeploymentCatalogTests
             configuration,
             Options.Create(new AIProviderOptions()),
             Options.Create(aiOptions),
-            new EphemeralDataProtectionProvider(),
             NullLogger<ConfigurationAIDeploymentCatalog>.Instance);
 
         var deployments = await catalog.GetAllAsync();
@@ -83,7 +81,6 @@ public sealed class ConfigurationAIDeploymentCatalogTests
             configuration,
             Options.Create(new AIProviderOptions()),
             Options.Create(aiOptions),
-            new EphemeralDataProtectionProvider(),
             NullLogger<ConfigurationAIDeploymentCatalog>.Instance);
 
         var deployment = await catalog.FindByNameAsync("AzureTextToSpeech");
@@ -113,7 +110,6 @@ public sealed class ConfigurationAIDeploymentCatalogTests
             configuration,
             Options.Create(new AIProviderOptions()),
             Options.Create(aiOptions),
-            new EphemeralDataProtectionProvider(),
             NullLogger<ConfigurationAIDeploymentCatalog>.Instance);
 
         var deployment = Assert.Single(await catalog.GetAllAsync());
@@ -147,7 +143,6 @@ public sealed class ConfigurationAIDeploymentCatalogTests
             configuration,
             Options.Create(new AIProviderOptions()),
             Options.Create(aiOptions),
-            new EphemeralDataProtectionProvider(),
             NullLogger<ConfigurationAIDeploymentCatalog>.Instance);
 
         var deployment = Assert.Single(await catalog.GetAllAsync());

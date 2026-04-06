@@ -1,3 +1,5 @@
+using CrestApps.AI.Models;
+
 namespace CrestApps.AI.Chat.Hubs;
 
 /// <summary>
@@ -31,4 +33,22 @@ public interface IChatInteractionHubClient
     /// </summary>
     /// <param name="itemId">The identifier of the content item whose history was cleared.</param>
     Task HistoryCleared(string itemId);
+
+    Task ReceiveTranscript(string identifier, string text, bool isFinal);
+
+    Task ReceiveAudioChunk(string identifier, string base64Audio, string contentType);
+
+    Task ReceiveAudioComplete(string identifier);
+
+    Task ReceiveConversationUserMessage(string identifier, string text);
+
+    Task ReceiveConversationAssistantToken(string identifier, string messageId, string token, string responseId, AssistantMessageAppearance appearance = null);
+
+    Task ReceiveConversationAssistantComplete(string identifier, string messageId);
+
+    Task ReceiveNotification(ChatNotification notification);
+
+    Task UpdateNotification(ChatNotification notification);
+
+    Task RemoveNotification(string notificationType);
 }

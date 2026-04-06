@@ -15,6 +15,7 @@ using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
@@ -46,6 +47,8 @@ public sealed class ChatInteractionController : Controller
     private readonly IAIDocumentProcessingService _documentProcessingService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
+    private readonly AppDataSettingsService<ChatInteractionSettings> _chatInteractionSettingsService;
+    private readonly AppDataSettingsService<DefaultAIDeploymentSettings> _defaultDeploymentSettingsService;
     private readonly MvcAIDocumentIndexingService _documentIndexingService;
     private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
@@ -71,6 +74,8 @@ public sealed class ChatInteractionController : Controller
         IAIDocumentProcessingService documentProcessingService,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
+        AppDataSettingsService<ChatInteractionSettings> chatInteractionSettingsService,
+        AppDataSettingsService<DefaultAIDeploymentSettings> defaultDeploymentSettingsService,
         MvcAIDocumentIndexingService documentIndexingService,
         IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
@@ -94,6 +99,8 @@ public sealed class ChatInteractionController : Controller
         _documentProcessingService = documentProcessingService;
         _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
+        _chatInteractionSettingsService = chatInteractionSettingsService;
+        _defaultDeploymentSettingsService = defaultDeploymentSettingsService;
         _documentIndexingService = documentIndexingService;
         _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
@@ -188,10 +195,23 @@ public sealed class ChatInteractionController : Controller
         }
 
         var prompts = await _promptStore.GetPromptsAsync(id);
+        var chatInteractionSettings = await _chatInteractionSettingsService.GetAsync();
+        var deploymentDefaults = await _defaultDeploymentSettingsService.GetAsync();
 
         var dataSourceMetadata = interaction.As<DataSourceMetadata>();
         interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata);
         var promptMetadata = interaction.As<PromptTemplateMetadata>();
+
+        var chatMode = chatInteractionSettings.ChatMode;
+        var hasSpeechToText = !string.IsNullOrWhiteSpace(deploymentDefaults.DefaultSpeechToTextDeploymentName);
+        var hasTextToSpeech = !string.IsNullOrWhiteSpace(deploymentDefaults.DefaultTextToSpeechDeploymentName);
+        var effectiveChatMode = chatMode switch
+        {
+            ChatMode.Conversation when hasSpeechToText && hasTextToSpeech => ChatMode.Conversation,
+            ChatMode.Conversation when hasSpeechToText => ChatMode.AudioInput,
+            ChatMode.AudioInput when hasSpeechToText => ChatMode.AudioInput,
+            _ => ChatMode.TextInput,
+        };
 
         var model = new ChatInteractionChatViewModel
         {
@@ -231,6 +251,11 @@ public sealed class ChatInteractionController : Controller
                 .Where(p => p.Role.Value is "user" or "assistant")
                 .Select(m => new { role = m.Role.Value, content = m.Text, id = m.ItemId, references = m.References })
                 .ToArray(),
+            ChatMode = effectiveChatMode,
+            SpeechToTextEnabled = effectiveChatMode is ChatMode.AudioInput or ChatMode.Conversation,
+            ConversationModeEnabled = effectiveChatMode == ChatMode.Conversation,
+            TextToSpeechEnabled = effectiveChatMode == ChatMode.Conversation,
+            TextToSpeechVoiceName = deploymentDefaults.DefaultTextToSpeechVoiceId,
         };
 
         await PopulateChatDropdownsAsync(model);

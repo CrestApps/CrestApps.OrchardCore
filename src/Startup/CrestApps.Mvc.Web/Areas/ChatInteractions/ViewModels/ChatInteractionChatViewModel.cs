@@ -91,6 +91,16 @@ internal sealed class ChatInteractionChatViewModel
     // Existing messages for the chat
     public object[] ExistingMessages { get; set; } = [];
 
+    public ChatMode ChatMode { get; set; } = ChatMode.TextInput;
+
+    public bool SpeechToTextEnabled { get; set; }
+
+    public bool ConversationModeEnabled { get; set; }
+
+    public bool TextToSpeechEnabled { get; set; }
+
+    public string TextToSpeechVoiceName { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> DataSources { get; set; } = [];
 

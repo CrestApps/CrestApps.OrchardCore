@@ -1,7 +1,6 @@
 using CrestApps;
 using CrestApps.AI;
 using CrestApps.AI.A2A;
-using CrestApps.AI.A2A.Models;
 using CrestApps.AI.AzureAIInference;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Endpoints;
@@ -19,8 +18,6 @@ using CrestApps.AI.Pdf;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
 using CrestApps.AI.Sftp;
-using CrestApps.AI.Tooling;
-using CrestApps.AI.Tools;
 using CrestApps.Azure.AISearch;
 using CrestApps.Elasticsearch;
 using CrestApps.Infrastructure.Indexing;
@@ -296,9 +293,6 @@ builder.Services.AddAITool<SendEmailTool>(SendEmailTool.TheName)
     .WithCategory("Communications")
     .Selectable();
 
-builder.Services.AddAITool<DataSourceSearchTool>(DataSourceSearchTool.TheName)
-    .WithPurpose(AIToolPurposes.DataSourceSearch);
-
 // =============================================================================
 // 11. DATA STORE — YesSql with SQLite
 // =============================================================================
@@ -390,64 +384,10 @@ app.UseWhen(context => context.Request.Path.StartsWithSegments("/mcp"), branch =
         {
             var authorization = context.Request.Headers.Authorization.ToString();
             var providedKey = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? authorization["Bearer ".Length..]
-
-            : authorization.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase)
-            ? authorization["ApiKey ".Length..]
-            : authorization;
-
-            if (!string.IsNullOrEmpty(settings.ApiKey) && string.Equals(providedKey, settings.ApiKey, StringComparison.Ordinal))
-            {
-                await next();
-
-                return;
-            }
-
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-
-            return;
-        }
-
-        if (context.User.Identity?.IsAuthenticated != true)
-        {
-            await context.ChallengeAsync();
-
-            return;
-        }
-
-        if (settings.RequireAccessPermission && !context.User.IsInRole("Administrator"))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-
-            return;
-        }
-
-        await next();
-    });
-});
-
-app.UseWhen(context => context.Request.Path.StartsWithSegments("/a2a"), branch =>
-{
-    branch.Use(async (context, next) =>
-    {
-        var settings = await context.RequestServices.GetRequiredService<AppDataSettingsService<CrestApps.AI.A2A.Models.A2AHostOptions>>().GetAsync();
-
-        if (settings.AuthenticationType == A2AHostAuthenticationType.None)
-        {
-            await next();
-
-            return;
-        }
-
-        if (settings.AuthenticationType == A2AHostAuthenticationType.ApiKey)
-        {
-            var authorization = context.Request.Headers.Authorization.ToString();
-            var providedKey = authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-            ? authorization["Bearer ".Length..]
-
-            : authorization.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase)
-            ? authorization["ApiKey ".Length..]
-            : authorization;
+                ? authorization["Bearer ".Length..]
+                : authorization.StartsWith("ApiKey ", StringComparison.OrdinalIgnoreCase)
+                    ? authorization["ApiKey ".Length..]
+                    : authorization;
 
             if (!string.IsNullOrEmpty(settings.ApiKey) && string.Equals(providedKey, settings.ApiKey, StringComparison.Ordinal))
             {
