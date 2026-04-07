@@ -22,7 +22,7 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
                 var profileMetadata = template.As<ProfileTemplateMetadata>();
                 model.IsOnAdminMenu = profileMetadata.ProfileType == AIProfileType.Chat;
             }
-        }).Location("Content:10%General;1")
+        }).Location("Content:5%Actions;3")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

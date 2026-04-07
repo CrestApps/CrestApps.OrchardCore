@@ -41,7 +41,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:10%Interactions;3")
+        }).Location("Content:10%Actions;3")
         .RenderWhen(async () =>
         {
             if (template.Source != AITemplateSources.Profile)

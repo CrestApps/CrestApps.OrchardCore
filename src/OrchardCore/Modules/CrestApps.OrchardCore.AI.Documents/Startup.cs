@@ -77,8 +77,8 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadChatInteractionDocumentEndpoint()
-            .AddRemoveChatInteractionDocumentEndpoint();
+            .AddUploadChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionUploadDocument)
+            .AddRemoveChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionRemoveDocument);
     }
 }
 
@@ -104,7 +104,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadChatSessionDocumentEndpoint()
-            .AddRemoveChatSessionDocumentEndpoint();
+            .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
+            .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
     }
 }

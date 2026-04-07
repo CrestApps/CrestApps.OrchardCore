@@ -26,11 +26,17 @@ public static class AIChatDocumentEndpoints
     /// Adds the chat interaction document upload endpoint.
     /// </summary>
     /// <param name="builder">The route builder.</param>
+    /// <param name="routeName">An optional route name for URL generation.</param>
     /// <returns>The route builder.</returns>
-    public static IEndpointRouteBuilder AddUploadChatInteractionDocumentEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddUploadChatInteractionDocumentEndpoint(this IEndpointRouteBuilder builder, string routeName = null)
     {
-        _ = builder.MapPost("ai/chat-interactions/upload-document", UploadChatInteractionDocumentAsync)
+        var endpoint = builder.MapPost("ai/chat-interactions/upload-document", UploadChatInteractionDocumentAsync)
             .DisableAntiforgery();
+
+        if (!string.IsNullOrEmpty(routeName))
+        {
+            _ = endpoint.WithName(routeName);
+        }
 
         return builder;
     }
@@ -38,11 +44,17 @@ public static class AIChatDocumentEndpoints
     /// Adds the chat interaction document removal endpoint.
     /// </summary>
     /// <param name="builder">The route builder.</param>
+    /// <param name="routeName">An optional route name for URL generation.</param>
     /// <returns>The route builder.</returns>
-    public static IEndpointRouteBuilder AddRemoveChatInteractionDocumentEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddRemoveChatInteractionDocumentEndpoint(this IEndpointRouteBuilder builder, string routeName = null)
     {
-        _ = builder.MapPost("ai/chat-interactions/remove-document", RemoveChatInteractionDocumentAsync)
+        var endpoint = builder.MapPost("ai/chat-interactions/remove-document", RemoveChatInteractionDocumentAsync)
             .DisableAntiforgery();
+
+        if (!string.IsNullOrEmpty(routeName))
+        {
+            _ = endpoint.WithName(routeName);
+        }
 
         return builder;
     }
@@ -50,11 +62,17 @@ public static class AIChatDocumentEndpoints
     /// Adds the chat session document upload endpoint.
     /// </summary>
     /// <param name="builder">The route builder.</param>
+    /// <param name="routeName">An optional route name for URL generation.</param>
     /// <returns>The route builder.</returns>
-    public static IEndpointRouteBuilder AddUploadChatSessionDocumentEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddUploadChatSessionDocumentEndpoint(this IEndpointRouteBuilder builder, string routeName = null)
     {
-        _ = builder.MapPost("ai/chat-sessions/upload-document", UploadChatSessionDocumentAsync)
+        var endpoint = builder.MapPost("ai/chat-sessions/upload-document", UploadChatSessionDocumentAsync)
             .DisableAntiforgery();
+
+        if (!string.IsNullOrEmpty(routeName))
+        {
+            _ = endpoint.WithName(routeName);
+        }
 
         return builder;
     }
@@ -62,11 +80,17 @@ public static class AIChatDocumentEndpoints
     /// Adds the chat session document removal endpoint.
     /// </summary>
     /// <param name="builder">The route builder.</param>
+    /// <param name="routeName">An optional route name for URL generation.</param>
     /// <returns>The route builder.</returns>
-    public static IEndpointRouteBuilder AddRemoveChatSessionDocumentEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddRemoveChatSessionDocumentEndpoint(this IEndpointRouteBuilder builder, string routeName = null)
     {
-        _ = builder.MapPost("ai/chat-sessions/remove-document", RemoveChatSessionDocumentAsync)
+        var endpoint = builder.MapPost("ai/chat-sessions/remove-document", RemoveChatSessionDocumentAsync)
             .DisableAntiforgery();
+
+        if (!string.IsNullOrEmpty(routeName))
+        {
+            _ = endpoint.WithName(routeName);
+        }
 
         return builder;
     }
@@ -181,7 +205,10 @@ public static class AIChatDocumentEndpoints
                 UploadedDocuments = uploadedDocuments,
             };
 
-            await InvokeUploadedHandlersAsync(eventHandlers, context, request.HttpContext.RequestAborted);
+            foreach (var handler in eventHandlers)
+            {
+                await handler.UploadedAsync(context, request.HttpContext.RequestAborted);
+            }
         }
 
         return TypedResults.Ok(new
@@ -416,7 +443,10 @@ public static class AIChatDocumentEndpoints
                 IsNewSession = isNewSession,
             };
 
-            await InvokeUploadedHandlersAsync(eventHandlers, context, request.HttpContext.RequestAborted);
+            foreach (var handler in eventHandlers)
+            {
+                await handler.UploadedAsync(context, request.HttpContext.RequestAborted);
+            }
         }
 
         return TypedResults.Ok(new
@@ -580,14 +610,6 @@ public static class AIChatDocumentEndpoints
     {
         return await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: profile.ChatDeploymentName)
         ?? await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Utility, deploymentName: profile.UtilityDeploymentName);
-    }
-
-    private static async Task InvokeUploadedHandlersAsync(IEnumerable<IAIChatDocumentEventHandler> eventHandlers, AIChatDocumentUploadContext context, CancellationToken cancellationToken)
-    {
-        foreach (var handler in eventHandlers)
-        {
-            await handler.UploadedAsync(context, cancellationToken);
-        }
     }
 
     private static bool IsDuplicateDocument(ICollection<ChatDocumentInfo> documents, IFormFile file)

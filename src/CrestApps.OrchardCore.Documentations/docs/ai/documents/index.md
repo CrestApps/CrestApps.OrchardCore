@@ -28,7 +28,11 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
 - **Index & Migrations**: Shared `AIDocumentIndex` with `ReferenceId` and `ReferenceType` columns for multi-purpose document storage
 
-The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core.
+The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core. Orchard Core now also bridges its native `IIndexProfileStore` into the shared `ISearchIndexProfileStore` contract so shared document RAG tools and handlers resolve tenant index profiles the same way in both hosts.
+
+Orchard Core chat-interaction and chat-session document uploads now tolerate tenants where Orchard indexing services are not currently available. In that case, the document endpoints still store and remove attachments normally, while the Orchard-specific index update handler safely skips remote index synchronization instead of failing the request.
+
+The Orchard Core host now also assigns route names to the shared chat-document upload and remove endpoints before generating UI links. That keeps chat pages and document editors posting to the JSON document endpoints instead of accidentally posting back to the current admin page, and the shared chat UI now collapses unexpected HTML error pages to readable upload/remove messages.
 
 ### Sub-Features
 

@@ -498,8 +498,9 @@ window.openAIChatManager = function () {
 
                         if (!response.ok) {
                             var errorText = await response.text();
+                            var uploadError = this.extractReadableErrorMessage(errorText, 'Upload failed. Please try again.');
                             console.error('Upload failed:', errorText);
-                            this.uploadErrors = [{ fileName: '', error: 'Upload failed. Please try again.' }];
+                            this.uploadErrors = [{ fileName: '', error: uploadError }];
                             return;
                         }
 
@@ -542,10 +543,15 @@ window.openAIChatManager = function () {
                             if (idx > -1) this.documents.splice(idx, 1);
                         } else {
                             var errorText = await response.text();
+                            var removeError = this.extractReadableErrorMessage(errorText, 'Failed to remove document. Please try again.');
                             console.error('Failed to remove document:', response.status, errorText);
+                            this.uploadErrors = [{ fileName: doc.fileName || '', error: removeError }];
+                            this.renderDocumentBar();
                         }
                     } catch (err) {
                         console.error('Remove document error:', err);
+                        this.uploadErrors = [{ fileName: doc.fileName || '', error: 'Failed to remove document. Please try again.' }];
+                        this.renderDocumentBar();
                     }
                 },
                 formatFileSize(bytes) {
@@ -650,6 +656,34 @@ window.openAIChatManager = function () {
                     var div = document.createElement('div');
                     div.textContent = text;
                     return div.innerHTML;
+                },
+                extractReadableErrorMessage(errorText, fallbackMessage) {
+                    if (!errorText || typeof errorText !== 'string') {
+                        return fallbackMessage;
+                    }
+
+                    var trimmed = errorText.trim();
+                    if (!trimmed) {
+                        return fallbackMessage;
+                    }
+
+                    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                        try {
+                            var parsed = JSON.parse(trimmed);
+                            var message = parsed?.error || parsed?.message || parsed?.title || parsed?.detail;
+                            return typeof message === 'string' && message.trim()
+                                ? message.trim()
+                                : fallbackMessage;
+                        } catch (err) {
+                            return fallbackMessage;
+                        }
+                    }
+
+                    if (/<[^>]+>/.test(trimmed)) {
+                        return fallbackMessage;
+                    }
+
+                    return trimmed;
                 },
                 normalizeAssistantAppearance(appearance) {
                     if (!appearance) {

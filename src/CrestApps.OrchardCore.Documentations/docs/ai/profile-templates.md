@@ -44,7 +44,7 @@ For prompt-template selection specifically, runtime **System Prompt** templates 
 
 ## Using Profile Templates
 
-When creating a new AI Profile, a **Template** dropdown appears at the top of the create form. Select a template and click **Apply** to pre-fill the profile fields with the template's values. You can then adjust any field before saving.
+When creating a new AI Profile, an **Apply Templates** card appears at the top of the create form. Select a template and click **Apply** to pre-fill the profile fields with the template's values. You can then adjust any field before saving.
 
 The Apply action redirects to the create page with the selected template's values pre-populated. All display drivers (including those from tool, data source, chat, MCP, analytics, and documents modules) automatically render the pre-filled values.
 
@@ -105,7 +105,7 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 10. Click **Save** to store the template.
 
 :::note
-The template editor mirrors the AI Profile editor more closely for **Profile** source templates: prompt templates live in the **Instructions** tab, **Enable User Memory** now lives in the **Knowledge** tab, and the Knowledge tab groups data-source RAG settings together with document-upload settings for consistent navigation across profiles, templates, and chat interactions.
+The template editor mirrors the AI Profile editor more closely for **Profile** source templates: prompt templates live in the **Instructions** tab, chat-specific controls such as menu/chat-mode/response-handler settings live in the **Actions** tab, **Enable User Memory** lives in the **Knowledge** tab, and the Knowledge tab groups data-source RAG settings together with document-upload settings for consistent navigation across profiles, templates, and chat interactions.
 :::
 
 ### Editing and Deleting Templates

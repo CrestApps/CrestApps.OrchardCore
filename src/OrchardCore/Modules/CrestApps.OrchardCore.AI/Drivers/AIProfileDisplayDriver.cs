@@ -133,7 +133,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             .Location("Content:5%General;1");
 
         var interactionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInteractionFields_Edit", PopulateProfileFields)
-            .Location("Content:1%Interactions;3");
+            .Location("Content:1%Actions;3");
 
         var instructionFieldsResult = Initialize<EditProfileViewModel>("AIProfileInstructionFields_Edit", PopulateProfileFields)
             .Location("Content:5%Instructions;4");

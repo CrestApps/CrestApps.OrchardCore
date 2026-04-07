@@ -7,17 +7,22 @@
     var selectId = Html.IdFor(m => m.TemplateId);
     var buttonId = $"{selectId}_apply";
 
-    <div class="alert alert-secondary mb-3" role="alert">
-        <label asp-for="TemplateId" class="form-label fw-semibold">@T["Apply Template"]</label>
-        <div class="input-group">
-            <select asp-for="TemplateId" asp-items="Model.Templates" class="form-control">
-                <option value="">@T["Select a template"]</option>
-            </select>
-            <button type="button" class="btn btn-secondary" id="@buttonId">
-                <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
-            </button>
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">@T["Apply Templates"]</h5>
         </div>
-        <span class="hint">@T["Select a profile template to pre-fill the form fields."]</span>
+        <div class="card-body">
+            <label asp-for="TemplateId" class="form-label fw-semibold">@T["Template"]</label>
+            <div class="input-group">
+                <select asp-for="TemplateId" asp-items="Model.Templates" class="form-select">
+                    <option value="">@T["Select a template"]</option>
+                </select>
+                <button type="button" class="btn btn-secondary" id="@buttonId">
+                    <i class="fa-solid fa-paste" aria-hidden="true"></i> @T["Apply"]
+                </button>
+            </div>
+            <span class="hint">@T["Select a profile template to pre-fill the form fields before you save the new profile."]</span>
+        </div>
     </div>
 
     <script at="Foot">

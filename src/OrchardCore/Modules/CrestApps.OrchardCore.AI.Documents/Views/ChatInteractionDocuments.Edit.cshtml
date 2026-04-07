@@ -393,13 +393,31 @@ else if (!Model.HasVectorSearchService)
         }
 
         function stripHtml(html) {
-            // If the text looks like HTML (contains tags), extract text content only
-            if (html && typeof html === 'string' && /<[^>]+>/.test(html)) {
-                const div = document.createElement('div');
-                div.innerHTML = html;
-                return div.textContent || div.innerText || '@T["An error occurred"]';
+            if (!html || typeof html !== 'string') {
+                return '';
             }
-            return html;
+
+            const trimmed = html.trim();
+            if (!trimmed) {
+                return '';
+            }
+
+            if (!/<[^>]+>/.test(trimmed)) {
+                return trimmed;
+            }
+
+            const div = document.createElement('div');
+            div.innerHTML = trimmed;
+
+            const preferredMessage = div.querySelector('.alert, .validation-summary-errors, main, title');
+            const text = (preferredMessage ? preferredMessage.textContent : div.textContent) || div.innerText || '';
+            const normalized = text.replace(/\s+/g, ' ').trim();
+
+            if (!normalized || normalized.length > 280) {
+                return '@T["An error occurred while processing the upload. Please try again."]';
+            }
+
+            return normalized;
         }
 
         // Handle document removal

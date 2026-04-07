@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
             .AddMarkdownServices()
             .AddCatalogs()
             .AddCatalogManagers()
+            .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
             .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())

@@ -57,7 +57,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
         var interactionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInteractionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:1%Interactions;3")
+        }).Location("Content:1%Actions;3")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var instructionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInstructionFields_Edit", model =>
@@ -208,6 +208,6 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             .Select(h => new SelectListItem(h.Name, h.Name))
             .OrderBy(x => x.Text)
             .ToList();
-        }).Location("Content:20%Interactions;3");
+        }).Location("Content:20%Actions;3");
     }
 }

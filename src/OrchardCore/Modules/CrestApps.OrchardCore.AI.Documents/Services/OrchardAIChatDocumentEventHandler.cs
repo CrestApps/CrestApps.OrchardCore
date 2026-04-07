@@ -11,19 +11,13 @@ namespace CrestApps.OrchardCore.AI.Documents.Services;
 
 public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {
-    private readonly IIndexProfileStore _indexProfileStore;
-    private readonly IEnumerable<IDocumentIndexHandler> _documentIndexHandlers;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<OrchardAIChatDocumentEventHandler> _logger;
 
     public OrchardAIChatDocumentEventHandler(
-        IIndexProfileStore indexProfileStore,
-        IEnumerable<IDocumentIndexHandler> documentIndexHandlers,
         IServiceProvider serviceProvider,
         ILogger<OrchardAIChatDocumentEventHandler> logger)
     {
-        _indexProfileStore = indexProfileStore;
-        _documentIndexHandlers = documentIndexHandlers;
         _serviceProvider = serviceProvider;
         _logger = logger;
     }
@@ -35,7 +29,19 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
             return;
         }
 
-        var indexProfiles = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+        var indexProfileStore = _serviceProvider.GetService<IIndexProfileStore>();
+
+        if (indexProfileStore == null)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Skipping Orchard AI chat document indexing because {ServiceName} is not registered.", nameof(IIndexProfileStore));
+            }
+            return;
+        }
+
+        var documentIndexHandlers = _serviceProvider.GetServices<IDocumentIndexHandler>().ToArray();
+        var indexProfiles = await indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
         if (!indexProfiles.Any())
         {
@@ -82,7 +88,7 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
                         },
                     };
 
-                    await _documentIndexHandlers.InvokeAsync((handler, currentContext) => handler.BuildIndexAsync(currentContext), buildContext, _logger);
+                    await documentIndexHandlers.InvokeAsync((handler, currentContext) => handler.BuildIndexAsync(currentContext), buildContext, _logger);
                     chunkDocuments.Add(documentIndex);
                 }
             }
@@ -101,7 +107,18 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
             return;
         }
 
-        var indexProfiles = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
+        var indexProfileStore = _serviceProvider.GetService<IIndexProfileStore>();
+
+        if (indexProfileStore == null)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("Skipping Orchard AI chat document index cleanup because {ServiceName} is not registered.", nameof(IIndexProfileStore));
+            }
+            return;
+        }
+
+        var indexProfiles = await indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
         if (!indexProfiles.Any())
         {

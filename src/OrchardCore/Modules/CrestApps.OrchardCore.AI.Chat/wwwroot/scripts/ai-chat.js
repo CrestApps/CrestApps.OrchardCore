@@ -412,7 +412,7 @@ window.openAIChatManager = function () {
         uploadFiles: function uploadFiles(files) {
           var _this = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
-            var sessionId, profileId, formData, i, response, errorText, result, j, _t;
+            var sessionId, profileId, formData, i, response, errorText, uploadError, result, j, _t;
             return _regenerator().w(function (_context) {
               while (1) switch (_context.p = _context.n) {
                 case 0:
@@ -459,10 +459,11 @@ window.openAIChatManager = function () {
                   return response.text();
                 case 5:
                   errorText = _context.v;
+                  uploadError = _this.extractReadableErrorMessage(errorText, 'Upload failed. Please try again.');
                   console.error('Upload failed:', errorText);
                   _this.uploadErrors = [{
                     fileName: '',
-                    error: 'Upload failed. Please try again.'
+                    error: uploadError
                   }];
                   return _context.a(2);
                 case 6:
@@ -506,7 +507,7 @@ window.openAIChatManager = function () {
         removeDocument: function removeDocument(doc) {
           var _this2 = this;
           return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee2() {
-            var sessionId, response, idx, errorText, _t2;
+            var sessionId, response, idx, errorText, removeError, _t2;
             return _regenerator().w(function (_context2) {
               while (1) switch (_context2.p = _context2.n) {
                 case 0:
@@ -544,7 +545,13 @@ window.openAIChatManager = function () {
                   return response.text();
                 case 4:
                   errorText = _context2.v;
+                  removeError = _this2.extractReadableErrorMessage(errorText, 'Failed to remove document. Please try again.');
                   console.error('Failed to remove document:', response.status, errorText);
+                  _this2.uploadErrors = [{
+                    fileName: doc.fileName || '',
+                    error: removeError
+                  }];
+                  _this2.renderDocumentBar();
                 case 5:
                   _context2.n = 7;
                   break;
@@ -552,6 +559,11 @@ window.openAIChatManager = function () {
                   _context2.p = 6;
                   _t2 = _context2.v;
                   console.error('Remove document error:', _t2);
+                  _this2.uploadErrors = [{
+                    fileName: doc.fileName || '',
+                    error: 'Failed to remove document. Please try again.'
+                  }];
+                  _this2.renderDocumentBar();
                 case 7:
                   return _context2.a(2);
               }
@@ -653,6 +665,28 @@ window.openAIChatManager = function () {
           var div = document.createElement('div');
           div.textContent = text;
           return div.innerHTML;
+        },
+        extractReadableErrorMessage: function extractReadableErrorMessage(errorText, fallbackMessage) {
+          if (!errorText || typeof errorText !== 'string') {
+            return fallbackMessage;
+          }
+          var trimmed = errorText.trim();
+          if (!trimmed) {
+            return fallbackMessage;
+          }
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+              var parsed = JSON.parse(trimmed);
+              var message = (parsed === null || parsed === void 0 ? void 0 : parsed.error) || (parsed === null || parsed === void 0 ? void 0 : parsed.message) || (parsed === null || parsed === void 0 ? void 0 : parsed.title) || (parsed === null || parsed === void 0 ? void 0 : parsed.detail);
+              return typeof message === 'string' && message.trim() ? message.trim() : fallbackMessage;
+            } catch (err) {
+              return fallbackMessage;
+            }
+          }
+          if (/<[^>]+>/.test(trimmed)) {
+            return fallbackMessage;
+          }
+          return trimmed;
         },
         normalizeAssistantAppearance: function normalizeAssistantAppearance(appearance) {
           if (!appearance) {
