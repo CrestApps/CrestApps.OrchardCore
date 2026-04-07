@@ -23,6 +23,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
     {
         var dataSourceId = GetString(settings, "dataSourceId");
         var isInScope = GetBool(settings, "isInScope") ?? false;
+        var topNDocuments = GetInt(settings, "topNDocuments");
 
         if (string.IsNullOrWhiteSpace(dataSourceId))
         {
@@ -30,7 +31,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
             interaction.Alter<AIDataSourceRagMetadata>(metadata =>
             {
                 metadata.Strictness = null;
-                metadata.TopNDocuments = null;
+                metadata.TopNDocuments = topNDocuments;
                 metadata.IsInScope = isInScope;
                 metadata.Filter = null;
             });
@@ -54,7 +55,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
             interaction.Alter<AIDataSourceRagMetadata>(metadata =>
             {
                 metadata.Strictness = null;
-                metadata.TopNDocuments = null;
+                metadata.TopNDocuments = topNDocuments;
                 metadata.IsInScope = isInScope;
                 metadata.Filter = null;
             });
@@ -69,7 +70,7 @@ public sealed class DataSourceChatInteractionSettingsHandler : IChatInteractionS
         interaction.Alter<AIDataSourceRagMetadata>(metadata =>
         {
             metadata.Strictness = GetInt(settings, "strictness");
-            metadata.TopNDocuments = GetInt(settings, "topNDocuments");
+            metadata.TopNDocuments = topNDocuments;
             metadata.IsInScope = isInScope;
             metadata.Filter = GetString(settings, "filter");
         });

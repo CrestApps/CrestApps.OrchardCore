@@ -3,8 +3,10 @@
         @if (Model.Parameters is not null)
         {
             <div class="chat-parameters-panel flex-shrink-0 bg-theme border rounded mb-3 mb-lg-0">
-                <div class="d-none d-lg-flex justify-content-end p-2 pb-0">
-                    <button type="button" class="btn btn-sm btn-link text-muted chat-panel-toggle" title="@T["Collapse panel"]">
+                <div class="d-flex justify-content-between align-items-center p-2 pb-0">
+                    <span id="settings-save-indicator" class="settings-save-indicator text-muted" data-chat-interaction-save-indicator></span>
+
+                    <button type="button" class="btn btn-sm btn-link text-muted chat-panel-toggle d-none d-lg-inline-flex" title="@T["Collapse panel"]">
                         <i class="fa-solid fa-angles-left"></i>
                     </button>
                 </div>

@@ -10,6 +10,7 @@ using CrestApps.AI.Services;
 using CrestApps.AI.Tooling;
 using CrestApps.Services;
 using CrestApps.Templates.Extensions;
+using Fluid;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -67,6 +68,11 @@ public static class ServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, ExtractedDataOrchestrationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
+
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<ExtractedFieldChange>();
+        });
 
         return services;
     }

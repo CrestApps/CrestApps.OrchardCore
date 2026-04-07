@@ -16,6 +16,7 @@
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
+<link rel="stylesheet" href="~/css/document-drop-zone.css" />
 
 <style>
     .chat-page-wrapper {
@@ -140,13 +141,13 @@
             <div class="tab-content settings-section" id="settingsTabContent">
                 <!-- Tab 1: General Settings -->
                 <div class="tab-pane fade show active" id="pane-settings" role="tabpanel">
-                    <div class="mb-2">
+                    <div class="mb-2 rag-data-source-dependent">
                         <label class="form-label">Title</label>
                         <input type="text" class="form-control setting-input" id="setting-title"
                                value="@Model.Title" placeholder="e.g., Code Helper" data-setting="title" />
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-2 rag-data-source-dependent">
                         <label class="form-label">Deployment</label>
                         <select class="form-select setting-input" id="setting-deployment" data-setting="deploymentName">
                             <option value="">Select deployment</option>
@@ -406,7 +407,28 @@
                         <div class="form-text">External data source for AI context.</div>
                     </div>
 
-                    <hr class="my-3" />
+                    <div class="mb-2 rag-data-source-filter-dependent">
+                        <label class="form-label">
+                            Filter
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
+                        <input type="text" class="form-control setting-input" id="setting-filter"
+                               value="@Model.DataSourceFilter" placeholder="Optional provider-specific filter" data-setting="filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input setting-input" type="checkbox" id="setting-isInScope"
+                               data-setting="isInScope" @(Model.DataSourceIsInScope ? "checked" : "") />
+                        <label class="form-check-label" for="setting-isInScope">
+                            Restrict answers to retrieved data only
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
+                    </div>
 
                     <div class="mb-2">
                         <label class="form-label">
@@ -432,63 +454,32 @@
                         <div class="form-text">How many data-source documents to retrieve for RAG.</div>
                     </div>
 
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input setting-input" type="checkbox" id="setting-isInScope"
-                               data-setting="isInScope" @(Model.DataSourceIsInScope ? "checked" : "") />
-                        <label class="form-check-label" for="setting-isInScope">
-                            Restrict answers to retrieved data only
-                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
-                                <i class="bi bi-question-circle"></i>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">
-                            Filter
-                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
-                                <i class="bi bi-question-circle"></i>
-                            </span>
-                        </label>
-                        <input type="text" class="form-control setting-input" id="setting-filter"
-                               value="@Model.DataSourceFilter" placeholder="Optional provider-specific filter" data-setting="filter" />
-                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
-                    </div>
-
-                    <hr class="my-3" />
-
-                    <div class="mb-2">
-                        <label class="form-label">
-                            Document Top N
-                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many matching uploaded document chunks are added as context for the AI.">
-                                <i class="bi bi-question-circle"></i>
-                            </span>
-                        </label>
-                        <input type="number" class="form-control setting-input" id="setting-documentTopN"
-                               min="1" max="20" value="@Model.DocumentTopN" placeholder="Default: 3" data-setting="documentTopN" />
-                        <div class="form-text">Number of top matching document chunks to include as context.</div>
-                    </div>
-
-                    @if (Model.HasDocumentIndexConfiguration)
+                    @if (!Model.HasDocumentIndexConfiguration)
                     {
-                        <div class="alert alert-info small py-2 mb-2">
-                            <i class="bi bi-info-circle"></i> Documents are indexed into <strong>@Model.DocumentIndexProfileName</strong>.
+                        <div class="alert alert-warning small py-2 mb-2">
+                            <i class="bi bi-exclamation-triangle"></i> Document indexing is not configured.
                         </div>
                     }
-                    else
-                        {
-                            <div class="alert alert-warning small py-2 mb-2">
-                                <i class="bi bi-exclamation-triangle"></i> Document indexing is not configured.
-                            </div>
-                        }
-
-                    <hr class="my-3" />
 
                     <div class="mb-2">
                         <label class="form-label"><i class="bi bi-paperclip"></i> Upload documents</label>
-                        <input type="file" class="form-control" id="chat-doc-upload" multiple
-                               accept="@supportedExtensionsAccept" />
-                        <div class="form-text">Supported formats: @supportedExtensionsDisplay</div>
+                        <div class="document-drop-zone" id="chat-doc-drop-zone">
+                            <input type="file" class="d-none" id="chat-doc-upload" multiple
+                                   accept="@supportedExtensionsAccept" />
+                            <div class="document-drop-zone__body">
+                                <span class="document-drop-zone__icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                                <div>
+                                    <div class="document-drop-zone__title">Drag and drop files here</div>
+                                    <div class="text-muted small">or browse for documents to upload into this chat interaction</div>
+                                </div>
+                                <div class="document-drop-zone__actions">
+                                    <button type="button" class="btn btn-outline-primary" id="chat-doc-browse" data-drop-zone-browse>
+                                        <i class="bi bi-folder2-open"></i> Browse files
+                                    </button>
+                                </div>
+                                <div class="form-text mb-0">Supported formats: @supportedExtensionsDisplay</div>
+                            </div>
+                        </div>
                         <div id="chat-doc-upload-status" class="small mt-2 d-none"></div>
                         <div id="chat-doc-upload-progress" class="progress mt-2 d-none" role="progressbar" aria-label="Document upload progress" aria-valuemin="0" aria-valuemax="100">
                             <div id="chat-doc-upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
@@ -559,6 +550,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/document-drop-zone.js" asp-append-version="true"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
@@ -573,6 +565,7 @@
             }
 
             var itemId = '@Model.ItemId';
+            var dataSourceSelect = document.getElementById('setting-dataSourceId');
             var hubUrl = '/hubs/chat-interaction';
             var existingMessages = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExistingMessages));
             var interactionDocuments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Documents));
@@ -1283,6 +1276,19 @@
             var isPlayingAudio = false;
             var currentAudioElement = null;
 
+            function toggleDataSourceDependentFields() {
+                var hasDataSource = !!(dataSourceSelect && dataSourceSelect.value && dataSourceSelect.value.trim() !== '');
+                document.querySelectorAll('.rag-data-source-filter-dependent').forEach(function (element) {
+                    element.classList.toggle('d-none', !hasDataSource);
+                });
+            }
+
+            if (dataSourceSelect) {
+                dataSourceSelect.addEventListener('change', toggleDataSourceDependentFields);
+            }
+
+            toggleDataSourceDependentFields();
+
             function ensureConnectionStarted() {
                 if (connection.state === signalR.HubConnectionState.Connected) {
                     return Promise.resolve();
@@ -1555,6 +1561,12 @@
             var sendBtn = document.getElementById('send-btn');
             var documentUploadInput = document.getElementById('chat-doc-upload');
             var placeholder = document.getElementById('chat-placeholder');
+
+            initDocumentDropZone({
+                dropZone: '#chat-doc-drop-zone',
+                fileInput: '#chat-doc-upload',
+                browseButton: '#chat-doc-browse'
+            });
 
             function sendMessage() {
                 if (isConversationMode) {
@@ -1880,6 +1892,70 @@
                 }, 3000);
             }
 
+            function getValidationMessage(input) {
+                if (!input || input.type !== 'number') {
+                    return null;
+                }
+
+                var value = input.value.trim();
+                if (value === '') {
+                    return null;
+                }
+
+                var numericValue = Number(value);
+                if (Number.isNaN(numericValue)) {
+                    return 'Enter a valid number.';
+                }
+
+                var min = input.getAttribute('min');
+                if (min !== null && numericValue < Number(min)) {
+                    return 'Value must be at least ' + min + '.';
+                }
+
+                var max = input.getAttribute('max');
+                if (max !== null && numericValue > Number(max)) {
+                    return 'Value must be no more than ' + max + '.';
+                }
+
+                return null;
+            }
+
+            function getOrCreateValidationMessage(input) {
+                var message = input.parentElement.querySelector('.invalid-feedback[data-setting-validation]');
+                if (!message) {
+                    message = document.createElement('div');
+                    message.className = 'invalid-feedback';
+                    message.dataset.settingValidation = 'true';
+                    input.parentElement.appendChild(message);
+                }
+
+                return message;
+            }
+
+            function validateSettingInput(input) {
+                var message = getValidationMessage(input);
+                var validation = getOrCreateValidationMessage(input);
+                var isValid = !message;
+
+                input.classList.toggle('is-invalid', !isValid);
+                validation.textContent = message || '';
+                validation.style.display = isValid ? 'none' : 'block';
+
+                return isValid;
+            }
+
+            function hasInvalidSettings() {
+                var isValid = true;
+
+                document.querySelectorAll('.setting-input[type="number"]').forEach(function (input) {
+                    if (!validateSettingInput(input)) {
+                        isValid = false;
+                    }
+                });
+
+                return !isValid;
+            }
+
             function collectSettings() {
                 var settings = {};
 
@@ -1930,6 +2006,11 @@
 
             function debounceSave() {
                 clearTimeout(debounceTimer);
+                if (hasInvalidSettings()) {
+                    showSaveIndicator('Fix errors', 'text-danger');
+                    return;
+                }
+
                 showSaveIndicator('Saving...', 'text-warning');
                 debounceTimer = setTimeout(function () {
                     var settings = collectSettings();
@@ -1946,6 +2027,9 @@
 
             // Bind setting-input changes
             document.querySelectorAll('.setting-input').forEach(function (el) {
+                if (el.type === 'number') {
+                    validateSettingInput(el);
+                }
                 el.addEventListener('input', debounceSave);
                 el.addEventListener('change', debounceSave);
             });

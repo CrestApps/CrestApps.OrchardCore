@@ -142,6 +142,7 @@
         ["chatMode"] = chatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["saveIndicatorElementSelector"] = "#settings-save-indicator",
     };
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

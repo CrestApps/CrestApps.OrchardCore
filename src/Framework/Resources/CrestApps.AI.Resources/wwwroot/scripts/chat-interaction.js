@@ -302,6 +302,7 @@ window.chatInteractionManager = function () {
           initialFieldValues: new Map(),
           settingsDirty: false,
           saveSettingsTimeout: null,
+          saveIndicatorTimeout: null,
           isRecording: false,
           mediaRecorder: null,
           preRecordingPrompt: '',
@@ -351,7 +352,7 @@ window.chatInteractionManager = function () {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
                     _this.messages = []; // Update the title field if it exists
-                    var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
@@ -369,9 +370,15 @@ window.chatInteractionManager = function () {
                     if (historyItem) {
                       historyItem.textContent = title || config.untitledText;
                     }
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
+                    if (titleInput && title) {
+                      titleInput.value = title;
+                    }
+                    _this.showSaveIndicator('Saved', 'text-success');
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    _this.showSaveIndicator('Save failed', 'text-danger');
                     if (_this.isRecording) {
                       _this.stopRecording();
                     }
@@ -1323,6 +1330,170 @@ window.chatInteractionManager = function () {
         getItemId: function getItemId() {
           return this.inputElement.getAttribute('data-interaction-id');
         },
+        getSaveIndicatorElement: function getSaveIndicatorElement() {
+          if (config.saveIndicatorElementSelector) {
+            return document.querySelector(config.saveIndicatorElementSelector);
+          }
+          return document.querySelector('[data-chat-interaction-save-indicator]');
+        },
+        showSaveIndicator: function showSaveIndicator(text, className) {
+          var _this0 = this;
+          var indicator = this.getSaveIndicatorElement();
+          if (!indicator) {
+            return;
+          }
+          indicator.textContent = text || '';
+          indicator.className = 'settings-save-indicator ' + (className || 'text-muted');
+          if (this.saveIndicatorTimeout) {
+            clearTimeout(this.saveIndicatorTimeout);
+            this.saveIndicatorTimeout = null;
+          }
+          if (!text) {
+            return;
+          }
+          this.saveIndicatorTimeout = setTimeout(function () {
+            indicator.textContent = '';
+            _this0.saveIndicatorTimeout = null;
+          }, 3000);
+        },
+        clearPendingSettingsSave: function clearPendingSettingsSave() {
+          if (this.saveSettingsTimeout) {
+            clearTimeout(this.saveSettingsTimeout);
+            this.saveSettingsTimeout = null;
+          }
+        },
+        getFieldLabel: function getFieldLabel(input) {
+          var _input$closest;
+          var label = (_input$closest = input.closest('.mb-3, .col-6, .col, .form-group, .form-floating')) === null || _input$closest === void 0 ? void 0 : _input$closest.querySelector('label');
+          if (!label) {
+            return input.dataset.setting || 'This field';
+          }
+          return (label.textContent || '').replace(/\s+/g, ' ').trim() || input.dataset.setting || 'This field';
+        },
+        getValidationFeedbackElement: function getValidationFeedbackElement(input) {
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            return feedback;
+          }
+          feedback = document.createElement('div');
+          feedback.className = 'invalid-feedback';
+          input.insertAdjacentElement('afterend', feedback);
+          return feedback;
+        },
+        clearSettingValidationError: function clearSettingValidationError(input) {
+          input.classList.remove('is-invalid');
+          input.removeAttribute('aria-invalid');
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.textContent = '';
+          }
+        },
+        setSettingValidationError: function setSettingValidationError(input, message) {
+          var feedback = this.getValidationFeedbackElement(input);
+          input.classList.add('is-invalid');
+          input.setAttribute('aria-invalid', 'true');
+          feedback.textContent = message;
+        },
+        getSettingValidationMessage: function getSettingValidationMessage(input) {
+          if (!input || input.disabled || input.type !== 'number') {
+            return null;
+          }
+          var value = (input.value || '').trim();
+          if (!value) {
+            return null;
+          }
+          var number = Number(value);
+          var fieldLabel = this.getFieldLabel(input);
+          if (Number.isNaN(number)) {
+            return "".concat(fieldLabel, " must be a valid number.");
+          }
+          var min = input.getAttribute('min');
+          if (min !== null && number < Number(min)) {
+            return "".concat(fieldLabel, " must be ").concat(min, " or greater.");
+          }
+          var max = input.getAttribute('max');
+          if (max !== null && number > Number(max)) {
+            return "".concat(fieldLabel, " must be ").concat(max, " or less.");
+          }
+          return null;
+        },
+        validateSettingInput: function validateSettingInput(input) {
+          var message = this.getSettingValidationMessage(input);
+          if (!message) {
+            this.clearSettingValidationError(input);
+            return true;
+          }
+          this.setSettingValidationError(input, message);
+          return false;
+        },
+        validateSettings: function validateSettings() {
+          var _this1 = this;
+          var isValid = true;
+          this.getSettingInputs().forEach(function (input) {
+            isValid = _this1.validateSettingInput(input) && isValid;
+          });
+          return isValid;
+        },
+        queueSettingsSave: function queueSettingsSave() {
+          if (!this.validateSettings()) {
+            this.clearPendingSettingsSave();
+            this.settingsDirty = false;
+            this.showSaveIndicator('Fix errors', 'text-danger');
+            return;
+          }
+          this.settingsDirty = true;
+          this.showSaveIndicator('Saving...', 'text-warning');
+          this.debouncedSaveSettings();
+        },
+        getSettingInputs: function getSettingInputs() {
+          var explicitInputs = document.querySelectorAll('.setting-input[data-setting]');
+          if (explicitInputs.length > 0) {
+            return explicitInputs;
+          }
+          return document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+        },
+        getSelectedGroupValues: function getSelectedGroupValues(groupName, fallbackSelector) {
+          var explicitSelections = document.querySelectorAll(".capability-checkbox[data-save-group=\"".concat(groupName, "\"]:checked"));
+          if (explicitSelections.length > 0) {
+            var _values = [];
+            explicitSelections.forEach(function (checkbox) {
+              var value = checkbox.getAttribute('data-item-id') || checkbox.value;
+              if (value) {
+                _values.push(value);
+              }
+            });
+            return _values;
+          }
+          if (!fallbackSelector) {
+            return [];
+          }
+          var values = [];
+          var checkboxes = document.querySelectorAll(fallbackSelector);
+          checkboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              values.push(hiddenInput.value);
+            }
+          });
+          return values;
+        },
+        getPromptTemplateSelections: function getPromptTemplateSelections() {
+          var promptTemplates = [];
+          document.querySelectorAll('.prompt-template-card').forEach(function (card) {
+            var templateIdInput = card.querySelector('.prompt-template-id-input');
+            var promptParametersInput = card.querySelector('.prompt-template-parameters-input');
+            var templateId = templateIdInput ? templateIdInput.value : card.getAttribute('data-template-id');
+            if (!templateId) {
+              return;
+            }
+            promptTemplates.push({
+              templateId: templateId,
+              promptParameters: promptParametersInput ? (promptParametersInput.value || '').trim() : ''
+            });
+          });
+          return promptTemplates;
+        },
         receiveNotification: function receiveNotification(notification) {
           if (!notification || !notification.type) {
             return;
@@ -1355,12 +1526,12 @@ window.chatInteractionManager = function () {
           }
         },
         scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
-          var _this0 = this;
+          var _this10 = this;
           if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
             return;
           }
           this.notificationDismissTimers[notification.type] = setTimeout(function () {
-            _this0.removeNotification(notification.type);
+            _this10.removeNotification(notification.type);
           }, notification.autoDismissMs);
         },
         clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
@@ -1399,7 +1570,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this1 = this;
+          var _this11 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1411,59 +1582,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this1.stream) {
+            if (!_this11.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this1.chatContainer.scrollHeight - _this1.chatContainer.clientHeight - _this1.chatContainer.scrollTop <= threshold;
-            _this1.autoScroll = atBottom;
+            var atBottom = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight - _this11.chatContainer.scrollTop <= threshold;
+            _this11.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this1.stream != null) {
+            if (_this11.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this1.buttonElement.click();
+              _this11.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this1.handleUserInput(e);
+            _this11.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this1.buttonElement.removeAttribute('disabled');
+              _this11.buttonElement.removeAttribute('disabled');
             } else {
-              _this1.buttonElement.setAttribute('disabled', true);
+              _this11.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this1.prompt = _this1.inputElement.value;
-              if (_this1.inputElement.value.trim()) {
-                _this1.buttonElement.removeAttribute('disabled');
+              _this11.prompt = _this11.inputElement.value;
+              if (_this11.inputElement.value.trim()) {
+                _this11.buttonElement.removeAttribute('disabled');
               } else {
-                _this1.buttonElement.setAttribute('disabled', true);
+                _this11.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this1.stream != null) {
-              _this1.stream.dispose();
-              _this1.stream = null;
-              _this1.streamingFinished();
-              _this1.hideTypingIndicator();
+            if (_this11.stream != null) {
+              _this11.stream.dispose();
+              _this11.stream = null;
+              _this11.streamingFinished();
+              _this11.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this1.messages.length > 0) {
-                var lastMsg = _this1.messages[_this1.messages.length - 1];
+              if (_this11.messages.length > 0) {
+                var lastMsg = _this11.messages[_this11.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this1.messages.pop();
+                  _this11.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this1.sendMessage();
+            _this11.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -1474,7 +1645,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this1.loadInteraction(itemId);
+              _this11.loadInteraction(itemId);
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1503,82 +1674,32 @@ window.chatInteractionManager = function () {
               }
             });
           }
-
-          // Add event listeners for all settings fields with "ChatInteraction." prefix
-          // Exclude tool and MCP connection inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
-          settingsInputs.forEach(function (input) {
-            var isCheckbox = input.type === 'checkbox';
-            var isSelect = input.tagName === 'SELECT';
-
-            // Checkboxes & selects save immediately
-            if (isCheckbox || isSelect) {
-              input.addEventListener('change', function () {
-                _this1.settingsDirty = true;
-                _this1.debouncedSaveSettings();
-              });
+          document.addEventListener('input', function (event) {
+            if (event.target.matches('.setting-input[data-setting]')) {
+              _this11.validateSettingInput(event.target);
+              _this11.queueSettingsSave();
+            }
+          });
+          document.addEventListener('change', function (event) {
+            if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .group-toggle, .ci-agent-global-toggle')) {
+              if (event.target.matches('.setting-input[data-setting]')) {
+                _this11.validateSettingInput(event.target);
+              }
+              _this11.queueSettingsSave();
               return;
             }
-
-            // Text / textarea / number inputs → save on blur if changed
-            input.addEventListener('focus', function () {
-              _this1.initialFieldValues.set(input, input.value);
-            });
-            input.addEventListener('blur', function () {
-              var initialValue = _this1.initialFieldValues.get(input);
-              var hasChanged = initialValue !== undefined && input.value !== initialValue;
-              if (hasChanged) {
-                _this1.settingsDirty = true;
-                _this1.debouncedSaveSettings();
-              }
-              _this1.initialFieldValues["delete"](input);
-            });
+            if (event.target.closest('.prompt-template-parameters-input, .prompt-template-id-input')) {
+              _this11.queueSettingsSave();
+            }
           });
-
-          // Add event listeners for tool checkboxes with debouncing (850ms)
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
-          toolCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this1.settingsDirty = true;
-              _this1.debouncedSaveSettings();
-            });
+          document.addEventListener('click', function (event) {
+            if (!event.target.closest('.prompt-template-add-btn, .remove-prompt-template-btn')) {
+              return;
+            }
+            setTimeout(function () {
+              _this11.queueSettingsSave();
+            }, 0);
           });
-
-          // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
-          var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
-          groupToggleCheckboxes.forEach(function (toggle) {
-            toggle.addEventListener('change', function () {
-              _this1.settingsDirty = true;
-              _this1.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for MCP connection checkboxes with debouncing (850ms)
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
-          mcpCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this1.settingsDirty = true;
-              _this1.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for agent checkboxes with debouncing (850ms)
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
-          agentCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this1.settingsDirty = true;
-              _this1.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
-          var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
-          if (agentGlobalToggle) {
-            agentGlobalToggle.addEventListener('change', function () {
-              _this1.settingsDirty = true;
-              _this1.debouncedSaveSettings();
-            });
-          }
 
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -1586,7 +1707,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this1.clearHistory(itemId);
+                _this11.clearHistory(itemId);
               }
             });
           }
@@ -1597,7 +1718,7 @@ window.chatInteractionManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this1.toggleRecording();
+                _this11.toggleRecording();
               });
             }
           }
@@ -1607,7 +1728,7 @@ window.chatInteractionManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this1.toggleConversationMode();
+                _this11.toggleConversationMode();
               });
             }
           }
@@ -1647,11 +1768,9 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this10 = this;
+          var _this12 = this;
           // Clear any existing timeout to reset the debounce timer
-          if (this.saveSettingsTimeout) {
-            clearTimeout(this.saveSettingsTimeout);
-          }
+          this.clearPendingSettingsSave();
 
           // Don't save while streaming — it will be saved when streaming completes.
           if (this.stream) {
@@ -1660,56 +1779,33 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this10.settingsDirty) {
-              _this10.saveSettings();
-              _this10.settingsDirty = false;
+            if (_this12.settingsDirty) {
+              _this12.saveSettings();
+              _this12.settingsDirty = false;
             }
-            _this10.saveSettingsTimeout = null;
+            _this12.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
-          // Find all checked tool checkboxes and get the corresponding ItemId values
-          var toolNames = [];
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
-          toolCheckboxes.forEach(function (checkbox) {
-            // Extract the base name pattern to find the corresponding hidden ItemId input
-            // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
-            // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              toolNames.push(hiddenInput.value);
-            }
-          });
-          return toolNames;
+          return this.getSelectedGroupValues('toolNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
         },
         getSelectedMcpConnectionIds: function getSelectedMcpConnectionIds() {
-          var connectionIds = [];
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
-          mcpCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              connectionIds.push(hiddenInput.value);
-            }
-          });
-          return connectionIds;
+          return this.getSelectedGroupValues('mcpConnectionIds', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+        },
+        getSelectedA2AConnectionIds: function getSelectedA2AConnectionIds() {
+          return this.getSelectedGroupValues('a2aConnectionIds');
         },
         getSelectedAgentNames: function getSelectedAgentNames() {
-          var agentNames = [];
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
-          agentCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              agentNames.push(hiddenInput.value);
-            }
-          });
-          return agentNames;
+          return this.getSelectedGroupValues('agentNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
         },
         saveSettings: function saveSettings() {
+          var _this13 = this;
           var itemId = this.getItemId();
           if (!itemId) {
+            return Promise.resolve();
+          }
+          if (!this.validateSettings()) {
+            this.showSaveIndicator('Fix errors', 'text-danger');
             return Promise.resolve();
           }
           var settings = {};
@@ -1717,11 +1813,14 @@ window.chatInteractionManager = function () {
           // Collect all form inputs with the "ChatInteraction." prefix generically.
           // This avoids coupling the JS to specific field names — new fields added by
           // any module are automatically included.
-          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])');
+          var inputs = this.getSettingInputs();
           inputs.forEach(function (input) {
-            // Extract field name: "ChatInteraction.Title" → "title"
-            var fieldName = input.name.replace('ChatInteraction.', '');
-            var key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+            var key = input.dataset.setting || (input.name || '').replace('ChatInteraction.', '').replace(/^[A-Z]/, function (match) {
+              return match.toLowerCase();
+            });
+            if (!key) {
+              return;
+            }
             if (input.type === 'checkbox') {
               settings[key] = input.checked;
             } else if (input.type === 'number') {
@@ -1734,9 +1833,18 @@ window.chatInteractionManager = function () {
           // Add tool, MCP connection, and agent collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          settings.a2aConnectionIds = this.getSelectedA2AConnectionIds();
           settings.agentNames = this.getSelectedAgentNames();
+          var promptTemplates = this.getPromptTemplateSelections();
+          if (promptTemplates.length > 0) {
+            settings.promptTemplates = promptTemplates;
+            settings.promptTemplateIds = promptTemplates.map(function (template) {
+              return template.templateId;
+            });
+          }
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
-            return console.error('Error saving settings:', err);
+            console.error('Error saving settings:', err);
+            _this13.showSaveIndicator('Save failed', 'text-danger');
           });
         },
         flushPendingSave: function flushPendingSave() {
@@ -1766,7 +1874,7 @@ window.chatInteractionManager = function () {
           navigator.clipboard.writeText(message);
         },
         startRecording: function startRecording() {
-          var _this11 = this;
+          var _this14 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1778,16 +1886,16 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this11.mediaRecorder = new MediaRecorder(stream, {
+            _this14.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this11.preRecordingPrompt = _this11.prompt;
-            _this11._audioInputSent = false;
+            _this14.preRecordingPrompt = _this14.prompt;
+            _this14._audioInputSent = false;
             var subject = new signalR.Subject();
-            var itemId = _this11.getItemId();
+            var itemId = _this14.getItemId();
             var pendingChunk = Promise.resolve();
-            _this11.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this14.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                   var data, uint8Array, binaryString, base64;
@@ -1811,7 +1919,7 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this11.mediaRecorder.addEventListener('stop', function () {
+            _this14.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
@@ -1820,10 +1928,10 @@ window.chatInteractionManager = function () {
               });
             });
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this11.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-            _this11.mediaRecorder.start(250);
-            _this11.isRecording = true;
-            _this11.updateMicButton();
+            _this14.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this14.mediaRecorder.start(250);
+            _this14.isRecording = true;
+            _this14.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
@@ -1877,15 +1985,15 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this12 = this;
+        var _this15 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
           return _regenerator().w(function (_context5) {
             while (1) switch (_context5.n) {
               case 0:
                 _context5.n = 1;
-                return _this12.startConnection();
+                return _this15.startConnection();
               case 1:
-                _this12.initializeApp();
+                _this15.initializeApp();
               case 2:
                 return _context5.a(2);
             }

@@ -1,3 +1,4 @@
+using CrestApps.AI;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
@@ -9,6 +10,7 @@ using CrestApps.AI.Profiles;
 using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.AI.Services;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
 using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
@@ -33,6 +35,8 @@ public sealed class AITemplateController : Controller
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIProfileManager _profileManager;
+    private readonly IAIDocumentStore _documentStore;
+    private readonly AIProfileTemplateDocumentService _templateDocumentService;
     private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
@@ -49,6 +53,8 @@ public sealed class AITemplateController : Controller
         ICatalog<McpConnection> mcpConnectionCatalog,
         IAIDataSourceStore dataSourceStore,
         IAIProfileManager profileManager,
+        IAIDocumentStore documentStore,
+        AIProfileTemplateDocumentService templateDocumentService,
         IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService aiTemplateService,
@@ -63,6 +69,8 @@ public sealed class AITemplateController : Controller
         _mcpConnectionCatalog = mcpConnectionCatalog;
         _dataSourceStore = dataSourceStore;
         _profileManager = profileManager;
+        _documentStore = documentStore;
+        _templateDocumentService = templateDocumentService;
         _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
@@ -94,7 +102,7 @@ public sealed class AITemplateController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(AITemplateViewModel model)
+    public async Task<IActionResult> Create(AITemplateViewModel model, List<IFormFile> Documents)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -129,9 +137,21 @@ public sealed class AITemplateController : Controller
 
         model.ApplyTo(template);
 
+        var hasDocumentChanges = Documents is { Count: > 0 };
+
+        if (hasDocumentChanges)
+        {
+            await _templateDocumentService.UploadDocumentsAsync(template, Documents);
+        }
+
         await _catalog.CreateAsync(template);
 
         await _catalog.SaveChangesAsync();
+
+        if (hasDocumentChanges)
+        {
+            await _documentStore.SaveChangesAsync();
+        }
 
         return RedirectToAction(nameof(Index));
 
@@ -150,6 +170,7 @@ public sealed class AITemplateController : Controller
 
         var model = AITemplateViewModel.FromTemplate(template);
         await NormalizeDeploymentSelectorsAsync(model);
+        await PopulateAttachedDocumentsAsync(model);
 
         await PopulateDropdownsAsync(model);
 
@@ -159,7 +180,7 @@ public sealed class AITemplateController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(AITemplateViewModel model)
+    public async Task<IActionResult> Edit(AITemplateViewModel model, List<IFormFile> Documents, string[] RemovedDocumentIds)
     {
         if (string.IsNullOrWhiteSpace(model.Name))
         {
@@ -169,6 +190,7 @@ public sealed class AITemplateController : Controller
 
         if (!ModelState.IsValid)
         {
+            await PopulateAttachedDocumentsAsync(model);
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -189,9 +211,28 @@ public sealed class AITemplateController : Controller
 
         model.ApplyTo(existing);
 
+        var hasDocumentChanges = false;
+
+        if (RemovedDocumentIds is { Length: > 0 })
+        {
+            await _templateDocumentService.RemoveDocumentsAsync(existing, RemovedDocumentIds);
+            hasDocumentChanges = true;
+        }
+
+        if (Documents is { Count: > 0 })
+        {
+            await _templateDocumentService.UploadDocumentsAsync(existing, Documents);
+            hasDocumentChanges = true;
+        }
+
         await _catalog.UpdateAsync(existing);
 
         await _catalog.SaveChangesAsync();
+
+        if (hasDocumentChanges)
+        {
+            await _documentStore.SaveChangesAsync();
+        }
 
         return RedirectToAction(nameof(Index));
 
@@ -338,6 +379,39 @@ public sealed class AITemplateController : Controller
         model.DataSources = dataSources
             .OrderBy(ds => ds.DisplayText, StringComparer.OrdinalIgnoreCase)
             .Select(ds => new SelectListItem(ds.DisplayText, ds.ItemId))
+            .ToList();
+    }
+
+    private async Task PopulateAttachedDocumentsAsync(AITemplateViewModel model)
+    {
+        if (string.IsNullOrWhiteSpace(model.ItemId))
+        {
+            return;
+        }
+
+        var storedDocuments = await _documentStore.GetDocumentsAsync(model.ItemId, AIReferenceTypes.Document.ProfileTemplate);
+        var documentsById = (model.AttachedDocuments ?? [])
+            .Where(d => !string.IsNullOrWhiteSpace(d.DocumentId))
+            .ToDictionary(d => d.DocumentId, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var document in storedDocuments)
+        {
+            if (string.IsNullOrWhiteSpace(document.ItemId))
+            {
+                continue;
+            }
+
+            documentsById[document.ItemId] = new DocumentItem
+            {
+                DocumentId = document.ItemId,
+                FileName = document.FileName,
+                ContentType = document.ContentType,
+                FileSize = document.FileSize,
+            };
+        }
+
+        model.AttachedDocuments = documentsById.Values
+            .OrderBy(d => d.FileName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 

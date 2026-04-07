@@ -33,22 +33,18 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddAITemplating(
         this IServiceCollection services,
-
         Action<TemplateOptions> configure = null)
-
     {
         services
             .AddTemplating(configure)
             .AddAITemplateSource(AITemplateSources.Profile, entry =>
             {
-
                 entry.DisplayName = new LocalizedString(AITemplateSources.Profile, "Profile");
                 entry.Description = new LocalizedString(AITemplateSources.Profile, "Create a template that can be applied to AI profiles.");
             })
             .AddAITemplateSource(AITemplateSources.SystemPrompt, entry =>
             {
                 entry.DisplayName = new LocalizedString(AITemplateSources.SystemPrompt, "System Prompt");
-
                 entry.Description = new LocalizedString(AITemplateSources.SystemPrompt, "Create a reusable system prompt template.");
             });
 
@@ -71,7 +67,6 @@ public static class ServiceCollectionExtensions
         services.AddCoreAITool<TTool>(name);
 
         var entry = new AIToolDefinitionEntry(typeof(TTool))
-
         {
             Name = name,
             IsSystemTool = true,
@@ -352,7 +347,6 @@ public static class ServiceCollectionExtensions
             .WithTitle("Default Orchestrator");
 
         services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
-
 
         // Register content generation system tools.
         services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)

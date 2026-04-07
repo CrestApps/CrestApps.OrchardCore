@@ -283,6 +283,9 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Implicit usings**: Enabled globally
 - **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
 - **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Dependency injection**: Prefer constructor injection over lazy service resolution. Only fall back to lazy resolution when it is absolutely necessary to break a real framework or container circular dependency.
+- **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
+- **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
 - **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.

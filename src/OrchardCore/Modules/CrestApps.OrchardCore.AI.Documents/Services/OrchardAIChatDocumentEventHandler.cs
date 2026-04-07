@@ -3,6 +3,7 @@ using CrestApps.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
@@ -11,113 +12,60 @@ namespace CrestApps.OrchardCore.AI.Documents.Services;
 
 public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHandler
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<OrchardAIChatDocumentEventHandler> _logger;
+    private readonly List<AIChatUploadedDocument> _uploadedDocuments = [];
+    private readonly List<string> _removedChunkIds = [];
+    private bool _taskAdded;
 
-    public OrchardAIChatDocumentEventHandler(
-        IServiceProvider serviceProvider,
-        ILogger<OrchardAIChatDocumentEventHandler> logger)
+    public Task UploadedAsync(AIChatDocumentUploadContext context, CancellationToken cancellationToken = default)
     {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        if (context.UploadedDocuments.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        AddDeferredTask();
+        _uploadedDocuments.AddRange(context.UploadedDocuments);
+
+        return Task.CompletedTask;
     }
 
-    public async Task UploadedAsync(AIChatDocumentUploadContext context, CancellationToken cancellationToken = default)
-    {
-        if (context.Session == null || context.UploadedDocuments.Count == 0)
-        {
-            return;
-        }
-
-        var indexProfileStore = _serviceProvider.GetService<IIndexProfileStore>();
-
-        if (indexProfileStore == null)
-        {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Skipping Orchard AI chat document indexing because {ServiceName} is not registered.", nameof(IIndexProfileStore));
-            }
-            return;
-        }
-
-        var documentIndexHandlers = _serviceProvider.GetServices<IDocumentIndexHandler>().ToArray();
-        var indexProfiles = await indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
-
-        if (!indexProfiles.Any())
-        {
-            return;
-        }
-
-        foreach (var indexProfile in indexProfiles)
-        {
-            var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
-
-            if (documentIndexManager == null)
-            {
-                continue;
-            }
-
-            var chunkDocuments = new List<DocumentIndex>();
-
-            foreach (var uploadedDocument in context.UploadedDocuments)
-            {
-                foreach (var chunk in uploadedDocument.Chunks)
-                {
-                    var documentIndex = new DocumentIndex(chunk.ItemId);
-                    var aiDocumentChunk = new AIDocumentChunkContext
-                    {
-                        ChunkId = chunk.ItemId,
-                        DocumentId = uploadedDocument.Document.ItemId,
-                        Content = chunk.Content,
-                        FileName = uploadedDocument.Document.FileName,
-                        ReferenceId = uploadedDocument.Document.ReferenceId,
-                        ReferenceType = uploadedDocument.Document.ReferenceType,
-                        ChunkIndex = chunk.Index,
-                        Embedding = chunk.Embedding,
-                    };
-
-                    var buildContext = new BuildDocumentIndexContext(
-                        documentIndex,
-                        aiDocumentChunk,
-                        [chunk.ItemId],
-                        documentIndexManager.GetContentIndexSettings())
-                    {
-                        AdditionalProperties = new Dictionary<string, object>
-                        {
-                            { nameof(IndexProfile), indexProfile },
-                        },
-                    };
-
-                    await documentIndexHandlers.InvokeAsync((handler, currentContext) => handler.BuildIndexAsync(currentContext), buildContext, _logger);
-                    chunkDocuments.Add(documentIndex);
-                }
-            }
-
-            if (chunkDocuments.Count > 0)
-            {
-                await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, chunkDocuments);
-            }
-        }
-    }
-
-    public async Task RemovedAsync(AIChatDocumentRemoveContext context, CancellationToken cancellationToken = default)
+    public Task RemovedAsync(AIChatDocumentRemoveContext context, CancellationToken cancellationToken = default)
     {
         if (context.ChunkIds.Count == 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        var indexProfileStore = _serviceProvider.GetService<IIndexProfileStore>();
+        AddDeferredTask();
+        _removedChunkIds.AddRange(context.ChunkIds);
 
-        if (indexProfileStore == null)
+        return Task.CompletedTask;
+    }
+
+    private void AddDeferredTask()
+    {
+        if (_taskAdded)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Skipping Orchard AI chat document index cleanup because {ServiceName} is not registered.", nameof(IIndexProfileStore));
-            }
             return;
         }
 
+        _taskAdded = true;
+
+        var uploadedDocuments = _uploadedDocuments;
+        var removedChunkIds = _removedChunkIds;
+
+        ShellScope.AddDeferredTask(scope => ProcessAsync(scope, uploadedDocuments, removedChunkIds));
+    }
+
+    private static async Task ProcessAsync(ShellScope scope, List<AIChatUploadedDocument> uploadedDocuments, List<string> removedChunkIds)
+    {
+        if (uploadedDocuments.Count == 0 && removedChunkIds.Count == 0)
+        {
+            return;
+        }
+
+        var services = scope.ServiceProvider;
+        var indexProfileStore = services.GetRequiredService<IIndexProfileStore>();
         var indexProfiles = await indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
         if (!indexProfiles.Any())
@@ -125,16 +73,73 @@ public sealed class OrchardAIChatDocumentEventHandler : IAIChatDocumentEventHand
             return;
         }
 
+        var documentIndexHandlers = services.GetServices<IDocumentIndexHandler>();
+        var logger = services.GetRequiredService<ILogger<OrchardAIChatDocumentEventHandler>>();
+
         foreach (var indexProfile in indexProfiles)
         {
-            var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
+            var documentIndexManager = services.GetKeyedService<IDocumentIndexManager>(indexProfile.ProviderName);
 
             if (documentIndexManager == null)
             {
                 continue;
             }
 
-            await documentIndexManager.DeleteDocumentsAsync(indexProfile, context.ChunkIds);
+            try
+            {
+                if (uploadedDocuments.Count > 0)
+                {
+                    var chunkDocuments = new List<DocumentIndex>();
+
+                    foreach (var uploadedDocument in uploadedDocuments)
+                    {
+                        foreach (var chunk in uploadedDocument.Chunks)
+                        {
+                            var documentIndex = new DocumentIndex(chunk.ItemId);
+                            var aiDocumentChunk = new AIDocumentChunkContext
+                            {
+                                ChunkId = chunk.ItemId,
+                                DocumentId = uploadedDocument.Document.ItemId,
+                                Content = chunk.Content,
+                                FileName = uploadedDocument.Document.FileName,
+                                ReferenceId = uploadedDocument.Document.ReferenceId,
+                                ReferenceType = uploadedDocument.Document.ReferenceType,
+                                ChunkIndex = chunk.Index,
+                                Embedding = chunk.Embedding,
+                            };
+
+                            var buildContext = new BuildDocumentIndexContext(
+                                documentIndex,
+                                aiDocumentChunk,
+                                [chunk.ItemId],
+                                documentIndexManager.GetContentIndexSettings())
+                            {
+                                AdditionalProperties = new Dictionary<string, object>
+                                {
+                                    { nameof(IndexProfile), indexProfile },
+                                },
+                            };
+
+                            await documentIndexHandlers.InvokeAsync((handler, currentContext) => handler.BuildIndexAsync(currentContext), buildContext, logger);
+                            chunkDocuments.Add(documentIndex);
+                        }
+                    }
+
+                    if (chunkDocuments.Count > 0)
+                    {
+                        await documentIndexManager.AddOrUpdateDocumentsAsync(indexProfile, chunkDocuments);
+                    }
+                }
+
+                if (removedChunkIds.Count > 0)
+                {
+                    await documentIndexManager.DeleteDocumentsAsync(indexProfile, removedChunkIds);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error syncing chat documents with index '{IndexName}'.", indexProfile.IndexName);
+            }
         }
     }
 }

@@ -10,7 +10,6 @@ namespace CrestApps.OrchardCore.AI.Documents.Handlers;
 public sealed class OrchardChatInteractionDocumentAuthorizationHandler : AuthorizationHandler<OperationAuthorizationRequirement, ChatInteraction>
 {
     private readonly IServiceProvider _serviceProvider;
-
     private IAuthorizationService _authorizationService;
 
     public OrchardChatInteractionDocumentAuthorizationHandler(IServiceProvider serviceProvider)

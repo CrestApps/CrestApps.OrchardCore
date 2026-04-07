@@ -22,7 +22,7 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
         {
             model.EnableUserMemory = profile.GetMemoryMetadata().EnableUserMemory ?? false;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:20%Knowledge;2");
+        }).Location("Content:1#Knowledge;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

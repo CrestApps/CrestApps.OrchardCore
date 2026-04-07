@@ -65,13 +65,20 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
+        var documentParametersResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocumentParameters_Edit", async model =>
+        {
+            model.ProfileId = profile.ItemId;
+
+            var documentsMetadata = profile.As<DocumentsMetadata>();
+            model.TopN = documentsMetadata.DocumentTopN ?? 3;
+        }).Location("Content:7#Knowledge;2");
+
+        var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {
             model.ProfileId = profile.ItemId;
 
             var documentsMetadata = profile.As<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
-            model.TopN = documentsMetadata.DocumentTopN ?? 3;
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.IndexProfileName = settings.IndexProfileName;
@@ -86,7 +93,9 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:10%Knowledge;2");
+        }).Location("Content:8#Knowledge;2");
+
+        return Combine(documentParametersResult, documentsResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
@@ -227,8 +236,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                         profile.ItemId);
                     }
 
-                    var docs = processedDocuments.ToList();
-                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, docs));
+                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, processedDocuments));
                 }
             }
         }

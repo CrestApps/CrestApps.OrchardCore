@@ -122,12 +122,6 @@ public sealed class ChatInteraction : CatalogItem
     public int? PastMessagesCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of top matching document chunks to include in AI context.
-    /// Default is 3 if not specified.
-    /// </summary>
-    public int? DocumentTopN { get; set; }
-
-    /// <summary>
     /// Gets or sets the name of the orchestrator to use for this interaction.
     /// When <see langword="null"/> or empty, the system default orchestrator is used.
     /// </summary>

@@ -48,9 +48,6 @@ public sealed class ChatInteractionViewModel
     public List<PromptTemplateSelectionItem> PromptTemplates { get; set; } = [];
     public List<PromptTemplateOptionItem> AvailablePromptTemplates { get; set; } = [];
 
-    // Documents
-    public int? DocumentTopN { get; set; }
-
     public bool HasDocumentIndexConfiguration { get; set; }
 
     public string DocumentIndexProfileName { get; set; }

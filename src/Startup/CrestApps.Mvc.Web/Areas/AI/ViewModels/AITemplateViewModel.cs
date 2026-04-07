@@ -93,6 +93,7 @@ public sealed class AITemplateViewModel
     public int? DocumentTopN { get; set; }
     public bool HasDocumentIndexConfiguration { get; set; }
     public string DocumentIndexProfileName { get; set; }
+    public List<DocumentItem> AttachedDocuments { get; set; } = [];
 
     // Data Extraction.
     public bool EnableDataExtraction { get; set; }

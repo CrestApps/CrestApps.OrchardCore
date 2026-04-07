@@ -112,6 +112,12 @@ public static class AIChatDocumentEndpoints
         var form = await request.ReadFormAsync();
         var interactionId = form["chatInteractionId"].ToString();
         var files = GetFiles(form);
+        var logger = loggerFactory.CreateLogger("AIChatDocumentEndpoints");
+
+        logger.LogInformation(
+            "Chat interaction document upload started for interaction '{InteractionId}' with {FileCount} file(s).",
+            interactionId,
+            files.Count);
 
         if (string.IsNullOrWhiteSpace(interactionId))
         {
@@ -139,18 +145,34 @@ public static class AIChatDocumentEndpoints
             return TypedResults.Forbid();
         }
 
+        logger.LogInformation("Chat interaction document upload authorized for interaction '{InteractionId}'.", interaction.ItemId);
+
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: interaction.ChatDeploymentName);
+        logger.LogInformation(
+            "Resolved chat deployment '{DeploymentName}' for interaction '{InteractionId}'.",
+            deployment?.Name,
+            interaction.ItemId);
+
         var embeddingDeployment = await deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
             clientName: deployment?.ClientName,
             connectionName: deployment?.ConnectionName ?? interaction.ConnectionName);
+        logger.LogInformation(
+            "Resolved embedding deployment '{DeploymentName}' for interaction '{InteractionId}'.",
+            embeddingDeployment?.Name,
+            interaction.ItemId);
+
         var embeddingGenerator = embeddingDeployment == null
             ? null
             : await aiClientFactory.CreateEmbeddingGeneratorAsync(
                 embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
                 embeddingDeployment.ModelName);
-        var logger = loggerFactory.CreateLogger("AIChatDocumentEndpoints");
+        logger.LogInformation(
+            "Created embedding generator for interaction '{InteractionId}': {HasEmbeddingGenerator}.",
+            interaction.ItemId,
+            embeddingGenerator != null);
+
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 
         interaction.Documents ??= [];
@@ -160,6 +182,12 @@ public static class AIChatDocumentEndpoints
 
         foreach (var file in files)
         {
+            logger.LogInformation(
+                "Processing uploaded file '{FileName}' ({FileSize} bytes) for interaction '{InteractionId}'.",
+                file.FileName,
+                file.Length,
+                interaction.ItemId);
+
             if (IsDuplicateDocument(interaction.Documents, file))
             {
                 failedFiles.Add(new
@@ -184,15 +212,27 @@ public static class AIChatDocumentEndpoints
 
             if (!result.Success)
             {
+                logger.LogWarning(
+                    "Document upload failed for file '{FileName}' in interaction '{InteractionId}': {Error}",
+                    file.FileName,
+                    interaction.ItemId,
+                    result.Error);
+
                 failedFiles.Add(new { fileName = file.FileName, error = result.Error });
                 continue;
             }
 
             interaction.Documents.Add(result.UploadedDocument.DocumentInfo);
             uploadedDocuments.Add(result.UploadedDocument);
+
+            logger.LogInformation(
+                "Document upload processed successfully for file '{FileName}' in interaction '{InteractionId}'.",
+                file.FileName,
+                interaction.ItemId);
         }
 
         await interactionManager.UpdateAsync(interaction);
+        logger.LogInformation("Chat interaction '{InteractionId}' document metadata saved.", interaction.ItemId);
 
         if (uploadedDocuments.Count > 0)
         {
@@ -210,6 +250,12 @@ public static class AIChatDocumentEndpoints
                 await handler.UploadedAsync(context, request.HttpContext.RequestAborted);
             }
         }
+
+        logger.LogInformation(
+            "Chat interaction document upload completed for interaction '{InteractionId}' with {UploadedCount} successful file(s) and {FailedCount} failed file(s).",
+            interaction.ItemId,
+            uploadedDocuments.Count,
+            failedFiles.Count);
 
         return TypedResults.Ok(new
         {

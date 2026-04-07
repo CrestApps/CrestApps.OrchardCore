@@ -20,23 +20,14 @@ AI profiles are now source-agnostic in the admin UI. When you click **Add Profil
 
 ### AI Profile and Template Editor Layout
 
-The AI Profile editor groups the most common profile settings into five cards at the top of the page:
+The AI Profile editor keeps the Orchard-style top-level tabs focused on broader areas:
 
-- **General** — title, technical name, profile type, orchestrator, and admin menu visibility
-- **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome/initial prompt behavior, prompt subject, chat mode, and per-profile user memory
-- **Instructions** — prompt template selection, template-specific prompt text, and system instructions
-- **Parameters** — model tuning values and data-source retrieval parameters
+- **Content** — contains the **General**, **Instructions**, and **Parameters** cards
+- **Knowledge** — data source selection, filter, retrieval behavior, uploaded documents, session-document uploads, and memory settings
 
-Profile-source AI Templates now follow the same top-level card grouping:
+Profile-source AI Templates follow the same layout, and new profiles show a dedicated **Apply Templates** card above the editor so you can pre-fill the form before saving.
 
-- **General** — title, technical name, category, profile type, orchestrator, response handler, data source, and admin menu visibility
-- **Deployments** — chat deployment and utility deployment
-- **Interactions** — title behavior, welcome message, prompt subject, chat mode, and per-template user memory
-- **Instructions** — prompt template text and system instructions
-- **Parameters** — model tuning values and data-source retrieval parameters
-
-Additional advanced sections such as capabilities, response handling, analytics, and post-session processing continue to appear below these cards in their existing sections. In the **Knowledge** tab, AI Profiles now group the selected data source, the same data-source RAG controls used by chat interactions (`Strictness`, `TopNDocuments`, `IsInScope`, and `Filter`), uploaded profile documents, and session-document upload settings in one place. The model-parameter editors in both MVC and Orchard Core now also use consistent `(?)` hover help for Temperature, Top P, penalties, token limits, and past-message settings so profile editing matches the chat and template UX.
+Only **Filter** hides until a data source is selected. **Restrict answers to retrieved data only**, **Document Top N**, **Strictness**, and **Retrieved documents** stay visible so knowledge behavior can still be tuned even without selecting a data source first. In the Orchard Core AI Profile knowledge tab, **Enable user memory** and **Allow session document uploads** appear before the data-source selector, while the retrieval settings and **Document Top N** stay grouped together below the data-source filter. The model-parameter editors in both MVC and Orchard Core now also use consistent `(?)` hover help for Temperature, Top P, penalties, token limits, and past-message settings so profile editing matches the chat and template UX.
 
 When **Data Extraction** is enabled for an AI Profile, the live chat session now feeds any already extracted field values back into the model prompt. This helps scripted assistants avoid re-asking for values they already collected in the same session unless the user is correcting them.
 

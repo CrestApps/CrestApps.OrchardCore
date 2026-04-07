@@ -24,7 +24,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
-        }).Location("Content:15%Knowledge;2");
+        }).Location("Content:2#Knowledge;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

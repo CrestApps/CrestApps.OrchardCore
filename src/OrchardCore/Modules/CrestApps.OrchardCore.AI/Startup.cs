@@ -1,6 +1,5 @@
 using CrestApps.AI;
 using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Services;
 using CrestApps.AI.Completions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
@@ -26,7 +25,6 @@ using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.Services;
 using CrestApps.Templates.Extensions;
-using Fluid;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,20 +54,6 @@ public sealed class Startup : StartupBase
         // available, even when the Templating feature is not enabled.
         services.AddTemplatesFromAssembly(typeof(Startup).Assembly);
         services.AddPermissionProvider<AIPermissionsProvider>();
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIProfile>();
-            o.MemberAccessStrategy.Register<AIChatSession>();
-            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
-            o.MemberAccessStrategy.Register<ExtractedFieldState>();
-            o.MemberAccessStrategy.Register<PostSessionResult>();
-            o.MemberAccessStrategy.Register<AICompletionReference>();
-
-            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
-            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
-            o.MemberAccessStrategy.Register<ExtractedFieldChange>();
-            o.MemberAccessStrategy.Register<ConversionGoalResult>();
-        });
 
         services
             .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
@@ -164,7 +148,6 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<AIProfileStep>();
-
         services.AddRecipeExecutionStep<AIProfileTemplateStep>();
         services.AddRecipeExecutionStep<AIDeploymentStep>();
         services.AddRecipeExecutionStep<DeleteAIDeploymentStep>();
@@ -176,15 +159,9 @@ public sealed class WorkflowsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<TemplateOptions>(o =>
-        {
-            o.MemberAccessStrategy.Register<AIResponseMessage>();
-        });
-
         services.AddActivity<AICompletionFromProfileTask, AICompletionFromProfileTaskDisplayDriver>();
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigTaskDisplayDriver>();
         services.AddActivity<AIChatSessionFieldExtractedEvent, AIChatSessionFieldExtractedEventDisplayDriver>();
-
         services.AddActivity<AIChatSessionAllFieldsExtractedEvent, AIChatSessionAllFieldsExtractedEventDisplayDriver>();
         services.AddActivity<AIChatSessionClosedEvent, AIChatSessionClosedEventDisplayDriver>();
         services.AddActivity<AIChatSessionPostProcessedEvent, AIChatSessionPostProcessedEventDisplayDriver>();
@@ -197,7 +174,6 @@ public sealed class OCDeploymentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<AIProfileDeploymentSource, AIProfileDeploymentStep, AIProfileDeploymentStepDisplayDriver>();
-
         services.AddDeployment<AIProfileTemplateDeploymentSource, AIProfileTemplateDeploymentStep, AIProfileTemplateDeploymentStepDisplayDriver>();
         services.AddDeployment<AIDeploymentDeploymentSource, AIDeploymentDeploymentStep, AIDeploymentDeploymentStepDisplayDriver>();
         services.AddDeployment<DeleteAIDeploymentDeploymentSource, DeleteAIDeploymentDeploymentStep, DeleteAIDeploymentDeploymentStepDisplayDriver>();
@@ -209,7 +185,6 @@ public sealed class ChatCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-
         services
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
@@ -222,7 +197,6 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddScoped<DefaultAIChatSessionPromptStore>()
             .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
             .AddIndexProvider<AIChatSessionPromptIndexProvider>()
-
             .AddDataMigration<AIChatSessionPromptIndexMigrations>()
             .AddDataMigration<AIChatSessionPromptDataMigrations>();
 

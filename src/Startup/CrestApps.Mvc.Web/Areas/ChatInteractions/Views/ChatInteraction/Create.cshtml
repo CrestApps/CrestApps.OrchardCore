@@ -399,6 +399,28 @@
                         </select>
                         <div class="form-text">Select a RAG data source to provide background knowledge for this interaction.</div>
                     </div>
+                    <div class="mb-3 rag-data-source-filter-dependent">
+                        <label asp-for="DataSourceFilter" class="form-label">
+                            Filter
+                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
+                                <i class="bi bi-question-circle"></i>
+                            </span>
+                        </label>
+                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">
+                                Restrict answers to retrieved data only
+                                <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
+                                    <i class="bi bi-question-circle"></i>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -425,27 +447,6 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
-                            <label asp-for="DataSourceIsInScope" class="form-check-label">
-                                Restrict answers to retrieved data only
-                                <span class="text-muted ms-1" data-bs-toggle="tooltip" title="When enabled, responses stay grounded in the retrieved knowledge instead of supplementing with general model knowledge.">
-                                    <i class="bi bi-question-circle"></i>
-                                </span>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="DataSourceFilter" class="form-label">
-                            Filter
-                            <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Optional provider-specific filter expression that limits which records can be retrieved from the selected data source.">
-                                <i class="bi bi-question-circle"></i>
-                            </span>
-                        </label>
-                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
-                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
-                    </div>
 
                     @if (Model.HasDocumentIndexConfiguration)
                     {
@@ -459,21 +460,6 @@
                             <i class="bi bi-exclamation-triangle"></i> Document knowledge-base search is not configured yet. Create an <strong>AI Documents</strong> index profile and select it under <strong>Settings → AI Settings → Documents</strong> before expecting uploaded documents to influence answers.
                         </div>
                     }
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="DocumentTopN" class="form-label">
-                                    Document Top N
-                                    <span class="text-muted ms-1" data-bs-toggle="tooltip" title="Controls how many matching uploaded document chunks are added as context for the AI.">
-                                        <i class="bi bi-question-circle"></i>
-                                    </span>
-                                </label>
-                                <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
-                                <div class="form-text">Number of top matching document chunks to include as AI context.</div>
-                            </div>
-                        </div>
-                    </div>
 
                     <h6 class="mt-3 mb-2"><i class="bi bi-paperclip"></i> Attach Documents</h6>
                     <div id="pending-docs-list" class="mb-3"></div>
@@ -503,6 +489,21 @@
                     window.bootstrap.Tooltip.getOrCreateInstance(element);
                 });
             }
+
+            var dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
+
+            function toggleDataSourceDependentFields() {
+                var hasDataSource = !!(dataSourceSelect && dataSourceSelect.value && dataSourceSelect.value.trim() !== '');
+                document.querySelectorAll('.rag-data-source-filter-dependent').forEach(function (element) {
+                    element.classList.toggle('d-none', !hasDataSource);
+                });
+            }
+
+            if (dataSourceSelect) {
+                dataSourceSelect.addEventListener('change', toggleDataSourceDependentFields);
+            }
+
+            toggleDataSourceDependentFields();
 
             // --- Tool Select All / Deselect All ---
             var selectAllBtn = document.getElementById('select-all-tools');

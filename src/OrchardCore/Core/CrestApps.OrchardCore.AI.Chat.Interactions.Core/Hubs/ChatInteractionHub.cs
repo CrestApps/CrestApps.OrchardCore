@@ -146,7 +146,6 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
     public async Task SaveSettings(string itemId, JsonElement settings)
     {
         if (string.IsNullOrWhiteSpace(itemId))
-
         {
             await Clients.Caller.ReceiveError(S["{0} is required.", nameof(itemId)].Value);
 
@@ -166,28 +165,31 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             var interaction = await interactionManager.FindByIdAsync(itemId);
 
             if (interaction == null)
-
             {
                 await Clients.Caller.ReceiveError(S["Interaction not found."].Value);
 
                 return;
-
             }
 
             var httpContext = Context.GetHttpContext();
 
             if (!await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction))
-
             {
                 await Clients.Caller.ReceiveError(S["You are not authorized to access chat interactions."].Value);
 
                 return;
             }
 
+            var invalidSetting = ChatInteractionSettingsValidator.Validate(settings);
+            if (invalidSetting != null)
+            {
+                await Clients.Caller.ReceiveError(GetSettingsValidationMessage(invalidSetting));
+                return;
+            }
+
             // Let module-specific handlers bind their own properties first.
             foreach (var handler in settingsHandlers)
             {
-
                 await handler.UpdatingAsync(interaction, settings);
             }
 
@@ -195,7 +197,9 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             interaction.Title = GetString(settings, "title") ?? "Untitled";
             interaction.OrchestratorName = GetString(settings, "orchestratorName");
             interaction.ConnectionName = GetString(settings, "connectionName");
-            interaction.ChatDeploymentName = GetString(settings, "deploymentId");
+            interaction.ChatDeploymentName = GetString(settings, "deploymentName")
+                ?? GetString(settings, "deploymentId");
+            interaction.UtilityDeploymentName = GetString(settings, "utilityDeploymentName");
             interaction.SystemMessage = GetString(settings, "systemMessage");
             interaction.Temperature = GetFloat(settings, "temperature");
             interaction.TopP = GetFloat(settings, "topP");
@@ -207,9 +211,14 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
             interaction.McpConnectionIds = GetStringArray(settings, "mcpConnectionIds");
 
+            interaction.A2AConnectionIds = GetStringArray(settings, "a2aConnectionIds");
+
             interaction.AgentNames = GetStringArray(settings, "agentNames");
 
             var dataSourceId = GetString(settings, "dataSourceId");
+
+            var topNDocuments = GetInt(settings, "topNDocuments");
+            var isInScope = GetBool(settings, "isInScope") ?? false;
 
             if (!string.IsNullOrWhiteSpace(dataSourceId))
             {
@@ -230,8 +239,8 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                         interaction.Put(new AIDataSourceRagMetadata()
                         {
                             Strictness = GetInt(settings, "strictness"),
-                            TopNDocuments = GetInt(settings, "topNDocuments"),
-                            IsInScope = GetBool(settings, "isInScope") ?? false,
+                            TopNDocuments = topNDocuments,
+                            IsInScope = isInScope,
                             Filter = GetString(settings, "filter"),
                         });
                     }
@@ -241,7 +250,13 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
             {
                 interaction.Put(new DataSourceMetadata());
 
-                interaction.Put(new AIDataSourceRagMetadata());
+                interaction.Alter<AIDataSourceRagMetadata>(metadata =>
+                {
+                    metadata.Strictness = null;
+                    metadata.TopNDocuments = topNDocuments;
+                    metadata.IsInScope = isInScope;
+                    metadata.Filter = null;
+                });
 
             }
 
@@ -269,6 +284,19 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
         return null;
     }
+
+    private string GetSettingsValidationMessage(string propertyName) => propertyName switch
+    {
+        "strictness" => S["Strictness must be between 1 and 5."].Value,
+        "topNDocuments" => S["Retrieved documents must be between 3 and 20."].Value,
+        "temperature" => S["Temperature must be between 0 and 2."].Value,
+        "topP" => S["Top P must be between 0 and 1."].Value,
+        "frequencyPenalty" => S["Frequency penalty must be between 0 and 2."].Value,
+        "presencePenalty" => S["Presence penalty must be between 0 and 2."].Value,
+        "pastMessagesCount" => S["Past messages must be between 2 and 50."].Value,
+        "maxTokens" => S["Max response tokens must be 4 or greater."].Value,
+        _ => S["One or more settings are invalid."].Value,
+    };
 
     private static float? GetFloat(JsonElement el, string name)
     {

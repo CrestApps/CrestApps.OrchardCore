@@ -34,7 +34,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        return Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
+        var selectorAndBehaviorResult = Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
@@ -50,6 +50,25 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:4#Knowledge;2");
+
+        var retrievalResult = Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSourceRetrieval_Edit", async model =>
+        {
+            var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+            var metadata = interaction.As<DataSourceMetadata>();
+            model.DataSourceId = metadata?.DataSourceId;
+
+            var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+
+            model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
+            model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
+            model.IsInScope = ragMetadata.IsInScope;
+            model.Filter = ragMetadata.Filter;
+
+            model.DataSources = await _dataSourceStore.GetAllAsync();
+        }).Location("Parameters:5#Knowledge;2");
+
+        return Combine(selectorAndBehaviorResult, retrievalResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

@@ -35,6 +35,7 @@ public sealed class AIProfileController : Controller
     private readonly ICatalog<McpConnection> _mcpConnectionCatalog;
     private readonly IAIDocumentStore _documentStore;
     private readonly AIProfileDocumentService _profileDocumentService;
+    private readonly AIProfileTemplateDocumentService _templateDocumentService;
     private readonly InteractionDocumentOptions _interactionDocumentOptions;
     private readonly ISearchIndexProfileStore _indexProfileStore;
     private readonly ITemplateService _aiTemplateService;
@@ -53,6 +54,7 @@ public sealed class AIProfileController : Controller
         ICatalog<McpConnection> mcpConnectionCatalog,
         IAIDocumentStore documentStore,
         AIProfileDocumentService profileDocumentService,
+        AIProfileTemplateDocumentService templateDocumentService,
         IOptions<InteractionDocumentOptions> interactionDocumentOptions,
         ISearchIndexProfileStore indexProfileStore,
         ITemplateService aiTemplateService,
@@ -69,6 +71,7 @@ public sealed class AIProfileController : Controller
         _mcpConnectionCatalog = mcpConnectionCatalog;
         _documentStore = documentStore;
         _profileDocumentService = profileDocumentService;
+        _templateDocumentService = templateDocumentService;
         _interactionDocumentOptions = interactionDocumentOptions.Value;
         _indexProfileStore = indexProfileStore;
         _aiTemplateService = aiTemplateService;
@@ -103,8 +106,10 @@ public sealed class AIProfileController : Controller
                 ApplyTemplateToProfile(profile, template);
 
                 model = AIProfileViewModel.FromProfile(profile);
+                model.SelectedTemplateId = templateId;
 
                 await NormalizeDeploymentSelectorsAsync(model);
+                await PopulateAttachedDocumentsAsync(model, template.ItemId, AIReferenceTypes.Document.ProfileTemplate);
             }
 
         }
@@ -125,6 +130,10 @@ public sealed class AIProfileController : Controller
 
         if (!ModelState.IsValid)
         {
+            if (!string.IsNullOrWhiteSpace(model.SelectedTemplateId))
+            {
+                await PopulateAttachedDocumentsAsync(model, model.SelectedTemplateId, AIReferenceTypes.Document.ProfileTemplate);
+            }
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -144,6 +153,17 @@ public sealed class AIProfileController : Controller
         if (hasDocumentChanges)
         {
             await _profileDocumentService.UploadDocumentsAsync(profile, Documents);
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.SelectedTemplateId))
+        {
+            var template = await _templateManager.FindByIdAsync(model.SelectedTemplateId);
+
+            if (template != null)
+            {
+                await _templateDocumentService.CloneDocumentsToProfileAsync(template, profile);
+                hasDocumentChanges = true;
+            }
         }
 
         await _profileManager.CreateAsync(profile);
@@ -168,7 +188,7 @@ public sealed class AIProfileController : Controller
 
         var model = AIProfileViewModel.FromProfile(profile);
 
-        await PopulateAttachedDocumentsAsync(model);
+        await PopulateAttachedDocumentsAsync(model, model.ItemId, AIReferenceTypes.Document.Profile);
         await NormalizeDeploymentSelectorsAsync(model);
         await PopulateDropdownsAsync(model);
 
@@ -186,7 +206,7 @@ public sealed class AIProfileController : Controller
 
         if (!ModelState.IsValid)
         {
-            await PopulateAttachedDocumentsAsync(model);
+            await PopulateAttachedDocumentsAsync(model, model.ItemId, AIReferenceTypes.Document.Profile);
             await PopulateDropdownsAsync(model);
 
             return View(model);
@@ -435,14 +455,14 @@ public sealed class AIProfileController : Controller
 
     }
 
-    private async Task PopulateAttachedDocumentsAsync(AIProfileViewModel model)
+    private async Task PopulateAttachedDocumentsAsync(AIProfileViewModel model, string referenceId, string referenceType)
     {
-        if (string.IsNullOrWhiteSpace(model.ItemId))
+        if (string.IsNullOrWhiteSpace(referenceId) || string.IsNullOrWhiteSpace(referenceType))
         {
             return;
         }
 
-        var storedDocuments = await _documentStore.GetDocumentsAsync(model.ItemId, AIReferenceTypes.Document.Profile);
+        var storedDocuments = await _documentStore.GetDocumentsAsync(referenceId, referenceType);
         var documentsById = (model.AttachedDocuments ?? [])
             .Where(d => !string.IsNullOrWhiteSpace(d.DocumentId))
             .ToDictionary(d => d.DocumentId, StringComparer.OrdinalIgnoreCase);

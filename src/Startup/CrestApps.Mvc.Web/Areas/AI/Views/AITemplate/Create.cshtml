@@ -11,22 +11,16 @@
     const string frequencyPenaltyHelp = "Penalizes tokens based on how frequently they appear in the response so far. Higher values reduce repetition of the same words and phrases.";
     const string presencePenaltyHelp = "Penalizes tokens based on whether they have appeared at all. Higher values encourage the AI to introduce new topics and ideas rather than staying on the same subjects.";
     const string pastMessagesHelp = "The number of previous messages from the conversation to include as context. More messages provide better context but increase token usage and costs.";
+    var embeddableExtensionsAccept = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsAcceptValue();
     var embeddableExtensionsDisplay = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsDisplayValue();
 }
 
-<style>
-    .attached-documents-panel {
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.75rem;
-        background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
-        padding: 1rem;
-    }
-</style>
+<link rel="stylesheet" href="~/css/document-drop-zone.css" />
 
 <h2><i class="bi bi-plus-lg"></i> Create AI Template</h2>
 <hr />
 
-<form asp-action="Create" method="post">
+<form asp-action="Create" method="post" enctype="multipart/form-data">
     <div class="row">
         <div class="col-md-8">
             <div class="mb-3">
@@ -99,7 +93,7 @@
                 <div class="tab-content p-3 border border-top-0 rounded-bottom" id="profileTabContent">
                     <!-- Basic Info Tab -->
                     <div class="tab-pane fade show active" id="basic" role="tabpanel">
-                        <div class="row">
+                        <div class="row rag-data-source-dependent">
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="ProfileType" class="form-label">Profile type</label>
@@ -515,11 +509,32 @@
                         <!-- Data Source Section -->
                         <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                         <div class="mb-3">
-                            <label asp-for="DataSourceId" class="form-label">RAG data source</label>
+                            <label asp-for="DataSourceId" class="form-label">Data source</label>
                             <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
                                 <option value="">No data source</option>
                             </select>
                             <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for profiles created from this template.</div>
+                        </div>
+                        <div class="mb-3 rag-data-source-filter-dependent">
+                            <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                            <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                            <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                                <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
+                                    <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
+                                    <div class="form-text">Number of top matching document chunks to include as AI context.</div>
+                                </div>
+                            </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
@@ -537,25 +552,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
-                                <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label asp-for="DataSourceFilter" class="form-label">Filter</label>
-                            <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
-                            <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
-                        </div>
 
-                        @if (Model.HasDocumentIndexConfiguration)
-                        {
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i> Documents are indexed into the <strong>@Model.DocumentIndexProfileName</strong> AI Documents index.
-                            </div>
-                        }
-                        else
+                        @if (!Model.HasDocumentIndexConfiguration)
                         {
                             <div class="alert alert-warning">
                                 <i class="bi bi-exclamation-triangle"></i> Document knowledge-base search is not configured. Create an <strong>AI Documents</strong> index profile and select it in <strong>Settings</strong>.
@@ -569,18 +567,27 @@
                             </div>
                             <div class="form-text">Allow users to upload documents during chat sessions with profiles created from this template.</div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
-                                    <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
-                                    <div class="form-text">Number of top matching document chunks to include as AI context.</div>
-                                </div>
-                            </div>
-                        </div>
                         <div class="attached-documents-panel">
                             <h6 class="mb-1"><i class="bi bi-paperclip"></i> Attach Documents</h6>
-                            <p class="text-muted small mb-0">Uploaded files become hidden knowledge for profiles created from this template after the template is applied. Supported knowledge formats: @embeddableExtensionsDisplay</p>
+                            <p class="text-muted small mb-3">Uploaded files become hidden knowledge for profiles created from this template after the template is applied. Supported knowledge formats: @embeddableExtensionsDisplay</p>
+                            <div id="pending-docs-list" class="mb-2"></div>
+                            <div class="document-drop-zone" id="template-doc-drop-zone">
+                                <input type="file" class="d-none" id="doc-add-input" name="Documents" multiple
+                                       accept="@embeddableExtensionsAccept" />
+                                <div class="document-drop-zone__body">
+                                    <span class="document-drop-zone__icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                                    <div>
+                                        <div class="document-drop-zone__title">Drag and drop files here</div>
+                                        <div class="text-muted small">or browse for documents to include with profiles created from this template</div>
+                                    </div>
+                                    <div class="document-drop-zone__actions">
+                                        <button type="button" class="btn btn-outline-primary" id="template-doc-browse" data-drop-zone-browse>
+                                            <i class="bi bi-folder2-open"></i> Browse files
+                                        </button>
+                                    </div>
+                                    <div class="form-text mb-0">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -809,6 +816,7 @@
 </form>
 
 @section Scripts {
+    <script src="~/js/document-drop-zone.js" asp-append-version="true"></script>
     <script>initAutoGenerateTechnicalName('templateTitle', 'templateTechName');</script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -821,6 +829,7 @@
             var sourceSelect = document.getElementById('sourceSelect');
             var profileFields = document.getElementById('profileFields');
             var systemPromptFields = document.getElementById('systemPromptFields');
+            var dataSourceSelect = document.getElementById('@Html.IdFor(m => m.DataSourceId)');
 
             // --- Profile Type conditional visibility ---
             var profileTypeSelect = document.getElementById('profileTypeSelect');
@@ -872,6 +881,13 @@
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
             }
 
+            function toggleDataSourceDependentFields() {
+                var hasDataSource = !!(dataSourceSelect && dataSourceSelect.value && dataSourceSelect.value.trim() !== '');
+                document.querySelectorAll('.rag-data-source-filter-dependent').forEach(function (element) {
+                    element.classList.toggle('d-none', !hasDataSource);
+                });
+            }
+
             function updateVisibility() {
                 var isProfile = sourceSelect.value === 'Profile';
                 profileFields.style.display = isProfile ? '' : 'none';
@@ -893,7 +909,12 @@
                 addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
             }
 
+            if (dataSourceSelect) {
+                dataSourceSelect.addEventListener('change', toggleDataSourceDependentFields);
+            }
+
             updateVisibility();
+            toggleDataSourceDependentFields();
 
         // --- Select All / Deselect All tools ---
         var selectAllBtn = document.getElementById('select-all-tools');
@@ -908,6 +929,88 @@
         document.querySelectorAll('input[name="SelectedToolNames"]').forEach(function (cb) { cb.checked = false; });
         });
         }
+
+        // --- Document file management ---
+        (function () {
+        var docAddInput = document.getElementById('doc-add-input');
+        var pendingDocsList = document.getElementById('pending-docs-list');
+        var pendingFiles = [];
+
+        initDocumentDropZone({
+        dropZone: '#template-doc-drop-zone',
+        fileInput: '#doc-add-input',
+        browseButton: '#template-doc-browse'
+        });
+
+        function syncPendingFiles() {
+        if (!docAddInput) {
+        return;
+        }
+
+        var dataTransfer = new DataTransfer();
+        pendingFiles.forEach(function (file) { dataTransfer.items.add(file); });
+        docAddInput.files = dataTransfer.files;
+        }
+
+        function renderPendingFiles() {
+        if (!pendingDocsList) {
+        return;
+        }
+
+        pendingDocsList.innerHTML = '';
+
+        pendingFiles.forEach(function (file, index) {
+        var row = document.createElement('div');
+        row.className = 'pending-doc-row';
+        row.dataset.index = index;
+        row.innerHTML = '<span class="attached-document-icon"><i class="bi bi-file-earmark-plus"></i></span>' +
+        '<span class="flex-grow-1">' + escapeHtml(file.name) + ' <small class="text-muted">(' + formatSize(file.size) + ')</small> <span class="badge bg-info">New</span></span>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger remove-pending-doc-btn" title="Remove"><i class="bi bi-trash"></i></button>';
+        pendingDocsList.appendChild(row);
+        });
+        }
+
+        if (docAddInput) {
+        docAddInput.addEventListener('change', function () {
+        var files = this.files;
+        if (!files || files.length === 0) return;
+
+        for (var i = 0; i < files.length; i++) {
+        pendingFiles.push(files[i]);
+        }
+
+        syncPendingFiles();
+        renderPendingFiles();
+        });
+        }
+
+        document.addEventListener('click', function (e) {
+        var removeBtn = e.target.closest('.remove-pending-doc-btn');
+        if (!removeBtn) {
+        return;
+        }
+
+        var row = removeBtn.closest('.pending-doc-row');
+        var idx = parseInt(row.dataset.index, 10);
+        if (!Number.isNaN(idx)) {
+        pendingFiles.splice(idx, 1);
+        syncPendingFiles();
+        renderPendingFiles();
+        }
+        });
+
+        function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+        }
+
+        function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        })();
 
         // --- Data Extraction conditional visibility ---
         var enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');

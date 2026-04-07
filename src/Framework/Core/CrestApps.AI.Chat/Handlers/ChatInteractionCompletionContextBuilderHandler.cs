@@ -39,11 +39,6 @@ internal sealed class ChatInteractionCompletionContextBuilderHandler : IAIComple
         context.Context.AdditionalProperties[AICompletionContextKeys.Interaction] = interaction;
         context.Context.AdditionalProperties[AICompletionContextKeys.InteractionId] = interaction.ItemId;
 
-        if (interaction.DocumentTopN.HasValue)
-        {
-            context.Context.AdditionalProperties["DocumentTopN"] = interaction.DocumentTopN.Value;
-        }
-
         if (interaction.TryGet<DataSourceMetadata>(out var dataSourceMetadata) &&
             !string.IsNullOrEmpty(dataSourceMetadata.DataSourceId))
         {

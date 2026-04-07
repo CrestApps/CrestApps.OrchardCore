@@ -34,14 +34,19 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         var dataSourceResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSources_Edit", async model =>
         {
             await PopulateViewModelAsync(profile, model);
-        }).Location("Content:1%Knowledge;2");
+        }).Location("Content:4#Knowledge;2");
 
         var parametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceParameters_Edit", async model =>
         {
             await PopulateViewModelAsync(profile, model);
-        }).Location("Content:5%Knowledge;2");
+        }).Location("Content:5#Knowledge;2");
 
-        return Combine(dataSourceResult, parametersResult);
+        var retrievalParametersResult = Initialize<EditProfileDataSourcesViewModel>("AIProfileDataSourceRetrieval_Edit", async model =>
+        {
+            await PopulateViewModelAsync(profile, model);
+        }).Location("Content:6#Knowledge;2");
+
+        return Combine(dataSourceResult, parametersResult, retrievalParametersResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

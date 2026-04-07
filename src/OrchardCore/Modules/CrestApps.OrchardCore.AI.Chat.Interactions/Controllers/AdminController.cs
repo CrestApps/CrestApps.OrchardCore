@@ -269,7 +269,6 @@ public sealed class AdminController : Controller
         clonedInteraction.PresencePenalty = interaction.PresencePenalty;
         clonedInteraction.MaxTokens = interaction.MaxTokens;
         clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
-        clonedInteraction.DocumentTopN = interaction.DocumentTopN;
         clonedInteraction.ToolNames = interaction.ToolNames.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();

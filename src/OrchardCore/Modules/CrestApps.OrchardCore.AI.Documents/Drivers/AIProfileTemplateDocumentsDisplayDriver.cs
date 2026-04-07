@@ -65,13 +65,21 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        return Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
+        var documentParametersResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocumentParameters_Edit", async model =>
+        {
+            model.ProfileId = template.ItemId;
+
+            var documentsMetadata = template.As<DocumentsMetadata>();
+            model.TopN = documentsMetadata.DocumentTopN ?? 3;
+        }).Location("Content:7#Knowledge;2")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {
             model.ProfileId = template.ItemId;
 
             var documentsMetadata = template.As<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
-            model.TopN = documentsMetadata.DocumentTopN ?? 3;
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.IndexProfileName = settings.IndexProfileName;
@@ -86,8 +94,10 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Content:10%Knowledge;2")
+        }).Location("Content:8#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
+
+        return Combine(documentParametersResult, documentsResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -229,8 +239,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                         processedDocuments.Count, template.ItemId);
                     }
 
-                    var docs = processedDocuments.ToList();
-                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, docs));
+                    ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, processedDocuments));
                 }
             }
         }

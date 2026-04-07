@@ -348,6 +348,7 @@ window.chatInteractionManager = function () {
                     initialFieldValues: new Map(),
                     settingsDirty: false,
                     saveSettingsTimeout: null,
+                    saveIndicatorTimeout: null,
                     isRecording: false,
                     mediaRecorder: null,
                     preRecordingPrompt: '',
@@ -394,7 +395,7 @@ window.chatInteractionManager = function () {
                     this.connection.on("LoadInteraction", (data) => {
                         this.initializeInteraction(data.itemId, true);
                         this.messages = [];// Update the title field if it exists
-                        const titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                        const titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
                         if (titleInput && data.title) {
                             titleInput.value = data.title;
                         }
@@ -415,10 +416,18 @@ window.chatInteractionManager = function () {
                         if (historyItem) {
                             historyItem.textContent = title || config.untitledText;
                         }
+
+                        const titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
+                        if (titleInput && title) {
+                            titleInput.value = title;
+                        }
+
+                        this.showSaveIndicator('Saved', 'text-success');
                     });
 
                     this.connection.on("ReceiveError", (error) => {
                         console.error("SignalR Error: ", error);
+                        this.showSaveIndicator('Save failed', 'text-danger');
 
                         if (this.isRecording) {
                             this.stopRecording();
@@ -1300,6 +1309,209 @@ window.chatInteractionManager = function () {
                 getItemId() {
                     return this.inputElement.getAttribute('data-interaction-id');
                 },
+                getSaveIndicatorElement() {
+                    if (config.saveIndicatorElementSelector) {
+                        return document.querySelector(config.saveIndicatorElementSelector);
+                    }
+
+                    return document.querySelector('[data-chat-interaction-save-indicator]');
+                },
+                showSaveIndicator(text, className) {
+                    const indicator = this.getSaveIndicatorElement();
+                    if (!indicator) {
+                        return;
+                    }
+
+                    indicator.textContent = text || '';
+                    indicator.className = 'settings-save-indicator ' + (className || 'text-muted');
+
+                    if (this.saveIndicatorTimeout) {
+                        clearTimeout(this.saveIndicatorTimeout);
+                        this.saveIndicatorTimeout = null;
+                    }
+
+                    if (!text) {
+                        return;
+                    }
+
+                    this.saveIndicatorTimeout = setTimeout(() => {
+                        indicator.textContent = '';
+                        this.saveIndicatorTimeout = null;
+                    }, 3000);
+                },
+                clearPendingSettingsSave() {
+                    if (this.saveSettingsTimeout) {
+                        clearTimeout(this.saveSettingsTimeout);
+                        this.saveSettingsTimeout = null;
+                    }
+                },
+                getFieldLabel(input) {
+                    const label = input
+                        .closest('.mb-3, .col-6, .col, .form-group, .form-floating')
+                        ?.querySelector('label');
+
+                    if (!label) {
+                        return input.dataset.setting || 'This field';
+                    }
+
+                    return (label.textContent || '')
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        || input.dataset.setting
+                        || 'This field';
+                },
+                getValidationFeedbackElement(input) {
+                    let feedback = input.nextElementSibling;
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        return feedback;
+                    }
+
+                    feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    input.insertAdjacentElement('afterend', feedback);
+
+                    return feedback;
+                },
+                clearSettingValidationError(input) {
+                    input.classList.remove('is-invalid');
+                    input.removeAttribute('aria-invalid');
+
+                    const feedback = input.nextElementSibling;
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.textContent = '';
+                    }
+                },
+                setSettingValidationError(input, message) {
+                    const feedback = this.getValidationFeedbackElement(input);
+                    input.classList.add('is-invalid');
+                    input.setAttribute('aria-invalid', 'true');
+                    feedback.textContent = message;
+                },
+                getSettingValidationMessage(input) {
+                    if (!input || input.disabled || input.type !== 'number') {
+                        return null;
+                    }
+
+                    const value = (input.value || '').trim();
+                    if (!value) {
+                        return null;
+                    }
+
+                    const number = Number(value);
+                    const fieldLabel = this.getFieldLabel(input);
+
+                    if (Number.isNaN(number)) {
+                        return `${fieldLabel} must be a valid number.`;
+                    }
+
+                    const min = input.getAttribute('min');
+                    if (min !== null && number < Number(min)) {
+                        return `${fieldLabel} must be ${min} or greater.`;
+                    }
+
+                    const max = input.getAttribute('max');
+                    if (max !== null && number > Number(max)) {
+                        return `${fieldLabel} must be ${max} or less.`;
+                    }
+
+                    return null;
+                },
+                validateSettingInput(input) {
+                    const message = this.getSettingValidationMessage(input);
+                    if (!message) {
+                        this.clearSettingValidationError(input);
+                        return true;
+                    }
+
+                    this.setSettingValidationError(input, message);
+                    return false;
+                },
+                validateSettings() {
+                    let isValid = true;
+
+                    this.getSettingInputs().forEach(input => {
+                        isValid = this.validateSettingInput(input) && isValid;
+                    });
+
+                    return isValid;
+                },
+                queueSettingsSave() {
+                    if (!this.validateSettings()) {
+                        this.clearPendingSettingsSave();
+                        this.settingsDirty = false;
+                        this.showSaveIndicator('Fix errors', 'text-danger');
+                        return;
+                    }
+
+                    this.settingsDirty = true;
+                    this.showSaveIndicator('Saving...', 'text-warning');
+                    this.debouncedSaveSettings();
+                },
+                getSettingInputs() {
+                    const explicitInputs = document.querySelectorAll('.setting-input[data-setting]');
+                    if (explicitInputs.length > 0) {
+                        return explicitInputs;
+                    }
+
+                    return document.querySelectorAll(
+                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
+                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
+                    );
+                },
+                getSelectedGroupValues(groupName, fallbackSelector) {
+                    const explicitSelections = document.querySelectorAll(`.capability-checkbox[data-save-group="${groupName}"]:checked`);
+                    if (explicitSelections.length > 0) {
+                        const values = [];
+
+                        explicitSelections.forEach(checkbox => {
+                            const value = checkbox.getAttribute('data-item-id') || checkbox.value;
+                            if (value) {
+                                values.push(value);
+                            }
+                        });
+
+                        return values;
+                    }
+
+                    if (!fallbackSelector) {
+                        return [];
+                    }
+
+                    const values = [];
+                    const checkboxes = document.querySelectorAll(fallbackSelector);
+
+                    checkboxes.forEach(checkbox => {
+                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
+
+                        if (hiddenInput && hiddenInput.value) {
+                            values.push(hiddenInput.value);
+                        }
+                    });
+
+                    return values;
+                },
+                getPromptTemplateSelections() {
+                    const promptTemplates = [];
+
+                    document.querySelectorAll('.prompt-template-card').forEach(card => {
+                        const templateIdInput = card.querySelector('.prompt-template-id-input');
+                        const promptParametersInput = card.querySelector('.prompt-template-parameters-input');
+                        const templateId = templateIdInput ? templateIdInput.value : card.getAttribute('data-template-id');
+
+                        if (!templateId) {
+                            return;
+                        }
+
+                        promptTemplates.push({
+                            templateId: templateId,
+                            promptParameters: promptParametersInput ? (promptParametersInput.value || '').trim() : ''
+                        });
+                    });
+
+                    return promptTemplates;
+                },
                 receiveNotification(notification) {
                     if (!notification || !notification.type) {
                         return;
@@ -1490,90 +1702,37 @@ window.chatInteractionManager = function () {
                         });
                     }
 
-                    // Add event listeners for all settings fields with "ChatInteraction." prefix
-                    // Exclude tool and MCP connection inputs (they have special handling with debouncing)
-                    const settingsInputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
-                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' +
-                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])'
-                    );
+                    document.addEventListener('input', event => {
+                        if (event.target.matches('.setting-input[data-setting]')) {
+                            this.validateSettingInput(event.target);
+                            this.queueSettingsSave();
+                        }
+                    });
 
-                    settingsInputs.forEach(input => {
-                        const isCheckbox = input.type === 'checkbox';
-                        const isSelect = input.tagName === 'SELECT';
+                    document.addEventListener('change', event => {
+                        if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .group-toggle, .ci-agent-global-toggle')) {
+                            if (event.target.matches('.setting-input[data-setting]')) {
+                                this.validateSettingInput(event.target);
+                            }
 
-                        // Checkboxes & selects save immediately
-                        if (isCheckbox || isSelect) {
-                            input.addEventListener('change', () => {
-                                this.settingsDirty = true;
-                                this.debouncedSaveSettings();
-                            });
+                            this.queueSettingsSave();
                             return;
                         }
 
-                        // Text / textarea / number inputs → save on blur if changed
-                        input.addEventListener('focus', () => {
-                            this.initialFieldValues.set(input, input.value);
-                        });
-
-                        input.addEventListener('blur', () => {
-                            const initialValue = this.initialFieldValues.get(input);
-                            const hasChanged =
-                                initialValue !== undefined && input.value !== initialValue;
-
-                            if (hasChanged) {
-                                this.settingsDirty = true;
-                                this.debouncedSaveSettings();
-                            }
-
-                            this.initialFieldValues.delete(input);
-                        });
+                        if (event.target.closest('.prompt-template-parameters-input, .prompt-template-id-input')) {
+                            this.queueSettingsSave();
+                        }
                     });
 
-                    // Add event listeners for tool checkboxes with debouncing (850ms)
-                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
-                    toolCheckboxes.forEach(checkbox => {
-                        checkbox.addEventListener('change', () => {
-                            this.settingsDirty = true;
-                            this.debouncedSaveSettings();
-                        });
-                    });
+                    document.addEventListener('click', event => {
+                        if (!event.target.closest('.prompt-template-add-btn, .remove-prompt-template-btn')) {
+                            return;
+                        }
 
-                    // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
-                    const groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
-                    groupToggleCheckboxes.forEach(toggle => {
-                        toggle.addEventListener('change', () => {
-                            this.settingsDirty = true;
-                            this.debouncedSaveSettings();
-                        });
+                        setTimeout(() => {
+                            this.queueSettingsSave();
+                        }, 0);
                     });
-
-                    // Add event listeners for MCP connection checkboxes with debouncing (850ms)
-                    const mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
-                    mcpCheckboxes.forEach(checkbox => {
-                        checkbox.addEventListener('change', () => {
-                            this.settingsDirty = true;
-                            this.debouncedSaveSettings();
-                        });
-                    });
-
-                    // Add event listeners for agent checkboxes with debouncing (850ms)
-                    const agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
-                    agentCheckboxes.forEach(checkbox => {
-                        checkbox.addEventListener('change', () => {
-                            this.settingsDirty = true;
-                            this.debouncedSaveSettings();
-                        });
-                    });
-
-                    // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
-                    const agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
-                    if (agentGlobalToggle) {
-                        agentGlobalToggle.addEventListener('change', () => {
-                            this.settingsDirty = true;
-                            this.debouncedSaveSettings();
-                        });
-                    }
 
                     // Add event listener for clear history button
                     const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -1641,9 +1800,7 @@ window.chatInteractionManager = function () {
                 },
                 debouncedSaveSettings() {
                     // Clear any existing timeout to reset the debounce timer
-                    if (this.saveSettingsTimeout) {
-                        clearTimeout(this.saveSettingsTimeout);
-                    }
+                    this.clearPendingSettingsSave();
 
                     // Don't save while streaming — it will be saved when streaming completes.
                     if (this.stream) {
@@ -1660,57 +1817,34 @@ window.chatInteractionManager = function () {
                     }, 850);
                 },
                 getSelectedToolNames() {
-                    // Find all checked tool checkboxes and get the corresponding ItemId values
-                    const toolNames = [];
-                    const toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
-
-                    toolCheckboxes.forEach(checkbox => {
-                        // Extract the base name pattern to find the corresponding hidden ItemId input
-                        // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
-                        // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
-                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
-
-                        if (hiddenInput && hiddenInput.value) {
-                            toolNames.push(hiddenInput.value);
-                        }
-                    });
-
-                    return toolNames;
+                    return this.getSelectedGroupValues(
+                        'toolNames',
+                        'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked'
+                    );
                 },
                 getSelectedMcpConnectionIds() {
-                    const connectionIds = [];
-                    const mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
-
-                    mcpCheckboxes.forEach(checkbox => {
-                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
-
-                        if (hiddenInput && hiddenInput.value) {
-                            connectionIds.push(hiddenInput.value);
-                        }
-                    });
-
-                    return connectionIds;
+                    return this.getSelectedGroupValues(
+                        'mcpConnectionIds',
+                        'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked'
+                    );
+                },
+                getSelectedA2AConnectionIds() {
+                    return this.getSelectedGroupValues('a2aConnectionIds');
                 },
                 getSelectedAgentNames() {
-                    const agentNames = [];
-                    const agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
-
-                    agentCheckboxes.forEach(checkbox => {
-                        const baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-                        const hiddenInput = document.querySelector(`input[type="hidden"][name="${baseName}"]`);
-
-                        if (hiddenInput && hiddenInput.value) {
-                            agentNames.push(hiddenInput.value);
-                        }
-                    });
-
-                    return agentNames;
+                    return this.getSelectedGroupValues(
+                        'agentNames',
+                        'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked'
+                    );
                 },
                 saveSettings() {
                     const itemId = this.getItemId();
                     if (!itemId) {
+                        return Promise.resolve();
+                    }
+
+                    if (!this.validateSettings()) {
+                        this.showSaveIndicator('Fix errors', 'text-danger');
                         return Promise.resolve();
                     }
 
@@ -1719,16 +1853,15 @@ window.chatInteractionManager = function () {
                     // Collect all form inputs with the "ChatInteraction." prefix generically.
                     // This avoids coupling the JS to specific field names — new fields added by
                     // any module are automatically included.
-                    const inputs = document.querySelectorAll(
-                        'input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' +
-                        'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' +
-                        'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])'
-                    );
+                    const inputs = this.getSettingInputs();
 
                     inputs.forEach(input => {
-                        // Extract field name: "ChatInteraction.Title" → "title"
-                        const fieldName = input.name.replace('ChatInteraction.', '');
-                        const key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+                        const key = input.dataset.setting
+                            || ((input.name || '').replace('ChatInteraction.', '').replace(/^[A-Z]/, match => match.toLowerCase()));
+
+                        if (!key) {
+                            return;
+                        }
 
                         if (input.type === 'checkbox') {
                             settings[key] = input.checked;
@@ -1742,10 +1875,20 @@ window.chatInteractionManager = function () {
                     // Add tool, MCP connection, and agent collections (special handling).
                     settings.toolNames = this.getSelectedToolNames();
                     settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+                    settings.a2aConnectionIds = this.getSelectedA2AConnectionIds();
                     settings.agentNames = this.getSelectedAgentNames();
 
+                    const promptTemplates = this.getPromptTemplateSelections();
+                    if (promptTemplates.length > 0) {
+                        settings.promptTemplates = promptTemplates;
+                        settings.promptTemplateIds = promptTemplates.map(template => template.templateId);
+                    }
+
                     return this.connection.invoke("SaveSettings", itemId, settings)
-                        .catch(err => console.error('Error saving settings:', err));
+                        .catch(err => {
+                            console.error('Error saving settings:', err);
+                            this.showSaveIndicator('Save failed', 'text-danger');
+                        });
                 },
                 flushPendingSave() {
                     if (this.saveSettingsTimeout) {

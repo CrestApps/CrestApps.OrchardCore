@@ -4,11 +4,13 @@ using CrestApps.AI.Markdown;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
 using CrestApps.AI.Services;
+using CrestApps.AI.Tooling;
 using CrestApps.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Services;
+using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,6 +42,20 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AICollectionName));
+
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<AIProfile>();
+            o.MemberAccessStrategy.Register<AIChatSession>();
+            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
+            o.MemberAccessStrategy.Register<ExtractedFieldState>();
+            o.MemberAccessStrategy.Register<PostSessionResult>();
+            o.MemberAccessStrategy.Register<AICompletionReference>();
+            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
+            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
+            o.MemberAccessStrategy.Register<ConversionGoalResult>();
+            o.MemberAccessStrategy.Register<AIResponseMessage>();
+        });
 
         return services;
     }

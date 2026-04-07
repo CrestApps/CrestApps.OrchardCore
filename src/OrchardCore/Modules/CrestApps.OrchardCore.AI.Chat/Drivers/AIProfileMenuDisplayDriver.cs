@@ -20,7 +20,7 @@ public sealed class AIProfileMenuDisplayDriver : DisplayDriver<AIProfile>
                 model.IsOnAdminMenu = profile.Type == AIProfileType.Chat && context.IsNew;
             }
 
-        }).Location("Content:5%Actions;3");
+        }).Location("Content:7%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

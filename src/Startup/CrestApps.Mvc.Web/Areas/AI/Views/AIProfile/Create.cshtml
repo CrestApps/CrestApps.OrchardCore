@@ -15,19 +15,13 @@
     var embeddableExtensionsDisplay = ChatDocumentOptions.Value.GetEmbeddableFileExtensionsDisplayValue();
 }
 
-<style>
-    .attached-documents-panel {
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.75rem;
-        background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
-        padding: 1rem;
-    }
-</style>
+<link rel="stylesheet" href="~/css/document-drop-zone.css" />
 
 <h2><i class="bi bi-plus-lg"></i> Create AI Profile</h2>
 <hr />
 
 <form asp-action="Create" method="post" enctype="multipart/form-data">
+    <input asp-for="SelectedTemplateId" type="hidden" />
     @if (Model.AvailableProfileTemplates.Any())
     {
         <div class="card mb-3">
@@ -91,7 +85,7 @@
                         <input asp-for="Name" id="profileName" class="form-control" required placeholder="e.g., my-chat-assistant" />
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
-                    <div class="row">
+                    <div class="row rag-data-source-dependent">
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="Type" class="form-label">Profile type</label>
@@ -519,11 +513,31 @@
                     <!-- Data Source Section -->
                     <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                     <div class="mb-3">
-                        <label asp-for="DataSourceId" class="form-label">RAG data source</label>
+                        <label asp-for="DataSourceId" class="form-label">Data source</label>
                         <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
                             <option value="">No data source</option>
                         </select>
                         <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for this profile.</div>
+                    </div>
+                    <div class="mb-3 rag-data-source-filter-dependent">
+                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
+                                <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
+                                <div class="form-text">Number of top matching document chunks to include as AI context.</div>
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -541,25 +555,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
-                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
-                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
-                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
-                    </div>
 
-                    @if (Model.HasDocumentIndexConfiguration)
-                    {
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> Documents uploaded here are indexed into the <strong>@Model.DocumentIndexProfileName</strong> AI Documents index and can be used as background knowledge during chat.
-                        </div>
-                    }
-                    else
+                    @if (!Model.HasDocumentIndexConfiguration)
                     {
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle"></i> Document knowledge-base search is not configured yet. Create an <strong>AI Documents</strong> index profile and select it under <strong>Settings → AI Settings → Documents</strong> before expecting uploaded documents to influence answers.
@@ -572,24 +569,46 @@
                         </div>
                         <div class="form-text">Allow users to upload documents during chat sessions with this profile.</div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
-                                <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
-                                <div class="form-text">Number of top matching document chunks to include as AI context.</div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="attached-documents-panel mt-3">
                         <h6 class="mb-1"><i class="bi bi-paperclip"></i> Attach Documents</h6>
                         <p class="text-muted small mb-3">Uploaded files will be indexed as hidden knowledge for this profile after you save it. Supported knowledge formats: @embeddableExtensionsDisplay</p>
+                        @if (Model.AttachedDocuments.Count > 0)
+                        {
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                <div class="small text-muted">These documents come from the selected template and will be copied to the new profile when you save it.</div>
+                                <span class="badge text-bg-primary rounded-pill">@Model.AttachedDocuments.Count included</span>
+                            </div>
+                            <div class="attached-documents-list mb-3">
+                                @foreach (var doc in Model.AttachedDocuments)
+                                {
+                                    <div class="attached-document-card">
+                                        <span class="attached-document-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                        <div class="attached-document-meta flex-grow-1">
+                                            <div class="attached-document-name">@doc.FileName</div>
+                                            <span class="attached-document-size">@(doc.FileSize < 1024 ? doc.FileSize + " B" : doc.FileSize < 1048576 ? (doc.FileSize / 1024.0).ToString("F1") + " KB" : (doc.FileSize / 1048576.0).ToString("F1") + " MB")</span>
+                                        </div>
+                                        <span class="badge text-bg-secondary">Template</span>
+                                    </div>
+                                }
+                            </div>
+                        }
                         <div id="pending-docs-list" class="mb-2"></div>
-                        <div class="mb-0">
-                            <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
+                        <div class="document-drop-zone" id="profile-doc-drop-zone">
+                            <input type="file" class="d-none" id="doc-add-input" name="Documents" multiple
                                    accept="@embeddableExtensionsAccept" />
-                            <div class="form-text">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                            <div class="document-drop-zone__body">
+                                <span class="document-drop-zone__icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                                <div>
+                                    <div class="document-drop-zone__title">Drag and drop files here</div>
+                                    <div class="text-muted small">or browse for documents to attach as hidden profile knowledge</div>
+                                </div>
+                                <div class="document-drop-zone__actions">
+                                    <button type="button" class="btn btn-outline-primary" id="profile-doc-browse" data-drop-zone-browse>
+                                        <i class="bi bi-folder2-open"></i> Browse files
+                                    </button>
+                                </div>
+                                <div class="form-text mb-0">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -814,6 +833,7 @@
 </form>
 
 @section Scripts {
+    <script src="~/js/document-drop-zone.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.bootstrap && window.bootstrap.Tooltip) {
@@ -827,6 +847,7 @@
             const addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
             const welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             const initialPromptGroup = document.getElementById('initialPromptGroup');
+            const dataSourceSelect = document.getElementById('@Html.IdFor(m => m.DataSourceId)');
 
             function normalizeProfileType(str) {
                 return (str || '')
@@ -873,6 +894,13 @@
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
             }
 
+            function toggleDataSourceDependentFields() {
+                const hasDataSource = !!(dataSourceSelect && dataSourceSelect.value && dataSourceSelect.value.trim() !== '');
+                document.querySelectorAll('.rag-data-source-filter-dependent').forEach(function (element) {
+                    element.classList.toggle('d-none', !hasDataSource);
+                });
+            }
+
             if (profileTypeSelect) {
                 profileTypeSelect.addEventListener('change', toggleProfileTypeFields);
                 toggleProfileTypeFields();
@@ -881,6 +909,12 @@
             if (addInitialPromptCheck) {
                 addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
             }
+
+            if (dataSourceSelect) {
+                dataSourceSelect.addEventListener('change', toggleDataSourceDependentFields);
+            }
+
+            toggleDataSourceDependentFields();
 
             // --- Data Extraction conditional visibility ---
             const enableDataExtractionCheck = document.getElementById('enableDataExtractionCheck');
@@ -1243,6 +1277,12 @@
             var docAddInput = document.getElementById('doc-add-input');
             var pendingDocsList = document.getElementById('pending-docs-list');
             var pendingFiles = [];
+
+            initDocumentDropZone({
+                dropZone: '#profile-doc-drop-zone',
+                fileInput: '#doc-add-input',
+                browseButton: '#profile-doc-browse'
+            });
 
             function syncPendingFiles() {
                 if (!docAddInput) {

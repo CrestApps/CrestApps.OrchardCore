@@ -30,9 +30,17 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 
 The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core. Orchard Core now also bridges its native `IIndexProfileStore` into the shared `ISearchIndexProfileStore` contract so shared document RAG tools and handlers resolve tenant index profiles the same way in both hosts.
 
+The shared PDF ingestion path now favors straightforward per-page text extraction instead of PdfPig layout-block analysis. That keeps PDF uploads more resilient for local and tenant-hosted chat attachment scenarios where some PDFs previously terminated the request process during extraction.
+
 Orchard Core chat-interaction and chat-session document uploads now tolerate tenants where Orchard indexing services are not currently available. In that case, the document endpoints still store and remove attachments normally, while the Orchard-specific index update handler safely skips remote index synchronization instead of failing the request.
 
 The Orchard Core host now also assigns route names to the shared chat-document upload and remove endpoints before generating UI links. That keeps chat pages and document editors posting to the JSON document endpoints instead of accidentally posting back to the current admin page, and the shared chat UI now collapses unexpected HTML error pages to readable upload/remove messages.
+
+Within Orchard Core, the AI Documents feature also relies on its declared `OrchardCore.Indexing` dependency so document handlers can use explicit constructor-injected indexing services instead of lazily resolving core Orchard indexing registrations at runtime.
+
+For chat upload/remove flows specifically, Orchard now queues the provider-specific index synchronization through the shell deferred-task pipeline instead of running that external indexing work inline during the upload request. That keeps the HTTP request focused on storing the attachment while the index update runs afterward with tenant-scoped services.
+
+For local Aspire or `dotnet watch` development, the Orchard CMS host now excludes `App_Data` from watched items at both the default item and explicit watch-item levels, just like the MVC sample. That prevents document uploads, SQLite changes, and other runtime tenant writes from triggering an immediate app restart while you are testing chat attachments.
 
 ### Sub-Features
 

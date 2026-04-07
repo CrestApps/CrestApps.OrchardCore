@@ -92,11 +92,15 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 7. Configure **Knowledge**:
    - **Enable User Memory** — Persist per-user memory for profiles created from this template.
    - **Data Source** — Select a data source for retrieval-augmented generation.
-   - **Strictness**, **Top N Documents**, **Is In Scope**, **Filter** — RAG parameters.
+   - **Restrict answers to retrieved data only** — Always visible and off by default.
+   - **Document Top N** — Always visible, and shown immediately after **Restrict answers to retrieved data only**, so uploaded-document retrieval can still be tuned without selecting a data source.
+   - **Strictness** and **Retrieved documents** — Always visible knowledge-tuning options.
+   - **Filter** — The only RAG field that appears only after a data source is selected.
 8. Configure **Documents** (when the Documents feature is enabled):
-   - **Allow Session Documents** — Whether users can upload documents during chat sessions.
-   - **Profile Documents** — Upload documents directly to the template. Documents are processed (text extraction, chunking, and embedding generation) and stored with the template. When the template is applied to a new profile, all attached documents — including their text chunks and embeddings — are cloned to the new profile automatically.
-     - **Top N** — Number of top matching document chunks to include in AI context (default: 3).
+    - **Allow Session Documents** — Whether users can upload documents during chat sessions.
+    - **Profile Documents** — Upload documents directly to the template. Documents are processed (text extraction, chunking, and embedding generation) and stored with the template. When the template is applied to a new profile, all attached documents — including their text chunks and embeddings — are cloned to the new profile automatically.
+      - **Top N** — Number of top matching document chunks to include in AI context (default: 3).
+      - In the MVC sample app, the template editor now uses the same drag-and-drop knowledge uploader as the Orchard Core editor, so template documents can be added, reviewed, and removed from the **Knowledge** tab without falling back to a plain file input.
 9. Configure **Data Processing & Metrics** (when the Chat and Analytics features are enabled):
    - **Session Settings** — Session inactivity timeout, AI resolution detection.
    - **Data Extraction** — Enable data extraction with extraction entries.
@@ -105,7 +109,7 @@ Navigate to **Artificial Intelligence → Templates** in the admin dashboard to 
 10. Click **Save** to store the template.
 
 :::note
-The template editor mirrors the AI Profile editor more closely for **Profile** source templates: prompt templates live in the **Instructions** tab, chat-specific controls such as menu/chat-mode/response-handler settings live in the **Actions** tab, **Enable User Memory** lives in the **Knowledge** tab, and the Knowledge tab groups data-source RAG settings together with document-upload settings for consistent navigation across profiles, templates, and chat interactions.
+The template editor mirrors the AI Profile editor more closely for **Profile** source templates: the **Content** tab keeps the **General**, **Instructions**, and **Parameters** cards together, chat-specific controls such as menu/chat-mode/response-handler settings stay in **General**, and the **Knowledge** tab keeps user memory, data-source RAG settings, and document-upload settings together instead of splitting them across separate tabs. Orchard Core and the MVC sample also share the same conditional visibility there: only `Filter` stays hidden until a data source is selected, while `Restrict answers to retrieved data only`, document `Top N`, `Strictness`, and `Retrieved documents` remain visible.
 :::
 
 ### Editing and Deleting Templates

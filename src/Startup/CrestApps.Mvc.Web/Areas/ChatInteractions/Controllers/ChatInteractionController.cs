@@ -160,7 +160,6 @@ public sealed class ChatInteractionController : Controller
         interaction.PresencePenalty = model.PresencePenalty;
         interaction.MaxTokens = model.MaxTokens;
         interaction.PastMessagesCount = model.PastMessagesCount;
-        interaction.DocumentTopN = model.DocumentTopN;
         interaction.A2AConnectionIds = await GetValidA2AConnectionIdsAsync(model.SelectedA2AConnectionIds);
         interaction.McpConnectionIds = await GetValidMcpConnectionIdsAsync(model.SelectedMcpConnectionIds);
         interaction.ToolNames = GetValidToolNames(model.SelectedToolNames);
@@ -226,7 +225,6 @@ public sealed class ChatInteractionController : Controller
             PresencePenalty = interaction.PresencePenalty,
             MaxTokens = interaction.MaxTokens,
             PastMessagesCount = interaction.PastMessagesCount,
-            DocumentTopN = interaction.DocumentTopN,
             Documents = interaction.Documents ?? [],
             DataSourceId = string.IsNullOrWhiteSpace(dataSourceMetadata.DataSourceId) ? null : dataSourceMetadata.DataSourceId,
             DataSourceStrictness = ragMetadata?.Strictness,

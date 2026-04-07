@@ -18,13 +18,9 @@
     var defaultTextToSpeechDeploymentName = defaultDeploymentSettings.DefaultTextToSpeechDeploymentName;
 }
 
+<link rel="stylesheet" href="~/css/document-drop-zone.css" />
+
 <style>
-    .attached-documents-panel {
-        border: 1px solid var(--bs-border-color, #dee2e6);
-        border-radius: 0.75rem;
-        background: linear-gradient(180deg, rgba(13, 110, 253, 0.04), rgba(13, 110, 253, 0.01));
-        padding: 1rem;
-    }
 
     .attached-documents-list {
         display: grid;
@@ -115,7 +111,7 @@
                         <input type="hidden" asp-for="Name" />
                         <span asp-validation-for="Name" class="text-danger"></span>
                     </div>
-                    <div class="row">
+                    <div class="row rag-data-source-dependent">
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label asp-for="Type" class="form-label">Profile type</label>
@@ -564,11 +560,31 @@
                     <!-- Data Source Section -->
                     <h6 class="mb-2 border-bottom pb-2"><i class="bi bi-database"></i> Data Source</h6>
                     <div class="mb-3">
-                        <label asp-for="DataSourceId" class="form-label">RAG data source</label>
+                        <label asp-for="DataSourceId" class="form-label">Data source</label>
                         <select asp-for="DataSourceId" asp-items="Model.DataSources" class="form-select">
                             <option value="">No data source</option>
                         </select>
                         <div class="form-text">Select a data source to enable Retrieval-Augmented Generation (RAG) for this profile.</div>
+                    </div>
+                    <div class="mb-3 rag-data-source-filter-dependent">
+                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
+                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
+                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
+                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
+                                <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -586,25 +602,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="DataSourceIsInScope" class="form-check-input" type="checkbox" />
-                            <label asp-for="DataSourceIsInScope" class="form-check-label">Restrict answers to retrieved data only</label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="DataSourceFilter" class="form-label">Filter</label>
-                        <input asp-for="DataSourceFilter" class="form-control" placeholder="Optional provider-specific filter" />
-                        <div class="form-text">Optional filter expression passed to the configured data source provider.</div>
-                    </div>
 
-                    @if (Model.HasDocumentIndexConfiguration)
-                    {
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> Documents are indexed into the <strong>@Model.DocumentIndexProfileName</strong> AI Documents index.
-                        </div>
-                    }
-                    else
+                    @if (!Model.HasDocumentIndexConfiguration)
                     {
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle"></i> Document knowledge-base search is not configured. Create an <strong>AI Documents</strong> index profile and select it in <strong>Settings</strong>.
@@ -614,14 +613,6 @@
                         <div class="form-check form-switch">
                             <input asp-for="AllowSessionDocuments" class="form-check-input" type="checkbox" />
                             <label asp-for="AllowSessionDocuments" class="form-check-label">Allow session document uploads</label>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label asp-for="DocumentTopN" class="form-label">Document Top N</label>
-                                <input asp-for="DocumentTopN" type="number" class="form-control" min="1" max="20" placeholder="Default: 3" />
-                            </div>
                         </div>
                     </div>
 
@@ -650,10 +641,22 @@
                         </div>
                         <div id="removed-docs-container"></div>
                         <div id="pending-docs-list" class="mb-2"></div>
-                        <div class="mb-0">
-                            <input type="file" class="form-control" id="doc-add-input" name="Documents" multiple
+                        <div class="document-drop-zone" id="profile-doc-drop-zone">
+                            <input type="file" class="d-none" id="doc-add-input" name="Documents" multiple
                                    accept="@embeddableExtensionsAccept" />
-                            <div class="form-text">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                            <div class="document-drop-zone__body">
+                                <span class="document-drop-zone__icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                                <div>
+                                    <div class="document-drop-zone__title">Drag and drop files here</div>
+                                    <div class="text-muted small">or browse for documents to attach as hidden profile knowledge</div>
+                                </div>
+                                <div class="document-drop-zone__actions">
+                                    <button type="button" class="btn btn-outline-primary" id="profile-doc-browse" data-drop-zone-browse>
+                                        <i class="bi bi-folder2-open"></i> Browse files
+                                    </button>
+                                </div>
+                                <div class="form-text mb-0">Supported knowledge formats: @embeddableExtensionsDisplay</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1008,6 +1011,7 @@
 </form>
 
 @section Scripts {
+    <script src="~/js/document-drop-zone.js" asp-append-version="true"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.bootstrap && window.bootstrap.Tooltip) {
@@ -1020,6 +1024,7 @@
             var addInitialPromptCheck = document.getElementById('addInitialPromptCheck');
             var welcomeMessageGroup = document.getElementById('welcomeMessageGroup');
             var initialPromptGroup = document.getElementById('initialPromptGroup');
+            var dataSourceSelect = document.getElementById('@Html.IdFor(m => m.DataSourceId)');
             var profileChatModeSelector = document.getElementById('profileChatModeSelector');
             var profileVoiceSelectorGroup = document.getElementById('profileVoiceSelectorGroup');
             var profileVoiceSelector = document.getElementById('@Html.IdFor(m => m.VoiceName)');
@@ -1066,6 +1071,13 @@
                 var showInitialPrompt = addInitialPromptCheck.checked;
                 welcomeMessageGroup.classList.toggle('d-none', !isChatType || showInitialPrompt);
                 initialPromptGroup.classList.toggle('d-none', !isChatType || !showInitialPrompt);
+            }
+
+            function toggleDataSourceDependentFields() {
+                var hasDataSource = !!(dataSourceSelect && dataSourceSelect.value && dataSourceSelect.value.trim() !== '');
+                document.querySelectorAll('.rag-data-source-filter-dependent').forEach(function (element) {
+                    element.classList.toggle('d-none', !hasDataSource);
+                });
             }
 
             function toggleProfileVoiceField() {
@@ -1132,6 +1144,12 @@
             if (addInitialPromptCheck) {
                 addInitialPromptCheck.addEventListener('change', toggleInitialPromptFields);
             }
+
+            if (dataSourceSelect) {
+                dataSourceSelect.addEventListener('change', toggleDataSourceDependentFields);
+            }
+
+            toggleDataSourceDependentFields();
             if (profileChatModeSelector) {
                 profileChatModeSelector.addEventListener('change', toggleProfileVoiceField);
             }
@@ -1530,6 +1548,12 @@
                 var pendingDocsList = document.getElementById('pending-docs-list');
                 var fileInput = document.getElementById('doc-add-input');
                 var pendingFiles = [];
+
+                initDocumentDropZone({
+                    dropZone: '#profile-doc-drop-zone',
+                    fileInput: '#doc-add-input',
+                    browseButton: '#profile-doc-browse'
+                });
 
                 function syncPendingFiles() {
                     if (!fileInput) {

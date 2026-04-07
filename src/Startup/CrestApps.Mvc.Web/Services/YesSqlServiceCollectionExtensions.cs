@@ -103,6 +103,7 @@ internal static class YesSqlServiceCollectionExtensions
             .AddScoped<INamedSourceCatalogManager<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
             .AddScoped<IAIProfileManager, SimpleAIProfileManager>()
             .AddScoped<AIProfileDocumentService>()
+            .AddScoped<AIProfileTemplateDocumentService>()
              .AddScoped<IAIChatSessionManager, YesSqlAIChatSessionManager>()
              .AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptStore>()
              .AddScoped<MvcAIChatSessionEventService>()

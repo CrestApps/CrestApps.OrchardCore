@@ -76,7 +76,6 @@ public sealed class ChatInteractionHubTests
         using var json = JsonDocument.Parse("""
             {
               "title":"Updated title",
-              "documentTopN":5,
               "agentNames":["agent-a","agent-b"],
               "promptTemplates":[
                 {
@@ -90,7 +89,6 @@ public sealed class ChatInteractionHubTests
         await hub.SaveSettings(interaction.ItemId, json.RootElement.Clone());
 
         Assert.Equal("Updated title", interaction.Title);
-        Assert.Equal(5, interaction.DocumentTopN);
         Assert.Equal(["agent-a", "agent-b"], interaction.AgentNames);
 
         var promptTemplateMetadata = interaction.As<PromptTemplateMetadata>();

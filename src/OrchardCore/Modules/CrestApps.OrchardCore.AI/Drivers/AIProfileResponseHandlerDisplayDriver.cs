@@ -47,7 +47,7 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
             .Select(h => new SelectListItem(h.Name, h.Name))
             .OrderBy(x => x.Text)
             .ToList();
-        }).Location("Content:20%Actions;3");
+        }).Location("Content:9%General;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

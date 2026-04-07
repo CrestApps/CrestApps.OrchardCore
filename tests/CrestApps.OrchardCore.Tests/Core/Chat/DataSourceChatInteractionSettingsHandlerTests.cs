@@ -42,14 +42,14 @@ public sealed class DataSourceChatInteractionSettingsHandlerTests
     }
 
     [Fact]
-    public async Task UpdatingAsync_WithoutDataSource_ClearsDataSourceAndRagMetadata()
+    public async Task UpdatingAsync_WithoutDataSource_ClearsDataSourceAndPreservesRetrievedDocuments()
     {
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
         var handler = new DataSourceChatInteractionSettingsHandler(
             serviceProvider,
             NullLogger<DataSourceChatInteractionSettingsHandler>.Instance);
 
-        using var document = JsonDocument.Parse("""{}""");
+        using var document = JsonDocument.Parse("""{"topNDocuments":8}""");
         var interaction = new ChatInteraction();
         interaction.Put(new DataSourceMetadata { DataSourceId = "datasource-1" });
         interaction.Put(new AIDataSourceRagMetadata { IsInScope = true, Strictness = 3, TopNDocuments = 5, Filter = "category eq 'docs'" });
@@ -61,7 +61,7 @@ public sealed class DataSourceChatInteractionSettingsHandlerTests
 
         Assert.True(interaction.TryGet<AIDataSourceRagMetadata>(out var ragMetadata));
         Assert.Null(ragMetadata.Strictness);
-        Assert.Null(ragMetadata.TopNDocuments);
+        Assert.Equal(8, ragMetadata.TopNDocuments);
         Assert.Null(ragMetadata.Filter);
         Assert.False(ragMetadata.IsInScope);
     }

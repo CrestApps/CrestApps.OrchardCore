@@ -1,9 +1,5 @@
 using Microsoft.Extensions.DataIngestion;
 using UglyToad.PdfPig;
-using UglyToad.PdfPig.Content;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
-
 namespace CrestApps.AI.Pdf.Services;
 
 /// <summary>
@@ -68,25 +64,20 @@ public sealed class PdfIngestionDocumentReader : IngestionDocumentReader
         }
     }
 
-    private static IngestionDocumentSection GetPageSection(Page pdfPage)
+    private static IngestionDocumentSection GetPageSection(UglyToad.PdfPig.Content.Page pdfPage)
     {
         var section = new IngestionDocumentSection
         {
             PageNumber = pdfPage.Number,
         };
 
-        var letters = pdfPage.Letters;
-        var words = NearestNeighbourWordExtractor.Instance.GetWords(letters);
-
-        foreach (var textBlock in DocstrumBoundingBoxes.Instance.GetBlocks(words))
+        var pageText = pdfPage.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(pageText))
         {
-            if (!string.IsNullOrWhiteSpace(textBlock.Text))
+            section.Elements.Add(new IngestionDocumentParagraph(pageText)
             {
-                section.Elements.Add(new IngestionDocumentParagraph(textBlock.Text)
-                {
-                    Text = textBlock.Text,
-                });
-            }
+                Text = pageText,
+            });
         }
 
         return section;

@@ -127,7 +127,25 @@ The MVC Chat Interaction parameter editors now follow the Orchard Core-style UX 
 
 The knowledge panel also surfaces inline document-upload feedback so users can see overall upload progress, per-file status, when uploads finish, when individual files fail, and when the same document is rejected as a duplicate instead of being uploaded again.
 
-In both Orchard Core and the MVC sample, the Chat Interaction **Knowledge** tab now appears before **Capabilities** and groups the selected data source, the RAG controls (`Strictness`, `Retrieved documents`, `Restrict answers to retrieved data only`, and `Filter`), and the uploaded-document `Document Top N` control together with the same `(?)` tooltip affordances used on the model-parameter editors.
+In both Orchard Core and the MVC sample, the Chat Interaction **Knowledge** tab now appears before **Capabilities** and groups the selected data source and the RAG controls together with the same `(?)` tooltip affordances used on the model-parameter editors.
+
+When no data source is selected, only the always-on control stays visible:
+
+- **Restrict answers to retrieved data only** (off by default)
+
+After you pick a data source, the advanced RAG fields appear:
+
+- **Strictness**
+- **Retrieved documents**
+- **Filter** (shown only after a data source is selected)
+
+The editors now keep **Retrieved documents** and **Strictness** tied to the shared `AIDataSourceRagMetadata` settings, and only **Filter** is tied to selecting a data source.
+
+For Orchard Core AI Profiles and profile-source AI Templates, the same knowledge-related editors now live in the **Knowledge** tab instead of being split across separate cards, so data sources, document settings, and memory options stay grouped in one place.
+
+In the Orchard Core Chat Interaction editor, changes made in **Settings**, **Knowledge**, and **Capabilities** now auto-save through the SignalR `SaveSettings` flow and show inline **Saving...** / **Saved** feedback in the parameter-panel header next to the collapse control so users can tell when the sidebar state has been persisted.
+
+Numeric sidebar settings now validate before autosave runs. If a value falls outside the allowed range (for example, setting **Strictness** above `5`), the field is highlighted in red, an inline validation message appears below it, and the invalid payload is not sent to the hub.
 
 The MVC sample's **Settings → AI Settings** page now also exposes the same high-level knobs used by the Orchard Core admin experience: the **Memory** card now groups the default AI Memory index, memory Top N, **Enable user memory by default**, and **Enable preemptive memory retrieval** together, while the other cards continue to cover AI Data Source defaults and default orchestrator preemptive RAG.
 

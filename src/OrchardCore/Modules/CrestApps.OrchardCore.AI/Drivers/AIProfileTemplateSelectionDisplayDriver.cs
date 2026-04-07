@@ -61,6 +61,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
                 return item;
             })
             .ToList();
-        }).Location("Content:0");
+        }).Location("Content:0%Apply Templates;1");
     }
 }

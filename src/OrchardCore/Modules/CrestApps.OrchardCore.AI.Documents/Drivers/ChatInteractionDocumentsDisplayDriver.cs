@@ -41,7 +41,6 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
-            model.TopN = interaction.DocumentTopN ?? 3;
 
             // Check if index profile is configured
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -60,15 +59,13 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
                     model.HasVectorSearchService = searchService != null;
                 }
             }
-        }).Location("Parameters:5#Knowledge;3");
+        }).Location("Parameters:6#Knowledge;3");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
         var model = new ChatInteractionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        interaction.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
 
         // Documents are uploaded via minimal API endpoints, so we just return the current view
         // The actual document handling happens in UploadDocumentEndpoint and RemoveDocumentEndpoint
