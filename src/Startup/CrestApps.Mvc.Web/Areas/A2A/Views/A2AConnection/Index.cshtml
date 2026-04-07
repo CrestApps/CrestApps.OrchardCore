@@ -1,4 +1,7 @@
-@model IReadOnlyCollection<CrestApps.AI.A2A.Models.A2AConnection>
+@using CrestApps
+@using CrestApps.AI.A2A.Models
+
+@model IReadOnlyCollection<A2AConnection>
 @{
     ViewData["Title"] = "Agent to Agent Hosts";
 }
@@ -29,25 +32,25 @@ else
                 </tr>
             </thead>
             <tbody>
-            @foreach (var connection in Model)
-            {
-                var metadata = connection.As<CrestApps.AI.A2A.Models.A2AConnectionMetadata>();
-                <tr>
-                    <td><strong>@connection.DisplayText</strong></td>
-                    <td><code>@connection.Endpoint</code></td>
-                    <td><span class="badge bg-info text-dark">@metadata.AuthenticationType</span></td>
-                    <td>
-                        <a asp-action="Edit" asp-route-id="@connection.ItemId" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil"></i> Edit
-                        </a>
-                        <form asp-action="Delete" asp-route-id="@connection.ItemId" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this A2A connection?')">
-                                <i class="bi bi-trash"></i> Delete
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            }
+                @foreach (var connection in Model)
+                {
+                    var metadata = connection.As<A2AConnectionMetadata>();
+                    <tr>
+                        <td><strong>@connection.DisplayText</strong></td>
+                        <td><code>@connection.Endpoint</code></td>
+                        <td><span class="badge bg-info text-dark">@metadata.AuthenticationType</span></td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@connection.ItemId" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@connection.ItemId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this A2A connection?')">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>

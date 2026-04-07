@@ -11,6 +11,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
 using USR = OrchardCore.Users;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 

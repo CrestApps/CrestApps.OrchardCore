@@ -1,12 +1,13 @@
 using System.Text.Json;
+using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
+using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
+using CrestApps;
 using CrestApps.AI.A2A.Models;
 using CrestApps.AI.Copilot.Models;
 using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.A2A.ViewModels;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
-using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

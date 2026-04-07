@@ -1,3 +1,4 @@
+@using CrestApps
 @using CrestApps.AI
 @using CrestApps.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.Hubs
@@ -184,8 +185,8 @@
                 {
                     <li>
                         <a href="#" class="chat-session-history-item"
-                           data-session-id="@session.SessionId"
-                           title="@session.Title">
+                               data-session-id="@session.SessionId"
+                               title="@session.Title">
                             @(string.IsNullOrEmpty(session.Title) ? T["Untitled Chat"] : session.Title)
                         </a>
                     </li>
@@ -238,25 +239,25 @@
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 <script at="Foot" depends-on="AIChatWidget, AIChatApp">
     (function () {
-        var configEl = document.getElementById('@($"{baseId}_Config")');
-        var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
+    var configEl = document.getElementById('@($"{baseId}_Config")');
+    var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
 
-        chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-        chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
+    chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
+    chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
 
-        aiChatAdminWidget.initialize({
-            containerSelector: '#@widgetContainerId',
-            toggleSelector: '#@toggleBtnId',
-            closeButtonSelector: '#@closeBtnId',
-            newChatButtonSelector: '#@newChatBtnId',
-            showHistorySelector: '#@historyBtnId',
-            historyPanelSelector: '#@historyPanelId',
-            closeHistorySelector: '#@closeHistoryBtnId',
-            restoreSizeSelector: '#@restoreSizeBtnId',
-            promptSelector: '#@userPromptHtmlId',
-            storagePrefix: '@storagePrefix',
-            chatConfig: chatConfig
-        });
+    aiChatAdminWidget.initialize({
+    containerSelector: '#@widgetContainerId',
+    toggleSelector: '#@toggleBtnId',
+    closeButtonSelector: '#@closeBtnId',
+    newChatButtonSelector: '#@newChatBtnId',
+    showHistorySelector: '#@historyBtnId',
+    historyPanelSelector: '#@historyPanelId',
+    closeHistorySelector: '#@closeHistoryBtnId',
+    restoreSizeSelector: '#@restoreSizeBtnId',
+    promptSelector: '#@userPromptHtmlId',
+    storagePrefix: '@storagePrefix',
+    chatConfig: chatConfig
+    });
     })();
 </script>
 <template id="@($"{baseId}_MessageTemplate")">

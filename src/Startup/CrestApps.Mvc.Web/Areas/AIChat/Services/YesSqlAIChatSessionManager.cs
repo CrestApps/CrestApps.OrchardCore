@@ -7,6 +7,7 @@ using CrestApps.Mvc.Web.Areas.AIChat.Indexes;
 using Microsoft.Extensions.AI;
 using YesSql;
 using ISession = YesSql.ISession;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.AIChat.Services;
 

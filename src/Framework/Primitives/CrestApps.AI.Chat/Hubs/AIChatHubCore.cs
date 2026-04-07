@@ -14,6 +14,7 @@ using CrestApps.Templates.Rendering;
 using CrestApps.Templates.Services;
 using Cysharp.Text;
 using Microsoft.AspNetCore.SignalR;
+using CrestApps;
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,7 +1,8 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Mcp.ViewModels;
+using CrestApps;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
-using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -51,25 +52,25 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 
             model.ArgumentsSchema =
             """
-{
-  "$schema": "https://json-schema.org/draft-04/schema#",
-  "type": "array",
-  "items": {
-    "type": "string"
-  }
-}
-""";
+            {
+              "$schema": "https://json-schema.org/draft-04/schema#",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+            """;
 
             model.EnvironmentVariablesSchema =
-        """
-{
-  "$schema": "https://json-schema.org/draft-04/schema#",
-  "type": "object",
-  "additionalProperties": {
-    "type": "string"
-  }
-}
-""";
+            """
+            {
+              "$schema": "https://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+            """;
 
         }).Location("Content:1");
     }

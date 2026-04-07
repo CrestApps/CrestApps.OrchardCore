@@ -8,6 +8,7 @@ using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.Indexing.Controllers;
 

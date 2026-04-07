@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.AI;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Models;
+using CrestApps;
 
 using CrestApps.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core.Indexes;

@@ -5,6 +5,7 @@ using CrestApps.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ModelContextProtocol.Protocol;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.Mcp.Controllers;
 

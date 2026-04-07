@@ -14,19 +14,6 @@ public static class JsonExtensions
     };
 
     /// <summary>
-    /// Deserializes a <see cref="JsonNode"/> to the specified type.
-    /// </summary>
-    public static T ToObject<T>(this JsonNode node, JsonSerializerOptions options = null)
-    {
-        if (node is null)
-        {
-            return default;
-        }
-
-        return node.Deserialize<T>(options ?? _defaultOptions);
-    }
-
-    /// <summary>
     /// Creates a <see cref="JsonObject"/> from an object.
     /// </summary>
     public static JsonObject FromObject<T>(T value, JsonSerializerOptions options = null)

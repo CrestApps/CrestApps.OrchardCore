@@ -1,7 +1,8 @@
+using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Handlers;
 using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.Mvc.Web.Areas.AIChat.Handlers;

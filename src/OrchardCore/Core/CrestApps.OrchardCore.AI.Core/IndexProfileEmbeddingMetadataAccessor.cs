@@ -1,6 +1,7 @@
 using CrestApps.AI.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Core;
 

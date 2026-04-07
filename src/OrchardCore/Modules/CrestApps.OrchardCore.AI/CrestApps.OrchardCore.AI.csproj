@@ -29,7 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
     <ProjectReference Include="../../../Framework/Utilities/CrestApps.Support/CrestApps.Support.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>

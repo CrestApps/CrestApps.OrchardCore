@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.OpenAI.Core/CrestApps.OrchardCore.OpenAI.Core.csproj" />

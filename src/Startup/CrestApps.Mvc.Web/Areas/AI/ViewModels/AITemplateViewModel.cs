@@ -9,6 +9,7 @@ using CrestApps.Mvc.Web.Areas.ChatInteractions.ViewModels;
 using CrestApps.Mvc.Web.Areas.Mcp.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.AI.ViewModels;
 

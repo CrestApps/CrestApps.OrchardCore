@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 

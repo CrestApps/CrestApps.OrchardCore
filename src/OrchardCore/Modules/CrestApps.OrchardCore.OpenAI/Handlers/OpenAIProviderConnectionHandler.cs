@@ -1,7 +1,8 @@
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps;
 using CrestApps.AI.Models;
 using CrestApps.AI.OpenAI;
 using CrestApps.AI.OpenAI.Models;
-using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace CrestApps.OrchardCore.OpenAI.Handlers;

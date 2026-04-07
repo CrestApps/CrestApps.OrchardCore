@@ -10,6 +10,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 

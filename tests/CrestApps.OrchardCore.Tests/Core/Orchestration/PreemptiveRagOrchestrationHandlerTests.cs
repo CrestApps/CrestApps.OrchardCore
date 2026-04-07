@@ -7,6 +7,7 @@ using CrestApps.AI.Services;
 using CrestApps.Templates.Models;
 using CrestApps.Templates.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using CrestApps;
 
 using Microsoft.Extensions.Options;
 

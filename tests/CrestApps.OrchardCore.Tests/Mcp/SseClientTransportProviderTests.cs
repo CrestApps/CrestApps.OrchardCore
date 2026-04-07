@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using Moq;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 

@@ -1,12 +1,12 @@
 using System.Reflection;
 
+using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
+using CrestApps.OrchardCore.OpenAI.Azure;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using Microsoft.Extensions.Logging;
-
-using Microsoft.Extensions.Options;
 
 using Moq;
 
@@ -20,126 +20,63 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
 
     [Fact]
 
-    public void FindFirstEmbeddingMetadata_WhenEmbeddingConnectionExists_ShouldReturnMetadata()
+    public async Task FindFirstEmbeddingMetadata_WhenEmbeddingConnectionExists_ShouldReturnMetadata()
     {
-
-        var providerOptions = new AIProviderOptions();
-
-        providerOptions.Providers["AzureOpenAI"] = new AIProvider
-
-        {
-
-            Connections = new Dictionary<string, AIProviderConnectionEntry>
-
-            {
-
-                ["Default"] = new(new Dictionary<string, object>
-
-                {
-
-                    ["DefaultEmbeddingDeploymentName"] = "text-embedding-3-small",
-
-                }),
-
-            },
-
-        };
-
-
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager
+            .Setup(x => x.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Returns(new ValueTask<IEnumerable<AIDeployment>>(
+            [
+                new AIDeployment { ItemId = "embedding-1" },
+            ]));
 
         var serviceProvider = new ServiceCollection()
-
-            .AddSingleton<IOptions<AIProviderOptions>>(Options.Create(providerOptions))
-
+            .AddSingleton(deploymentManager.Object)
             .BuildServiceProvider();
-
-
-
         var logger = Mock.Of<ILogger>();
+        var metadata = await InvokeFindFirstEmbeddingMetadata(serviceProvider, logger);
 
-
-
-        var metadata = InvokeFindFirstEmbeddingMetadata(serviceProvider, logger);
-
-
-
-        Assert.Equal("AzureOpenAI", metadata.EmbeddingProviderName);
-
-        Assert.Equal("Default", metadata.EmbeddingConnectionName);
-
-        Assert.Equal("text-embedding-3-small", metadata.EmbeddingDeploymentName);
-
+        Assert.Equal("embedding-1", metadata.EmbeddingDeploymentId);
     }
 
 
 
     [Fact]
 
-    public void FindFirstEmbeddingMetadata_WhenNoEmbeddingConnectionConfigured_ShouldLogWarningAndReturnEmptyMetadata()
+    public async Task FindFirstEmbeddingMetadata_WhenNoEmbeddingConnectionConfigured_ShouldLogWarningAndReturnEmptyMetadata()
     {
-
-        var providerOptions = new AIProviderOptions();
-
-
+        var deploymentManager = new Mock<IAIDeploymentManager>();
+        deploymentManager
+            .Setup(x => x.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Returns(new ValueTask<IEnumerable<AIDeployment>>(Array.Empty<AIDeployment>()));
 
         var serviceProvider = new ServiceCollection()
-
-            .AddSingleton<IOptions<AIProviderOptions>>(Options.Create(providerOptions))
-
+            .AddSingleton(deploymentManager.Object)
             .BuildServiceProvider();
-
-
-
         var logger = new Mock<ILogger>();
+        var metadata = await InvokeFindFirstEmbeddingMetadata(serviceProvider, logger.Object);
 
-
-
-        var metadata = InvokeFindFirstEmbeddingMetadata(serviceProvider, logger.Object);
-
-
-
-        Assert.True(string.IsNullOrEmpty(metadata.EmbeddingProviderName));
-
-        Assert.True(string.IsNullOrEmpty(metadata.EmbeddingConnectionName));
-
-        Assert.True(string.IsNullOrEmpty(metadata.EmbeddingDeploymentName));
-
-
+        Assert.True(string.IsNullOrEmpty(metadata.EmbeddingDeploymentId));
 
         logger.Verify(x => x.Log(
-
             LogLevel.Warning,
-
             It.IsAny<EventId>(),
-
-        It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No AI provider connection with an embedding deployment")),
-
-        It.IsAny<Exception>(),
-
-        It.IsAny<Func<It.IsAnyType, Exception, string>>()),
-
-        Times.Once);
-
+            It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No embedding deployment was found")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+            Times.Once);
     }
 
 
 
-    private static DataSourceIndexProfileMetadata InvokeFindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
+    private static async Task<DataSourceIndexProfileMetadata> InvokeFindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
     {
+        var method = typeof(Startup).Assembly
+            .GetType("CrestApps.OrchardCore.OpenAI.Azure.Migrations.AzureOpenAIDataSourceMetadataMigrations", throwOnError: true)!
+            .GetMethod("FindFirstEmbeddingMetadataAsync", BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        var assembly = Assembly.Load("CrestApps.OrchardCore.OpenAI.Azure");
+        var task = (Task<DataSourceIndexProfileMetadata>)method.Invoke(null, [serviceProvider, logger])!;
 
-        var type = assembly.GetType(
-
-            "CrestApps.OrchardCore.OpenAI.Azure.Migrations.AzureOpenAIDataSourceMetadataMigrations",
-
-            throwOnError: true)!;
-
-        var method = type.GetMethod("FindFirstEmbeddingMetadata", BindingFlags.NonPublic | BindingFlags.Static)!;
-
-
-
-        return (DataSourceIndexProfileMetadata)method.Invoke(null, [serviceProvider, logger])!;
-
+        return await task;
     }
 }

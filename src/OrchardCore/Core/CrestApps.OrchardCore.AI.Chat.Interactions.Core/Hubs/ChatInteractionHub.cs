@@ -26,6 +26,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
+using CrestApps;
 
 using OrchardCore.Modules;
 using OrchardCore.Settings;

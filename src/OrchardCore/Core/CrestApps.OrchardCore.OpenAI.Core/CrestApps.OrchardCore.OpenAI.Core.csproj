@@ -17,9 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Core/CrestApps.Azure/CrestApps.Azure.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Azure/CrestApps.Azure.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
   </ItemGroup>
 
 </Project>

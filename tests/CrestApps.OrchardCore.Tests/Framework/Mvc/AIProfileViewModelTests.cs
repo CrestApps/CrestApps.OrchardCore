@@ -6,6 +6,7 @@ using CrestApps.AI.Copilot.Services;
 using CrestApps.AI.Mcp.Models;
 using CrestApps.AI.Models;
 using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 

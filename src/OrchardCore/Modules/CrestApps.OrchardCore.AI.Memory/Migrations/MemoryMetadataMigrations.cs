@@ -6,6 +6,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Memory.Migrations;
 

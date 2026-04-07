@@ -1,94 +1,53 @@
+@using CrestApps
 @using CrestApps.AI
-
 @using CrestApps.OrchardCore.AI
-
 @using CrestApps.OrchardCore.AI.Core
-
 @using CrestApps.AI.Models
-
 @using CrestApps.SignalR.Services
-
 @using Microsoft.AspNetCore.Authorization
-
 @using OrchardCore.ContentManagement
-
 @using OrchardCore.Entities
-
 @using OrchardCore.Environment.Shell
-
 @using OrchardCore.Environment.Shell.Scope
-
 @using Microsoft.Extensions.DependencyInjection
-
 @using CrestApps.OrchardCore.AI.Chat.Hubs
-
 @using CrestApps.Services
-
 @using Microsoft.Extensions.Options
-
 @using System.Text.Json
-
 @using CrestApps.AI.Profiles
 
 @inject IAIProfileStore ProfileCatalog
-
 @inject IAuthorizationService AuthorizationService
-
 @inject ShellSettings ShellSettings
-
 @inject HubRouteManager HubRouteManager
 
 @{
-
     ContentItem contentItem = Model.ContentItem;
-
-
 
     var part = contentItem.As<AIProfilePart>();
 
-
-
     if (string.IsNullOrEmpty(part?.ProfileId))
-
     {
-
         return;
-
     }
-
-
 
     var profile = await ProfileCatalog.FindByIdAsync(part.ProfileId);
 
-
-
     if (profile == null)
-
     {
-
         return;
-
     }
-
-
 
     if (!await AuthorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
-
     {
-
         return;
-
     }
-
-
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
 
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
 
     var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
-
-
 
     var baseId = $"Widget_{contentItem.ContentItemId}";
 
@@ -120,11 +79,7 @@
 
     var documentBarHtmlId = $"{baseId}_DocumentBar";
 
-
-
     var storagePrefix = $"{ShellSettings.Name}-{baseId}";
-
-
 
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
 
@@ -132,9 +87,7 @@
 
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
 
-    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
-
-        && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
 
     var allowedExtensions = string.Empty;
 
@@ -361,27 +314,17 @@
             }
 
             <textarea class="ai-admin-widget-prompt"
-
                       id="@userPromptHtmlId"
-
                       data-session-id=""
-
                       data-profile-id="@(profile.ItemId)"
-
                       placeholder="@T["Message..."]"
-
                       rows="1"
-
                       aria-label="@T["Message"]"></textarea>
 
             <button class="stt-mic-btn ai-admin-widget-mic-btn"
-
                     type="button"
-
                     id="@micBtnHtmlId"
-
                     title="@T["Voice input"]"
-
                     style="display: none;">
 
                 <i class="fa-solid fa-microphone"></i>
@@ -393,19 +336,12 @@
             {
 
                 <button class="ai-admin-widget-send-btn"
-
                         type="button"
-
                         id="@conversationBtnHtmlId"
-
                         title="@T["Start Conversation"]"
-
                         data-start-title="@T["Start Conversation"]"
-
                         data-end-title="@T["End Conversation"]"
-
                         data-start-html="<i class='fa-solid fa-wave-square'></i>"
-
                         data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
 
                     <i class="fa-solid fa-wave-square"></i>
@@ -415,13 +351,9 @@
             }
 
             <button class="ai-admin-widget-send-btn"
-
                     id="@buttonHtmlId"
-
                     disabled
-
                     data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
-
                     data-stop-icon="<i class='fa-solid fa-stop'></i>">
 
                 <i class="fa-solid fa-arrow-up"></i>
@@ -550,43 +482,43 @@
 
     (function () {
 
-        var configEl = document.getElementById('@($"{baseId}_Config")');
+    var configEl = document.getElementById('@($"{baseId}_Config")');
 
-        var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
-
-
-
-        chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-
-        chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
+    var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
 
 
 
-        aiChatAdminWidget.initialize({
+    chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
 
-            containerSelector: '#@widgetContainerId',
+    chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
 
-            toggleSelector: '#@toggleBtnId',
 
-            closeButtonSelector: '#@closeBtnId',
 
-            newChatButtonSelector: '#@newChatBtnId',
+    aiChatAdminWidget.initialize({
 
-            showHistorySelector: '#@historyBtnId',
+    containerSelector: '#@widgetContainerId',
 
-            historyPanelSelector: '#@historyPanelId',
+    toggleSelector: '#@toggleBtnId',
 
-            closeHistorySelector: '#@closeHistoryBtnId',
+    closeButtonSelector: '#@closeBtnId',
 
-            restoreSizeSelector: '#@restoreSizeBtnId',
+    newChatButtonSelector: '#@newChatBtnId',
 
-            promptSelector: '#@userPromptHtmlId',
+    showHistorySelector: '#@historyBtnId',
 
-            storagePrefix: '@storagePrefix',
+    historyPanelSelector: '#@historyPanelId',
 
-            chatConfig: chatConfig
+    closeHistorySelector: '#@closeHistoryBtnId',
 
-        });
+    restoreSizeSelector: '#@restoreSizeBtnId',
+
+    promptSelector: '#@userPromptHtmlId',
+
+    storagePrefix: '@storagePrefix',
+
+    chatConfig: chatConfig
+
+    });
 
     })();
 

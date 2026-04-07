@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions", ""))</RootNamespace>
+    <RootNamespace>CrestApps.AI</RootNamespace>
     <Title>CrestApps AI Abstractions</Title>
     <Description>
       $(CrestAppsDescription)

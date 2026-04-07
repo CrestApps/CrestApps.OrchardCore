@@ -22,8 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Framework\Abstractions\CrestApps.AI.Abstractions\CrestApps.AI.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Framework\Core\CrestApps.AI.Chat\CrestApps.AI.Chat.csproj" />
-    <ProjectReference Include="..\..\..\Framework\Core\CrestApps.SignalR\CrestApps.SignalR.csproj" />
+    <ProjectReference Include="..\..\..\Framework\Primitives\CrestApps.AI.Chat\CrestApps.AI.Chat.csproj" />
+    <ProjectReference Include="..\..\..\Framework\Primitives\CrestApps.SignalR\CrestApps.SignalR.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 

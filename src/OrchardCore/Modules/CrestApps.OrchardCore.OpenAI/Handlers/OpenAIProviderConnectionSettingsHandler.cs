@@ -8,6 +8,7 @@ using CrestApps.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.OpenAI.Handlers;
 

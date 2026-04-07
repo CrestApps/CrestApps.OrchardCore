@@ -16,8 +16,8 @@ public sealed class EmbeddedResourceAIProfileTemplateProviderTests
 
         var templates = await provider.GetTemplatesAsync();
 
+        Assert.Single(templates);
         Assert.Contains(templates, template => template.ItemId == "chat-session-summarizer");
-        Assert.Contains(templates, template => template.ItemId == "summarizer-agent");
         Assert.All(templates, template => Assert.Equal(AITemplateSources.Profile, template.Source));
     }
 
@@ -29,11 +29,11 @@ public sealed class EmbeddedResourceAIProfileTemplateProviderTests
             [new DefaultMarkdownTemplateParser()]);
 
         var templates = await provider.GetTemplatesAsync();
-        var template = templates.Single(t => t.ItemId == "summarizer-agent");
+        var template = templates.Single(t => t.ItemId == "chat-session-summarizer");
         var metadata = template.As<ProfileTemplateMetadata>();
 
-        Assert.Equal(AIProfileType.Agent, metadata.ProfileType);
+        Assert.Equal(AIProfileType.TemplatePrompt, metadata.ProfileType);
         Assert.Equal(0.3f, metadata.Temperature);
-        Assert.Equal("Condenses long-form content into concise, accurate summaries while preserving key information, context, and main takeaways.", metadata.Description);
+        Assert.Equal("Summarizes the current chat session into a concise summary with key points and action items.", template.Description);
     }
 }

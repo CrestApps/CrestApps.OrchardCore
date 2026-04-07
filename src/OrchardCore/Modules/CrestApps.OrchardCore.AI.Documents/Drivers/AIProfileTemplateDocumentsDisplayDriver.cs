@@ -19,6 +19,7 @@ using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 

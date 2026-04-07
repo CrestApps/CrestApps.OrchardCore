@@ -9,3 +9,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("CrestApps.OrchardCore.AI.Core")]
 [assembly: InternalsVisibleTo("CrestApps.Mvc.Web")]
 [assembly: InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+[assembly: InternalsVisibleTo("CrestApps.Core.Tests")]

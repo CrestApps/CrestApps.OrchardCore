@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.SignalR/CrestApps.SignalR.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.SignalR/CrestApps.SignalR.csproj" />
   </ItemGroup>
 
 </Project>

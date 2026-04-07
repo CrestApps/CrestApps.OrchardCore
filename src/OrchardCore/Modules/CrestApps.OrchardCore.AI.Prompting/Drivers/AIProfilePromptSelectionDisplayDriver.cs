@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 

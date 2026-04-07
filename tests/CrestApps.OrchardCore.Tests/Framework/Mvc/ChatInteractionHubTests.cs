@@ -1,4 +1,8 @@
 using System.Text.Json;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
+using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
+using CrestApps.Mvc.Web.Services;
+using CrestApps;
 using CrestApps.AI.Chat;
 using CrestApps.AI.Chat.Handlers;
 using CrestApps.AI.Chat.Hubs;
@@ -7,9 +11,6 @@ using CrestApps.AI.Deployments;
 using CrestApps.AI.Models;
 using CrestApps.AI.Orchestration;
 using CrestApps.AI.Services;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
-using CrestApps.Mvc.Web.Services;
 using CrestApps.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;

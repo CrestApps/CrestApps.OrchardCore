@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.Core.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,8 +27,8 @@
     <ProjectReference Include="../CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI/CrestApps.AI.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
   </ItemGroup>
 
 </Project>

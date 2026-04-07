@@ -23,10 +23,10 @@
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
-    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
-    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
-    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
-    <ProjectReference Include="../../src/Framework/Core/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />
     <ProjectReference Include="../../src/Startup/CrestApps.Mvc.Web/CrestApps.Mvc.Web.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
@@ -42,6 +42,16 @@
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Abstractions\**\*.cs" />
+    <Compile Remove="AITemplates\**\*.cs" />
+    <Compile Remove="ChatNotifications\**\*.cs" />
+    <Compile Remove="Core\**\*.cs" />
+    <Compile Remove="Extensions\**\*.cs" />
+    <Compile Remove="Framework\**\*.cs" />
+    <Compile Remove="Helpers\DocumentReaders\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

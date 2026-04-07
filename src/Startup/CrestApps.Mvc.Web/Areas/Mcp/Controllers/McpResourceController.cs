@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.Mcp.Controllers;
 

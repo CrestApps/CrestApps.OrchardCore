@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Recipes;
 

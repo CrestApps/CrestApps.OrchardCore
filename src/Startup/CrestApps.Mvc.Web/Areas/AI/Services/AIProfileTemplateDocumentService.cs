@@ -7,6 +7,7 @@ using CrestApps.Models;
 using CrestApps.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Mvc.Web.Services;
 using Microsoft.Extensions.AI;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.AI.Services;
 

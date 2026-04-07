@@ -20,8 +20,11 @@ internal sealed class GeneralAIOptionsConfiguration : IConfigureOptions<GeneralA
 
         options.EnableAIUsageTracking = overrides.EnableAIUsageTracking;
         options.EnablePreemptiveMemoryRetrieval = overrides.EnablePreemptiveMemoryRetrieval;
+        options.OverrideMaximumIterationsPerRequest = overrides.OverrideMaximumIterationsPerRequest;
         options.MaximumIterationsPerRequest = overrides.MaximumIterationsPerRequest;
+        options.OverrideEnableDistributedCaching = overrides.OverrideEnableDistributedCaching;
         options.EnableDistributedCaching = overrides.EnableDistributedCaching;
+        options.OverrideEnableOpenTelemetry = overrides.OverrideEnableOpenTelemetry;
         options.EnableOpenTelemetry = overrides.EnableOpenTelemetry;
     }
 }

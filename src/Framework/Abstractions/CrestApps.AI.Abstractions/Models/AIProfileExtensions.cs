@@ -35,7 +35,7 @@ public static class AIProfileExtensions
             return new T();
         }
 
-        return node.ToObject<T>() ?? new T();
+        return node.Deserialize<T>(_ignoreDefaultValuesSerializer) ?? new T();
     }
 
     /// <summary>
@@ -58,7 +58,8 @@ public static class AIProfileExtensions
             return false;
         }
 
-        settings = node.ToObject<T>();
+        settings = node.Deserialize<T>(_ignoreDefaultValuesSerializer);
+
         return true;
     }
 
@@ -76,7 +77,8 @@ public static class AIProfileExtensions
             profile.Settings[typeof(T).Name] = existingJObject;
         }
 
-        var settingsToMerge = existingJObject.ToObject<T>();
+        var settingsToMerge = existingJObject.Deserialize<T>(_ignoreDefaultValuesSerializer);
+
         setting(settingsToMerge);
 
         profile.Settings[typeof(T).Name] = JsonExtensions.FromObject(settingsToMerge, _ignoreDefaultValuesSerializer);

@@ -4,6 +4,7 @@ using CrestApps.AI.Mcp.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using Microsoft.AspNetCore.DataProtection;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 

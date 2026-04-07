@@ -5,6 +5,7 @@ using CrestApps.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.Tests.Core.Chat;
 

@@ -10,6 +10,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
+using CrestApps;
 
 using OrchardCore.Settings;
 

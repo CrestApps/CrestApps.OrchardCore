@@ -1,6 +1,7 @@
 using CrestApps.Models;
 using CrestApps.Services;
 using ModelContextProtocol.Protocol;
+using CrestApps;
 
 namespace CrestApps.AI.Mcp.Models;
 

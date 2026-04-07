@@ -6,6 +6,7 @@ using CrestApps.Mvc.Web.Areas.AIChat.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Moq;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 

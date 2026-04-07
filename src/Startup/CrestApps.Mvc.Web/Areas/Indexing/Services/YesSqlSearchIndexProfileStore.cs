@@ -5,6 +5,7 @@ using CrestApps.Mvc.Web.Areas.Indexing.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Areas.Indexing.Services;
 

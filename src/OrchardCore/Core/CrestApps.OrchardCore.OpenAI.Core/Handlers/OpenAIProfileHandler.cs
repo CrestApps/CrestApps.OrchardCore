@@ -3,6 +3,7 @@ using CrestApps.AI.Models;
 using CrestApps.Handlers;
 using CrestApps.Models;
 using Microsoft.Extensions.Localization;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 

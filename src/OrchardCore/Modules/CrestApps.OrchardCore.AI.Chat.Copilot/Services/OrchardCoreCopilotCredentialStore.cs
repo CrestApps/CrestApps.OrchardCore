@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using OrchardCore.Entities;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 

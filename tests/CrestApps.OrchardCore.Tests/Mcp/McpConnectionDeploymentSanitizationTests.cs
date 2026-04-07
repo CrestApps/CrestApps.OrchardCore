@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.AI.Mcp;
 using CrestApps.AI.Mcp.Models;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.Tests.Mcp;
 

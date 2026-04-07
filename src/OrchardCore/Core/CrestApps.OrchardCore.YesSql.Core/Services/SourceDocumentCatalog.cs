@@ -3,6 +3,7 @@ using CrestApps.Data.YesSql.Indexes;
 using CrestApps.Models;
 using CrestApps.Services;
 using YesSql;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.YesSql.Core.Services;
 

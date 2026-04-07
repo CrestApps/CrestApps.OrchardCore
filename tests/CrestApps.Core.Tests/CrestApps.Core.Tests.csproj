@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1852</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/OrchardCore/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Framework/Primitives/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />
+    <ProjectReference Include="../../src/Startup/CrestApps.Mvc.Web/CrestApps.Mvc.Web.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Documents.Pdf/CrestApps.OrchardCore.AI.Documents.Pdf.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Memory/CrestApps.OrchardCore.AI.Memory.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" />
+    <ProjectReference Include="../../src/OrchardCore/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\CrestApps.OrchardCore.Tests\Abstractions\**\*.cs" Link="Abstractions\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\AITemplates\**\*.cs" Link="AITemplates\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\ChatNotifications\**\*.cs" Link="ChatNotifications\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\Core\**\*.cs" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\Extensions\**\*.cs" Link="Extensions\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\Framework\**\*.cs" Link="Framework\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\CrestApps.OrchardCore.Tests\Helpers\DocumentReaders\**\*.cs" Link="Helpers\DocumentReaders\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\CrestApps.OrchardCore.Tests\Templates\Prompts\*.md" Link="Templates\Prompts\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

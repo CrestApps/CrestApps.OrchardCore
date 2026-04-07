@@ -1,6 +1,7 @@
+using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;
-using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 

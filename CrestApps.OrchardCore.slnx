@@ -13,28 +13,28 @@
   <Folder Name="/Framework/Utilities/">
     <Project Path="src/Framework/Utilities/CrestApps.Support/CrestApps.Support.csproj" />
   </Folder>
-  <Folder Name="/Framework/Core/">
-    <Project Path="src/Framework/Core/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Ftp/CrestApps.AI.Ftp.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI.Sftp/CrestApps.AI.Sftp.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.AI/CrestApps.AI.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Azure.AISearch/CrestApps.Azure.AISearch.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Azure/CrestApps.Azure.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Core/CrestApps.Core.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Elasticsearch/CrestApps.Elasticsearch.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.SignalR/CrestApps.SignalR.csproj" />
-    <Project Path="src/Framework/Core/CrestApps.Templates/CrestApps.Templates.csproj" />
+  <Folder Name="/Framework/Primitives/">
+    <Project Path="src/Framework/Primitives/CrestApps.AI.A2A/CrestApps.AI.A2A.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Copilot/CrestApps.AI.Copilot.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Ftp/CrestApps.AI.Ftp.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Markdown/CrestApps.AI.Markdown.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Ollama/CrestApps.AI.Ollama.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.OpenXml/CrestApps.AI.OpenXml.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Pdf/CrestApps.AI.Pdf.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI.Sftp/CrestApps.AI.Sftp.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.AI/CrestApps.AI.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Azure.AISearch/CrestApps.Azure.AISearch.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Azure/CrestApps.Azure.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Core/CrestApps.Core.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Elasticsearch/CrestApps.Elasticsearch.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Infrastructure/CrestApps.Infrastructure.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.SignalR/CrestApps.SignalR.csproj" />
+    <Project Path="src/Framework/Primitives/CrestApps.Templates/CrestApps.Templates.csproj" />
   </Folder>
   <Folder Name="/Framework/Stores/">
     <Project Path="src/Framework/Stores/CrestApps.Data.YesSql/CrestApps.Data.YesSql.csproj" />
@@ -120,6 +120,7 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />
+    <Project Path="tests/CrestApps.Core.Tests/CrestApps.Core.Tests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
   </Folder>
 </Solution>

@@ -90,7 +90,7 @@ public sealed class IndexProfileTypeRulesTests
         var profile = new SearchIndexProfile
         {
             ItemId = "1",
-            ProviderName = Elasticsearch.ServiceCollectionExtensions.ProviderName,
+            ProviderName = CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName,
             IndexName = null,
             IndexFullName = null,
             Type = IndexProfileTypes.Articles,

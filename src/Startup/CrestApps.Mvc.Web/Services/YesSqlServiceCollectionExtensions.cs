@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Authorization;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps;
 
 namespace CrestApps.Mvc.Web.Services;
 

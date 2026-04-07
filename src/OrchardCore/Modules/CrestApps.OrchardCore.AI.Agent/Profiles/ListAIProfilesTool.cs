@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps;
 using CrestApps.AI.Extensions;
 using CrestApps.AI.Models;
 using CrestApps.AI.Profiles;

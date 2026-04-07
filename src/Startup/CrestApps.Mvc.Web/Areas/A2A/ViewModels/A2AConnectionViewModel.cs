@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using CrestApps;
 using CrestApps.AI.A2A.Models;
 
 namespace CrestApps.Mvc.Web.Areas.A2A.ViewModels;
@@ -71,8 +72,8 @@ public sealed class A2AConnectionViewModel
             DisplayText = connection.DisplayText,
             Endpoint = connection.Endpoint,
             AuthenticationType = metadata.AuthenticationType == A2AClientAuthenticationType.Anonymous && metadata.AdditionalHeaders is { Count: > 0 }
-            ? A2AClientAuthenticationType.CustomHeaders
-            : metadata.AuthenticationType,
+                ? A2AClientAuthenticationType.CustomHeaders
+                : metadata.AuthenticationType,
             ApiKeyHeaderName = metadata.ApiKeyHeaderName,
             ApiKeyPrefix = metadata.ApiKeyPrefix,
             BasicUsername = metadata.BasicUsername,
@@ -81,8 +82,8 @@ public sealed class A2AConnectionViewModel
             OAuth2Scopes = metadata.OAuth2Scopes,
             OAuth2KeyId = metadata.OAuth2KeyId,
             AdditionalHeaders = metadata.AdditionalHeaders is null
-            ? null
-            : JsonSerializer.Serialize(metadata.AdditionalHeaders, _serializerOptions),
+                ? null
+                : JsonSerializer.Serialize(metadata.AdditionalHeaders, _serializerOptions),
             HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey),
             HasBasicPassword = !string.IsNullOrEmpty(metadata.BasicPassword),
             HasOAuth2ClientSecret = !string.IsNullOrEmpty(metadata.OAuth2ClientSecret),

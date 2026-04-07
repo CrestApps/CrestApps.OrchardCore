@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 

@@ -114,10 +114,13 @@ public static class AIChatDocumentEndpoints
         var files = GetFiles(form);
         var logger = loggerFactory.CreateLogger("AIChatDocumentEndpoints");
 
-        logger.LogInformation(
-            "Chat interaction document upload started for interaction '{InteractionId}' with {FileCount} file(s).",
-            interactionId,
-            files.Count);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Chat interaction document upload started for interaction '{InteractionId}' with {FileCount} file(s).",
+                interactionId,
+                files.Count);
+        }
 
         if (string.IsNullOrWhiteSpace(interactionId))
         {
@@ -144,23 +147,32 @@ public static class AIChatDocumentEndpoints
         {
             return TypedResults.Forbid();
         }
-
-        logger.LogInformation("Chat interaction document upload authorized for interaction '{InteractionId}'.", interaction.ItemId);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Chat interaction document upload authorized for interaction '{InteractionId}'.", interaction.ItemId);
+        }
 
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: interaction.ChatDeploymentName);
-        logger.LogInformation(
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
             "Resolved chat deployment '{DeploymentName}' for interaction '{InteractionId}'.",
             deployment?.Name,
             interaction.ItemId);
+        }
 
         var embeddingDeployment = await deploymentManager.ResolveOrDefaultAsync(
             AIDeploymentType.Embedding,
             clientName: deployment?.ClientName,
             connectionName: deployment?.ConnectionName ?? interaction.ConnectionName);
-        logger.LogInformation(
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
             "Resolved embedding deployment '{DeploymentName}' for interaction '{InteractionId}'.",
             embeddingDeployment?.Name,
             interaction.ItemId);
+        }
 
         var embeddingGenerator = embeddingDeployment == null
             ? null
@@ -168,10 +180,13 @@ public static class AIChatDocumentEndpoints
                 embeddingDeployment.ClientName,
                 embeddingDeployment.ConnectionName,
                 embeddingDeployment.ModelName);
-        logger.LogInformation(
-            "Created embedding generator for interaction '{InteractionId}': {HasEmbeddingGenerator}.",
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Created embedding generator for interaction '{InteractionId}': {HasEmbeddingGenerator}.",
             interaction.ItemId,
             embeddingGenerator != null);
+        }
 
         var S = localizerFactory.Create(typeof(AIChatDocumentEndpoints));
 
@@ -182,11 +197,14 @@ public static class AIChatDocumentEndpoints
 
         foreach (var file in files)
         {
-            logger.LogInformation(
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
                 "Processing uploaded file '{FileName}' ({FileSize} bytes) for interaction '{InteractionId}'.",
                 file.FileName,
                 file.Length,
                 interaction.ItemId);
+            }
 
             if (IsDuplicateDocument(interaction.Documents, file))
             {
@@ -225,14 +243,21 @@ public static class AIChatDocumentEndpoints
             interaction.Documents.Add(result.UploadedDocument.DocumentInfo);
             uploadedDocuments.Add(result.UploadedDocument);
 
-            logger.LogInformation(
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
                 "Document upload processed successfully for file '{FileName}' in interaction '{InteractionId}'.",
                 file.FileName,
                 interaction.ItemId);
+            }
         }
 
         await interactionManager.UpdateAsync(interaction);
-        logger.LogInformation("Chat interaction '{InteractionId}' document metadata saved.", interaction.ItemId);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Chat interaction '{InteractionId}' document metadata saved.", interaction.ItemId);
+        }
 
         if (uploadedDocuments.Count > 0)
         {
@@ -251,11 +276,14 @@ public static class AIChatDocumentEndpoints
             }
         }
 
-        logger.LogInformation(
-            "Chat interaction document upload completed for interaction '{InteractionId}' with {UploadedCount} successful file(s) and {FailedCount} failed file(s).",
-            interaction.ItemId,
-            uploadedDocuments.Count,
-            failedFiles.Count);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Chat interaction document upload completed for interaction '{InteractionId}' with {UploadedCount} successful file(s) and {FailedCount} failed file(s).",
+                interaction.ItemId,
+                uploadedDocuments.Count,
+                failedFiles.Count);
+        }
 
         return TypedResults.Ok(new
         {

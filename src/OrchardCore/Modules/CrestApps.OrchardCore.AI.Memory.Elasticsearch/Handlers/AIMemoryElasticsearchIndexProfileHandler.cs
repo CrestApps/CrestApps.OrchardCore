@@ -9,6 +9,7 @@ using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 using OrchardCore.Search.Elasticsearch.Models;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 

@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Core/CrestApps.Core/CrestApps.Core.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core/CrestApps.Core.csproj" />
   </ItemGroup>
 
 </Project>

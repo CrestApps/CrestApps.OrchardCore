@@ -16,6 +16,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
+using CrestApps;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
