@@ -5,6 +5,10 @@ title: AI Core
 description: Core AI services including completion clients, client factory, context building, and the deployment resolution chain.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/ai-core)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # AI Core
 
 > Provider-agnostic AI completion services, client factory, and context-building pipeline.
@@ -48,7 +52,7 @@ A **provider connection** stores credentials and endpoint information for a spec
 
 It also chains `AddAITemplating()` and `AddCrestAppsCoreServices()` automatically.
 
-Optional format-specific packages stay opt-in. For example, Markdown-aware normalization lives in `CrestApps.AI.Markdown`, so hosts that want Markdig-backed RAG normalization should register `AddMarkdownServices()` explicitly instead of expecting `AddCrestAppsAI()` to pull it in automatically.
+Optional format-specific packages stay opt-in. For example, Markdown-aware normalization lives in `CrestApps.Core.AI.Markdown`, so hosts that want Markdig-backed RAG normalization should register `AddMarkdownServices()` explicitly instead of expecting `AddCrestAppsAI()` to pull it in automatically.
 
 ## Key Interfaces
 

@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;

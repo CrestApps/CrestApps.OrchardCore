@@ -2,19 +2,23 @@
 sidebar_label: MVC Example
 sidebar_position: 20
 title: MVC Example Application
-description: Complete walkthrough of the CrestApps.Mvc.Web example application showing how to bootstrap a full AI-powered MVC application.
+description: Complete walkthrough of the CrestApps.Core.Mvc.Web example application showing how to bootstrap a full AI-powered MVC application.
 ---
+
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/mvc-example)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
 
 # MVC Example Application
 
-> A complete walkthrough of the `CrestApps.Mvc.Web` example project that demonstrates every framework feature in a standard ASP.NET Core MVC application.
+> A complete walkthrough of the `CrestApps.Core.Mvc.Web` example project that demonstrates every framework feature in a standard ASP.NET Core MVC application.
 
-The source code is at `src/Startup/CrestApps.Mvc.Web/`. It serves as the canonical example for consuming the CrestApps AI Framework without Orchard Core.
+The source code is at `src/Startup/CrestApps.Core.Mvc.Web/`. It serves as the canonical example for consuming the CrestApps AI Framework without Orchard Core.
 
 ## Application Structure
 
 ```text
-CrestApps.Mvc.Web/
+CrestApps.Core.Mvc.Web/
 ├── Program.cs                  ← Full startup configuration
 ├── Areas/
 │   ├── Admin/                  ← Settings, articles, and shared admin-only pages
@@ -118,7 +122,7 @@ builder.Services
 
 Documents, memory, and data sources now remain fully independent orchestration sources in the shared framework. Each source injects its own availability instructions and preemptive-RAG context, so the orchestrator can compose them together without the document prompts needing to know whether memory or data sources are also attached.
 
-The MVC sample explicitly calls `AddMarkdownServices()` after `AddCrestAppsAI()`. That keeps Markdown-aware normalization opt-in at the host level instead of making `CrestApps.AI` depend on the Markdig-backed package automatically.
+The MVC sample explicitly calls `AddMarkdownServices()` after `AddCrestAppsAI()`. That keeps Markdown-aware normalization opt-in at the host level instead of making `CrestApps.Core.AI` depend on the Markdig-backed package automatically.
 
 ### Section 6 — AI Providers
 
@@ -343,7 +347,7 @@ The middleware pipeline includes:
 ## Running the Example
 
 ```bash
-cd src/Startup/CrestApps.Mvc.Web
+cd src/Startup/CrestApps.Core.Mvc.Web
 dotnet run
 ```
 

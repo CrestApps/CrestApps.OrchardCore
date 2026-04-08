@@ -1,9 +1,9 @@
 using Azure;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Search.AzureAI.Services;
 

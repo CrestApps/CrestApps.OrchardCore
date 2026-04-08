@@ -1,11 +1,11 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
-using CrestApps.Models;
-using CrestApps.Mvc.Web.Areas.Indexing.Controllers;
-using CrestApps.Mvc.Web.Areas.Indexing.ViewModels;
-using CrestApps.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.Core.Models;
+using CrestApps.Core.Mvc.Web.Areas.Indexing.Controllers;
+using CrestApps.Core.Mvc.Web.Areas.Indexing.ViewModels;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -32,7 +32,7 @@ public sealed class SearchIndexProfileProvisioningServiceTests
         {
             Name = "articles",
             IndexName = "articles",
-            ProviderName = CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName,
+            ProviderName = CrestApps.Core.Elasticsearch.ServiceCollectionExtensions.ProviderName,
             Type = IndexProfileTypes.Articles,
         });
 
@@ -58,7 +58,7 @@ public sealed class SearchIndexProfileProvisioningServiceTests
         {
             Name = "articles",
             IndexName = "articles",
-            ProviderName = CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName,
+            ProviderName = CrestApps.Core.Elasticsearch.ServiceCollectionExtensions.ProviderName,
             Type = IndexProfileTypes.Articles,
         });
 
@@ -74,12 +74,12 @@ public sealed class SearchIndexProfileProvisioningServiceTests
         TestRemoteSearchIndexManager remoteManager)
     {
         var services = new ServiceCollection();
-        services.AddKeyedSingleton<ISearchIndexManager>(CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName, remoteManager);
+        services.AddKeyedSingleton<ISearchIndexManager>(CrestApps.Core.Elasticsearch.ServiceCollectionExtensions.ProviderName, remoteManager);
         var serviceProvider = services.BuildServiceProvider();
         var sourceOptions = new IndexProfileSourceOptions();
         sourceOptions.Sources.Add(new IndexProfileSourceDescriptor
         {
-            ProviderName = CrestApps.Elasticsearch.ServiceCollectionExtensions.ProviderName,
+            ProviderName = CrestApps.Core.Elasticsearch.ServiceCollectionExtensions.ProviderName,
             ProviderDisplayName = "Elasticsearch",
             Type = IndexProfileTypes.Articles,
             DisplayName = "Articles",

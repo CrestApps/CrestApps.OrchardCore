@@ -1,8 +1,8 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Handlers;
-using CrestApps.AI.Models;
-using CrestApps.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

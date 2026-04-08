@@ -1,0 +1,216 @@
+@using CrestApps.Core.Mvc.Web.Areas.Mcp.ViewModels
+@model McpConnectionViewModel
+
+<form asp-action="@(string.IsNullOrEmpty(Model.ItemId) ? "Create" : "Edit")" method="post">
+    @if (!string.IsNullOrEmpty(Model.ItemId))
+    {
+        <input asp-for="ItemId" type="hidden" />
+    }
+
+    <div class="col-md-8">
+        <div class="mb-3">
+            <label asp-for="DisplayText" class="form-label">Title</label>
+            <input asp-for="DisplayText" class="form-control" />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Source" class="form-label">Connection type</label>
+            <select asp-for="Source" class="form-select" id="transportType">
+                <option value="@CrestApps.Core.AI.Mcp.McpConstants.TransportTypes.Sse">Server-Sent Events (SSE)</option>
+                <option value="@CrestApps.Core.AI.Mcp.McpConstants.TransportTypes.StdIo">Standard Input/Output</option>
+            </select>
+        </div>
+
+        <div id="sseFields" class="transport-fields">
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label">Endpoint</label>
+                <input asp-for="Endpoint" class="form-control" placeholder="https://mcp.example.com/mcp/sse" />
+                <span asp-validation-for="Endpoint" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AuthenticationType" class="form-label">Authentication</label>
+                <select asp-for="AuthenticationType" class="form-select" id="authType">
+                    @foreach (var authType in Enum.GetValues<CrestApps.Core.AI.Mcp.Models.McpClientAuthenticationType>())
+                    {
+                        <option value="@((int)authType)" data-auth-type="@authType">@authType</option>
+                    }
+                </select>
+            </div>
+
+            <div id="apiKeyFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="ApiKeyHeaderName" class="form-label">API key header name</label>
+                    <input asp-for="ApiKeyHeaderName" class="form-control" placeholder="Authorization" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="ApiKeyPrefix" class="form-label">API key prefix</label>
+                    <input asp-for="ApiKeyPrefix" class="form-control" placeholder="Bearer" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="ApiKey" class="form-label">API key</label>
+                    <input asp-for="ApiKey" class="form-control" type="password" autocomplete="new-password" />
+                    @if (Model.HasApiKey)
+                    {
+                        <div class="form-text">Leave blank to keep the existing API key.</div>
+                    }
+                </div>
+            </div>
+
+            <div id="basicFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="BasicUsername" class="form-label">Username</label>
+                    <input asp-for="BasicUsername" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="BasicPassword" class="form-label">Password</label>
+                    <input asp-for="BasicPassword" class="form-control" type="password" autocomplete="new-password" />
+                    @if (Model.HasBasicPassword)
+                    {
+                        <div class="form-text">Leave blank to keep the existing password.</div>
+                    }
+                </div>
+            </div>
+
+            <div id="oauthFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="OAuth2TokenEndpoint" class="form-label">Token endpoint</label>
+                    <input asp-for="OAuth2TokenEndpoint" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="OAuth2ClientId" class="form-label">Client ID</label>
+                    <input asp-for="OAuth2ClientId" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="OAuth2Scopes" class="form-label">Scopes</label>
+                    <input asp-for="OAuth2Scopes" class="form-control" />
+                </div>
+            </div>
+
+            <div id="oauthClientCredentialsFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="OAuth2ClientSecret" class="form-label">Client secret</label>
+                    <input asp-for="OAuth2ClientSecret" class="form-control" type="password" autocomplete="new-password" />
+                    @if (Model.HasOAuth2ClientSecret)
+                    {
+                        <div class="form-text">Leave blank to keep the existing client secret.</div>
+                    }
+                </div>
+            </div>
+
+            <div id="oauthPrivateKeyFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="OAuth2KeyId" class="form-label">Key ID</label>
+                    <input asp-for="OAuth2KeyId" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label asp-for="OAuth2PrivateKey" class="form-label">Private key (PEM)</label>
+                    <textarea asp-for="OAuth2PrivateKey" class="form-control" rows="6"></textarea>
+                    @if (Model.HasOAuth2PrivateKey)
+                    {
+                        <div class="form-text">Leave blank to keep the existing private key.</div>
+                    }
+                </div>
+            </div>
+
+            <div id="oauthMtlsFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="OAuth2ClientCertificate" class="form-label">Client certificate (Base64 PFX/PKCS#12)</label>
+                    <textarea asp-for="OAuth2ClientCertificate" class="form-control" rows="5"></textarea>
+                    @if (Model.HasOAuth2ClientCertificate)
+                    {
+                        <div class="form-text">Leave blank to keep the existing certificate.</div>
+                    }
+                </div>
+                <div class="mb-3">
+                    <label asp-for="OAuth2ClientCertificatePassword" class="form-label">Certificate password</label>
+                    <input asp-for="OAuth2ClientCertificatePassword" class="form-control" type="password" autocomplete="new-password" />
+                    @if (Model.HasOAuth2ClientCertificatePassword)
+                    {
+                        <div class="form-text">Leave blank to keep the existing certificate password.</div>
+                    }
+                </div>
+            </div>
+
+            <div id="customHeadersFields" class="auth-fields">
+                <div class="mb-3">
+                    <label asp-for="AdditionalHeaders" class="form-label">Additional headers (JSON)</label>
+                    <textarea asp-for="AdditionalHeaders" class="form-control" rows="5"></textarea>
+                    <span asp-validation-for="AdditionalHeaders" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="stdioFields" class="transport-fields">
+            <div class="mb-3">
+                <label asp-for="Command" class="form-label">Command</label>
+                <input asp-for="Command" class="form-control" placeholder="docker" />
+                <span asp-validation-for="Command" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Arguments" class="form-label">Arguments (JSON array)</label>
+                <textarea asp-for="Arguments" class="form-control" rows="5"></textarea>
+                <span asp-validation-for="Arguments" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="WorkingDirectory" class="form-label">Working directory</label>
+                <input asp-for="WorkingDirectory" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="EnvironmentVariables" class="form-label">Environment variables (JSON object)</label>
+                <textarea asp-for="EnvironmentVariables" class="form-control" rows="5"></textarea>
+                <span asp-validation-for="EnvironmentVariables" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> @(string.IsNullOrEmpty(Model.ItemId) ? "Create" : "Save")</button>
+            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const transportType = document.getElementById('transportType');
+        const authType = document.getElementById('authType');
+        const authGroups = {
+            ApiKey: ['apiKeyFields'],
+            Basic: ['basicFields'],
+            OAuth2ClientCredentials: ['oauthFields', 'oauthClientCredentialsFields'],
+            OAuth2PrivateKeyJwt: ['oauthFields', 'oauthPrivateKeyFields'],
+            OAuth2Mtls: ['oauthFields', 'oauthMtlsFields'],
+            CustomHeaders: ['customHeadersFields']
+        };
+
+        function updateTransportVisibility() {
+            const isSse = transportType.value === '@CrestApps.Core.AI.Mcp.McpConstants.TransportTypes.Sse';
+            document.getElementById('sseFields').style.display = isSse ? '' : 'none';
+            document.getElementById('stdioFields').style.display = isSse ? 'none' : '';
+        }
+
+        function updateAuthVisibility() {
+            document.querySelectorAll('.auth-fields').forEach(element => element.style.display = 'none');
+            if (transportType.value !== '@CrestApps.Core.AI.Mcp.McpConstants.TransportTypes.Sse') {
+                return;
+            }
+
+            const selectedAuthType = authType.selectedOptions.length > 0 ? authType.selectedOptions[0].dataset.authType : null;
+            (authGroups[selectedAuthType] || []).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.style.display = '';
+                }
+            });
+        }
+
+        transportType.addEventListener('change', function () {
+            updateTransportVisibility();
+            updateAuthVisibility();
+        });
+        authType.addEventListener('change', updateAuthVisibility);
+        updateTransportVisibility();
+        updateAuthVisibility();
+    });
+</script>

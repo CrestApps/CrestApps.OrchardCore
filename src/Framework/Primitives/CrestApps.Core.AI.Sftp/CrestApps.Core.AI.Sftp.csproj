@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI.Sftp</RootNamespace>
+    <Title>CrestApps AI SFTP</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      SFTP resource support for CrestApps AI MCP server integrations.
+    </Description>
+    <PackageTags>$(PackageTags) AI MCP SFTP SSH</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.Core.AI.Mcp/CrestApps.Core.AI.Mcp.csproj" />
+  </ItemGroup>
+
+</Project>

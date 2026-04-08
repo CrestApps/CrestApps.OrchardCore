@@ -1,14 +1,14 @@
 using System.Threading.Channels;
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Hubs;
-using CrestApps.AI.Chat.Models;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Profiles;
-using CrestApps.AI.ResponseHandling;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Hubs;
+using CrestApps.Core.AI.Chat.Models;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Cysharp.Text;
@@ -24,6 +24,7 @@ using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 

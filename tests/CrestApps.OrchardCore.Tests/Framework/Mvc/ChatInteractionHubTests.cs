@@ -1,23 +1,23 @@
 using System.Text.Json;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.Hubs;
-using CrestApps.Mvc.Web.Areas.ChatInteractions.Models;
-using CrestApps.Mvc.Web.Services;
-using CrestApps;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Handlers;
-using CrestApps.AI.Chat.Hubs;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Services;
-using CrestApps.Services;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Handlers;
+using CrestApps.Core.AI.Chat.Hubs;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Mvc.Web.Areas.ChatInteractions.Hubs;
+using CrestApps.Core.Mvc.Web.Areas.ChatInteractions.Models;
+using CrestApps.Core.Mvc.Web.Services;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using YesSql;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 

@@ -2,39 +2,39 @@
 sidebar_label: Introduction
 sidebar_position: 1
 title: CrestApps AI Platform
-description: Overview of the CrestApps AI Framework and Orchard Core modules for building AI-powered applications.
+description: Orchard Core modules built on top of the shared CrestApps.Core framework.
 ---
 
 # CrestApps AI Platform
 
 CrestApps provides two complementary layers for building AI-powered .NET applications:
 
-1. **[CrestApps AI Framework](framework/)** — A standalone .NET library for AI completions, orchestration, chat, MCP, A2A, and more. Use it in any ASP.NET Core application.
-2. **[Orchard Core Modules](#orchard-core-modules)** — Modules that wrap the framework with admin UI, recipes, deployment steps, and multi-tenant support for Orchard Core CMS.
+1. **[CrestApps.Core](https://core.crestapps.com)** — The shared framework for AI completions, orchestration, chat, document processing, MCP, A2A, providers, and storage abstractions.
+2. **[CrestApps.OrchardCore](#orchard-core-modules)** — Orchard Core modules that wrap that framework with admin UI, recipes, deployment steps, content integration, and multi-tenant support.
 
-## Choosing Your Path
+## Start in the right place
 
 | I want to... | Start here |
 |--------------|-----------|
-| Build an AI app without Orchard Core | [Framework Quick Start](framework/) |
+| Build an AI app without Orchard Core | [CrestApps.Core docs](https://core.crestapps.com/docs) |
+| Understand the shared framework packages | [Framework overview in CrestApps.Core](https://core.crestapps.com/docs/framework) |
 | Add AI to an Orchard Core site | [Getting Started](getting-started.md) |
-| Understand the AI architecture | [AI Core](framework/ai-core.md) |
-| See a complete working example | [MVC Example](framework/mvc-example.md) |
+| Explore Orchard-specific modules | [AI Suite docs](ai/index.md) |
 
-## CrestApps AI Framework
+## About the shared framework
 
-The framework is a set of NuGet packages that you compose via dependency injection. Key features:
+`CrestApps.OrchardCore` uses the same `CrestApps.Core.*` libraries that are documented in the standalone framework site. Those libraries provide:
 
-- **Provider-agnostic AI** — OpenAI, Azure OpenAI, Ollama, Azure AI Inference
-- **Orchestration** — Agentic tool-calling loop with progressive scoping and RAG
-- **Chat** — Session management, response routing, interaction history
-- **Document processing** — Upload, chunk, embed, and search documents
-- **MCP & A2A** — Standard protocols for tool sharing and agent collaboration
-- **Pluggable storage** — YesSql, Entity Framework, or custom persistence
+- provider-agnostic AI services
+- orchestration and tool execution
+- chat and response handling
+- document processing and retrieval
+- MCP and A2A protocol support
+- storage and indexing abstractions
 
-See the [Framework documentation](framework/) for details.
+The Orchard Core modules build on top of that shared runtime and add CMS-specific capabilities such as settings screens, recipes, deployment steps, permissions, tenancy, and content integration.
 
-## Orchard Core Modules
+## Orchard Core modules
 
 ### Artificial Intelligence Suite
 
@@ -76,10 +76,3 @@ Unified communication orchestration:
 - **[Event Grid](omnichannel/event-grid)** – Azure Event Grid integration
 - **[Management](omnichannel/management)** – Mini-CRM for contacts, campaigns, and activities
 - **[SMS Automation](omnichannel/sms)** – AI-driven SMS automation
-
-## Package Management
-
-- **Orchard Core 2.1–2.3**: Use package version `1.2.x`
-- **Orchard Core 3.0+**: Use version `2.0.0-preview-0001` or newer
-
-Stable releases are available on [NuGet.org](https://www.nuget.org/). Preview packages are available from the [CrestApps CloudSmith feed](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).

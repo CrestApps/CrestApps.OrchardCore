@@ -5,6 +5,10 @@ title: AI Providers
 description: Provider architecture and how to connect to OpenAI, Azure OpenAI, Ollama, and Azure AI Inference.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/providers/index)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # AI Providers
 
 > Connect to one or more LLM providers. Each provider registers an `IAIClientProvider` that creates typed AI clients.

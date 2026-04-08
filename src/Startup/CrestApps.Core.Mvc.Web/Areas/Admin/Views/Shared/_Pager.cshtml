@@ -1,0 +1,97 @@
+@model CrestApps.Core.Mvc.Web.Areas.Admin.ViewModels.PagerViewModel
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Page navigation">
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                Showing page @Model.Page of @Model.TotalPages (@Model.TotalCount total items)
+            </small>
+            <ul class="pagination mb-0">
+                @if (Model.Page > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link"
+                           asp-action="@Model.Action"
+                           asp-controller="@Model.Controller"
+                           asp-area="@Model.Area"
+                           asp-route-page="@(Model.Page - 1)">
+                            &laquo; Previous
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">&laquo; Previous</span>
+                    </li>
+                }
+
+                @{
+                    var startPage = Math.Max(1, Model.Page - 2);
+                    var endPage = Math.Min(Model.TotalPages, Model.Page + 2);
+                }
+
+                @if (startPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link"
+                           asp-action="@Model.Action"
+                           asp-controller="@Model.Controller"
+                           asp-area="@Model.Area"
+                           asp-route-page="1">1</a>
+                    </li>
+                    @if (startPage > 2)
+                    {
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    }
+                }
+
+                @for (var i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == Model.Page ? "active" : "")">
+                        <a class="page-link"
+                           asp-action="@Model.Action"
+                           asp-controller="@Model.Controller"
+                           asp-area="@Model.Area"
+                           asp-route-page="@i">@i</a>
+                    </li>
+                }
+
+                @if (endPage < Model.TotalPages)
+                {
+                    @if (endPage < Model.TotalPages - 1)
+                    {
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    }
+                    <li class="page-item">
+                        <a class="page-link"
+                           asp-action="@Model.Action"
+                           asp-controller="@Model.Controller"
+                           asp-area="@Model.Area"
+                           asp-route-page="@Model.TotalPages">@Model.TotalPages</a>
+                    </li>
+                }
+
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link"
+                           asp-action="@Model.Action"
+                           asp-controller="@Model.Controller"
+                           asp-area="@Model.Area"
+                           asp-route-page="@(Model.Page + 1)">
+                            Next &raquo;
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">Next &raquo;</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </nav>
+}

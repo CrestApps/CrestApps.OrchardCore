@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Search.Elasticsearch;

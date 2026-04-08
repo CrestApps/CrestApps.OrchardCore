@@ -1,6 +1,7 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Memory;
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
@@ -8,7 +9,6 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.AzureAI.Models;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 

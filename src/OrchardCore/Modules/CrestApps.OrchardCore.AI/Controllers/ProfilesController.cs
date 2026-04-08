@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +20,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Controllers;
 

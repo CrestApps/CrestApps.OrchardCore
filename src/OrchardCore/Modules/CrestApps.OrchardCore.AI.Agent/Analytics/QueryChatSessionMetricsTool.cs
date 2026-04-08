@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.AI.Extensions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.Extensions.AI;

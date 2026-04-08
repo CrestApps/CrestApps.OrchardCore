@@ -1,10 +1,9 @@
 using System.Security.Claims;
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
-using CrestApps;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 
-using CrestApps.AI.ResponseHandling;
+using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 
 using Microsoft.AspNetCore.Http;
@@ -16,6 +15,7 @@ using OrchardCore.Modules;
 using YesSql;
 
 using ISession = YesSql.ISession;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
@@ -257,7 +257,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             return false;
         }
 
-        var deletingContext = new CrestApps.Models.DeletingContext<AIChatSession>(chatSession);
+        var deletingContext = new CrestApps.Core.Models.DeletingContext<AIChatSession>(chatSession);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
         // Delete all prompts associated with this session.
@@ -266,7 +266,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         _session.Delete(chatSession, collection: AIConstants.AICollectionName);
 
-        var deletedContext = new CrestApps.Models.DeletedContext<AIChatSession>(chatSession);
+        var deletedContext = new CrestApps.Core.Models.DeletedContext<AIChatSession>(chatSession);
         await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
 
         return true;
@@ -300,7 +300,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         foreach (var session in sessions)
         {
 
-            var deletingContext = new CrestApps.Models.DeletingContext<AIChatSession>(session);
+            var deletingContext = new CrestApps.Core.Models.DeletingContext<AIChatSession>(session);
             await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 
             // Delete all prompts associated with this session.
@@ -309,7 +309,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
             _session.Delete(session, collection: AIConstants.AICollectionName);
 
-            var deletedContext = new CrestApps.Models.DeletedContext<AIChatSession>(session);
+            var deletedContext = new CrestApps.Core.Models.DeletedContext<AIChatSession>(session);
             await _handlers.InvokeAsync((handler, ctx) => handler.DeletedAsync(ctx), deletedContext, _logger);
 
             totalDeleted++;

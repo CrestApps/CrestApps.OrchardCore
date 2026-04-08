@@ -2,21 +2,21 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
 using System.Threading.Channels;
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Models;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.ResponseHandling;
-using CrestApps.AI.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Models;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.Services;
-using CrestApps.Support;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 using Cysharp.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -26,10 +26,10 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
-using CrestApps;
 
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 

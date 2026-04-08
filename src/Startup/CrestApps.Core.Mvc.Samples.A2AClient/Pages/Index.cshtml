@@ -1,0 +1,37 @@
+@page
+@model CrestApps.Core.Mvc.Samples.A2AClient.Pages.IndexModel
+
+<h1>MVC A2A Client Sample</h1>
+
+<p class="lead">This sample app connects to the A2A host served by <strong>CrestApps.Core.Mvc.Web</strong> and demonstrates listing agents and sending messages.</p>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Prerequisites</h5>
+        <ol class="mb-0">
+            <li>Start the <strong>CrestApps.Core.Mvc.Web</strong> application.</li>
+            <li>
+                Enable the <strong>A2A Host</strong> feature on the default tenant.
+                <ul>
+                    <li>Feature ID: <code>CrestApps.OrchardCore.AI.A2A.Host</code></li>
+                    <li>Admin UI: <strong>Tools → Features</strong></li>
+                </ul>
+            </li>
+            <li>Create at least one AI Profile of type <strong>Agent</strong> so the host has agents to expose.</li>
+        </ol>
+    </div>
+</div>
+
+<p>Use the navigation tabs above to explore A2A capabilities:</p>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Agents</h5>
+                <p class="card-text">Discover all agents exposed by the A2A host, view their skills, and send messages.</p>
+                <a asp-page="/Agents" class="btn btn-primary btn-sm">Go to Agents</a>
+            </div>
+        </div>
+    </div>
+</div>

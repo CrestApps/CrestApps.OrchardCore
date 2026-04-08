@@ -6,7 +6,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      OrchardCore-specific AI chat interaction services that extend the framework-independent CrestApps.AI.Chat.Core.
+      OrchardCore-specific AI chat interaction services that extend the framework-independent CrestApps.Core.AI.Chat.Core.
     </Description>
     <PackageTags>$(PackageTags) AI</PackageTags>
   </PropertyGroup>
@@ -18,7 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Chat/CrestApps.AI.Chat.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.Chat/CrestApps.Core.AI.Chat.csproj" />
   </ItemGroup>
 
 </Project>

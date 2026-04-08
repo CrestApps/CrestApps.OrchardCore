@@ -1,9 +1,9 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat.Services;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.Templates.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

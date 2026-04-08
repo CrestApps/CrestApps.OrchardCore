@@ -1,8 +1,8 @@
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace CrestApps;
+namespace CrestApps.Core;
 
 public static class ServiceCollectionExtensions
 {

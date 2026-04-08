@@ -1,7 +1,7 @@
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 
@@ -43,13 +43,13 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     public async ValueTask<IReadOnlyCollection<SearchIndexProfile>> GetAllAsync()
         => (await _store.GetAllAsync()).Select(Map).ToArray();
 
-    public async ValueTask<global::CrestApps.Models.PageResult<SearchIndexProfile>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-        where TQuery : global::CrestApps.Models.QueryContext
+    public async ValueTask<global::CrestApps.Core.Models.PageResult<SearchIndexProfile>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
+        where TQuery : global::CrestApps.Core.Models.QueryContext
     {
         var entries = await GetAllAsync();
         var skip = (page - 1) * pageSize;
 
-        return new global::CrestApps.Models.PageResult<SearchIndexProfile>
+        return new global::CrestApps.Core.Models.PageResult<SearchIndexProfile>
         {
             Count = entries.Count,
             Entries = entries.Skip(skip).Take(pageSize).ToArray(),

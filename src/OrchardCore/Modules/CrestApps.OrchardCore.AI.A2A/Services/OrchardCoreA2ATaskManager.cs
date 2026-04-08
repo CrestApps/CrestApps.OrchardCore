@@ -1,9 +1,9 @@
 using A2A;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 /// <summary>
 /// Creates and configures an A2A <see cref="TaskManager"/> that routes incoming messages to local AI Agent profiles.

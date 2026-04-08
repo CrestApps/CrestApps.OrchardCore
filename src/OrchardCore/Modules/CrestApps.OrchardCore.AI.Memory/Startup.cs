@@ -1,6 +1,6 @@
-using CrestApps.AI;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Memory.Drivers;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
@@ -8,7 +8,7 @@ using CrestApps.OrchardCore.AI.Memory.Indexes;
 using CrestApps.OrchardCore.AI.Memory.Migrations;
 using CrestApps.OrchardCore.AI.Memory.Services;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;

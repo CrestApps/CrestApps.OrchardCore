@@ -1,9 +1,9 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Profiles;
-using CrestApps.AI.Services;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Mvc.Web.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Mvc.Web.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;

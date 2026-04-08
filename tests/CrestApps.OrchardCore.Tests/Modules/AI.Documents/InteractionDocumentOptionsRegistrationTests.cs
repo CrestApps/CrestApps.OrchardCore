@@ -1,8 +1,9 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Documents;
 

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+<PropertyGroup>
+<RootNamespace>CrestApps.Core.Data.YesSql</RootNamespace>
+<Title>CrestApps Data YesSql</Title>
+<Description>
+$(CrestAppsDescription)
+
+YesSql-based document store implementations for CrestApps services.
+Optional - consumers can provide their own store implementations.
+</Description>
+<PackageTags>$(PackageTags) YesSql Store</PackageTags>
+</PropertyGroup>
+
+<ItemGroup>
+<PackageReference Include="YesSql.Core" />
+</ItemGroup>
+
+<ItemGroup>
+<ProjectReference Include="../../Abstractions/CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
+</ItemGroup>
+
+</Project>

@@ -1,9 +1,9 @@
-using CrestApps.AI;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Mcp.Services;
-using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Mcp.Core;
@@ -15,7 +15,7 @@ using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.AI.Mcp.Tools;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -156,9 +156,9 @@ public sealed class McpServerStartup : StartupBase
 
         // Also register OC implementations under the framework interfaces
         // so the shared WithCrestAppsHandlers() can resolve them.
-        services.AddScoped<CrestApps.AI.Mcp.Services.IMcpServerPromptService>(sp =>
+        services.AddScoped<CrestApps.Core.AI.Mcp.Services.IMcpServerPromptService>(sp =>
             sp.GetRequiredService<OrchardMcpServerPromptService>());
-        services.AddScoped<CrestApps.AI.Mcp.Services.IMcpServerResourceService>(sp =>
+        services.AddScoped<CrestApps.Core.AI.Mcp.Services.IMcpServerResourceService>(sp =>
             sp.GetRequiredService<OrchardMcpServerResourceService>());
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();

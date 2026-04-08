@@ -15,7 +15,7 @@ description: Centralized management for AI system prompts with Liquid template r
 
 The **AI Templates** module provides a centralized system for managing AI system prompts. Instead of scattering hardcoded prompt strings across your codebase, you define prompts as reusable `.md` files with metadata and Liquid template support.
 
-This module is built on top of the standalone **CrestApps.Templates** library, which can be used in any .NET project — not just Orchard Core.
+This module is built on top of the standalone **CrestApps.Core.Templates** library, which can be used in any .NET project — not just Orchard Core.
 
 ### Key Benefits
 
@@ -243,7 +243,7 @@ The template ID can be a variable:
 ```
 
 :::tip
-The `render_ai_template` tag is available in the standalone **CrestApps.Templates** library and can be used in any .NET project — not just Orchard Core.
+The `render_ai_template` tag is available in the standalone **CrestApps.Core.Templates** library and can be used in any .NET project — not just Orchard Core.
 :::
 
 ---
@@ -371,7 +371,7 @@ When the `CrestApps.OrchardCore.AI.Prompting` feature is enabled:
 
 ## Using in Non-OrchardCore Projects
 
-The standalone `CrestApps.Templates` library can be used in any .NET project:
+The standalone `CrestApps.Core.Templates` library can be used in any .NET project:
 
 ```csharp
 // In your Program.cs or Startup.cs

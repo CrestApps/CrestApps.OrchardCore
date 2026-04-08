@@ -1,11 +1,11 @@
-using CrestApps;
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Rendering;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Rendering;
 
-using CrestApps.Templates.Services;
+using CrestApps.Core.Templates.Services;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 

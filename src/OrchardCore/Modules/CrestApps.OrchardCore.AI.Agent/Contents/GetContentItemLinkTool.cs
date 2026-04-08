@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.AI.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;

@@ -1,15 +1,15 @@
-using CrestApps.AI;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Markdown;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.AI.Services;
-using CrestApps.AI.Tooling;
-using CrestApps.Infrastructure.Indexing;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Markdown;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Core;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,7 +69,7 @@ public static class ServiceCollectionExtensions
             .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
             .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
             .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
-            .AddScoped<IAIDeploymentManager, CrestApps.AI.Services.DefaultAIDeploymentManager>()
+            .AddScoped<IAIDeploymentManager, CrestApps.Core.AI.Services.DefaultAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
         return services;

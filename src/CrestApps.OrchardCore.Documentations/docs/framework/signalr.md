@@ -5,6 +5,10 @@ title: SignalR Hub Management
 description: Centralized SignalR hub route registration and URL generation with multi-tenant path prefix support.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/signalr)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # SignalR Hub Management
 
 > Centralized hub route registration and URL generation with support for multi-tenant path prefixes.
@@ -204,7 +208,7 @@ OrchardCore__OrchardCore_Redis__Configuration=localhost:6379,allowAdmin=true
 ```
 
 :::info
-When using the Aspire AppHost for local development, Redis is configured automatically as part of the orchestration. See the Aspire project at `src/Startup/CrestApps.Aspire.AppHost/`.
+When using the Aspire AppHost for local development, Redis is configured automatically as part of the orchestration. See the Aspire project at `src/Startup/CrestApps.Core.Aspire.AppHost/`.
 :::
 
 ### When You Need Scale-out

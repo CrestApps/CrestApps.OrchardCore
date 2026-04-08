@@ -1,0 +1,84 @@
+@using CrestApps.Core.Mvc.Web.Areas.AI.ViewModels
+@model AIConnectionViewModel
+@{
+    ViewData["Title"] = "Create AI Connection";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Create AI Connection</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="DisplayText" class="form-label">Title</label>
+                <input asp-for="DisplayText" class="form-control" id="connectionTitle" placeholder="e.g., My OpenAI Connection" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Technical name <span class="text-danger">*</span></label>
+                <input asp-for="Name" class="form-control" id="connectionTechName" required placeholder="e.g., MyOpenAIConnection" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <div class="form-text">Auto-generated from the title. You may override it before saving.</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Source" class="form-label">Provider <span class="text-danger">*</span></label>
+                <select asp-for="Source" class="form-select" asp-items="Model.Providers" id="providerSelect">
+                    <option value="">Select provider</option>
+                </select>
+                <span asp-validation-for="Source" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Endpoint" class="form-label">Endpoint</label>
+                <input asp-for="Endpoint" class="form-control" placeholder="e.g., https://api.openai.com/v1" />
+                <div class="form-text">The API endpoint URL for the provider.</div>
+            </div>
+            <div class="mb-3" id="authTypeGroup">
+                <label asp-for="AuthenticationType" class="form-label">Authentication type</label>
+                <select asp-for="AuthenticationType" class="form-select" asp-items="Model.AuthenticationTypes" id="authTypeSelect">
+                    <option value="">Select authentication type</option>
+                </select>
+            </div>
+            <div class="mb-3" id="apiKeyGroup">
+                <label asp-for="ApiKey" class="form-label">API key</label>
+                <input asp-for="ApiKey" class="form-control" type="password" placeholder="Enter API key" autocomplete="new-password" />
+                <div class="form-text">The API key or secret used for authentication.</div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Create
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var providerSelect = document.getElementById('providerSelect');
+            var authTypeGroup = document.getElementById('authTypeGroup');
+            var apiKeyGroup = document.getElementById('apiKeyGroup');
+            var authTypeSelect = document.getElementById('authTypeSelect');
+
+            function updateVisibility() {
+                var provider = providerSelect.value;
+                // Azure providers support multiple auth types.
+                var showAuthType = (provider === 'Azure' || provider === 'AzureAIInference');
+                authTypeGroup.style.display = showAuthType ? '' : 'none';
+
+                // Show API key for OpenAI (always key-based), Azure with ApiKey auth, and Ollama (optional).
+                var authType = authTypeSelect.value;
+                var showApiKey = (provider === 'OpenAI') ||
+                    ((provider === 'Azure' || provider === 'AzureAIInference') && authType === 'ApiKey') ||
+                    (provider === 'Ollama');
+                apiKeyGroup.style.display = showApiKey ? '' : 'none';
+            }
+
+            providerSelect.addEventListener('change', updateVisibility);
+            authTypeSelect.addEventListener('change', updateVisibility);
+            updateVisibility();
+        });
+    </script>
+    <script>initAutoGenerateTechnicalName('connectionTitle', 'connectionTechName');</script>
+}

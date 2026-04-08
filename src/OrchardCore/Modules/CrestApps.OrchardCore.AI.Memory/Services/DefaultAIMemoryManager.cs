@@ -1,6 +1,6 @@
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AI.Memory.Services;

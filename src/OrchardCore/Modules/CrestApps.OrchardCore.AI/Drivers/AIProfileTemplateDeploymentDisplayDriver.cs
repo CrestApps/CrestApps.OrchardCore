@@ -1,13 +1,13 @@
-using CrestApps.AI;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 

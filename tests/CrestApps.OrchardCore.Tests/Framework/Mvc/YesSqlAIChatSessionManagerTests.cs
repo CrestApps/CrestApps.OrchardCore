@@ -1,12 +1,12 @@
 using System.Security.Claims;
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.ResponseHandling;
-using CrestApps.Mvc.Web.Areas.AIChat.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.Mvc.Web.Areas.AIChat.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Moq;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 

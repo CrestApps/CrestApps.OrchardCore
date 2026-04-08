@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps;
-using CrestApps.AI.Extensions;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 

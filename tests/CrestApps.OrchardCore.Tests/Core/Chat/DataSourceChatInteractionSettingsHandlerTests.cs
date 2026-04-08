@@ -1,11 +1,11 @@
 using System.Text.Json;
-using CrestApps.AI.Chat.Handlers;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Chat.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core.Chat;
 

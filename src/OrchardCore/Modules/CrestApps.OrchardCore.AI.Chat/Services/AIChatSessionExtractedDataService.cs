@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Indexes;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules;

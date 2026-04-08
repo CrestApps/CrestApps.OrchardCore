@@ -1,8 +1,8 @@
-using CrestApps.AI.Handlers;
-using CrestApps.AI.Models;
-using CrestApps.Templates.Services;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Services;
 using Moq;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core;
 

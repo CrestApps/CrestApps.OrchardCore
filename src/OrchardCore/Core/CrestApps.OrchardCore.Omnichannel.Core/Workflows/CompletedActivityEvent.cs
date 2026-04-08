@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;

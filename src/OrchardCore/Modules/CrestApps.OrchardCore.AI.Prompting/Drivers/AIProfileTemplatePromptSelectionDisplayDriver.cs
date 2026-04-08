@@ -1,10 +1,10 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Prompting.Drivers;
 

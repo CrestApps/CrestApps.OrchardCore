@@ -1,10 +1,10 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Services;
-using CrestApps.Infrastructure;
-using CrestApps.Infrastructure.Indexing.DataSources;
-using CrestApps.Services;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;

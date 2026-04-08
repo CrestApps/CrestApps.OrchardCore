@@ -1,10 +1,10 @@
 using System.Text.Json;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Mcp.Tools;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 

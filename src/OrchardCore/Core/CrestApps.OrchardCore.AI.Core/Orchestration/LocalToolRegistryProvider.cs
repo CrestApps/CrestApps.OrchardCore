@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;

@@ -5,6 +5,10 @@ title: Azure AI Search Provider
 description: Configure Azure AI Search as a vector search backend for RAG-powered AI experiences.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/data-sources/azure-ai)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Azure AI Search Provider
 
 > Use Azure AI Search as a vector search backend for retrieval-augmented generation.

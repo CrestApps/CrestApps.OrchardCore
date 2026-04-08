@@ -1,0 +1,280 @@
+@*
+    Copilot orchestrator configuration panel.
+    Shown/hidden dynamically based on orchestrator selection.
+    Works for AI Profile, AI Template, and Chat Interaction views.
+
+    Expected model properties:
+      - CopilotAuthenticationType (int enum: 0=NotConfigured, 1=GitHubOAuth, 2=ApiKey)
+      - CopilotIsAuthenticated (bool)
+      - CopilotGitHubUsername (string)
+      - CopilotModel (string)
+      - CopilotIsAllowAll (bool)
+      - CopilotAvailableModels (List<SelectListItem>)
+*@
+
+@{
+    var prefix = ViewData["CopilotPrefix"] as string ?? "copilot";
+    var authType = (int)(ViewData["CopilotAuthType"] ?? 0);
+    var isGitHubOAuth = authType == (int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.GitHubOAuth;
+    var isApiKey = authType == (int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.ApiKey;
+    var isConfigured = (bool)(ViewData["CopilotIsConfigured"] ?? false);
+    var isAuth = (bool)(ViewData["CopilotIsAuth"] ?? false);
+    var username = ViewData["CopilotUsername"] as string ?? "";
+    var copilotModel = ViewData["CopilotModel"] as string ?? "";
+    var isAllowAll = (bool)(ViewData["CopilotIsAllowAll"] ?? false);
+    var copilotModels = ViewData["CopilotModels"] as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? [];
+}
+
+<div class="d-none orchestrator-dependent orchestrator-dependent-copilot" id="@(prefix)-copilot-panel">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h6 class="card-title mb-0"><i class="bi bi-github me-1"></i> Copilot Configuration</h6>
+        </div>
+        <div class="card-body">
+            @if (!isConfigured)
+            {
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>Copilot is not configured and cannot be used until it has been configured.</strong>
+                    Go to <a href="@Url.Action("Index", "Settings", new { area = "Admin" })"><strong>Settings</strong></a>
+                    and complete the Copilot section first.
+                </div>
+            }
+            else if (isGitHubOAuth)
+            {
+                @* GitHub OAuth mode *@
+                <div id="@(prefix)-github-connected" class="@(isAuth ? "" : "d-none")">
+                    <div class="alert alert-success d-flex align-items-center justify-content-between py-2 mb-3">
+                        <span>
+                            <i class="bi bi-check-circle-fill"></i>
+                            Connected as <strong id="@(prefix)-github-username">@username</strong>
+                        </span>
+                        <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="@(prefix)-disconnect-github"
+                           data-confirm-message="Are you sure you want to disconnect your GitHub account?">
+                            <i class="bi bi-power"></i>
+                        </a>
+                    </div>
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Using the Copilot orchestrator will allow any user chatting with this profile to utilize your GitHub credentials, not their own.
+                    </div>
+                </div>
+
+                <div id="@(prefix)-github-disconnected" class="@(isAuth ? "d-none" : "")">
+                    <div class="text-center py-3">
+                        <p class="text-muted mb-2">
+                            <i class="bi bi-github fs-1"></i>
+                        </p>
+                        <p class="text-muted">Copilot requires GitHub authentication. Sign in with your GitHub account to continue.</p>
+                        <a href="#" class="btn btn-primary" id="@(prefix)-connect-github">
+                            <i class="bi bi-github"></i> Sign in with GitHub
+                        </a>
+                    </div>
+                </div>
+
+                <div id="@(prefix)-github-loading" class="d-none">
+                    <div class="d-flex align-items-center justify-content-center text-muted py-3">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Checking GitHub connection...
+                    </div>
+                </div>
+
+                <div class="mb-3 @(isAuth ? "" : "d-none")" id="@(prefix)-copilot-model-group">
+                    <label for="@(prefix)-CopilotModel" class="form-label">Copilot model</label>
+                    <select name="CopilotModel" id="@(prefix)-CopilotModel" class="form-select">
+                        @foreach (var m in copilotModels)
+                        {
+                            <option value="@m.Value" selected="@(m.Value == copilotModel ? "selected" : null)">@m.Text</option>
+                        }
+                    </select>
+                    <div class="form-text">Select the Copilot model to use.</div>
+                </div>
+
+                <div class="mb-3 @(isAuth ? "" : "d-none")" id="@(prefix)-copilot-flags-group">
+                    <div class="form-check">
+                        <input type="checkbox" name="CopilotIsAllowAll" value="true" class="form-check-input"
+                               id="@(prefix)-CopilotIsAllowAll" @(isAllowAll ? "checked" : "") />
+                        <label for="@(prefix)-CopilotIsAllowAll" class="form-check-label">Allow all tool executions</label>
+                    </div>
+                    <div class="form-text">When checked, the Copilot CLI runs with the --allow-all flag.</div>
+                </div>
+            }
+            else if (isApiKey)
+            {
+                @* BYOK mode *@
+                <div class="mb-3">
+                    <label for="@(prefix)-CopilotModel" class="form-label">Model override</label>
+                    <input type="text" name="CopilotModel" id="@(prefix)-CopilotModel" class="form-control"
+                           value="@copilotModel" placeholder="Leave empty to use the default model from settings" />
+                    <div class="form-text">Optionally override the model name. Leave empty to use the default model configured in Copilot settings.</div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="CopilotIsAllowAll" value="true" class="form-check-input"
+                               id="@(prefix)-CopilotIsAllowAll" @(isAllowAll ? "checked" : "") />
+                        <label for="@(prefix)-CopilotIsAllowAll" class="form-check-label">Allow all tool executions</label>
+                    </div>
+                    <div class="form-text">When checked, the Copilot CLI runs with the --allow-all flag.</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* Orchestrator-change panel toggle — always rendered so the panel
+   shows/hides regardless of the current authentication type. *@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const prefix = '@prefix';
+        const copilotName = 'copilot';
+
+        const orchestratorSelect = document.querySelector('[name="OrchestratorName"]');
+        if (orchestratorSelect) {
+            orchestratorSelect.addEventListener('change', function () {
+                const panel = document.getElementById(prefix + '-copilot-panel');
+                const isCopilot = this.value === copilotName;
+                document.querySelectorAll('.orchestrator-dependent').forEach(el => el.classList.add('d-none'));
+                if (isCopilot && panel) {
+                    panel.classList.remove('d-none');
+                }
+            });
+
+            if (orchestratorSelect.value === copilotName) {
+                const panel = document.getElementById(prefix + '-copilot-panel');
+                if (panel) panel.classList.remove('d-none');
+            }
+        }
+    });
+</script>
+
+@if (isGitHubOAuth)
+{
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const prefix = '@prefix';
+            const copilotName = 'copilot';
+            const connectBtn = document.getElementById(prefix + '-connect-github');
+            const disconnectBtn = document.getElementById(prefix + '-disconnect-github');
+            const connectedEl = document.getElementById(prefix + '-github-connected');
+            const disconnectedEl = document.getElementById(prefix + '-github-disconnected');
+            const loadingEl = document.getElementById(prefix + '-github-loading');
+            const usernameEl = document.getElementById(prefix + '-github-username');
+            const modelSelect = document.getElementById(prefix + '-CopilotModel');
+            const modelGroup = document.getElementById(prefix + '-copilot-model-group');
+            const flagsGroup = document.getElementById(prefix + '-copilot-flags-group');
+
+            const statusUrl = '@Url.Action("Status", "CopilotAuth", new { area = "AIChat" })';
+            const modelsUrl = '@Url.Action("Models", "CopilotAuth", new { area = "AIChat" })';
+            const disconnectUrl = '@Url.Action("DisconnectAjax", "CopilotAuth", new { area = "AIChat" })';
+            const authUrl = '@Url.Action("Authorize", "CopilotAuth", new { area = "AIChat" })' + '?returnUrl=__popup__';
+
+            let statusChecked = @(isAuth ? "true" : "false");
+
+            function getAntiForgeryToken() {
+                const el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : '';
+            }
+
+            function showState(state) {
+                connectedEl.classList.toggle('d-none', state !== 'connected');
+                disconnectedEl.classList.toggle('d-none', state !== 'disconnected');
+                loadingEl.classList.toggle('d-none', state !== 'loading');
+                if (modelGroup) modelGroup.classList.toggle('d-none', state !== 'connected');
+                if (flagsGroup) flagsGroup.classList.toggle('d-none', state !== 'connected');
+            }
+
+            async function loadModels() {
+                try {
+                    const currentValue = modelSelect ? modelSelect.value : '';
+                    const resp = await fetch(modelsUrl);
+                    const models = await resp.json();
+                    if (!modelSelect) return;
+                    modelSelect.innerHTML = '';
+                    models.forEach(function (m) {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.name;
+                        modelSelect.appendChild(opt);
+                    });
+                    if (currentValue && modelSelect.querySelector('option[value="' + CSS.escape(currentValue) + '"]')) {
+                        modelSelect.value = currentValue;
+                    } else if (modelSelect.options.length > 0) {
+                        modelSelect.selectedIndex = 0;
+                    }
+                } catch (e) {
+                    console.error('Failed to load Copilot models', e);
+                }
+            }
+
+            async function checkAuthStatus() {
+                showState('loading');
+                try {
+                    const resp = await fetch(statusUrl);
+                    const data = await resp.json();
+                    if (data.isAuthenticated) {
+                        usernameEl.textContent = data.gitHubUsername;
+                        showState('connected');
+                        await loadModels();
+                    } else {
+                        showState('disconnected');
+                    }
+                    statusChecked = true;
+                } catch {
+                    showState('disconnected');
+                }
+            }
+
+            // Trigger auth check when orchestrator changes to copilot
+            const orchestratorSelect = document.querySelector('[name="OrchestratorName"]');
+            if (orchestratorSelect) {
+                orchestratorSelect.addEventListener('change', function () {
+                    if (this.value === copilotName && !statusChecked) {
+                        checkAuthStatus();
+                    }
+                });
+
+                if (orchestratorSelect.value === copilotName && !statusChecked) {
+                    checkAuthStatus();
+                }
+            }
+
+            if (connectBtn) {
+                connectBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var popup = window.open(authUrl, 'github-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                    window.addEventListener('message', function handler(event) {
+                        if (event.origin !== window.location.origin) return;
+                        if (event.data && event.data.type === 'github-auth-complete') {
+                            window.removeEventListener('message', handler);
+                            if (event.data.success) {
+                                usernameEl.textContent = event.data.username;
+                                showState('connected');
+                                loadModels();
+                            }
+                        }
+                    });
+                });
+            }
+
+            if (disconnectBtn) {
+                const confirmMsg = disconnectBtn.getAttribute('data-confirm-message');
+                disconnectBtn.addEventListener('click', async function (e) {
+                    e.preventDefault();
+                    if (!confirm(confirmMsg)) return;
+                    showState('loading');
+                    try {
+                        const resp = await fetch(disconnectUrl, {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': getAntiForgeryToken() },
+                        });
+                        if (resp.ok) showState('disconnected');
+                        else showState('connected');
+                    } catch {
+                        showState('connected');
+                    }
+                });
+            }
+        });
+    </script>
+}

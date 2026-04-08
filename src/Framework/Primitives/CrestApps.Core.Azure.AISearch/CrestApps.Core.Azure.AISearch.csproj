@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Azure.AISearch</RootNamespace>
+    <Title>CrestApps Azure AI Search</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure AI Search integration services for search index management, document indexing, vector search, and data source access.
+    </Description>
+    <PackageTags>$(PackageTags) AzureAI AzureAISearch Search</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Search.Documents" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.Infrastructure.Abstractions/CrestApps.Core.Infrastructure.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.Core.Infrastructure/CrestApps.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Utilities\CrestApps.Core.Support\CrestApps.Core.Support.csproj" />
+  </ItemGroup>
+
+</Project>

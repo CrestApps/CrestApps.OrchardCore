@@ -5,6 +5,10 @@ title: Agent-to-Agent Protocol (A2A)
 description: Connect to remote AI agents and expose your own agents using the A2A protocol for cross-application agent collaboration.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/a2a/index)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Agent-to-Agent Protocol (A2A)
 
 > Discover, invoke, and expose AI agents across application boundaries using the [Agent-to-Agent (A2A) protocol](https://google.github.io/A2A/).

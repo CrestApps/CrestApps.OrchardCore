@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;

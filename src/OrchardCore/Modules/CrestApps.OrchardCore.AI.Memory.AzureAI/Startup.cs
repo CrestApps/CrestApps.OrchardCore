@@ -1,4 +1,4 @@
-using CrestApps.AI.Memory;
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Services;

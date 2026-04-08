@@ -1,5 +1,5 @@
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Services;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;

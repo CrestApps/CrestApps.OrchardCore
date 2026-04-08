@@ -23,7 +23,7 @@ This sample project is a small ASP.NET Core Razor Pages app that connects to the
 The easiest way to run this sample is using the **Aspire AppHost** project:
 
 1. Make sure [Docker Desktop](https://www.docker.com/products/docker-desktop) is installed and running locally.
-2. Set `CrestApps.Aspire.AppHost` as your startup project.
+2. Set `CrestApps.Core.Aspire.AppHost` as your startup project.
 3. Run the project. The Aspire dashboard will open in your browser.
 4. From the Aspire dashboard, click on the endpoint for the resource you want to access:
    - **orchardcore** — Opens the Orchard Core CMS application (on port 5001).

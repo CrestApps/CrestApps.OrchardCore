@@ -1,18 +1,18 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
-using CrestApps;
+using CrestApps.Core;
 
 #pragma warning disable MEAI001
 

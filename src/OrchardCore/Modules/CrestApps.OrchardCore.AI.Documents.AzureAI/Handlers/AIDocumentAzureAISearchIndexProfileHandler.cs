@@ -1,5 +1,6 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Entities;
@@ -8,7 +9,6 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Search.AzureAI.Models;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 

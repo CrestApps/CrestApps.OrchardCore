@@ -6,7 +6,7 @@
 		<Description>
 			$(CrestAppsDescription)
 
-			OrchardCore-specific abstractions that extend the framework-independent CrestApps.Abstractions.
+			OrchardCore-specific abstractions that extend the framework-independent CrestApps.Core.Abstractions.
 		</Description>
 		<PackageTags>$(PackageTags) OrchardCoreCMS Abstractions</PackageTags>
 	</PropertyGroup>
@@ -19,8 +19,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.Abstractions/CrestApps.Abstractions.csproj" />
-		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.AI.Abstractions/CrestApps.AI.Abstractions.csproj" />
+		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
+		<ProjectReference Include="../../../Framework/Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

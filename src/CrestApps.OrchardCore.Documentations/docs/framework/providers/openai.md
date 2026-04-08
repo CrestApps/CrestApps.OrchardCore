@@ -5,6 +5,10 @@ title: OpenAI Provider
 description: Connect to the OpenAI API for chat completions, embeddings, image generation, and speech services.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/providers/openai)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # OpenAI Provider
 
 > Connect to the OpenAI API (`api.openai.com`) for chat completions, embeddings, image generation, and speech.

@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;

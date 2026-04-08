@@ -1,13 +1,13 @@
 using A2A;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.A2A;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 /// <summary>
 /// Handles GET requests to <c>/.well-known/agent-card.json</c>.

@@ -1,15 +1,15 @@
-using CrestApps.AI;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Models;
-using CrestApps.AI.OpenAI;
-using CrestApps.AI.OpenAI.Azure;
-using CrestApps.AI.OpenAI.Azure.Handlers;
-using CrestApps.AI.OpenAI.Azure.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.AI.OpenAI.Azure.Handlers;
+using CrestApps.Core.AI.OpenAI.Azure.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Data.Migration;
@@ -30,7 +30,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIFeatureMigrations>();
-        services.AddSingleton<CrestApps.Services.IODataValidator, CrestApps.Services.ODataFilterValidator>();
+        services.AddSingleton<CrestApps.Core.Services.IODataValidator, CrestApps.Core.Services.ODataFilterValidator>();
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()

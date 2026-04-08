@@ -5,6 +5,10 @@ title: Custom AI Tools
 description: Register AI-callable functions using the fluent tool builder pattern.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/tools)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Custom AI Tools
 
 > Register functions that the AI model can invoke during orchestration using the fluent builder pattern.

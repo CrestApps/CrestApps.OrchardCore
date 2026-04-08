@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;

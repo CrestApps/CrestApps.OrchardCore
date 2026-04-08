@@ -1,6 +1,6 @@
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;

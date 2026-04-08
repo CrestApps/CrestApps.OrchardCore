@@ -1,16 +1,16 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.OpenAI;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.Services;
-using CrestApps.Templates.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenAI.Chat;
-using OpenAIConst = CrestApps.AI.OpenAI.OpenAIConstants;
+using OpenAIConst = CrestApps.Core.AI.OpenAI.OpenAIConstants;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Services;
 

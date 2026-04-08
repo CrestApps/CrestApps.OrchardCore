@@ -5,6 +5,10 @@ title: Chat Interactions
 description: Chat session management, interaction handlers, and response routing for conversational AI experiences.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/chat)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Chat Interactions
 
 > Manages chat sessions, routes responses through pluggable handlers, and tracks interaction history.
@@ -43,7 +47,7 @@ The chat system provides all of this with a pluggable handler architecture.
 | `PostSessionProcessingChatSessionHandler` | — | Scoped | Triggers the shared post-close processor when a session closes |
 
 :::info
-The chat system also registers embedded templates from the `CrestApps.AI.Chat` assembly for system prompts.
+The chat system also registers embedded templates from the `CrestApps.Core.AI.Chat` assembly for system prompts.
 :::
 
 ## Core Concepts

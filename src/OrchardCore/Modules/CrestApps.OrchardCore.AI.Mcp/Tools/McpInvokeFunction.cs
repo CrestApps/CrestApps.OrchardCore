@@ -1,7 +1,7 @@
 using System.Text.Json;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

@@ -1,11 +1,11 @@
 using System.Text;
-using CrestApps;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Mcp.Services;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Services;
 

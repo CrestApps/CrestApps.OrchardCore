@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Flows.Models;
 using YesSql.Indexes;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 

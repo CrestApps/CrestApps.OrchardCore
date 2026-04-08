@@ -1,0 +1,90 @@
+@model CrestApps.Core.Mvc.Web.Areas.AIChat.ViewModels.ChatExtractedDataIndexViewModel
+@{
+    ViewData["Title"] = "Chat extracted data";
+}
+
+<h2><i class="bi bi-table"></i> Chat extracted data</h2>
+<p class="text-muted">Review extracted session values for a selected AI Profile.</p>
+<hr />
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="post" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-4">
+                <label asp-for="ProfileId" class="form-label">AI Profile</label>
+                <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select" required></select>
+                <span asp-validation-for="ProfileId" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="StartDateUtc" class="form-label">From</label>
+                <input asp-for="StartDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="EndDateUtc" class="form-label">To</label>
+                <input asp-for="EndDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Show
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.ShowReport)
+{
+    <div class="alert alert-info">
+        Select an AI Profile to generate the extracted data report.
+    </div>
+}
+else if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-warning">
+        No extracted data was found for the selected filters.
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-end mb-3">
+        <form asp-action="Export" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ProfileId" />
+            <input type="hidden" asp-for="StartDateUtc" />
+            <input type="hidden" asp-for="EndDateUtc" />
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="bi bi-filetype-csv"></i> Export CSV
+            </button>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Session date</th>
+                    <th>Session ID</th>
+                    @foreach (var column in Model.Columns)
+                    {
+                        <th>@column</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>@row.SessionStartedUtc.ToString("g")</td>
+                        <td class="font-monospace small">@row.SessionId</td>
+                        @foreach (var column in Model.Columns)
+                        {
+                            row.Values.TryGetValue(column, out var value);
+                            <td>@value</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,7 +1,7 @@
 using System.Threading.Channels;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
-using CrestApps.AI.Services;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

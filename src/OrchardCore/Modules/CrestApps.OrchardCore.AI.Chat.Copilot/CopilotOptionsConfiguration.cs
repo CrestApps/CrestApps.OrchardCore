@@ -1,4 +1,4 @@
-using CrestApps.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;

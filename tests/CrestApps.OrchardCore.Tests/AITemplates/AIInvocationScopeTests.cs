@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 
 namespace CrestApps.OrchardCore.Tests.AI;
 

@@ -1,4 +1,4 @@
-namespace CrestApps.Models;
+namespace CrestApps.Core.Models;
 
 public class ListSourceCatalogEntryViewModel<T> : ListSourceModelViewModel
 {

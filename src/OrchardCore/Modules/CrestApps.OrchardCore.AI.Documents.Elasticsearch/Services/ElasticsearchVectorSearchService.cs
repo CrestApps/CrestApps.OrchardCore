@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;

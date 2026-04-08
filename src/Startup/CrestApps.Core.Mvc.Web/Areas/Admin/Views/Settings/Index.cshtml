@@ -1,0 +1,610 @@
+@model CrestApps.Core.Mvc.Web.Areas.Admin.ViewModels.SettingsViewModel
+@{
+    ViewData["Title"] = "AI Settings";
+}
+
+<h2><i class="bi bi-gear"></i> AI Settings</h2>
+<hr />
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @message
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form asp-action="Save" method="post">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Default Deployments</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Select the default deployment for each capability. These are used as a
+                        fallback when a specific deployment is not configured at the profile or
+                        connection level.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultChatDeploymentName" class="form-label">Default chat deployment</label>
+                        <select asp-for="DefaultChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for chat sessions and chat interactions when no specific chat deployment is configured.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultUtilityDeploymentName" class="form-label">Default utility deployment</label>
+                        <select asp-for="DefaultUtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for auxiliary tasks such as planning, intent detection, query rewriting, and chart generation.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultEmbeddingDeploymentName" class="form-label">Default embedding deployment</label>
+                        <select asp-for="DefaultEmbeddingDeploymentName" asp-items="Model.EmbeddingDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for embedding generation in document indexing, data sources, and vector search.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultImageDeploymentName" class="form-label">Default image deployment</label>
+                        <select asp-for="DefaultImageDeploymentName" asp-items="Model.ImageDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for image generation.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultSpeechToTextDeploymentName" class="form-label">Default speech-to-text deployment</label>
+                        <select asp-for="DefaultSpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for speech-to-text transcription.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultTextToSpeechDeploymentName" class="form-label">Default text-to-speech deployment</label>
+                        <select asp-for="DefaultTextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">The default deployment used for text-to-speech synthesis.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DefaultTextToSpeechVoiceId" class="form-label">Default text-to-speech voice</label>
+                        <select asp-for="DefaultTextToSpeechVoiceId" class="form-select">
+                            <option value="">Default voice</option>
+                        </select>
+                        <div class="form-text">The default voice used for text-to-speech when a profile does not specify one. Available voices depend on the selected text-to-speech deployment.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Memory</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="MemoryIndexProfileName" class="form-label">Default memory index</label>
+                        <select asp-for="MemoryIndexProfileName" asp-items="Model.MemoryIndexProfiles" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <span asp-validation-for="MemoryIndexProfileName" class="text-danger"></span>
+                        <div class="form-text">Choose the AI Memory index profile used to store and retrieve user memories.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="MemoryTopN" class="form-label">Default memory Top N</label>
+                        <input asp-for="MemoryTopN" class="form-control" type="number" min="1" max="20" style="max-width: 200px;" />
+                        <span asp-validation-for="MemoryTopN" class="text-danger"></span>
+                        <div class="form-text">The default number of memory entries retrieved when memory is enabled.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableUserMemoryByDefault" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableUserMemoryByDefault" class="form-check-label">Enable user memory by default</label>
+                        </div>
+                        <div class="form-text">When enabled, chat interactions automatically remember user preferences and context across sessions. Individual profiles can override this setting.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnablePreemptiveMemoryRetrieval" class="form-check-label">Enable preemptive memory retrieval</label>
+                        </div>
+                        <div class="form-text">Allow the orchestrator to preload relevant user memory before generation when memory is enabled for the request.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Orchestration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableAIUsageTracking" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableAIUsageTracking" class="form-check-label">Enable AI usage tracking</label>
+                        </div>
+                        <div class="form-text">Disabled by default to avoid extra provider-call tracking overhead. Enable this to capture future AI usage data for the AI Usage Analytics report. This does not affect per-profile session metrics.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-input" type="checkbox" />
+                            <label asp-for="DefaultOrchestratorEnablePreemptiveRag" class="form-check-label">Enable preemptive retrieval-augmented generation (RAG)</label>
+                        </div>
+                        <div class="form-text">When enabled, the default orchestrator retrieves relevant context from connected knowledge sources before the main AI call.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ChatInteractionChatMode" class="form-label">Chat Interactions mode</label>
+                        <select asp-for="ChatInteractionChatMode" asp-items="Model.ChatInteractionModes" class="form-select">
+                        </select>
+                        <div class="form-text">Controls whether Chat Interactions use text input only, microphone dictation, or full two-way conversation mode.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="MaximumIterationsPerRequest" class="form-label">Maximum iterations per request</label>
+                        <input asp-for="MaximumIterationsPerRequest" class="form-control" type="number" min="1" max="100" style="max-width: 200px;" />
+                        <span asp-validation-for="MaximumIterationsPerRequest" class="text-danger"></span>
+                        <div class="form-text">This caps the number of orchestrator iterations allowed per request. Default is 10.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableDistributedCaching" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableDistributedCaching" class="form-check-label">Enable distributed caching</label>
+                        </div>
+                        <div class="form-text">Cache AI responses across nodes for improved performance.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input asp-for="EnableOpenTelemetry" class="form-check-input" type="checkbox" />
+                            <label asp-for="EnableOpenTelemetry" class="form-check-label">Enable OpenTelemetry</label>
+                        </div>
+                        <div class="form-text">Enable distributed tracing and diagnostics for AI operations.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="AdminPageSize" class="form-label">Items per page</label>
+                        <input asp-for="AdminPageSize" class="form-control" type="number" min="1" max="200" style="max-width: 200px;" />
+                        <span asp-validation-for="AdminPageSize" class="text-danger"></span>
+                        <div class="form-text">Controls pagination size for admin lists throughout the MVC application.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Admin widget</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="AdminWidgetProfileId" class="form-label">Chat profile</label>
+                        <select asp-for="AdminWidgetProfileId" asp-items="Model.AdminWidgetProfiles" class="form-select" data-admin-widget-profile-select="true">
+                            <option value="">No profile (Disable)</option>
+                        </select>
+                        <span asp-validation-for="AdminWidgetProfileId" class="text-danger"></span>
+                        <div class="form-text">Select the chat profile used by the floating admin widget. Leave this empty to disable the widget completely.</div>
+                    </div>
+
+                    <div class="mb-3" data-admin-widget-options="true">
+                        <label asp-for="AdminWidgetPrimaryColor" class="form-label">Widget accent color override</label>
+                        <div class="input-group">
+                            <input type="color"
+                                   class="form-control form-control-color"
+                                   value="@(string.IsNullOrWhiteSpace(Model.AdminWidgetPrimaryColor) ? CrestApps.Core.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor : Model.AdminWidgetPrimaryColor)"
+                                   oninput="document.getElementById('@Html.IdFor(m => m.AdminWidgetPrimaryColor)').value = this.value" />
+                            <input asp-for="AdminWidgetPrimaryColor"
+                                   class="form-control"
+                                   placeholder="@CrestApps.Core.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor" />
+                        </div>
+                        <span asp-validation-for="AdminWidgetPrimaryColor" class="text-danger"></span>
+                        <div class="form-text">Defaults to the admin theme secondary color (<code>@CrestApps.Core.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings.DefaultSecondaryColor</code>).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Documents</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure the default AI Documents index used to store embedded chunks for profile and session documents.
+                        Uploading files alone is not enough for knowledge-base search; the app also needs an <strong>AI Documents</strong> index profile.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="DocumentIndexProfileName" class="form-label">Default AI Documents index</label>
+                        <select asp-for="DocumentIndexProfileName" asp-items="Model.DocumentIndexProfiles" class="form-select">
+                            <option value="">None</option>
+                        </select>
+                        <div class="form-text">Choose the AI Documents index profile that stores embedded document chunks for retrieval during chat.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="DocumentTopN" class="form-label">Default document Top N</label>
+                        <input asp-for="DocumentTopN" class="form-control" type="number" min="1" max="20" style="max-width: 200px;" />
+                        <span asp-validation-for="DocumentTopN" class="text-danger"></span>
+                        <div class="form-text">The default number of matching document chunks to include when a profile does not override it.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Data sources</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceDefaultStrictness" class="form-label">Default strictness</label>
+                                <input asp-for="DataSourceDefaultStrictness" class="form-control" type="number" min="1" max="5" />
+                                <span asp-validation-for="DataSourceDefaultStrictness" class="text-danger"></span>
+                                <div class="form-text">The default strictness threshold applied when a profile does not specify its own data source strictness.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DataSourceDefaultTopNDocuments" class="form-label">Default retrieved documents</label>
+                                <input asp-for="DataSourceDefaultTopNDocuments" class="form-control" type="number" min="3" max="20" />
+                                <span asp-validation-for="DataSourceDefaultTopNDocuments" class="text-danger"></span>
+                                <div class="form-text">The default number of data source documents retrieved when a profile does not override it.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Copilot</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure how the Copilot orchestrator authenticates with the AI provider.
+                    </p>
+
+                    <div class="mb-3">
+                        <label asp-for="CopilotAuthenticationType" class="form-label">Authentication type</label>
+                        <select asp-for="CopilotAuthenticationType" class="form-select" id="copilotAuthType">
+                            <option value="@((int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.NotConfigured)">Not configured</option>
+                            <option value="@((int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)">GitHub signed-in user</option>
+                            <option value="@((int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.ApiKey)">API key (BYOK)</option>
+                        </select>
+                        <div class="form-text">Choose how the Copilot orchestrator authenticates. "Not configured" keeps Copilot disabled until you explicitly select and save an authentication mode.</div>
+                    </div>
+
+                    @* GitHub OAuth Section *@
+                    <div id="copilotGitHubOAuthSection">
+                        <div class="mb-4">
+                            <h6 class="mb-2">How to create a GitHub app</h6>
+                            <div class="ps-3">
+                                <ol>
+                                    <li>
+                                        In GitHub, go to <strong>Settings</strong> &rarr; <strong>Developer settings</strong> &rarr; <strong>GitHub Apps</strong> and click <strong>New GitHub App</strong>.
+                                        You can also open <a href="https://github.com/settings/apps/new" target="_blank" rel="noopener noreferrer">this link</a>.
+                                    </li>
+                                    <li>Enter an <strong>App name</strong> (e.g., "MVC Copilot Integration") and your site's <strong>Homepage URL</strong>.</li>
+                                    <li>
+                                        Under <strong>Callback URL</strong>, enter the following value:
+                                        <div class="input-group mt-1 mb-2" style="max-width: 600px;">
+                                            <input type="text" class="form-control" readonly value="@Model.CopilotCallbackUrl" id="copilotComputedCallbackUrl" />
+                                            <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('copilotComputedCallbackUrl').value)">
+                                                <i class="bi bi-clipboard"></i> Copy
+                                            </button>
+                                        </div>
+                                    </li>
+                                    <li>Webhooks are <strong>not required</strong> for this integration. Under <strong>Webhook</strong>, uncheck <strong>Active</strong>.</li>
+                                    <li>Under <strong>Permissions</strong>, grant <strong>Copilot Chat &rarr; Read-only</strong> access under "Account permissions" to allow model listing.</li>
+                                    <li>Choose where the app can be installed and click <strong>Create GitHub App</strong>.</li>
+                                    <li>On the app's settings page, copy the <strong>Client ID</strong> and paste it below.</li>
+                                    <li>Click <strong>Generate a new client secret</strong>, copy the secret, and paste it below.</li>
+                                </ol>
+                                <p class="text-muted">
+                                    Docs: <a href="https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps" target="_blank" rel="noopener noreferrer">About creating GitHub Apps</a>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotClientId" class="form-label">Client ID</label>
+                            <input asp-for="CopilotClientId" class="form-control" />
+                            <div class="form-text">The client ID from your GitHub app.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotClientSecret" class="form-label">Client secret</label>
+                            <input asp-for="CopilotClientSecret" type="password" class="form-control" placeholder="Enter a new secret to update" />
+                            @if (Model.CopilotHasSecret)
+                            {
+                                <div class="form-text text-success">A client secret has been securely stored. Enter a new value to replace it, or leave empty to keep the existing secret.</div>
+                            }
+                            else
+                            {
+                                <div class="form-text">The client secret from your GitHub app.</div>
+                            }
+                        </div>
+                    </div>
+
+                    @* BYOK (API Key) Section *@
+                    <div id="copilotApiKeySection">
+                        <div class="mb-4">
+                            <h6 class="mb-2">API key (BYOK) configuration</h6>
+                            <p class="text-muted">Use your own API key from a model provider. No GitHub Copilot subscription is required.
+                                <a href="https://github.com/github/copilot-sdk/blob/main/docs/auth/byok.md" target="_blank" rel="noopener noreferrer">Learn more about BYOK</a>
+                            </p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotProviderType" class="form-label">Provider type</label>
+                            <select asp-for="CopilotProviderType" class="form-select" id="copilotProviderType">
+                                <option value="openai">OpenAI / OpenAI-compatible</option>
+                                <option value="azure">Azure OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                            </select>
+                            <div class="form-text">Select the AI provider type.</div>
+                        </div>
+
+                        <div id="copilotProviderInstructions">
+                            <div class="copilot-hint copilot-hint-openai">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>OpenAI / OpenAI-compatible</strong><br />
+                                    Works with OpenAI API and any OpenAI-compatible endpoint (Ollama, vLLM, LiteLLM, etc.).<br />
+                                    <strong>Base URL</strong> should include the full path, e.g., <code>https://api.openai.com/v1</code> or <code>http://localhost:11434/v1</code> for Ollama.<br />
+                                    API key is optional for local providers like Ollama.
+                                </div>
+                            </div>
+                            <div class="copilot-hint copilot-hint-azure">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>Azure OpenAI</strong><br />
+                                    Use for native Azure OpenAI endpoints at <code>*.openai.azure.com</code>.<br />
+                                    <strong>Base URL</strong> should be the deployment URL, e.g., <code>https://&lt;deployment-name&gt;.openai.azure.com/</code>. Do <strong>not</strong> include <code>/openai/v1</code>.<br />
+                                    An <strong>API key</strong> and <strong>Azure API version</strong> are required.
+                                </div>
+                            </div>
+                            <div class="copilot-hint copilot-hint-anthropic">
+                                <div class="alert alert-info py-2 mb-3">
+                                    <strong>Anthropic</strong><br />
+                                    For direct Anthropic API access to Claude models.<br />
+                                    <strong>Base URL</strong> should be <code>https://api.anthropic.com</code>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotBaseUrl" class="form-label">Base URL</label>
+                            <input asp-for="CopilotBaseUrl" class="form-control" id="copilotBaseUrl" placeholder="https://api.openai.com/v1" />
+                            <div class="form-text">The API endpoint URL for your provider.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotApiKey" class="form-label">API key</label>
+                            <input asp-for="CopilotApiKey" type="password" class="form-control" placeholder="Enter API key" />
+                            @if (Model.CopilotHasApiKey)
+                            {
+                                <div class="form-text text-success">An API key has been securely stored. Enter a new value to replace it, or leave empty to keep the existing key.</div>
+                            }
+                            else
+                            {
+                                <div class="form-text">The API key from your provider. Optional for local providers like Ollama.</div>
+                            }
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotDefaultModel" class="form-label">Default model</label>
+                            <input asp-for="CopilotDefaultModel" class="form-control" placeholder="gpt-4o" />
+                            <div class="form-text">The model name or deployment name to use (e.g., "gpt-4o", "claude-3.5-sonnet"). This is required for BYOK.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="CopilotWireApi" class="form-label">Wire API format</label>
+                            <select asp-for="CopilotWireApi" class="form-select">
+                                <option value="completions">Chat completions</option>
+                                <option value="responses">Responses</option>
+                            </select>
+                            <div class="form-text">"Chat completions" works for most models. Use "Responses" for GPT-5 series models that support the newer responses format.</div>
+                        </div>
+
+                        <div class="mb-3" id="copilotAzureVersionGroup">
+                            <label asp-for="CopilotAzureApiVersion" class="form-label">Azure API version</label>
+                            <input asp-for="CopilotAzureApiVersion" class="form-control" placeholder="2024-10-21" />
+                            <div class="form-text">Required for Azure provider. Default: <code>2024-10-21</code>.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Model Context Protocol (MCP) server</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Configure how external MCP clients access the MVC application's MCP endpoint at <code>/mcp</code>.
+                    </p>
+                    <div class="mb-3">
+                        <label asp-for="McpServerAuthenticationType" class="form-label">Authentication type</label>
+                        <select asp-for="McpServerAuthenticationType" class="form-select" id="mcpServerAuthenticationType">
+                            @foreach (var authenticationType in Enum.GetValues<CrestApps.Core.AI.Mcp.Models.McpServerAuthenticationType>())
+                            {
+                                <option value="@((int)authenticationType)">@authenticationType</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3" id="mcpServerApiKeyFields">
+                        <label asp-for="McpServerApiKey" class="form-label">API key</label>
+                        <input asp-for="McpServerApiKey" class="form-control" />
+                        <span asp-validation-for="McpServerApiKey" class="text-danger"></span>
+                        <div class="form-text">Clients may send this as <code>Bearer key</code>, <code>ApiKey key</code>, or the raw value in the <code>Authorization</code> header.</div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input asp-for="McpServerRequireAccessPermission" class="form-check-input" type="checkbox" />
+                        <label asp-for="McpServerRequireAccessPermission" class="form-check-label">Require administrator access for OpenId mode</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // MCP server visibility toggle.
+        const authenticationType = document.getElementById('mcpServerAuthenticationType');
+        const apiKeyFields = document.getElementById('mcpServerApiKeyFields');
+
+        function updateVisibility() {
+            apiKeyFields.style.display = authenticationType.value === '@((int)CrestApps.Core.AI.Mcp.Models.McpServerAuthenticationType.ApiKey)' ? '' : 'none';
+        }
+
+        authenticationType.addEventListener('change', updateVisibility);
+        updateVisibility();
+
+        // Copilot section visibility toggle.
+        var copilotAuthType = document.getElementById('copilotAuthType');
+        var copilotGitHubSection = document.getElementById('copilotGitHubOAuthSection');
+        var copilotApiKeySection = document.getElementById('copilotApiKeySection');
+        var copilotProviderType = document.getElementById('copilotProviderType');
+        var copilotAzureVersionGroup = document.getElementById('copilotAzureVersionGroup');
+        var copilotHints = document.querySelectorAll('.copilot-hint');
+
+        function toggleCopilotAuthSections() {
+            var isGitHubOAuth = copilotAuthType.value === '@((int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.GitHubOAuth)';
+            var isApiKey = copilotAuthType.value === '@((int)CrestApps.Core.AI.Copilot.Models.CopilotAuthenticationType.ApiKey)';
+            copilotGitHubSection.style.display = isGitHubOAuth ? '' : 'none';
+            copilotApiKeySection.style.display = isApiKey ? '' : 'none';
+        }
+
+        function toggleCopilotProviderHints() {
+            var provider = copilotProviderType.value;
+            copilotHints.forEach(function (el) { el.style.display = 'none'; });
+            var activeHint = document.querySelector('.copilot-hint-' + provider);
+            if (activeHint) { activeHint.style.display = ''; }
+            copilotAzureVersionGroup.style.display = provider === 'azure' ? '' : 'none';
+
+            var baseUrlInput = document.getElementById('copilotBaseUrl');
+            if (baseUrlInput) {
+                var placeholders = {
+                    'openai': 'https://api.openai.com/v1',
+                    'azure': 'https://<deployment-name>.openai.azure.com/',
+                    'anthropic': 'https://api.anthropic.com',
+                };
+                baseUrlInput.setAttribute('placeholder', placeholders[provider] || 'https://api.openai.com/v1');
+            }
+        }
+
+        if (copilotAuthType) {
+            copilotAuthType.addEventListener('change', toggleCopilotAuthSections);
+            toggleCopilotAuthSections();
+        }
+
+        if (copilotProviderType) {
+            copilotProviderType.addEventListener('change', toggleCopilotProviderHints);
+            toggleCopilotProviderHints();
+        }
+
+        var adminWidgetProfileSelect = document.querySelector('[data-admin-widget-profile-select="true"]');
+        var adminWidgetOptionBlocks = document.querySelectorAll('[data-admin-widget-options="true"]');
+
+        function toggleAdminWidgetOptions() {
+            if (!adminWidgetProfileSelect) {
+                return;
+            }
+
+            var isEnabled = !!adminWidgetProfileSelect.value && adminWidgetProfileSelect.value.trim() !== '';
+
+            adminWidgetOptionBlocks.forEach(function (element) {
+                element.classList.toggle('d-none', !isEnabled);
+            });
+        }
+
+        if (adminWidgetProfileSelect) {
+            adminWidgetProfileSelect.addEventListener('change', toggleAdminWidgetOptions);
+            toggleAdminWidgetOptions();
+        }
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ttsDeploymentSelect = document.getElementById('@Html.IdFor(m => m.DefaultTextToSpeechDeploymentName)');
+        const voiceSelect = document.getElementById('@Html.IdFor(m => m.DefaultTextToSpeechVoiceId)');
+        const voicesUrl = '@Url.Action("GetVoices", "Settings", new { area = "Admin" })';
+        let selectedVoiceId = '@(Model.DefaultTextToSpeechVoiceId ?? string.Empty)';
+
+        if (!ttsDeploymentSelect || !voiceSelect) {
+            return;
+        }
+
+        function resetVoiceOptions() {
+            voiceSelect.innerHTML = '<option value="">Default voice</option>';
+        }
+
+        async function loadVoiceOptions() {
+            resetVoiceOptions();
+
+            if (!ttsDeploymentSelect.value) {
+                return;
+            }
+
+            const response = await fetch(voicesUrl + '?deploymentName=' + encodeURIComponent(ttsDeploymentSelect.value), { credentials: 'same-origin' });
+            const result = await response.json();
+
+            if (!result || !Array.isArray(result.voices)) {
+                return;
+            }
+
+            const groupedVoices = new Map();
+            for (const voice of result.voices) {
+                const groupName = voice.languageDisplayName || voice.language || 'Unknown';
+                if (!groupedVoices.has(groupName)) {
+                    groupedVoices.set(groupName, []);
+                }
+
+                groupedVoices.get(groupName).push(voice);
+            }
+
+            Array.from(groupedVoices.keys()).sort((a, b) => a.localeCompare(b)).forEach(groupName => {
+                const group = document.createElement('optgroup');
+                group.label = groupName;
+
+                groupedVoices.get(groupName).forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    option.selected = voice.id === selectedVoiceId;
+                    group.appendChild(option);
+                });
+
+                voiceSelect.appendChild(group);
+            });
+        }
+
+        ttsDeploymentSelect.addEventListener('change', function () {
+            selectedVoiceId = '';
+            loadVoiceOptions();
+        });
+
+        loadVoiceOptions();
+    });
+</script>

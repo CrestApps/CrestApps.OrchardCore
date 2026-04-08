@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
 using Microsoft.Extensions.DependencyInjection;

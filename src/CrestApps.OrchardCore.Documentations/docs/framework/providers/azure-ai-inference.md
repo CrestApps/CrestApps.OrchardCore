@@ -5,6 +5,10 @@ title: Azure AI Inference Provider
 description: Connect to Azure AI Inference and GitHub Models for serverless model access.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/providers/azure-ai-inference)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Azure AI Inference Provider
 
 > Connect to [Azure AI Inference](https://learn.microsoft.com/azure/ai-studio/) and [GitHub Models](https://github.com/marketplace/models) for serverless access to a wide catalog of models.

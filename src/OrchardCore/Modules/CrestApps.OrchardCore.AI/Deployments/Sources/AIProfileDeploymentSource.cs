@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using OrchardCore.Deployment;
 

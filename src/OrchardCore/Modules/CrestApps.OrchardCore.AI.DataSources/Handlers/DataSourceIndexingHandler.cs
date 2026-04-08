@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

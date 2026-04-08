@@ -18,8 +18,8 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
 {
     private const string LegacyNamespacePrefix = "CrestApps.OrchardCore.AI.Models.";
     private const string LegacyAssemblyName = "CrestApps.OrchardCore.AI.Abstractions";
-    private const string CurrentNamespacePrefix = "CrestApps.AI.Models.";
-    private const string CurrentAssemblyName = "CrestApps.AI.Abstractions";
+    private const string CurrentNamespacePrefix = "CrestApps.Core.AI.Models.";
+    private const string CurrentAssemblyName = "CrestApps.Core.AI.Abstractions";
 
     public static int Create()
     {

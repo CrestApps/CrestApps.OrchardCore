@@ -1,4 +1,4 @@
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Logging;
 using OrchardCore;

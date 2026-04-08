@@ -38,7 +38,7 @@ This repository also includes a temporary exporter utility for synchronizing the
 dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
 ```
 
-By default, the tool first locates the `CrestApps.OrchardCore` repository root by walking up from the running process directory until it finds a marker such as `global.json`, `NuGet.config`, or `CrestApps.OrchardCore.slnx`. It then writes:
+By default, the tool first locates the `CrestApps.OrchardCore` repository root by walking up from the running process directory until it finds a marker such as `global.json`, `NuGet.config`, `CrestApps.OrchardCore.sln`, or `CrestApps.OrchardCore.slnx`. It then writes:
 
 - one `<step>.schema.json` file per `IRecipeStep`
 - `recipe.schema.json` for the root recipe contract

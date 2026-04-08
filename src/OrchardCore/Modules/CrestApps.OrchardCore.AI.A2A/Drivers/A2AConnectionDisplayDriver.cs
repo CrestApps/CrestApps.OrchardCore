@@ -1,12 +1,12 @@
 using System.Text.Json;
-using CrestApps.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.A2A.Drivers;
 

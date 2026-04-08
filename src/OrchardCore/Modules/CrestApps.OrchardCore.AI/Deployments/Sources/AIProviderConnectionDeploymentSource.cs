@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Deployment;
 using OrchardCore.Modules;

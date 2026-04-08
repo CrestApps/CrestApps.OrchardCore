@@ -1,0 +1,198 @@
+@using CrestApps.Core.Mvc.Web.Areas.Mcp.ViewModels
+@model McpResourceViewModel
+@{
+    var resourceTypes = ViewBag.ResourceTypes as IEnumerable<KeyValuePair<string, CrestApps.Core.AI.Mcp.Models.McpResourceTypeEntry>> ?? [];
+}
+
+<form asp-action="@(string.IsNullOrEmpty(Model.ItemId) ? "Create" : "Edit")" method="post">
+    @if (!string.IsNullOrEmpty(Model.ItemId))
+    {
+        <input asp-for="ItemId" type="hidden" />
+    }
+
+    <div class="col-md-8">
+        <div class="mb-3">
+            <label asp-for="DisplayText" class="form-label">Title</label>
+            <input asp-for="DisplayText" class="form-control" />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Source" class="form-label">Resource type</label>
+            <select asp-for="Source" class="form-select" id="resourceType">
+                @foreach (var resourceType in resourceTypes)
+                {
+                    <option value="@resourceType.Key">@resourceType.Value.DisplayName.Value</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Name</label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+        </div>
+        <div class="mb-3">
+            <label asp-for="MimeType" class="form-label">Mime type</label>
+            <input asp-for="MimeType" class="form-control" placeholder="text/plain" />
+        </div>
+        <div class="mb-3">
+            <label asp-for="Path" class="form-label">Path or URI pattern</label>
+            <input asp-for="Path" class="form-control" placeholder="docs/{path}" />
+            <div class="form-text">Use template variables like <code>{path}</code> when you want the MCP server to expose this as a resource template.</div>
+        </div>
+
+        <div id="ftpFields" class="resource-fields">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Host" class="form-label">Host</label>
+                    <input asp-for="Host" class="form-control" />
+                    <span asp-validation-for="Host" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Port" class="form-label">Port</label>
+                    <input asp-for="Port" class="form-control" type="number" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
+                @if (Model.HasPassword && Model.Source == CrestApps.Core.AI.Ftp.FtpResourceConstants.Type)
+                {
+                    <div class="form-text">Leave blank to keep the existing password.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label asp-for="EncryptionMode" class="form-label">Encryption mode</label>
+                <input asp-for="EncryptionMode" class="form-control" placeholder="None / Explicit / Implicit / Auto" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="DataConnectionType" class="form-label">Data connection type</label>
+                <input asp-for="DataConnectionType" class="form-control" placeholder="AutoPassive / PASV / EPSV / PORT" />
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input asp-for="ValidateAnyCertificate" class="form-check-input" type="checkbox" />
+                <label asp-for="ValidateAnyCertificate" class="form-check-label">Accept any SSL/TLS certificate</label>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ConnectTimeout" class="form-label">Connect timeout (s)</label>
+                    <input asp-for="ConnectTimeout" class="form-control" type="number" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ReadTimeout" class="form-label">Read timeout (s)</label>
+                    <input asp-for="ReadTimeout" class="form-control" type="number" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="RetryAttempts" class="form-label">Retry attempts</label>
+                    <input asp-for="RetryAttempts" class="form-control" type="number" />
+                </div>
+            </div>
+        </div>
+
+        <div id="sftpFields" class="resource-fields">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Host" class="form-label">Host</label>
+                    <input asp-for="Host" class="form-control" />
+                    <span asp-validation-for="Host" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Port" class="form-label">Port</label>
+                    <input asp-for="Port" class="form-control" type="number" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">Username</label>
+                <input asp-for="Username" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
+                @if (Model.HasPassword && Model.Source == CrestApps.Core.AI.Sftp.SftpResourceConstants.Type)
+                {
+                    <div class="form-text">Leave blank to keep the existing password.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label asp-for="PrivateKey" class="form-label">Private key (PEM)</label>
+                <textarea asp-for="PrivateKey" class="form-control" rows="5"></textarea>
+                @if (Model.HasPrivateKey)
+                {
+                    <div class="form-text">Leave blank to keep the existing private key.</div>
+                }
+            </div>
+            <div class="mb-3">
+                <label asp-for="Passphrase" class="form-label">Passphrase</label>
+                <input asp-for="Passphrase" class="form-control" type="password" autocomplete="new-password" />
+                @if (Model.HasPassphrase)
+                {
+                    <div class="form-text">Leave blank to keep the existing passphrase.</div>
+                }
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ProxyType" class="form-label">Proxy type</label>
+                    <input asp-for="ProxyType" class="form-control" placeholder="None / Socks4 / Socks5 / Http" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ProxyHost" class="form-label">Proxy host</label>
+                    <input asp-for="ProxyHost" class="form-control" />
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ProxyPort" class="form-label">Proxy port</label>
+                    <input asp-for="ProxyPort" class="form-control" type="number" />
+                </div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ProxyUsername" class="form-label">Proxy username</label>
+                <input asp-for="ProxyUsername" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="ProxyPassword" class="form-label">Proxy password</label>
+                <input asp-for="ProxyPassword" class="form-control" type="password" autocomplete="new-password" />
+                @if (Model.HasProxyPassword)
+                {
+                    <div class="form-text">Leave blank to keep the existing proxy password.</div>
+                }
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ConnectionTimeout" class="form-label">Connection timeout (s)</label>
+                    <input asp-for="ConnectionTimeout" class="form-control" type="number" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="KeepAliveInterval" class="form-label">Keep alive interval (s)</label>
+                    <input asp-for="KeepAliveInterval" class="form-control" type="number" />
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> @(string.IsNullOrEmpty(Model.ItemId) ? "Create" : "Save")</button>
+            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const resourceType = document.getElementById('resourceType');
+        const ftpFields = document.getElementById('ftpFields');
+        const sftpFields = document.getElementById('sftpFields');
+
+        function updateVisibility() {
+            ftpFields.style.display = resourceType.value === '@CrestApps.Core.AI.Ftp.FtpResourceConstants.Type' ? '' : 'none';
+            sftpFields.style.display = resourceType.value === '@CrestApps.Core.AI.Sftp.SftpResourceConstants.Type' ? '' : 'none';
+        }
+
+        resourceType.addEventListener('change', updateVisibility);
+        updateVisibility();
+    });
+</script>

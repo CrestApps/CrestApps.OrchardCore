@@ -5,6 +5,10 @@ title: Elasticsearch Provider
 description: Configure Elasticsearch as a vector search backend for RAG-powered AI experiences.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/data-sources/elasticsearch)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Elasticsearch Provider
 
 > Use Elasticsearch as a vector search backend for retrieval-augmented generation.

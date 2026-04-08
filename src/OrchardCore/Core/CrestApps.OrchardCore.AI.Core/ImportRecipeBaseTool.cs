@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Extensions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;

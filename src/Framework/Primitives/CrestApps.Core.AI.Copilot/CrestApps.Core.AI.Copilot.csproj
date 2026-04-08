@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI.Copilot</RootNamespace>
+    <Title>CrestApps AI Copilot</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      GitHub Copilot SDK-based orchestrator for AI chat sessions.
+    </Description>
+    <PackageTags>$(PackageTags) AI Copilot</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitHub.Copilot.SDK" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+    <ProjectReference Include="../CrestApps.Core.AI.Mcp/CrestApps.Core.AI.Mcp.csproj" />
+  </ItemGroup>
+
+</Project>

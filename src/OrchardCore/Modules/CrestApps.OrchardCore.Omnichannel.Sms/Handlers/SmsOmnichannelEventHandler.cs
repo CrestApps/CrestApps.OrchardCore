@@ -1,17 +1,17 @@
 using System.Text.Json;
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
-using CrestApps.Services;
-using CrestApps.Support;
-using CrestApps.Templates.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -20,13 +20,13 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
-using CrestApps;
 
 using OrchardCore.Modules;
 
 using OrchardCore.Sms;
 using OrchardCore.Workflows.Services;
 using YesSql;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
 

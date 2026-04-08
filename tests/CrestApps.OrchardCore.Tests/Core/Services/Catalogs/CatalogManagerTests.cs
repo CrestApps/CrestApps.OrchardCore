@@ -1,6 +1,6 @@
-using CrestApps.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 

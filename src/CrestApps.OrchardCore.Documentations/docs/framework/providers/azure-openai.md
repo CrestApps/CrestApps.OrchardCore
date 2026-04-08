@@ -5,6 +5,10 @@ title: Azure OpenAI Provider
 description: Connect to Azure OpenAI Service for enterprise-grade AI completions with Azure-specific optimizations.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/providers/azure-openai)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Azure OpenAI Provider
 
 > Connect to Azure OpenAI Service for enterprise-grade completions with Azure-specific optimizations for `max_tokens` and stream handling.

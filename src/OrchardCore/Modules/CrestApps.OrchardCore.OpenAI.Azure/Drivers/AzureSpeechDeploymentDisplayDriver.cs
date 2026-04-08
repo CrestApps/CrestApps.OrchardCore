@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.Azure.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;

@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +12,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 

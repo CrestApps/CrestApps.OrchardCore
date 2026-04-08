@@ -1,0 +1,57 @@
+@model IReadOnlyList<CrestApps.Core.AI.Models.ChatInteraction>
+@{
+    ViewData["Title"] = "Chat Interactions";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-chat-left-dots"></i> Chat Interactions</h2>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> New Chat
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No chat interactions yet. Create one to start chatting with AI using custom parameters.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Created</th>
+                    <th style="width: 200px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var interaction in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Chat" asp-route-id="@interaction.ItemId" class="text-decoration-none">
+                                <strong>@(interaction.Title ?? "Untitled Chat")</strong>
+                            </a>
+                        </td>
+                        <td>
+                            <small class="text-muted">@interaction.CreatedUtc.ToString("g")</small>
+                        </td>
+                        <td>
+                            <a asp-action="Chat" asp-route-id="@interaction.ItemId" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-chat-left-text"></i> Chat
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@interaction.ItemId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this chat interaction and all its history?')">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

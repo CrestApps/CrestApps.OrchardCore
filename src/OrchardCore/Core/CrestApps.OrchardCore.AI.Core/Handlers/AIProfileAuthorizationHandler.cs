@@ -1,4 +1,4 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;

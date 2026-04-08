@@ -1,0 +1,242 @@
+@model CrestApps.Core.Mvc.Web.Areas.AIChat.ViewModels.ChatAnalyticsIndexViewModel
+@{
+    ViewData["Title"] = "Chat analytics";
+}
+
+<h2><i class="bi bi-bar-chart-line"></i> Chat analytics</h2>
+<p class="text-muted">Review chat-session activity, performance, conversion, and feedback across AI chat profiles.</p>
+<hr />
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="post" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-4">
+                <label asp-for="ProfileId" class="form-label">AI Profile</label>
+                <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select"></select>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="StartDateUtc" class="form-label">From</label>
+                <input asp-for="StartDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="EndDateUtc" class="form-label">To</label>
+                <input asp-for="EndDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="bi bi-funnel"></i> Show
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.ShowReport)
+{
+    <div class="alert alert-info">
+        Use the filters above to generate the analytics report.
+    </div>
+}
+else if (Model.TotalSessions == 0)
+{
+    <div class="alert alert-warning">
+        No chat analytics data was found for the selected filters.
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-end mb-3">
+        <form asp-action="Export" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ProfileId" />
+            <input type="hidden" asp-for="StartDateUtc" />
+            <input type="hidden" asp-for="EndDateUtc" />
+            <button type="submit" class="btn btn-outline-secondary">
+                <i class="bi bi-filetype-csv"></i> Export CSV
+            </button>
+        </form>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Total sessions</div><div class="fs-3 fw-semibold">@Model.TotalSessions</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Unique visitors</div><div class="fs-3 fw-semibold">@Model.UniqueVisitors</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Containment rate</div><div class="fs-3 fw-semibold">@Model.ContainmentRatePercent%</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Abandonment rate</div><div class="fs-3 fw-semibold">@Model.AbandonmentRatePercent%</div></div></div></div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">Overview</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">Resolved sessions</dt><dd class="col-sm-5">@Model.ResolvedSessions</dd>
+                        <dt class="col-sm-7">Abandoned sessions</dt><dd class="col-sm-5">@Model.AbandonedSessions</dd>
+                        <dt class="col-sm-7">Active sessions</dt><dd class="col-sm-5">@Model.ActiveSessions</dd>
+                        <dt class="col-sm-7">Average handle time</dt><dd class="col-sm-5">@Model.AverageHandleTimeSeconds s</dd>
+                        <dt class="col-sm-7">Average messages / session</dt><dd class="col-sm-5">@Model.AverageMessagesPerSession</dd>
+                        <dt class="col-sm-7">Returning user rate</dt><dd class="col-sm-5">@Model.ReturningUserRatePercent%</dd>
+                        <dt class="col-sm-7">Average steps to resolution</dt><dd class="col-sm-5">@Model.AverageStepsToResolution</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">Performance</div>
+                <div class="card-body">
+                    @if (!Model.HasPerformanceData)
+                    {
+                        <p class="text-muted mb-0">No latency or token data is available for this selection.</p>
+                    }
+                    else
+                    {
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Sessions with latency data</dt><dd class="col-sm-5">@Model.SessionsWithLatencyData</dd>
+                            <dt class="col-sm-7">Average response latency</dt><dd class="col-sm-5">@Model.AverageResponseLatencyMs ms</dd>
+                            <dt class="col-sm-7">Sessions with token data</dt><dd class="col-sm-5">@Model.SessionsWithTokenData</dd>
+                            <dt class="col-sm-7">Total tokens</dt><dd class="col-sm-5">@Model.TotalTokens</dd>
+                            <dt class="col-sm-7">Average tokens / session</dt><dd class="col-sm-5">@Model.AverageTokensPerSession</dd>
+                            <dt class="col-sm-7">Average input tokens / session</dt><dd class="col-sm-5">@Model.AverageInputTokensPerSession</dd>
+                            <dt class="col-sm-7">Average output tokens / session</dt><dd class="col-sm-5">@Model.AverageOutputTokensPerSession</dd>
+                        </dl>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">Resolution and conversion</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">AI resolved sessions</dt><dd class="col-sm-5">@Model.AIResolvedSessions</dd>
+                        <dt class="col-sm-7">AI unresolved sessions</dt><dd class="col-sm-5">@Model.AIUnresolvedSessions</dd>
+                        <dt class="col-sm-7">AI resolution rate</dt><dd class="col-sm-5">@Model.AIResolutionRatePercent%</dd>
+                    </dl>
+
+                    <hr />
+
+                    @if (!Model.HasConversionData)
+                    {
+                        <p class="text-muted mb-0">No conversion goal data is available for this selection.</p>
+                    }
+                    else
+                    {
+                        <dl class="row mb-0">
+                            <dt class="col-sm-7">Sessions with conversion data</dt><dd class="col-sm-5">@Model.SessionsWithConversionData</dd>
+                            <dt class="col-sm-7">Average conversion score</dt><dd class="col-sm-5">@Model.AverageConversionScorePercent%</dd>
+                            <dt class="col-sm-7">High performing sessions</dt><dd class="col-sm-5">@Model.HighPerformingSessions (@Model.HighPerformingPercent%)</dd>
+                            <dt class="col-sm-7">Low performing sessions</dt><dd class="col-sm-5">@Model.LowPerformingSessions (@Model.LowPerformingPercent%)</dd>
+                        </dl>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">User feedback</div>
+                <div class="card-body">
+                    @if (!Model.HasFeedbackData)
+                    {
+                        <p class="text-muted mb-0">No user ratings were recorded for this selection.</p>
+                    }
+                    else
+                    {
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-success">
+                                        <i class="bi bi-hand-thumbs-up me-1"></i>@Model.ThumbsUpCount
+                                    </div>
+                                    <div class="text-muted">Positive ratings</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-danger">
+                                        <i class="bi bi-hand-thumbs-down me-1"></i>@Model.ThumbsDownCount
+                                    </div>
+                                    <div class="text-muted">Negative ratings</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-success">@Model.ThumbsUpPercent%</div>
+                                    <div class="text-muted">Satisfaction rate</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="border rounded p-3">
+                                    <div class="fs-2 fw-bold text-info">@Model.FeedbackRatePercent%</div>
+                                    <div class="text-muted">Feedback rate</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.TotalRatings > 0)
+                        {
+                            <div class="progress mb-3" style="height: 40px;">
+                                <div class="progress-bar bg-success d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsUpPercent)%">
+                                    <i class="bi bi-hand-thumbs-up"></i>
+                                    <span>@Model.ThumbsUpPercent%</span>
+                                </div>
+                                <div class="progress-bar bg-danger d-flex align-items-center justify-content-center gap-1 px-2" role="progressbar" style="width: @(Model.ThumbsDownPercent)%">
+                                    <i class="bi bi-hand-thumbs-down"></i>
+                                    <span>@Model.ThumbsDownPercent%</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="text-muted small">No feedback: @Model.NoFeedbackCount</div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">Sessions by hour</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                        @foreach (var entry in Model.SessionsByHour)
+                        {
+                            <tr><th class="ps-3">@entry.Key</th><td class="text-end pe-3">@entry.Value</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">Sessions by day of week</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                        @foreach (var entry in Model.SessionsByDayOfWeek)
+                        {
+                            <tr><th class="ps-3">@entry.Key</th><td class="text-end pe-3">@entry.Value</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">Sessions by user segment</div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                        @foreach (var entry in Model.SessionsByUserSegment)
+                        {
+                            <tr><th class="ps-3">@entry.Key</th><td class="text-end pe-3">@entry.Value</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}

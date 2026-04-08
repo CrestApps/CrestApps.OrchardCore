@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI.A2A</RootNamespace>
+    <Title>CrestApps AI A2A Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Framework-independent Agent-to-Agent (A2A) client support for CrestApps AI services.
+    </Description>
+    <PackageTags>$(PackageTags) AI A2A AgentToAgent</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="A2A" />
+    <PackageReference Include="A2A.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.Core/CrestApps.Core.csproj" />
+    <ProjectReference Include="../CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.AI.AzureAIInference;
-using CrestApps.AI.Models;
-using CrestApps.Azure.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.AzureAIInference;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Azure.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 

@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.Copilot.Models;
-using CrestApps.AI.Copilot.Services;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.AI.ViewModels;
-using CrestApps;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 
@@ -266,7 +266,7 @@ public sealed class AIProfileViewModelTests
     public void FromProfile_WhenLegacyMvcMemorySettingsExist_ShouldFallbackToLegacyValue()
     {
         var profile = new AIProfile();
-        profile.AlterSettings<CrestApps.Mvc.Web.Models.MemorySettings>(settings =>
+        profile.AlterSettings<CrestApps.Core.Mvc.Web.Models.MemorySettings>(settings =>
         {
             settings.EnableUserMemory = true;
         });

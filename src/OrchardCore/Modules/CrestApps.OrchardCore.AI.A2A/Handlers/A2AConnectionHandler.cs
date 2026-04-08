@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.A2A.Services;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;

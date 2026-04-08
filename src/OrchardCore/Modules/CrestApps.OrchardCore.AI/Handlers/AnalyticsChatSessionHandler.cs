@@ -1,10 +1,10 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Handlers;
-using CrestApps.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
 

@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 

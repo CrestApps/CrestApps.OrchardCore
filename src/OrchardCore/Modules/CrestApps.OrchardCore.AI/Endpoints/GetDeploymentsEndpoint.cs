@@ -1,4 +1,4 @@
-using CrestApps.AI.Deployments;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

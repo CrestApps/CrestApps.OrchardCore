@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// OrchardCore-specific AIDeploymentManager that reads global default deployment
 /// settings from ISiteService instead of IOptions.
 /// </summary>
-public sealed class DefaultAIDeploymentManager : CrestApps.AI.Services.DefaultAIDeploymentManager
+public sealed class DefaultAIDeploymentManager : CrestApps.Core.AI.Services.DefaultAIDeploymentManager
 {
     private readonly ISiteService _siteService;
 

@@ -1,6 +1,6 @@
-using CrestApps;
-using CrestApps.Models;
-using CrestApps.Services;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 

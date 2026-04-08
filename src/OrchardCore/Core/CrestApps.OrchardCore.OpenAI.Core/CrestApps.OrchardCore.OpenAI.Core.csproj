@@ -5,7 +5,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      OrchardCore-specific OpenAI services that extend the framework-independent CrestApps.AI.OpenAI.Core.
+      OrchardCore-specific OpenAI services that extend the framework-independent CrestApps.Core.AI.OpenAI.Core.
     </Description>
     <PackageTags>$(PackageTags) OpenAI</PackageTags>
   </PropertyGroup>
@@ -17,9 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Azure/CrestApps.Azure.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.Azure/CrestApps.Core.Azure.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.OpenAI/CrestApps.AI.OpenAI.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.OpenAI/CrestApps.Core.AI.OpenAI.csproj" />
   </ItemGroup>
 
 </Project>

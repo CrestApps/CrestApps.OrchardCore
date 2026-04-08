@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>CrestApps.Core.SignalR</RootNamespace>
+		<Title>CrestApps SignalR Core</Title>
+		<Description>
+			$(CrestAppsDescription)
+
+			SignalR hub route management for CrestApps services.
+		</Description>
+		<PackageTags>$(PackageTags) SignalR</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../../Utilities/CrestApps.Core.Support/CrestApps.Core.Support.csproj" />
+	</ItemGroup>
+
+</Project>

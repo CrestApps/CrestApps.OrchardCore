@@ -5,6 +5,10 @@ title: AI Documents
 description: Upload, process, chunk, embed, and search documents so the AI model can retrieve relevant content during conversations (RAG).
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/ai-documents)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # AI Documents
 
 > A complete document management pipeline that reads uploaded files, splits them into chunks, generates vector embeddings, and makes the content searchable via semantic similarity — enabling retrieval-augmented generation (RAG) in AI conversations.
@@ -102,14 +106,14 @@ The document processing system handles this full pipeline from upload to retriev
 
 | Interface | Package | Purpose |
 |-----------|---------|---------|
-| `IAIDocumentStore` | `CrestApps.AI` | CRUD for document records |
-| `IAIDocumentChunkStore` | `CrestApps.AI` | CRUD for document chunks |
-| `IAIDocumentProcessingService` | `CrestApps.AI.Chat` | Orchestrates file → chunk → embed → index |
-| `ISearchDocumentManager` | `CrestApps.AI` | Manages documents in the vector search index |
-| `IVectorSearchService` | `CrestApps.AI` | Performs vector similarity search at query time |
-| `ITabularBatchProcessor` | `CrestApps.AI.Chat` | Splits and processes CSV/Excel batch queries |
-| `ITabularBatchResultCache` | `CrestApps.AI.Chat` | Caches tabular query results |
-| `IngestionDocumentReader` | `CrestApps.AI` | Abstract base for format-specific file readers |
+| `IAIDocumentStore` | `CrestApps.Core.AI` | CRUD for document records |
+| `IAIDocumentChunkStore` | `CrestApps.Core.AI` | CRUD for document chunks |
+| `IAIDocumentProcessingService` | `CrestApps.Core.AI.Chat` | Orchestrates file → chunk → embed → index |
+| `ISearchDocumentManager` | `CrestApps.Core.AI` | Manages documents in the vector search index |
+| `IVectorSearchService` | `CrestApps.Core.AI` | Performs vector similarity search at query time |
+| `ITabularBatchProcessor` | `CrestApps.Core.AI.Chat` | Splits and processes CSV/Excel batch queries |
+| `ITabularBatchResultCache` | `CrestApps.Core.AI.Chat` | Caches tabular query results |
+| `IngestionDocumentReader` | `CrestApps.Core.AI` | Abstract base for format-specific file readers |
 
 ## Document Processing Pipeline
 

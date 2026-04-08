@@ -45,8 +45,8 @@ That is enough to resolve `IOrchestrator` or `IAICompletionService` and start se
 │                  AI Core Services                        │
 │   IAIClientFactory · IAICompletionService · Context      │
 ├──────────────────────────────────────────────────────────┤
-│ Infrastructure: CrestApps.Core · CrestApps.Infrastructure    │
-│ Abstractions: CrestApps.Infrastructure.Abstractions          │
+│ Infrastructure: CrestApps.Core · CrestApps.Core.Infrastructure    │
+│ Abstractions: CrestApps.Core.Infrastructure.Abstractions          │
 │ Shared host-agnostic helpers, indexing contracts, constants  │
 ├──────────────────────────────────────────────────────────┤
 │  Providers: OpenAI │ Azure OpenAI │ Ollama │ Azure AI    │
@@ -64,26 +64,26 @@ Each layer is an independent NuGet package. You only reference the packages you 
 | Feature | Extension Method | Package | Description |
 |---------|-----------------|---------|-------------|
 | [Core Services](./core-services.md) | `AddCrestAppsCoreServices()` | `CrestApps.Core` | OData validation and shared utilities |
-| Infrastructure abstractions | — | `CrestApps.Infrastructure.Abstractions` | Search, indexing, and data-source contracts consumed by provider packages without depending on the AI layer |
-| Infrastructure helpers | — | `CrestApps.Infrastructure` | Shared non-AI constants and helpers consumed by higher layers |
-| [AI Core](./ai-core.md) | `AddCrestAppsAI()` | `CrestApps.AI` | Completion clients, client factory, context building |
-| [Orchestration](./orchestration.md) | `AddOrchestrationServices()` | `CrestApps.AI` | Tool management, orchestrator pipeline, RAG |
-| [Chat](./chat.md) | `AddChatInteractionHandlers()` | `CrestApps.AI.Chat` | Chat sessions, response handlers, interaction history |
-| [Document Processing](./document-processing.md) | `AddDefaultDocumentProcessingServices()` | `CrestApps.AI.Chat` | Document readers, semantic search, tabular data |
-| [AI Templates](./ai-templates.md) | `AddTemplating()` | `CrestApps.Templates` | Liquid-based prompt templates |
-| [Custom Tools](./tools.md) | `AddAITool<T>()` | `CrestApps.AI` | Register AI-callable functions |
-| [AI Agents](./agents.md) | *via orchestration* | `CrestApps.AI` | Sub-agents as tools for task delegation |
-| [GitHub Copilot](./copilot.md) | `AddCopilotOrchestrator()` | `CrestApps.AI.Copilot` | GitHub Copilot SDK orchestrator with OAuth and BYOK |
-| [Response Handlers](./response-handlers.md) | *implement interface* | `CrestApps.AI` | Route chat to external systems |
-| [Context Builders](./context-builders.md) | *implement interface* | `CrestApps.AI` | Enrich AI context per request |
-| [SignalR](./signalr.md) | `AddCrestAppsSignalR()` | `CrestApps.SignalR` | Real-time hub route management |
-| [Data Storage](./data-storage.md) | `AddDocumentCatalog<,>()` | `CrestApps.Data.YesSql` | Pluggable catalog/store pattern |
-| [AI Documents](./ai-documents.md) | `AddDefaultDocumentProcessingServices()` | `CrestApps.AI.Chat` | Document upload, chunking, embedding, and RAG search |
-| [AI Memory](./ai-memory.md) | *implement store* | `CrestApps.AI` | Persistent user-scoped memory with vector search |
+| Infrastructure abstractions | — | `CrestApps.Core.Infrastructure.Abstractions` | Search, indexing, and data-source contracts consumed by provider packages without depending on the AI layer |
+| Infrastructure helpers | — | `CrestApps.Core.Infrastructure` | Shared non-AI constants and helpers consumed by higher layers |
+| [AI Core](./ai-core.md) | `AddCrestAppsAI()` | `CrestApps.Core.AI` | Completion clients, client factory, context building |
+| [Orchestration](./orchestration.md) | `AddOrchestrationServices()` | `CrestApps.Core.AI` | Tool management, orchestrator pipeline, RAG |
+| [Chat](./chat.md) | `AddChatInteractionHandlers()` | `CrestApps.Core.AI.Chat` | Chat sessions, response handlers, interaction history |
+| [Document Processing](./document-processing.md) | `AddDefaultDocumentProcessingServices()` | `CrestApps.Core.AI.Chat` | Document readers, semantic search, tabular data |
+| [AI Templates](./ai-templates.md) | `AddTemplating()` | `CrestApps.Core.Templates` | Liquid-based prompt templates |
+| [Custom Tools](./tools.md) | `AddAITool<T>()` | `CrestApps.Core.AI` | Register AI-callable functions |
+| [AI Agents](./agents.md) | *via orchestration* | `CrestApps.Core.AI` | Sub-agents as tools for task delegation |
+| [GitHub Copilot](./copilot.md) | `AddCopilotOrchestrator()` | `CrestApps.Core.AI.Copilot` | GitHub Copilot SDK orchestrator with OAuth and BYOK |
+| [Response Handlers](./response-handlers.md) | *implement interface* | `CrestApps.Core.AI` | Route chat to external systems |
+| [Context Builders](./context-builders.md) | *implement interface* | `CrestApps.Core.AI` | Enrich AI context per request |
+| [SignalR](./signalr.md) | `AddCrestAppsSignalR()` | `CrestApps.Core.SignalR` | Real-time hub route management |
+| [Data Storage](./data-storage.md) | `AddDocumentCatalog<,>()` | `CrestApps.Core.Data.YesSql` | Pluggable catalog/store pattern |
+| [AI Documents](./ai-documents.md) | `AddDefaultDocumentProcessingServices()` | `CrestApps.Core.AI.Chat` | Document upload, chunking, embedding, and RAG search |
+| [AI Memory](./ai-memory.md) | *implement store* | `CrestApps.Core.AI` | Persistent user-scoped memory with vector search |
 | [Providers](./providers/index.md) | per-provider | various | OpenAI, Azure, Ollama, Azure AI Inference |
 | [Data Sources](./data-sources/index.md) | per-backend | various | Elasticsearch, Azure AI Search |
-| [MCP](./mcp/index.md) | `AddCrestAppsMcpClient()` / `AddCrestAppsMcpServer()` | `CrestApps.AI.Mcp` | Model Context Protocol client & server |
-| [A2A](./a2a/index.md) | `AddCrestAppsA2AClient()` | `CrestApps.AI.A2A` | Agent-to-Agent protocol |
+| [MCP](./mcp/index.md) | `AddCrestAppsMcpClient()` / `AddCrestAppsMcpServer()` | `CrestApps.Core.AI.Mcp` | Model Context Protocol client & server |
+| [A2A](./a2a/index.md) | `AddCrestAppsA2AClient()` | `CrestApps.Core.AI.A2A` | Agent-to-Agent protocol |
 | [MVC Example](./mvc-example.md) | — | — | Full walkthrough of the example MVC application |
 
 ## Service Consumption Hierarchy
@@ -105,23 +105,23 @@ Most applications should use `IOrchestrator` or `IOrchestrationContextBuilder`. 
 | Package | Description |
 |---------|-------------|
 | `CrestApps.Core` | Foundation services |
-| `CrestApps.Infrastructure.Abstractions` | Search, indexing, and data-source contracts for lower-level providers |
-| `CrestApps.Infrastructure` | Shared non-AI infrastructure helpers and constants |
-| `CrestApps.AI` | AI core + orchestration |
-| `CrestApps.AI.Chat` | Chat interaction system |
-| `CrestApps.Templates` | Template engine |
-| `CrestApps.AI.Tools` | Tool abstractions |
-| `CrestApps.AI.OpenAI` | OpenAI provider |
-| `CrestApps.AI.OpenAI.Azure` | Azure OpenAI provider |
-| `CrestApps.AI.Ollama` | Ollama provider |
-| `CrestApps.AI.AzureAIInference` | Azure AI Inference / GitHub Models |
-| `CrestApps.AI.Mcp` | MCP client & server |
-| `CrestApps.AI.A2A` | A2A client |
-| `CrestApps.AI.Copilot` | GitHub Copilot orchestrator |
-| `CrestApps.Elasticsearch` | Elasticsearch vector search and indexing services |
-| `CrestApps.Azure.AISearch` | Azure AI Search vector search and indexing services |
-| `CrestApps.SignalR` | SignalR hub management |
-| `CrestApps.Data.YesSql` | YesSql persistence catalogs |
+| `CrestApps.Core.Infrastructure.Abstractions` | Search, indexing, and data-source contracts for lower-level providers |
+| `CrestApps.Core.Infrastructure` | Shared non-AI infrastructure helpers and constants |
+| `CrestApps.Core.AI` | AI core + orchestration |
+| `CrestApps.Core.AI.Chat` | Chat interaction system |
+| `CrestApps.Core.Templates` | Template engine |
+| `CrestApps.Core.AI` | Tool abstractions and AI extension points |
+| `CrestApps.Core.AI.OpenAI` | OpenAI provider |
+| `CrestApps.Core.AI.OpenAI.Azure` | Azure OpenAI provider |
+| `CrestApps.Core.AI.Ollama` | Ollama provider |
+| `CrestApps.Core.AI.AzureAIInference` | Azure AI Inference / GitHub Models |
+| `CrestApps.Core.AI.Mcp` | MCP client & server |
+| `CrestApps.Core.AI.A2A` | A2A client |
+| `CrestApps.Core.AI.Copilot` | GitHub Copilot orchestrator |
+| `CrestApps.Core.Elasticsearch` | Elasticsearch vector search and indexing services |
+| `CrestApps.Core.Azure.AISearch` | Azure AI Search vector search and indexing services |
+| `CrestApps.Core.SignalR` | SignalR hub management |
+| `CrestApps.Core.Data.YesSql` | YesSql persistence catalogs |
 
 ## Next Steps
 

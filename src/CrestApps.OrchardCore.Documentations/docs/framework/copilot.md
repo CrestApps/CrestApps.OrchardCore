@@ -5,6 +5,10 @@ title: GitHub Copilot Orchestrator
 description: An alternative IOrchestrator implementation that uses the GitHub Copilot Extensions SDK for AI completions, supporting GitHub OAuth and Bring Your Own Key (BYOK) authentication modes.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/copilot)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # GitHub Copilot Orchestrator
 
 > An alternative orchestrator that uses the GitHub Copilot Extensions SDK instead of the default orchestration pipeline, supporting both GitHub OAuth and BYOK authentication modes.

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>CrestApps.Core.Infrastructure</RootNamespace>
+		<Title>CrestApps Infrastructure Abstractions</Title>
+		<Description>
+			$(CrestAppsDescription)
+
+			Core infrastructure abstractions for indexing, search, and data source services. Framework-independent and reusable outside the AI layer.
+		</Description>
+		<PackageTags>$(PackageTags) Infrastructure Abstractions Indexing Search</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="../CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

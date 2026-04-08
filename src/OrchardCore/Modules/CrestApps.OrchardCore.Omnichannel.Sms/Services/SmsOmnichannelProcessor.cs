@@ -1,9 +1,9 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -12,7 +12,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 

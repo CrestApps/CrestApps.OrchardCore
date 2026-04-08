@@ -1,12 +1,12 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Recipes;
 

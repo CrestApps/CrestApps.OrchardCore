@@ -1,6 +1,6 @@
-using CrestApps.AI.Copilot.Services;
+using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
-using CrestApps.Support;
+using CrestApps.Core.Support;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

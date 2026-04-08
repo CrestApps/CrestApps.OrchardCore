@@ -1,0 +1,185 @@
+using System.Text.Json;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Services;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+
+namespace CrestApps.Core.AI.Services;
+
+/// <summary>
+/// Extracts focused search queries from the user's message using a lightweight utility LLM call.
+/// Results are cached per <see cref="OrchestrationContext"/> so that multiple preemptive RAG
+/// consumers (e.g., DataSource and Document handlers) share a single LLM call.
+/// </summary>
+public sealed class PreemptiveSearchQueryProvider
+{
+    /// <summary>
+    /// The property key where the extracted search queries are cached in
+    /// <see cref="OrchestrationContext.Properties"/>.
+    /// </summary>
+    private const string CacheKey = "PreemptiveSearchQueries";
+    /// <summary>
+    /// The maximum number of recent conversation messages (user + assistant) to include
+    /// when extracting search queries, so follow-up messages are resolved correctly.
+    /// </summary>
+    private const int MaxConversationHistoryMessages = 4;
+
+    private readonly IAIClientFactory _aiClientFactory;
+    private readonly IAIDeploymentManager _deploymentManager;
+    private readonly ITemplateService _aiTemplateService;
+    private readonly ILogger _logger;
+
+    public PreemptiveSearchQueryProvider(
+        IAIClientFactory aiClientFactory,
+        IAIDeploymentManager deploymentManager,
+        ITemplateService aiTemplateService,
+        ILogger<PreemptiveSearchQueryProvider> logger)
+    {
+        _aiClientFactory = aiClientFactory;
+        _deploymentManager = deploymentManager;
+        _aiTemplateService = aiTemplateService;
+        _logger = logger;
+    }
+    /// <summary>
+    /// Gets search queries for the given context. The queries are extracted from the user's
+    /// message using a utility LLM call and cached in
+    /// <see cref="OrchestrationContext.Properties"/> so subsequent calls return the cached result.
+    /// </summary>
+    public async Task<IList<string>> GetQueriesAsync(OrchestrationContext context)
+    {
+        // Return cached queries if already extracted for this context.
+        if (context.Properties.TryGetValue(CacheKey, out var cached) &&
+            cached is IList<string> cachedQueries)
+        {
+            return cachedQueries;
+        }
+
+        var queries = await ExtractSearchQueriesAsync(context);
+        context.Properties[CacheKey] = queries;
+
+        return queries;
+    }
+
+    private async Task<IList<string>> ExtractSearchQueriesAsync(OrchestrationContext context)
+    {
+        var chatClient = await TryCreateUtilityChatClientAsync(context);
+
+        if (chatClient == null)
+        {
+            return [context.UserMessage];
+        }
+
+        try
+        {
+            var systemPrompt = await _aiTemplateService.RenderAsync(AITemplateIds.SearchQueryExtraction);
+
+            var messages = new List<ChatMessage>
+            {
+                new(ChatRole.System, systemPrompt),
+            };
+
+            // Include recent conversation history for context resolution.
+            if (context.ConversationHistory is { Count: > 0 })
+            {
+                var recentMessages = context.ConversationHistory
+                    .Where(m => m.Role == ChatRole.User || m.Role == ChatRole.Assistant)
+                    .Where(m => !string.IsNullOrEmpty(m.Text))
+                    .TakeLast(MaxConversationHistoryMessages);
+
+                messages.AddRange(recentMessages);
+            }
+
+            // Ensure the current user message is the last message.
+            if (messages.Count <= 1 || messages[^1].Text != context.UserMessage)
+            {
+                messages.Add(new ChatMessage(ChatRole.User, context.UserMessage));
+            }
+
+            var chatOptions = new ChatOptions
+            {
+                Temperature = 0.2f,
+                MaxOutputTokens = 200,
+            }.AddUsageTracking(context.CompletionContext);
+
+            var response = await chatClient.GetResponseAsync(messages, chatOptions);
+
+            if (response == null || string.IsNullOrWhiteSpace(response.Text))
+            {
+                return [context.UserMessage];
+            }
+
+            var queries = ParseSearchQueries(response.Text);
+
+            return queries.Count > 0 ? queries : [context.UserMessage];
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to extract search queries using utility model. Falling back to raw user message.");
+
+            return [context.UserMessage];
+        }
+    }
+
+    private static List<string> ParseSearchQueries(string responseText)
+    {
+        var text = responseText.Trim();
+
+        // Strip markdown code fences if the model wraps the JSON.
+        if (text.StartsWith("```", StringComparison.Ordinal))
+        {
+            var firstNewLine = text.IndexOf('\n');
+
+            if (firstNewLine > 0)
+            {
+                var lastFence = text.LastIndexOf("```", StringComparison.Ordinal);
+
+                if (lastFence > firstNewLine)
+                {
+                    text = text[(firstNewLine + 1)..lastFence].Trim();
+                }
+            }
+        }
+
+        try
+        {
+            var queries = JsonSerializer.Deserialize<List<string>>(text);
+
+            if (queries != null)
+            {
+                return queries
+                    .Where(q => !string.IsNullOrWhiteSpace(q))
+                    .ToList();
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignore parse errors; caller will fall back to the raw user message.
+        }
+
+        return [];
+    }
+
+    private async Task<IChatClient> TryCreateUtilityChatClientAsync(OrchestrationContext context)
+    {
+        var providerName = context.SourceName;
+        var connectionName = context.CompletionContext?.ConnectionName;
+
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return null;
+        }
+
+        var deployment = await _deploymentManager.ResolveUtilityOrDefaultAsync(
+            clientName: providerName,
+            connectionName: connectionName);
+
+        if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
+        {
+            return null;
+        }
+
+        return await _aiClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
+    }
+}

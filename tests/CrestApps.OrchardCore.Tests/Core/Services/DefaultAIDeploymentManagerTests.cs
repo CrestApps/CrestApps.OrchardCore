@@ -1,11 +1,12 @@
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services;
 

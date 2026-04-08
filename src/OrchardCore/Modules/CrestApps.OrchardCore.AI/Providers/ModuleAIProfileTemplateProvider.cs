@@ -1,9 +1,7 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.AI.Services;
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Parsing;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Templates.Parsing;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions;
 

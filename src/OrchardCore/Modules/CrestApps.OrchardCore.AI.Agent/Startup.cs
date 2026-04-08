@@ -1,4 +1,4 @@
-using CrestApps.AI;
+using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Agent.Analytics;
 using CrestApps.OrchardCore.AI.Agent.Communications;
 using CrestApps.OrchardCore.AI.Agent.Contents;

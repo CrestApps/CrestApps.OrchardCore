@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Services;
-using CrestApps.AI.Speech;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

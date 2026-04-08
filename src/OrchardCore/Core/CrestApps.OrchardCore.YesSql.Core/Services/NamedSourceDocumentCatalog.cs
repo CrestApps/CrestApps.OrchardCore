@@ -1,9 +1,9 @@
-using CrestApps.Data.YesSql;
-using CrestApps.Data.YesSql.Indexes;
-using CrestApps.Models;
-using CrestApps.Services;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using YesSql;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.YesSql.Core.Services;
 

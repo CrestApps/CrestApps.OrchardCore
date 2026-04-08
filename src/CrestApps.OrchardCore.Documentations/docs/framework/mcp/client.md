@@ -5,6 +5,10 @@ title: MCP Client
 description: Connect to remote MCP servers to discover and use their tools, prompts, and resources in AI orchestration.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/mcp/client)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # MCP Client
 
 > Connect to remote MCP servers, discover their capabilities, and make their tools available to the AI orchestrator.

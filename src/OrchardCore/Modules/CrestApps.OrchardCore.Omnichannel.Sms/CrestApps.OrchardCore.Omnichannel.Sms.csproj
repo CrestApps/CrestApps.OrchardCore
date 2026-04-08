@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Utilities/CrestApps.Support/CrestApps.Support.csproj" />
+    <ProjectReference Include="../../../Framework/Utilities/CrestApps.Core.Support/CrestApps.Core.Support.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
   </ItemGroup>

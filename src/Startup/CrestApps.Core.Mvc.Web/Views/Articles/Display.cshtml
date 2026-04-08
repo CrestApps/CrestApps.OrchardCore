@@ -1,0 +1,44 @@
+@model CrestApps.Core.Mvc.Web.Areas.Admin.Models.Article
+@{
+    ViewData["Title"] = Model.Title ?? "Article";
+    var markdown = Model.Description ?? string.Empty;
+}
+
+<style>
+    .article-markdown img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .article-markdown pre {
+        padding: 1rem;
+        overflow-x: auto;
+        border-radius: 0.5rem;
+        background: var(--bs-tertiary-bg, #f8f9fa);
+    }
+</style>
+
+<div class="container py-4">
+    <div class="mx-auto" style="max-width: 900px;">
+        <h1 class="mb-2">@ViewData["Title"]</h1>
+
+        <p class="text-muted mb-4">
+            Published @Model.CreatedUtc.ToString("f")
+        </p>
+
+        <article id="article-content" class="article-markdown"></article>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const container = document.getElementById("article-content");
+            const markdown = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(markdown));
+            const html = marked.parse(markdown || "");
+            container.innerHTML = DOMPurify.sanitize(html);
+        });
+    </script>
+}

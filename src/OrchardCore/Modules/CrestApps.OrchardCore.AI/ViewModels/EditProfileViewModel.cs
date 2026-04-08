@@ -1,4 +1,4 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

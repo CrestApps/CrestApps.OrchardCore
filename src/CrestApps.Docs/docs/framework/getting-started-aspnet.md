@@ -18,25 +18,25 @@ Add the framework packages your application needs:
 
 ```xml
 <!-- Required: Core AI services -->
-<PackageReference Include="CrestApps.AI.Core" />
+<PackageReference Include="CrestApps.Core.AI.Core" />
 
 <!-- Required: Orchestration (DefaultOrchestrator, tool execution) -->
-<!-- Already included transitively by CrestApps.AI.Core -->
+<!-- Already included transitively by CrestApps.Core.AI.Core -->
 
 <!-- Optional: OpenAI provider -->
-<PackageReference Include="CrestApps.AI.OpenAI.Core" />
+<PackageReference Include="CrestApps.Core.AI.OpenAI.Core" />
 
 <!-- Optional: Azure OpenAI provider -->
-<PackageReference Include="CrestApps.AI.OpenAI.Azure.Core" />
+<PackageReference Include="CrestApps.Core.AI.OpenAI.Azure.Core" />
 
 <!-- Optional: Real-time chat via SignalR -->
-<PackageReference Include="CrestApps.SignalR.Core" />
+<PackageReference Include="CrestApps.Core.SignalR.Core" />
 
 <!-- Optional: YesSql document store (for profile/connection/session persistence) -->
-<PackageReference Include="CrestApps.Data.YesSql" />
+<PackageReference Include="CrestApps.Core.Data.YesSql" />
 
 <!-- Optional: Chat session management -->
-<PackageReference Include="CrestApps.AI.Chat.Core" />
+<PackageReference Include="CrestApps.Core.AI.Chat.Core" />
 ```
 
 ## 2. Register Services
@@ -44,8 +44,8 @@ Add the framework packages your application needs:
 In your `Program.cs`, register the CrestApps AI services:
 
 ```csharp
-using CrestApps.AI.ResponseHandling;
-using CrestApps.SignalR;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -139,8 +139,8 @@ Add provider configuration to `appsettings.json`:
 If you want to persist AI profiles, connections, and chat sessions, use the YesSql store:
 
 ```csharp
-using CrestApps.AI.ResponseHandling;
-using CrestApps.Data.YesSql;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.Data.YesSql;
 using YesSql;
 using YesSql.Provider.Sqlite;
 
@@ -188,9 +188,9 @@ YesSql supports SQLite, PostgreSQL, SQL Server, and MySQL. Simply swap the provi
 
 ```csharp
 using System.Threading.Channels;
-using CrestApps.AI.ResponseHandling;
-using CrestApps.AI.Chat.Hubs;
-using CrestApps.AI.Chat.Models;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Chat.Hubs;
+using CrestApps.Core.AI.Chat.Models;
 using Microsoft.AspNetCore.SignalR;
 
 public class AIChatHub : Hub<IAIChatHubClient>
@@ -311,7 +311,7 @@ Include it in your layout:
 
 ## Complete Example
 
-See the `CrestApps.Mvc.Web` project in the repository for a fully working standalone MVC application that demonstrates all of the above, including:
+See the `CrestApps.Core.Mvc.Web` project in the repository for a fully working standalone MVC application that demonstrates all of the above, including:
 
 - Admin UI for managing AI profiles, connections, and deployments
 - Full chat interface with SignalR streaming

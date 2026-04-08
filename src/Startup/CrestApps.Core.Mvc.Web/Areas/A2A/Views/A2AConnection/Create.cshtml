@@ -1,0 +1,10 @@
+@using CrestApps.Core.Mvc.Web.Areas.A2A.ViewModels
+@model A2AConnectionViewModel
+@{
+    ViewData["Title"] = "Add Agent to Agent Host";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Add Agent to Agent Host</h2>
+<hr />
+
+@await Html.PartialAsync("_Form", Model)

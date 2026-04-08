@@ -1,4 +1,4 @@
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

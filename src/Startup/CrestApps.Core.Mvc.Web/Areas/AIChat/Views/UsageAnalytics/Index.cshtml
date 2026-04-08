@@ -1,0 +1,96 @@
+@model CrestApps.Core.Mvc.Web.Areas.AIChat.ViewModels.UsageAnalyticsIndexViewModel
+@{
+    ViewData["Title"] = "AI usage analytics";
+}
+
+<h2><i class="bi bi-activity"></i> AI usage analytics</h2>
+<p class="text-muted">Review provider usage by user, model, and conversation type across chat sessions and chat interactions.</p>
+<hr />
+
+@if (!Model.IsAIUsageTrackingEnabled)
+{
+    <div class="alert alert-warning">
+        AI usage tracking is currently disabled. Enable <strong>AI usage tracking</strong> in <strong>Admin &gt; Settings</strong> to capture future provider usage data for this report.
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="post" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-4">
+                <label asp-for="StartDateUtc" class="form-label">From</label>
+                <input asp-for="StartDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EndDateUtc" class="form-label">To</label>
+                <input asp-for="EndDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel"></i> Show
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.ShowReport)
+{
+    <div class="alert alert-info">Use the filters above to generate the usage report.</div>
+}
+else if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-warning">No usage data was found for the selected filters.</div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Provider calls</div><div class="fs-3 fw-semibold">@Model.TotalCalls</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Chat sessions</div><div class="fs-3 fw-semibold">@Model.TotalSessions</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Chat interactions</div><div class="fs-3 fw-semibold">@Model.TotalChatInteractions</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">Total tokens</div><div class="fs-3 fw-semibold">@Model.TotalTokens</div></div></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Usage by user and model</div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Client</th>
+                        <th>Model</th>
+                        <th class="text-end">Calls</th>
+                        <th class="text-end">Sessions</th>
+                        <th class="text-end">Interactions</th>
+                        <th class="text-end">Input</th>
+                        <th class="text-end">Output</th>
+                        <th class="text-end">Tokens</th>
+                        <th class="text-end">Avg latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@row.UserLabel</div>
+                            <div class="text-muted small">@(row.IsAuthenticated ? "Authenticated" : "Anonymous")</div>
+                        </td>
+                        <td>@row.ClientName</td>
+                        <td>@row.ModelName</td>
+                        <td class="text-end">@row.TotalCalls</td>
+                        <td class="text-end">@row.TotalSessions</td>
+                        <td class="text-end">@row.TotalChatInteractions</td>
+                        <td class="text-end">@row.TotalInputTokens</td>
+                        <td class="text-end">@row.TotalOutputTokens</td>
+                        <td class="text-end fw-semibold">@row.TotalTokens</td>
+                        <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

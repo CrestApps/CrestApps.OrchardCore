@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 

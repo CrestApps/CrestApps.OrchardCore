@@ -1,0 +1,73 @@
+@model IReadOnlyCollection<CrestApps.Core.AI.Models.AIDataSource>
+@{
+    ViewData["Title"] = "Data Sources";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-collection"></i> Data Sources</h2>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="bi bi-plus-lg"></i> Create New Data Source
+    </a>
+</div>
+
+@if (TempData["SuccessMessage"] is string message)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @message
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No data sources found.
+        Create one to map data from an existing search index into a knowledge base.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Source Index</th>
+                    <th>Knowledge Base Index</th>
+                    <th style="width: 250px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td><strong>@item.DisplayText</strong></td>
+                        <td><code>@(item.SourceIndexProfileName ?? "—")</code></td>
+                        <td><code>@(item.AIKnowledgeBaseIndexProfileName ?? "—")</code></td>
+                        <td>
+                            <form asp-action="Sync" asp-route-id="@item.ItemId"
+                                  method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-arrow-repeat"></i> Sync
+                                </button>
+                            </form>
+                            <a asp-action="Edit" asp-route-id="@item.ItemId"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@item.ItemId"
+                                  method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Delete this data source?')">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

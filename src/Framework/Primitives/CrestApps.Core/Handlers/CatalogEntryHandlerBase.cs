@@ -1,7 +1,7 @@
-using CrestApps.Models;
-using CrestApps.Services;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 
-namespace CrestApps.Handlers;
+namespace CrestApps.Core.Handlers;
 
 public abstract class CatalogEntryHandlerBase<T> : ICatalogEntryHandler<T>
 {

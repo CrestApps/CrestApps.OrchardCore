@@ -1,6 +1,6 @@
 // @ts-check
 
-import {themes as prismThemes} from 'prism-react-renderer';
+import { themes as prismThemes } from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -13,7 +13,7 @@ const config = {
     v4: true,
   },
 
-  url: 'https://orchardcore.crestapps.com',
+  url: 'https://crestapps.crestapps.com',
   baseUrl: '/',
 
   organizationName: 'CrestApps',
@@ -29,7 +29,6 @@ const config = {
   themes: [
     [
       '@easyops-cn/docusaurus-search-local',
-      /** @type {import("@easyops-cn/docusaurus-search-local").PluginOptions} */
       ({
         hashed: true,
         language: ['en'],
@@ -42,12 +41,10 @@ const config = {
   presets: [
     [
       'classic',
-      /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          editUrl:
-            'https://github.com/CrestApps/CrestApps.OrchardCore/tree/main/src/CrestApps.OrchardCore.Documentations/',
+          editUrl: 'https://github.com/CrestApps/CrestApps.OrchardCore/tree/main/src/CrestApps.OrchardCore.Documentations/',
           lastVersion: 'current',
           versions: {
             current: {
@@ -65,7 +62,6 @@ const config = {
   ],
 
   themeConfig:
-    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       image: 'img/logo.png',
       colorMode: {
@@ -95,6 +91,11 @@ const config = {
             label: 'GitHub',
             position: 'right',
           },
+          {
+            href: 'https://core.crestapps.com',
+            label: 'Core Docs',
+            position: 'right',
+          },
         ],
       },
       footer: {
@@ -103,52 +104,28 @@ const config = {
           {
             title: 'Documentation',
             items: [
-              {
-                label: 'Getting Started',
-                to: '/docs/getting-started',
-              },
-              {
-                label: 'Framework',
-                to: '/docs/framework',
-              },
-              {
-                label: 'AI Suite',
-                to: '/docs/ai',
-              },
-              {
-                label: 'AI Providers',
-                to: '/docs/ai/providers',
-              },
+              { label: 'Getting Started', to: '/docs/getting-started' },
+              { label: 'Framework', href: 'https://core.crestapps.com' },
+              { label: 'AI Suite', to: '/docs/ai' },
+              { label: 'AI Providers', to: '/docs/ai/providers' },
             ],
           },
           {
             title: 'Community',
             items: [
-              {
-                label: 'Issues',
-                href: 'https://github.com/CrestApps/CrestApps.OrchardCore/issues',
-              },
+              { label: 'Issues', href: 'https://github.com/CrestApps/CrestApps.OrchardCore/issues' },
             ],
           },
           {
             title: 'More',
             items: [
-              {
-                label: 'GitHub',
-                href: 'https://github.com/CrestApps/CrestApps.OrchardCore',
-              },
-              {
-                label: 'NuGet Packages',
-                href: 'https://www.nuget.org/profiles/malhayek',
-              },
-              {
-                label: 'CrestApps',
-                href: 'https://crestapps.com',
-              },
+              { label: 'GitHub', href: 'https://github.com/CrestApps/CrestApps.OrchardCore' },
+              { label: 'NuGet Packages', href: 'https://www.nuget.org/profiles/malhayek' },
+              { label: 'CrestApps', href: 'https://crestapps.com' },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.`,
+        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.Core.`,
       },
       prism: {
         theme: prismThemes.github,

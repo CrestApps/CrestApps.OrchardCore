@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.ResponseHandling;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.ResponseHandling;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Core;

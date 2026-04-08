@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.OpenAI;
-using CrestApps.AI.OpenAI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI;
+using CrestApps.Core.AI.OpenAI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.OpenAI.Drivers;
 

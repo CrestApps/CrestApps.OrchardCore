@@ -2,7 +2,7 @@
 sidebar_label: Getting Started
 sidebar_position: 2
 title: Getting Started
-description: How to get started with the CrestApps AI Framework or CrestApps Orchard Core modules.
+description: Choose between the standalone CrestApps.Core framework and the Orchard Core modules.
 ---
 
 # Getting Started
@@ -11,62 +11,29 @@ Choose the path that matches your project:
 
 | Path | Description |
 |------|-------------|
-| **[Framework (any ASP.NET Core app)](#framework-quick-start)** | Use the AI framework in a standard MVC, Razor Pages, or Minimal API application |
-| **[Orchard Core modules](#orchard-core-quick-start)** | Add AI capabilities to an existing Orchard Core CMS site |
+| **[CrestApps.Core framework](https://core.crestapps.com/docs)** | Use the shared AI framework in MVC, Razor Pages, Blazor, Minimal APIs, or MAUI hybrid apps |
+| **[Orchard Core modules](#orchard-core-quick-start)** | Add AI, omnichannel, and related capabilities to an Orchard Core CMS site |
 
-## Framework Quick Start
+## Framework quick start
 
-### Prerequisites
+The standalone framework is now documented in the `CrestApps.Core` site:
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download) or later
+- **[Framework overview](https://core.crestapps.com/docs/framework)** — package layout, capabilities, and extension methods
+- **[ASP.NET Core integration](https://core.crestapps.com/docs/framework/getting-started-aspnet)** — how to register services in MVC, Pages, Blazor, Minimal APIs, and MAUI hybrid hosts
+- **[MVC example](https://core.crestapps.com/docs/framework/mvc-example)** — feature-by-feature reference application
 
-### 1. Add NuGet Packages
-
-```bash
-dotnet add package CrestApps.AI
-dotnet add package CrestApps.AI.Chat
-dotnet add package CrestApps.AI.Markdown
-dotnet add package CrestApps.AI.OpenAI        # or another provider
-dotnet add package CrestApps.Data.YesSql       # or your preferred storage
-```
-
-### 2. Register Services
-
-```csharp
-builder.Services
-    .AddCrestAppsCoreServices()
-    .AddCrestAppsAI()
-    .AddMarkdownServices()
-    .AddOrchestrationServices()
-    .AddChatInteractionHandlers()
-    .AddDefaultDocumentProcessingServices()
-    .AddOpenAIProvider();
-```
-
-### 3. Use the Orchestrator
-
-```csharp
-app.MapPost("/chat", async (IOrchestrator orchestrator, string message) =>
-{
-    // Build context and stream response
-    // See the Framework documentation for complete examples
-});
-```
-
-For a complete working example, see the [MVC Example walkthrough](framework/mvc-example.md) and the full [Framework documentation](framework/).
+If you are building on Orchard Core, continue below.
 
 ---
 
-## Orchard Core Quick Start
+## Orchard Core quick start
 
-## Prerequisites
+### Prerequisites
 
-- [.NET SDK](https://dotnet.microsoft.com/download) (version matching your Orchard Core target)
+- [.NET SDK](https://dotnet.microsoft.com/download) matching your Orchard Core target
 - An existing Orchard Core application, or use the CrestApps starter project
 
-## Installation
-
-### Install All Modules
+### Install all modules
 
 Add the `CrestApps.OrchardCore.Cms.Core.Targets` package to include all modules at once:
 
@@ -74,7 +41,7 @@ Add the `CrestApps.OrchardCore.Cms.Core.Targets` package to include all modules 
 dotnet add package CrestApps.OrchardCore.Cms.Core.Targets
 ```
 
-### Install Individual Modules
+### Install individual modules
 
 Or install only the modules you need:
 
@@ -84,63 +51,55 @@ dotnet add package CrestApps.OrchardCore.AI.Chat
 # ... add other modules as needed
 ```
 
-## Running Locally
+## Running locally
 
-1. **Clone the Repository:**
+1. **Clone the repository**
    ```bash
    git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
-   ```
-
-2. **Navigate to the Project Directory:**
-   ```bash
    cd CrestApps.OrchardCore
    ```
 
-3. **Install Frontend Dependencies and Rebuild Assets:**
+2. **Install frontend dependencies and rebuild assets**
    ```bash
    npm install
    npm run rebuild
    ```
 
-   The Gulp asset pipeline emits both the standard and minified frontend outputs into each module's `wwwroot` folder, such as `ai-chat.js` and `ai-chat.min.js`.
-
-4. **Build the Solution:**
+3. **Build the solution**
    ```bash
    dotnet build
    ```
 
-5. **Launch the Application:**
+4. **Launch the application**
    ```bash
    dotnet run
    ```
 
-6. **Enable Modules:**
-   Access the **Orchard Core Admin Dashboard** to enable desired CrestApps modules.
+5. **Enable modules**
+   Open the Orchard Core admin dashboard and enable the desired CrestApps modules.
 
-## Package Feeds
+## Package feeds
 
-### Production Packages
+### Production packages
 
 Stable releases are available on [NuGet.org](https://www.nuget.org/).
 
-### Preview Packages
+### Preview packages
 
 [![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)
 
-For the latest updates and preview packages, visit the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).
+Preview packages are available from the [CrestApps OrchardCore Cloudsmith repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).
 
-### Adding the Preview Feed
+### Adding the preview feed
 
 #### In Visual Studio
 
-1. Open **NuGet Package Manager Settings** (under *Tools*).
-2. Add a new package source:
+1. Open **NuGet Package Manager Settings**.
+2. Add a new source:
    - **Name:** `CrestAppsPreview`
    - **URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`
 
 #### Via NuGet.config
-
-Update your **NuGet.config** file:
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -153,17 +112,3 @@ Update your **NuGet.config** file:
   <disabledPackageSources />
 </configuration>
 ```
-
-## Contributing
-
-We welcome contributions from the community! To contribute:
-
-1. **Fork the repository.**
-2. **Create a new branch** for your feature or bug fix.
-3. **Make your changes** and commit them with clear messages.
-4. **Push your changes** to your fork.
-5. **Submit a pull request** to the main repository.
-
-## License
-
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://opensource.org/licenses/MIT) file for more details.

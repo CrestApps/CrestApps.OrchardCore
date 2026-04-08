@@ -1,5 +1,5 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
@@ -11,7 +11,7 @@ using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.SignalR.Services;
+using CrestApps.Core.SignalR.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;

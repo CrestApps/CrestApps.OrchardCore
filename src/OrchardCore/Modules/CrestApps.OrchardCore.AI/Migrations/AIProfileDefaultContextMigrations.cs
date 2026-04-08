@@ -1,6 +1,6 @@
-using CrestApps;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;

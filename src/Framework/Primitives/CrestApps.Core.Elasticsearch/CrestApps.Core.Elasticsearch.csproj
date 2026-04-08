@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Elasticsearch</RootNamespace>
+    <Title>CrestApps Elasticsearch</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Elasticsearch integration services for search index management, document indexing, vector search, and data source access.
+    </Description>
+    <PackageTags>$(PackageTags) Elasticsearch Search</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Elastic.Clients.Elasticsearch" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.Infrastructure.Abstractions/CrestApps.Core.Infrastructure.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.Core.Infrastructure/CrestApps.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Utilities\CrestApps.Core.Support\CrestApps.Core.Support.csproj" />
+  </ItemGroup>
+
+</Project>

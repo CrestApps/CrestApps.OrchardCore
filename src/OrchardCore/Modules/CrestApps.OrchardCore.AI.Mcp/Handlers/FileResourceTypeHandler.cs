@@ -1,5 +1,5 @@
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;

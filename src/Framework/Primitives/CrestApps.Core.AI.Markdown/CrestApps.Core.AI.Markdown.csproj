@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI.Markdown</RootNamespace>
+    <Title>CrestApps AI Markdown</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Markdown-based text normalization helpers for CrestApps AI RAG and document-processing flows.
+    </Description>
+    <PackageTags>$(PackageTags) AI Markdown</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion.Markdig" />
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.Core.Tests" />
+  </ItemGroup>
+
+</Project>

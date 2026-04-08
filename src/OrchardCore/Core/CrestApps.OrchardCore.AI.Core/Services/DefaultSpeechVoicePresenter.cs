@@ -1,8 +1,8 @@
 using System.Globalization;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Services;
-using CrestApps.AI.Speech;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Speech;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;

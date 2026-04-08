@@ -1,4 +1,4 @@
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Options;
 using OrchardCore;

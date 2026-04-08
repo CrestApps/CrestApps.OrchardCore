@@ -1,12 +1,12 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 

@@ -5,6 +5,10 @@ title: Ollama Provider
 description: Connect to locally hosted Ollama models for private, self-hosted AI completions.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/providers/ollama)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Ollama Provider
 
 > Connect to locally hosted [Ollama](https://ollama.ai/) models for private, self-hosted AI completions.
@@ -90,7 +94,7 @@ curl http://localhost:11434/api/tags
 ```
 
 :::tip
-The CrestApps.OrchardCore repository includes an Aspire AppHost that can orchestrate Ollama alongside the CMS application for local development. Run `dotnet run` from `src/Startup/CrestApps.Aspire.AppHost/` to start everything together.
+The CrestApps.OrchardCore repository includes an Aspire AppHost that can orchestrate Ollama alongside the CMS application for local development. Run `dotnet run` from `src/Startup/CrestApps.Core.Aspire.AppHost/` to start everything together.
 :::
 
 ## Model Management

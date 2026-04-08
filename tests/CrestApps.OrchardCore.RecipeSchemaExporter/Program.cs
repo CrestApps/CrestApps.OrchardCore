@@ -19,8 +19,8 @@ namespace CrestApps.OrchardCore.RecipeSchemaExporter;
 
 internal sealed class Program
 {
-    private const string _agentSkillsRepositoryName = "CrestApps.AgentSkills";
-    private const string _agentSkillsRelativePath = @"CrestApps.AgentSkills\src\CrestApps.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
+    private const string _agentSkillsRepositoryName = "CrestApps.Core.AgentSkills";
+    private const string _agentSkillsRelativePath = @"CrestApps.Core.AgentSkills\src\CrestApps.Core.AgentSkills\orchardcore\orchardcore-recipes\references\recipe-schemas";
 
     private static readonly JsonSerializerOptions _jsonSerializerOptions = new()
     {
@@ -174,12 +174,13 @@ internal sealed class Program
 
         throw new DirectoryNotFoundException(
             "Could not locate the CrestApps.OrchardCore repository root. " +
-            "Expected a parent directory containing global.json, NuGet.config, or CrestApps.OrchardCore.slnx.");
+            "Expected a parent directory containing global.json, NuGet.config, CrestApps.OrchardCore.sln, or CrestApps.OrchardCore.slnx.");
     }
 
     private static bool IsRepositoryRoot(DirectoryInfo directory)
         => File.Exists(Path.Combine(directory.FullName, "global.json")) ||
             File.Exists(Path.Combine(directory.FullName, "NuGet.config")) ||
+                File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.sln")) ||
                 File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx"));
 
     private static DirectoryNotFoundException CreateAgentSkillsNotFoundException(string projectRoot, string agentSkillsRoot)
@@ -191,9 +192,9 @@ internal sealed class Program
             $"Detected CrestApps.OrchardCore root: '{projectRoot}'." + Environment.NewLine +
             $"Expected sibling repository root: '{agentSkillsRoot}'." + Environment.NewLine +
             Environment.NewLine +
-            "To fix this, clone CrestApps.AgentSkills next to CrestApps.OrchardCore, for example:" + Environment.NewLine +
+            "To fix this, clone CrestApps.Core.AgentSkills next to CrestApps.OrchardCore, for example:" + Environment.NewLine +
             $"  Set-Location '{parentDirectory}'" + Environment.NewLine +
-            "  git clone https://github.com/CrestApps/CrestApps.AgentSkills.git" + Environment.NewLine +
+            "  git clone https://github.com/CrestApps/CrestApps.Core.AgentSkills.git" + Environment.NewLine +
             Environment.NewLine +
             "Alternatively, pass an explicit output directory as the first argument to the exporter.");
     }

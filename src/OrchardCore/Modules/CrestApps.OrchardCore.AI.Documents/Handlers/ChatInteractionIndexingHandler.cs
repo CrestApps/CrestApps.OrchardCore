@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;

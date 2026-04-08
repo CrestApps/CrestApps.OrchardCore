@@ -1,7 +1,8 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.Services;
-using CrestApps.Templates.Parsing;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.Templates.Parsing;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services;
 
@@ -11,7 +12,7 @@ public sealed class EmbeddedResourceAIProfileTemplateProviderTests
     public async Task GetTemplatesAsync_DiscoversAllEmbeddedProfileTemplates()
     {
         var provider = new EmbeddedResourceAIProfileTemplateProvider(
-            typeof(CrestApps.AI.ServiceCollectionExtensions).Assembly,
+            typeof(CrestApps.Core.AI.ServiceCollectionExtensions).Assembly,
             [new DefaultMarkdownTemplateParser()]);
 
         var templates = await provider.GetTemplatesAsync();
@@ -25,7 +26,7 @@ public sealed class EmbeddedResourceAIProfileTemplateProviderTests
     public async Task GetTemplatesAsync_MapsFrontMatterToProfileMetadata()
     {
         var provider = new EmbeddedResourceAIProfileTemplateProvider(
-            typeof(CrestApps.AI.ServiceCollectionExtensions).Assembly,
+            typeof(CrestApps.Core.AI.ServiceCollectionExtensions).Assembly,
             [new DefaultMarkdownTemplateParser()]);
 
         var templates = await provider.GetTemplatesAsync();

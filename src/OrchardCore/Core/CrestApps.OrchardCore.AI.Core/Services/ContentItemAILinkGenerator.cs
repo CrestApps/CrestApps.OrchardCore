@@ -1,4 +1,4 @@
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 

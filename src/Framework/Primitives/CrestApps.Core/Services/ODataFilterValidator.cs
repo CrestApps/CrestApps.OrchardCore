@@ -1,4 +1,4 @@
-namespace CrestApps.Services;
+namespace CrestApps.Core.Services;
 
 /// <summary>
 /// Provides basic OData filter syntax validation.

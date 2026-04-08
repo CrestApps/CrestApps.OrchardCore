@@ -1,0 +1,71 @@
+@using CrestApps.Core.Mvc.Web.Areas.DataSources.ViewModels
+@model AIDataSourceViewModel
+@{
+    ViewData["Title"] = "Create Data Source";
+}
+
+<h2><i class="bi bi-plus-lg"></i> Create Data Source</h2>
+<hr />
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="DisplayText" class="form-label">Title <span class="text-danger">*</span></label>
+                <input asp-for="DisplayText" class="form-control" required placeholder="e.g., Product Catalog" />
+                <span asp-validation-for="DisplayText" class="text-danger"></span>
+                <div class="form-text">A human-readable name for this data source.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="SourceIndexProfileName" class="form-label">Source index profile <span class="text-danger">*</span></label>
+                <select asp-for="SourceIndexProfileName" asp-items="Model.SourceIndexProfiles" class="form-select" required>
+                    <option value="">Select index profile</option>
+                </select>
+                <span asp-validation-for="SourceIndexProfileName" class="text-danger"></span>
+                <div class="form-text">The index to read source documents from.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AIKnowledgeBaseIndexProfileName" class="form-label">Knowledge base index profile</label>
+                <select asp-for="AIKnowledgeBaseIndexProfileName" asp-items="Model.KnowledgeBaseIndexProfiles" class="form-select">
+                    <option value="">Select index profile</option>
+                </select>
+                <span asp-validation-for="AIKnowledgeBaseIndexProfileName" class="text-danger"></span>
+                <div class="form-text">The index where chunked and embedded documents are stored for AI retrieval.</div>
+            </div>
+
+            <hr />
+            <h5>Field Mapping</h5>
+
+            <div class="mb-3">
+                <label asp-for="KeyFieldName" class="form-label">Key field name</label>
+                <input asp-for="KeyFieldName" class="form-control" placeholder="e.g., id" />
+                <span asp-validation-for="KeyFieldName" class="text-danger"></span>
+                <div class="form-text">The source index field that maps to the document key. Leave empty to use the native document ID.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="TitleFieldName" class="form-label">Title field name</label>
+                <input asp-for="TitleFieldName" class="form-control" placeholder="e.g., title" />
+                <span asp-validation-for="TitleFieldName" class="text-danger"></span>
+                <div class="form-text">The source index field that maps to the document title.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ContentFieldName" class="form-label">Content field name <span class="text-danger">*</span></label>
+                <input asp-for="ContentFieldName" class="form-control" required placeholder="e.g., content" />
+                <span asp-validation-for="ContentFieldName" class="text-danger"></span>
+                <div class="form-text">The source index field that maps to the document content (text body).</div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Create
+                </button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>

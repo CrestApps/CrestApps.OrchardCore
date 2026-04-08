@@ -5,6 +5,10 @@ title: A2A Client
 description: Discover and invoke remote AI agents using the A2A protocol client — connection management, tool registry integration, authentication, and built-in discovery tools.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/a2a/client)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # A2A Client
 
 > Discover and invoke remote AI agents by registering A2A connections, fetching their Agent Cards, and exposing their skills as tools in the orchestrator.

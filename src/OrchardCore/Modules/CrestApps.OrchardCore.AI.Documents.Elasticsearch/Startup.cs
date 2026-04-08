@@ -1,4 +1,4 @@
-using CrestApps.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Elasticsearch.Services;

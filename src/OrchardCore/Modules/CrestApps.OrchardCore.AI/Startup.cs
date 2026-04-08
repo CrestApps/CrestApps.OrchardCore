@@ -1,10 +1,10 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.AI.Services;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -23,8 +23,8 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.AI.Tools.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Drivers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
-using CrestApps.Services;
-using CrestApps.Templates.Extensions;
+using CrestApps.Core.Services;
+using CrestApps.Core.Templates.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -104,10 +104,10 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
             .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
             .AddScoped<INamedSourceCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<CrestApps.AI.Services.DefaultAIProfileTemplateManager>()
-            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<CrestApps.AI.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.AI.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.AI.Services.DefaultAIProfileTemplateManager>())
+            .AddScoped<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>()
+            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
             .AddIndexProvider<AIProfileTemplateIndexProvider>()

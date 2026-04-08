@@ -1,12 +1,12 @@
 using A2A;
 using A2A.AspNetCore;
-using CrestApps.AI.A2A;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.A2A.Services;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.A2A;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;

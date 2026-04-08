@@ -28,7 +28,7 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 - **Strategy-Based Processing**: Adds document-focused prompt-processing strategies
 - **Index & Migrations**: Shared `AIDocumentIndex` with `ReferenceId` and `ReferenceType` columns for multi-purpose document storage
 
-The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core. Orchard Core now also bridges its native `IIndexProfileStore` into the shared `ISearchIndexProfileStore` contract so shared document RAG tools and handlers resolve tenant index profiles the same way in both hosts.
+The same document-processing pipeline is now shared with non-OrchardCore hosts. `CrestApps.Core.Mvc.Web`, for example, uses the framework-owned document processor, search tools, and ingestion readers so text, OpenXml, and PDF uploads follow the same extraction and chunking rules as Orchard Core. Orchard Core now also bridges its native `IIndexProfileStore` into the shared `ISearchIndexProfileStore` contract so shared document RAG tools and handlers resolve tenant index profiles the same way in both hosts.
 
 The shared PDF ingestion path now favors straightforward per-page text extraction instead of PdfPig layout-block analysis. That keeps PDF uploads more resilient for local and tenant-hosted chat attachment scenarios where some PDFs previously terminated the request process during extraction.
 
@@ -256,7 +256,7 @@ If you see this warning, navigate to **Settings > Artificial Intelligence** and 
 If no index profiles are available, go to **Search > Indexing**, add an **AI Documents** index, and enable one of the **AI Documents indexing** features if the **AI Documents** index type is not listed.
 Leaving the setting empty is supported while you are configuring other AI features, but document retrieval remains unavailable until a valid index profile is selected.
 
-In `CrestApps.Mvc.Web`, the same requirement applies: upload storage alone does not make a document searchable. The MVC admin **AI Settings** page now lets you select the default **AI Documents** index profile and the default document `Top N` retrieval value. Until that setting is configured, the profile editor shows a warning so users know document uploads will not influence AI answers yet.
+In `CrestApps.Core.Mvc.Web`, the same requirement applies: upload storage alone does not make a document searchable. The MVC admin **AI Settings** page now lets you select the default **AI Documents** index profile and the default document `Top N` retrieval value. Until that setting is configured, the profile editor shows a warning so users know document uploads will not influence AI answers yet.
 
 ### "Embedding Search Service Not Available" Warning
 

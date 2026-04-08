@@ -152,7 +152,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.`,
+        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.Core.`,
       },
       prism: {
         theme: prismThemes.github,

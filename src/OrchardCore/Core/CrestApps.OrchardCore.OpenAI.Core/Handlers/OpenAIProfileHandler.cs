@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.Extensions.Localization;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.OpenAI.Core.Handlers;
 

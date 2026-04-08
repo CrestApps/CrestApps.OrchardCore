@@ -1,8 +1,8 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
-using CrestApps.Mvc.Web.Areas.Indexing.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
+using CrestApps.Core.Mvc.Web.Areas.Indexing.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -21,7 +21,7 @@ public sealed class MvcAIDocumentIndexingServiceTests
             .ReturnsAsync(new SearchIndexProfile
             {
                 Name = "chat-documents",
-                ProviderName = CrestApps.Azure.AISearch.ServiceCollectionExtensions.ProviderName,
+                ProviderName = CrestApps.Core.Azure.AISearch.ServiceCollectionExtensions.ProviderName,
                 Type = IndexProfileTypes.AIDocuments,
                 IndexFullName = "chat-documents-index",
             });
@@ -37,8 +37,8 @@ public sealed class MvcAIDocumentIndexingServiceTests
             .ThrowsAsync(new InvalidOperationException("Index backend unavailable."));
 
         var services = new ServiceCollection();
-        services.AddKeyedSingleton(CrestApps.Azure.AISearch.ServiceCollectionExtensions.ProviderName, indexManager.Object);
-        services.AddKeyedSingleton(CrestApps.Azure.AISearch.ServiceCollectionExtensions.ProviderName, documentManager.Object);
+        services.AddKeyedSingleton(CrestApps.Core.Azure.AISearch.ServiceCollectionExtensions.ProviderName, indexManager.Object);
+        services.AddKeyedSingleton(CrestApps.Core.Azure.AISearch.ServiceCollectionExtensions.ProviderName, documentManager.Object);
 
         var serviceProvider = services.BuildServiceProvider();
 

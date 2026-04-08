@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;

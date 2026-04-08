@@ -5,6 +5,10 @@ title: Response Handlers
 description: Route chat responses through pluggable handlers for AI, live agent handoff, webhooks, and external systems.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/response-handlers)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Response Handlers
 
 > Pluggable components that determine how a chat message is processed — through AI, a live agent, a webhook, or a custom system.

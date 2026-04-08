@@ -24,9 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.AzureAIInference/CrestApps.AI.AzureAIInference.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.AzureAIInference/CrestApps.Core.AI.AzureAIInference.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Azure/CrestApps.Azure.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.Azure/CrestApps.Core.Azure.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 

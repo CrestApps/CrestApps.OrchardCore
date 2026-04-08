@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using CrestApps.AI.Handlers;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Services;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

@@ -1,4 +1,4 @@
-using CrestApps.AI.Ollama;
+using CrestApps.Core.AI.Ollama;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 

@@ -1,12 +1,12 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
-using CrestApps.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Memory.Migrations;
 

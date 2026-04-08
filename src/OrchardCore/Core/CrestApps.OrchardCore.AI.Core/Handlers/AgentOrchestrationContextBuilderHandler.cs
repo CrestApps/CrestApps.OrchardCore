@@ -1,10 +1,10 @@
-using CrestApps;
-using CrestApps.AI;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Profiles;
-using CrestApps.Templates.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.Logging;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 

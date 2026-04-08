@@ -1,5 +1,5 @@
 using System.Text;
-using CrestApps.AI.Chat.Services;
+using CrestApps.Core.AI.Chat.Services;
 
 namespace CrestApps.OrchardCore.Tests.Helpers.DocumentReaders;
 

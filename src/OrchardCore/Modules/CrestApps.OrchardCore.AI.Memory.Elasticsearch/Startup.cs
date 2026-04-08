@@ -1,4 +1,4 @@
-using CrestApps.AI.Memory;
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;

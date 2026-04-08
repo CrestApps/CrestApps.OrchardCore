@@ -77,7 +77,7 @@ dotnet run
 **Aspire Orchestration**: For full-stack local development with Ollama, Elasticsearch, and Redis, use the Aspire AppHost:
 
 ```bash
-cd src/Startup/CrestApps.Aspire.AppHost
+cd src/Startup/CrestApps.Core.Aspire.AppHost
 dotnet run
 ```
 
@@ -109,9 +109,9 @@ src/
 │   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
 │   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
 ├── Common/                     # Shared utility libraries
-│   └── CrestApps.Support/                          # General support utilities
+│   └── CrestApps.Core.Support/                          # General support utilities
 ├── Core/                       # Core service libraries (not Orchard modules)
-│   ├── CrestApps.Azure.Core/                       # Azure utilities
+│   ├── CrestApps.Core.Azure.Core/                       # Azure utilities
 │   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
 │   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
 │   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
@@ -161,7 +161,7 @@ src/
 │   └── CrestApps.OrchardCore.Users/               # Enhanced user management
 ├── CrestApps.OrchardCore.Documentations/  # Docusaurus documentation site
 ├── Startup/                    # Runnable applications
-│   ├── CrestApps.Aspire.AppHost/                   # .NET Aspire orchestration host
+│   ├── CrestApps.Core.Aspire.AppHost/                   # .NET Aspire orchestration host
 │   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
 │   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
 └── Targets/                    # MSBuild package bundle targets

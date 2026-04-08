@@ -1,9 +1,8 @@
+using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
-using CrestApps;
-using CrestApps.AI.Copilot.Models;
-using CrestApps.AI.Copilot.Services;
-using CrestApps.AI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,6 +11,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
 using OrchardCore.Users;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 

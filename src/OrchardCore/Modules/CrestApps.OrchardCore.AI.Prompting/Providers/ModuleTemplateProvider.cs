@@ -1,6 +1,6 @@
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Parsing;
-using CrestApps.Templates.Providers;
+using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Parsing;
+using CrestApps.Core.Templates.Providers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Extensions;
 using OrchardCore.Modules;

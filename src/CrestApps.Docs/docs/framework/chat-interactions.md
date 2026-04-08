@@ -29,8 +29,8 @@ Chat Hub (AIChatHubBase)
 ### Step 1: Register Services
 
 ```csharp
-using CrestApps.AI.ResponseHandling;
-using CrestApps.SignalR;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.SignalR;
 
 // Core AI services
 builder.Services.AddCrestAppsCoreServices();
@@ -51,9 +51,9 @@ builder.Services.AddScoped<IAIChatSessionPromptStore, YesSqlAIChatSessionPromptS
 Extend the `AIChatHubBase` class or create your own hub:
 
 ```csharp
-using CrestApps.AI.ResponseHandling;
-using CrestApps.AI.Chat.Hubs;
-using CrestApps.AI.Chat.Models;
+using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Chat.Hubs;
+using CrestApps.Core.AI.Chat.Models;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading.Channels;
 

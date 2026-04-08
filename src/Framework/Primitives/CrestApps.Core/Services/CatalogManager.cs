@@ -1,10 +1,10 @@
 using System.Text.Json.Nodes;
-using CrestApps.Extensions;
-using CrestApps.Models;
+using CrestApps.Core.Extensions;
+using CrestApps.Core.Models;
 using Microsoft.Extensions.Logging;
-using CrestApps;
+using CrestApps.Core;
 
-namespace CrestApps.Services;
+namespace CrestApps.Core.Services;
 
 public class CatalogManager<T> : ICatalogManager<T>
     where T : CatalogItem, new()

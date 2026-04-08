@@ -1,10 +1,10 @@
-using CrestApps.AI.Copilot;
+using CrestApps.Core;
+using CrestApps.Core.AI.Copilot;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Entities;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 

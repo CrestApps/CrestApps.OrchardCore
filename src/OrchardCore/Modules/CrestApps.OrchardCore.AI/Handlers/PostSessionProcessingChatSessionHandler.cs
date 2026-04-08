@@ -1,7 +1,7 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Handlers;
-using CrestApps.AI.Chat.Services;
-using CrestApps.AI.Handlers;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Handlers;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Handlers;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Workflows.Services;

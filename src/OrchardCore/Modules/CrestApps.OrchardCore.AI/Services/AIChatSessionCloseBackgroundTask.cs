@@ -1,7 +1,7 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat.Services;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Workflows.Models;

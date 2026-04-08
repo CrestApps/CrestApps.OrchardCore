@@ -1,8 +1,9 @@
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Profiles;
+using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -10,8 +11,6 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
-using CrestApps;
-
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Migrations;

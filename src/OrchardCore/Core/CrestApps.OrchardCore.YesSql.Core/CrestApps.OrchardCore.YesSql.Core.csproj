@@ -5,7 +5,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      OrchardCore-specific YesSql stores that extend the framework-independent CrestApps.Data.YesSql.
+      OrchardCore-specific YesSql stores that extend the framework-independent CrestApps.Core.Data.YesSql.
     </Description>
     <PackageTags>$(PackageTags) AI</PackageTags>
   </PropertyGroup>
@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Stores/CrestApps.Data.YesSql/CrestApps.Data.YesSql.csproj" />
+    <ProjectReference Include="../../../Framework/Stores/CrestApps.Core.Data.YesSql/CrestApps.Core.Data.YesSql.csproj" />
   </ItemGroup>
 
 </Project>

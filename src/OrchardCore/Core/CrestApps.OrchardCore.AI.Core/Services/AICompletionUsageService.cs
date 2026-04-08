@@ -1,5 +1,5 @@
-using CrestApps.AI.Completions;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Indexes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;

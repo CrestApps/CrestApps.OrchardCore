@@ -5,6 +5,10 @@ title: AI Memory
 description: Persistent, user-scoped long-term memory that enables AI conversations to retain and recall durable contextual information across sessions.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/ai-memory)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # AI Memory
 
 > A persistent memory system that lets AI conversations remember user preferences, active projects, recurring topics, and other durable facts across sessions.
@@ -23,7 +27,7 @@ builder.Services
 
 `AddAIMemoryServices()` registers the shared framework behavior — safety validation, memory tools, orchestration handlers, preemptive memory retrieval, the shared memory-indexing service, and the default semantic memory search service. Hosts still provide the durable store plus any provider-specific vector-search adapters (`IAIMemoryStore`, `ISearchIndexProfileStore`, and keyed `IMemoryVectorSearchService`) while configuring runtime options such as `AIMemoryOptions`, `GeneralAIOptions`, and `ChatInteractionMemoryOptions` through standard `IOptions<>` registration.
 
-The shared memory search service now reuses the active request scope, so preemptive memory retrieval, `search_user_memories`, and `remove_user_memory` work in both Orchard Core and `CrestApps.Mvc.Web` without opening a nested YesSql scope that can trigger SQLite locking.
+The shared memory search service now reuses the active request scope, so preemptive memory retrieval, `search_user_memories`, and `remove_user_memory` work in both Orchard Core and `CrestApps.Core.Mvc.Web` without opening a nested YesSql scope that can trigger SQLite locking.
 
 The Orchard Core memory module layers its YesSql storage, indexing, and admin UI on top of that shared framework registration. Once enabled, authenticated users gain four AI-callable memory tools out of the box.
 
@@ -90,13 +94,13 @@ Every save operation passes through `IAIMemorySafetyService` before persisting. 
 
 | Interface | Namespace | Purpose |
 |-----------|-----------|---------|
-| `IAIMemoryStore` | `CrestApps.AI` | CRUD operations for memory entries, extends `ICatalog<AIMemoryEntry>` |
-| `IAIMemorySearchService` | `CrestApps.AI` | Shared semantic memory search service used by memory tools and preemptive RAG |
-| `IMemoryVectorSearchService` | `CrestApps.AI` | Provider-specific vector-search adapter resolved by search-provider name |
-| `IAIMemorySafetyService` | `CrestApps.AI` | Validates memory content against sensitive data patterns |
-| `ICatalogEntryHandler<AIMemoryEntry>` | `CrestApps.Services` | Lifecycle hooks for memory create/update/delete events |
-| `IOrchestrationContextBuilderHandler` | `CrestApps.AI.Orchestration` | Injects memory tools and context into the orchestration pipeline |
-| `IPreemptiveRagHandler` | `CrestApps.AI.Orchestration` | Proactively retrieves relevant memories before AI responds |
+| `IAIMemoryStore` | `CrestApps.Core.AI` | CRUD operations for memory entries, extends `ICatalog<AIMemoryEntry>` |
+| `IAIMemorySearchService` | `CrestApps.Core.AI` | Shared semantic memory search service used by memory tools and preemptive RAG |
+| `IMemoryVectorSearchService` | `CrestApps.Core.AI` | Provider-specific vector-search adapter resolved by search-provider name |
+| `IAIMemorySafetyService` | `CrestApps.Core.AI` | Validates memory content against sensitive data patterns |
+| `ICatalogEntryHandler<AIMemoryEntry>` | `CrestApps.Core.Services` | Lifecycle hooks for memory create/update/delete events |
+| `IOrchestrationContextBuilderHandler` | `CrestApps.Core.AI.Orchestration` | Injects memory tools and context into the orchestration pipeline |
+| `IPreemptiveRagHandler` | `CrestApps.Core.AI.Orchestration` | Proactively retrieves relevant memories before AI responds |
 
 ### `IAIMemoryStore`
 

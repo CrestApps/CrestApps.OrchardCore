@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using CrestApps.AI.A2A.Models;
-using CrestApps.AI.A2A.Services;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;

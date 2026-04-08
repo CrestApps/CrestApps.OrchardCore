@@ -1,7 +1,7 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.Support;
+using CrestApps.Core.Support;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;

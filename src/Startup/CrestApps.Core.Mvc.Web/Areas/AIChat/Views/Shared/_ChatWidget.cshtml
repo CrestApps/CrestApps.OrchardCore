@@ -1,0 +1,363 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI
+@using CrestApps.Core.AI.Models
+@using CrestApps.Core.AI.Profiles
+@using Microsoft.Extensions.Options
+
+@inject IAIProfileManager ProfileManager
+@inject IOptions<ChatDocumentsOptions> ChatDocumentOptions
+@inject CrestApps.Core.Mvc.Web.Services.AppDataSettingsService<CrestApps.Core.Mvc.Web.Areas.AIChat.Models.AIChatAdminWidgetSettings> AdminWidgetSettingsService
+@inject CrestApps.Core.Mvc.Web.Services.AppDataSettingsService<CrestApps.Core.AI.Models.DefaultAIDeploymentSettings> DefaultDeploymentSettingsService
+
+@{
+    var adminWidgetSettings = await AdminWidgetSettingsService.GetAsync();
+    var defaultDeploymentSettings = await DefaultDeploymentSettingsService.GetAsync();
+    var selectedProfile = string.IsNullOrWhiteSpace(adminWidgetSettings.ProfileId)
+        ? null
+        : await ProfileManager.FindByIdAsync(adminWidgetSettings.ProfileId);
+    ChatModeProfileSettings profileChatModeSettings = null;
+    if (selectedProfile is not null)
+    {
+        selectedProfile.TryGetSettings<ChatModeProfileSettings>(out profileChatModeSettings);
+    }
+    var configuredChatMode = profileChatModeSettings?.ChatMode ?? ChatMode.TextInput;
+    var speechToTextEnabled = !string.IsNullOrWhiteSpace(defaultDeploymentSettings.DefaultSpeechToTextDeploymentName);
+    var textToSpeechEnabled = !string.IsNullOrWhiteSpace(defaultDeploymentSettings.DefaultTextToSpeechDeploymentName);
+    var effectiveChatMode = configuredChatMode switch
+    {
+        ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
+        ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
+        ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
+        _ => ChatMode.TextInput,
+    };
+    var supportedExtensionsAccept = ChatDocumentOptions.Value.GetAllowedFileExtensionsAcceptValue();
+    var supportedExtensionsDisplay = ChatDocumentOptions.Value.GetAllowedFileExtensionsDisplayValue();
+    var profile = selectedProfile is null || selectedProfile.Type != AIProfileType.Chat
+        ? null
+        : new
+        {
+            chatMode = effectiveChatMode.ToString(),
+            ttsVoiceName = profileChatModeSettings?.VoiceName ?? defaultDeploymentSettings.DefaultTextToSpeechVoiceId,
+            id = selectedProfile.ItemId,
+            name = selectedProfile.Name,
+            displayText = selectedProfile.DisplayText ?? selectedProfile.Name,
+            welcomeMessage = selectedProfile.WelcomeMessage,
+            enableSessionMetrics = selectedProfile.As<AnalyticsMetadata>()?.EnableSessionMetrics ?? false,
+            allowSessionDocuments = selectedProfile.As<AIProfileSessionDocumentsMetadata>()?.AllowSessionDocuments ?? false,
+        };
+    var widgetStyle = string.IsNullOrWhiteSpace(adminWidgetSettings.PrimaryColor)
+        ? null
+        : $"--ai-widget-primary: {adminWidgetSettings.PrimaryColor.Trim()};";
+}
+
+
+@if (profile != null)
+
+{
+    <div class="ai-chat-admin-widget-shell" style="@widgetStyle">
+
+        <link rel="stylesheet" href="~/css/chat-widget.css" />
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css" />
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+
+
+        <style>
+
+                .ai-chat-messages {
+                    padding: 0.5rem;
+                }
+
+                .ai-chat-message-item {
+                    position: relative;
+                    padding: 0.5rem 0;
+                }
+
+                    .ai-chat-message-item + .ai-chat-message-item::before {
+                        content: '';
+                        display: block;
+                        width: 100%;
+                        margin-bottom: 0.5rem;
+                        border-top: 1px solid rgba(33, 37, 41, 0.08);
+                    }
+
+                .ai-chat-msg-role {
+                    font-size: 0.7rem;
+                    font-weight: 600;
+                    margin-bottom: 2px;
+                }
+
+                .ai-chat-msg-role-user {
+                    color: #0d6efd;
+                }
+
+                .ai-chat-msg-role-assistant {
+                    color: #6f42c1;
+                }
+
+                    .ai-chat-msg-role-assistant i.ai-streaming-icon {
+                        animation: pulse 1.5s infinite;
+                    }
+
+                    .ai-chat-msg-role-assistant i.ai-bot-icon {
+                        color: #6f42c1;
+                    }
+
+                .ai-chat-message-body {
+                    padding: 0 5.5rem 1.75rem 0;
+                }
+
+                .message-buttons-container {
+                    position: absolute;
+                    right: 0;
+                    bottom: 0.25rem;
+                    display: inline-flex;
+                    gap: 0.35rem;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: opacity 0.15s ease-in-out;
+                }
+
+                .ai-chat-message-item:hover .message-buttons-container,
+                .ai-chat-message-item:focus-within .message-buttons-container {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+
+                .message-buttons-container > .button-message-toolbox {
+                    color: var(--bs-secondary-color, #6c757d) !important;
+                    text-decoration: none;
+                }
+
+                    .message-buttons-container > .button-message-toolbox:hover,
+                    .message-buttons-container > .button-message-toolbox:focus {
+                        color: var(--bs-body-color, #212529) !important;
+                    }
+
+                .ai-chat-notification {
+                    margin: 0.75rem 0.5rem 0;
+                    padding: 0.625rem 0.75rem;
+                    border: 1px solid rgba(33, 37, 41, 0.12);
+                    border-radius: 0.5rem;
+                    background: rgba(248, 249, 250, 0.98);
+                }
+
+                .ai-chat-notification-content {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+
+                .ai-chat-notification-icon {
+                    margin-top: 0.1rem;
+                    color: var(--bs-secondary-color, #6c757d);
+                }
+
+                .ai-chat-notification-text {
+                    flex: 1 1 auto;
+                    min-width: 0;
+                }
+
+                .ai-chat-notification-dismiss {
+                    margin-left: auto !important;
+                    color: var(--bs-secondary-color, #6c757d) !important;
+                }
+
+                .ai-chat-notification-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                    margin-top: 0.5rem;
+                }
+
+                .ai-chat-message-item p:last-child {
+                    margin-bottom: 0;
+                }
+
+                @@keyframes pulse {
+                    0%, 100% {
+                        opacity: 1;
+                    }
+
+                    50% {
+                        opacity: 0.4;
+                    }
+                }
+        </style>
+
+
+
+        <!-- Floating toggle button -->
+
+        <button id="widget-toggle" class="ai-chat-widget-toggle" title="Open AI Chat">
+
+            <i class="bi bi-chat-dots-fill"></i>
+
+        </button>
+
+
+
+        <!-- Widget container -->
+
+        <div id="widget-panel" class="ai-chat-widget-container">
+
+            <div class="ai-chat-widget-header">
+
+                <span class="title">AI Chat</span>
+
+                <div>
+
+                    <button id="widget-new-chat" title="New Chat"><i class="bi bi-plus-lg"></i></button>
+
+                    <button id="widget-close" title="Close"><i class="bi bi-x-lg"></i></button>
+
+                </div>
+
+            </div>
+
+
+            <div id="widget-chat-container" class="ai-chat-widget-messages">
+                <div id="widget-placeholder">
+                    <div class="ai-chat-widget-welcome">
+                        <i class="bi bi-robot" style="font-size: 2rem;"></i><br>
+                        @(string.IsNullOrWhiteSpace(profile.welcomeMessage) ? "What do you want to know?" : profile.welcomeMessage)
+
+                    </div>
+
+                </div>
+                <div id="widget-chat-app"></div>
+            </div>
+
+            <div id="widget-chat-document-bar" class="border-top bg-light d-none"></div>
+
+            <div class="ai-chat-widget-input">
+                <textarea id="widget-chat-input"
+                          placeholder="Type a message..."
+                          rows="1"
+                          data-session-id=""
+                          data-profile-id="@profile.id"></textarea>
+
+                <button type="button" id="widget-mic-btn" class="btn btn-outline-secondary btn-sm" title="Voice input" style="display: none;">
+                    <i class="bi bi-mic-fill"></i>
+                </button>
+
+                @if (profile.chatMode == nameof(ChatMode.Conversation))
+                {
+                    <button type="button"
+                            id="widget-conversation-btn"
+                            class="btn btn-outline-dark btn-sm"
+                            title="Start Conversation"
+                            data-start-title="Start Conversation"
+                            data-end-title="End Conversation"
+                            data-start-html="<i class='bi bi-soundwave'></i>"
+                            data-end-html="<i class='bi bi-stop-fill me-1'></i> End Conversation">
+                        <i class="bi bi-soundwave"></i>
+                    </button>
+                }
+ 
+                <button type="button" id="widget-send-btn">
+
+                    <i class="bi bi-send"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
+        <script src="~/js/ai-chat.js"></script>
+
+        <script>
+
+            document.addEventListener('DOMContentLoaded', function () {
+            var selectedProfile = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profile));
+            var panel = document.getElementById('widget-panel');
+            var toggle = document.getElementById('widget-toggle');
+            var closeBtn = document.getElementById('widget-close');
+            var newChatBtn = document.getElementById('widget-new-chat');
+            var chatInput = document.getElementById('widget-chat-input');
+            var placeholder = document.getElementById('widget-placeholder');
+            var widgetStateName = 'mvc-admin-chat-widget-' + selectedProfile.id;
+            var widgetOpenStateKey = widgetStateName + 'Open';
+
+            function setPlaceholder(profile) {
+            if (!placeholder) {
+            return;
+            }
+
+            var welcome = profile && profile.welcomeMessage ? profile.welcomeMessage : 'What do you want to know?';
+            placeholder.innerHTML = '<div class="ai-chat-widget-welcome"><i class="bi bi-robot" style="font-size: 2rem;"></i><br>' + welcome + '</div>';
+            }
+
+            function setPanelOpen(isOpen) {
+            panel.classList.toggle('open', isOpen);
+            toggle.innerHTML = isOpen
+            ? '<i class="bi bi-x-lg"></i>'
+            : '<i class="bi bi-chat-dots-fill"></i>';
+            localStorage.setItem(widgetOpenStateKey, isOpen ? 'true' : 'false');
+            }
+
+            setPlaceholder(selectedProfile);
+            chatInput.setAttribute('data-profile-id', selectedProfile.id);
+
+            var widgetApp = window.openAIChatManager.initialize({
+            signalRHubUrl: '/hubs/ai-chat',
+            appElementSelector: '#widget-chat-app',
+            chatContainerElementSelector: '#widget-chat-container',
+            inputElementSelector: '#widget-chat-input',
+            sendButtonElementSelector: '#widget-send-btn',
+            placeholderElementSelector: '#widget-placeholder',
+            messages: [],
+            autoCreateSession: true,
+            metricsEnabled: selectedProfile.enableSessionMetrics,
+            chatMode: selectedProfile.chatMode,
+            micButtonElementSelector: '#widget-mic-btn',
+            conversationButtonElementSelector: '#widget-conversation-btn',
+            ttsVoiceName: selectedProfile.ttsVoiceName || null,
+            sessionDocumentsEnabled: selectedProfile.allowSessionDocuments,
+            existingDocuments: [],
+            documentBarSelector: '#widget-chat-document-bar',
+            uploadDocumentUrl: '@Url.Content("~/ai/chat-sessions/upload-document")',
+            removeDocumentUrl: '@Url.Content("~/ai/chat-sessions/remove-document")',
+            allowedExtensions: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsAccept)),
+            supportedExtensionsText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(supportedExtensionsDisplay)),
+            widget: {
+            chatWidgetContainer: '#widget-panel',
+            chatWidgetStateName: widgetStateName
+            }
+            });
+
+            widgetApp.metricsEnabled = !!selectedProfile.enableSessionMetrics;
+
+            setPanelOpen(localStorage.getItem(widgetOpenStateKey) === 'true');
+
+            toggle.addEventListener('click', function () {
+            setPanelOpen(!panel.classList.contains('open'));
+            });
+
+            closeBtn.addEventListener('click', function () {
+            setPanelOpen(false);
+            });
+
+            newChatBtn.addEventListener('click', function () {
+            setPlaceholder(selectedProfile);
+            widgetApp.resetSession();
+            });
+            });
+        </script>
+    </div>
+
+}

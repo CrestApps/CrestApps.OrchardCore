@@ -1,15 +1,15 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat;
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.Services;
-using CrestApps.Support;
-using CrestApps.Templates.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
+using CrestApps.Core.Templates.Services;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
@@ -18,12 +18,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using CrestApps;
 
 using Microsoft.Extensions.AI;
 
 using Microsoft.Extensions.Logging;
 using OrchardCore.Liquid;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 

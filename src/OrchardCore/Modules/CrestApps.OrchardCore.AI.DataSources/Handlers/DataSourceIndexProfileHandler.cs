@@ -1,4 +1,4 @@
-using CrestApps.Infrastructure;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Services;
 using OrchardCore.Indexing.Core.Handlers;
 using OrchardCore.Indexing.Models;

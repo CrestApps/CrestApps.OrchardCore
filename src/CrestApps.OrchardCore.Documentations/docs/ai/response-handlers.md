@@ -151,7 +151,7 @@ using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.Support;
+using CrestApps.Core.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
@@ -450,7 +450,7 @@ using System.Text.Json;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Models;
-using CrestApps.Support;
+using CrestApps.Core.Support;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -1078,7 +1078,7 @@ The `ChatResponseHandlerContext` provides rich context to handlers:
 
 ## Default AI Handler
 
-The built-in AI handler (`AIChatResponseHandler`) is registered by the shared `CrestApps.AI` orchestration services, so it is available to Orchard Core, the MVC sample, and other hosts that use the framework. It wraps the existing orchestration pipeline and:
+The built-in AI handler (`AIChatResponseHandler`) is registered by the shared `CrestApps.Core.AI` orchestration services, so it is available to Orchard Core, the MVC sample, and other hosts that use the framework. It wraps the existing orchestration pipeline and:
 
 1. Builds the orchestration context using `IOrchestrationContextBuilder`.
 2. Resolves the orchestrator via `IOrchestratorResolver`.

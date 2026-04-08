@@ -17,6 +17,6 @@ This section contains sample projects that demonstrate how to integrate with Cre
 
 ## Running Samples
 
-Most samples are designed to run with the **Aspire AppHost** (`CrestApps.Aspire.AppHost`). Start the Aspire host first, then access the sample endpoints from the Aspire dashboard.
+Most samples are designed to run with the **Aspire AppHost** (`CrestApps.Core.Aspire.AppHost`). Start the Aspire host first, then access the sample endpoints from the Aspire dashboard.
 
 See individual sample documentation for specific setup instructions.

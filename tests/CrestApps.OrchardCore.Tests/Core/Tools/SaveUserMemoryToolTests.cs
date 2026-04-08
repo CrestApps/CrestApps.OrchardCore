@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using System.Text.Json;
-using CrestApps.AI.Memory;
-using CrestApps.AI.Models;
-using CrestApps.AI.Services;
-using CrestApps.AI.Tools;
-using CrestApps.Services;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tools;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,12 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.AI.OpenAI.Azure;
-using CrestApps.AI.Profiles;
-using CrestApps.Infrastructure;
+using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -16,7 +17,6 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 

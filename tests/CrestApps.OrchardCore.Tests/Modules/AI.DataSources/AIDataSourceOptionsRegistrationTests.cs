@@ -1,4 +1,4 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -6,6 +6,7 @@ using Moq;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Settings;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
 

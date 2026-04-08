@@ -1,4 +1,4 @@
-using CrestApps.AI.Profiles;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
 using Microsoft.Extensions.Localization;

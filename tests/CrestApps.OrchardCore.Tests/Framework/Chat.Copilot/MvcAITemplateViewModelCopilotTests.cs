@@ -1,9 +1,9 @@
-using CrestApps.AI;
-using CrestApps.AI.Copilot.Models;
-using CrestApps.AI.Copilot.Services;
-using CrestApps.AI.Models;
-using CrestApps.Mvc.Web.Areas.AI.ViewModels;
-using CrestApps;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Chat.Copilot;
 
@@ -79,7 +79,7 @@ public sealed class MvcAITemplateViewModelCopilotTests
         {
             Source = AITemplateSources.Profile,
         };
-        template.Put(new CrestApps.Mvc.Web.Models.MemorySettings
+        template.Put(new CrestApps.Core.Mvc.Web.Models.MemorySettings
         {
             EnableUserMemory = true,
         });

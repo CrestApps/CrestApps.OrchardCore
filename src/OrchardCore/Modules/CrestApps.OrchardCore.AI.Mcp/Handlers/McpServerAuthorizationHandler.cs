@@ -1,4 +1,4 @@
-using CrestApps.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;

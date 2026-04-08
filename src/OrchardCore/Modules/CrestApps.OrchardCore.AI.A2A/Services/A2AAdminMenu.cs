@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
-namespace CrestApps.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 internal sealed class A2AAdminMenu : AdminNavigationProvider
 {

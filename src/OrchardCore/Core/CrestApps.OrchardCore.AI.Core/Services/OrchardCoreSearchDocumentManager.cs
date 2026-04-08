@@ -1,5 +1,5 @@
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using Microsoft.AspNetCore.Html;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Indexing;

@@ -5,6 +5,10 @@ title: MCP Resource Types
 description: Create custom MCP resource type handlers for FTP, SFTP, databases, or any protocol.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/mcp/resource-types)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # MCP Resource Types
 
 > Register custom resource type handlers to expose files, data, or content from any protocol as MCP resources.
@@ -21,7 +25,7 @@ builder.Services
 
 ## Problem & Solution
 
-MCP resources represent files, URLs, or data that clients can read. FTP and SFTP handlers are available as optional packages (`CrestApps.AI.Ftp` and `CrestApps.AI.Sftp`), and applications often need additional resource types for databases, APIs, blob storage, or custom protocols. Resource type handlers provide a pluggable extension point.
+MCP resources represent files, URLs, or data that clients can read. FTP and SFTP handlers are available as optional packages (`CrestApps.Core.AI.Ftp` and `CrestApps.Core.AI.Sftp`), and applications often need additional resource types for databases, APIs, blob storage, or custom protocols. Resource type handlers provide a pluggable extension point.
 
 ## Built-in Resource Types
 

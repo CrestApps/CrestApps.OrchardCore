@@ -1,12 +1,12 @@
-using CrestApps.AI;
-using CrestApps.AI.Chat.Services;
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure.Indexing;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
-using CrestApps.Support;
+using CrestApps.Core.Support;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -19,7 +19,7 @@ using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 

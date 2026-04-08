@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.AI.Tooling;
+using CrestApps.Core.AI.Tooling;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;

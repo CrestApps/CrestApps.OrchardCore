@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.AI;
@@ -10,7 +10,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 {
     private const int _batchSize = 50;
-    private const string _sessionDocumentType = "CrestApps.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
+    private const string _sessionDocumentType = "CrestApps.Core.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
 
     public static int Create()
     {

@@ -1,6 +1,6 @@
-using CrestApps.AI.Copilot.Services;
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
+using CrestApps.Core.AI.Copilot.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;

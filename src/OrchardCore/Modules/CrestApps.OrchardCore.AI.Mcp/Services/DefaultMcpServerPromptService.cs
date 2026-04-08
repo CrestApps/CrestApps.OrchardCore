@@ -1,6 +1,6 @@
 using CrestApps.AgentSkills.Mcp.Abstractions;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

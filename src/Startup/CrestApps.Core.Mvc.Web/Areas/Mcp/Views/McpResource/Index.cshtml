@@ -1,0 +1,45 @@
+@model IReadOnlyCollection<CrestApps.Core.AI.Mcp.Models.McpResource>
+@{
+    ViewData["Title"] = "MCP Resources";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-folder2-open"></i> MCP Resources</h2>
+    <a asp-action="Create" class="btn btn-success"><i class="bi bi-plus-lg"></i> Add Resource</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No MCP resources are configured yet.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>URI</th>
+                    <th style="width:180px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var resource in Model)
+            {
+                <tr>
+                    <td><strong>@resource.DisplayText</strong></td>
+                    <td><span class="badge bg-info text-dark">@resource.Source</span></td>
+                    <td><code>@resource.Resource?.Uri</code></td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@resource.ItemId" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
+                        <form asp-action="Delete" asp-route-id="@resource.ItemId" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this MCP resource?')"><i class="bi bi-trash"></i> Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

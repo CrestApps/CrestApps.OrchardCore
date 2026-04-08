@@ -1,5 +1,5 @@
 using System.Reflection;
-using CrestApps.Mvc.Web.Areas.AI.ViewModels;
+using CrestApps.Core.Mvc.Web.Areas.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -35,7 +35,7 @@ public sealed class MvcViewModelBindingTests
     private static IEnumerable<Type> GetViewModelTypes()
     {
         return typeof(AIProfileViewModel).Assembly.GetTypes()
-            .Where(type => type.Namespace?.StartsWith("CrestApps.Mvc.Web.Areas", StringComparison.Ordinal) == true)
+            .Where(type => type.Namespace?.StartsWith("CrestApps.Core.Mvc.Web.Areas", StringComparison.Ordinal) == true)
             .Where(type => type.Name.EndsWith("ViewModel", StringComparison.Ordinal));
     }
 }

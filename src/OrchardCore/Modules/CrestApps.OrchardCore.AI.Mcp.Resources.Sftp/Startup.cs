@@ -1,6 +1,6 @@
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Sftp;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Sftp;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Sftp.Handlers;
 using Microsoft.Extensions.DependencyInjection;

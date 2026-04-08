@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Sftp/CrestApps.AI.Sftp.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.Sftp/CrestApps.Core.AI.Sftp.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,8 +1,8 @@
-using CrestApps.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Models;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using OrchardCore.Documents;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Core.Services;
 

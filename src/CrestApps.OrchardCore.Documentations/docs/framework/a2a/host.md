@@ -5,6 +5,10 @@ title: A2A Host
 description: Expose your AI agents to remote clients using the A2A protocol host — configuration, authentication modes, agent card generation, and skill exposure.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/a2a/host)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # A2A Host
 
 > Expose your AI agents to remote A2A clients so they can discover and invoke your agents over HTTP.

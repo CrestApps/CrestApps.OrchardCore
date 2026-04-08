@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;

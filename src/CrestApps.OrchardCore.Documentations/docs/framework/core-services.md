@@ -5,6 +5,10 @@ title: Core Services
 description: Foundation services including OData validation, shared utilities, and base types used by all CrestApps AI modules.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/core-services)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Core Services
 
 > Foundation services that other CrestApps features depend on.

@@ -24,7 +24,7 @@ jobs:
           10.0.x
     - name: Build prompt validation tool
       run: |
-        dotnet build -c Release src/Common/CrestApps.Templates/CrestApps.Templates.csproj /p:NuGetAudit=false
+        dotnet build -c Release src/Common/CrestApps.Core.Templates/CrestApps.Core.Templates.csproj /p:NuGetAudit=false
     - name: Validate template file structure
       shell: bash
       run: |

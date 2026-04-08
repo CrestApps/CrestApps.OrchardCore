@@ -27,7 +27,7 @@ Two transport types are supported:
 
 The **MCP Client Feature** enables your application to connect to remote MCP servers using standard HTTP requests with **Server-Sent Events (SSE)** transport, which allows real-time data flow between LLMs and external services.
 
-The transport, OAuth token acquisition, and connection metadata handling now live in shared framework services so Orchard Core and `CrestApps.Mvc.Web` can use the same MCP client behavior without duplicating protocol code.
+The transport, OAuth token acquisition, and connection metadata handling now live in shared framework services so Orchard Core and `CrestApps.Core.Mvc.Web` can use the same MCP client behavior without duplicating protocol code.
 
 ### Connect to a Remote MCP Server
 

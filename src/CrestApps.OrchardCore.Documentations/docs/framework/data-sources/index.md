@@ -5,6 +5,10 @@ title: Data Sources
 description: Vector search backends for retrieval-augmented generation (RAG) with Elasticsearch and Azure AI Search.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/data-sources/index)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Data Sources
 
 > Connect vector search backends for retrieval-augmented generation (RAG). Data sources provide semantic search over external knowledge bases.

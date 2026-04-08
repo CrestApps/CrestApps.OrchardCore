@@ -1,4 +1,4 @@
-using CrestApps.Templates.Parsing;
+using CrestApps.Core.Templates.Parsing;
 
 namespace CrestApps.OrchardCore.Tests.AI.Prompting;
 

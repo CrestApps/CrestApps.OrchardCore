@@ -1,4 +1,4 @@
-using CrestApps.AI.Pdf;
+using CrestApps.Core.AI.Pdf;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 

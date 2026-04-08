@@ -14,7 +14,7 @@ description: Connect to remote A2A hosts to discover and use external AI agents.
 
 The A2A Client feature allows your Orchard Core application to connect to external A2A hosts, enabling AI models to discover and communicate with remote AI agents.
 
-The shared framework-level A2A client is also used by the sample MVC host. In `CrestApps.Mvc.Web`, administrators can manage the same A2A host definitions and select them on AI profiles, profile templates, and chat interactions so MVC orchestration can use remote A2A agents without a separate MVC-only model or service stack.
+The shared framework-level A2A client is also used by the sample MVC host. In `CrestApps.Core.Mvc.Web`, administrators can manage the same A2A host definitions and select them on AI profiles, profile templates, and chat interactions so MVC orchestration can use remote A2A agents without a separate MVC-only model or service stack.
 
 ---
 

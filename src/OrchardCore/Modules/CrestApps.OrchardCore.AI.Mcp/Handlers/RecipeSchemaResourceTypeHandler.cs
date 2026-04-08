@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.AI.Mcp;
-using CrestApps.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;

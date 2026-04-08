@@ -5,6 +5,10 @@ title: Data Storage
 description: Pluggable catalog pattern for persistent data storage using YesSql, with support for named, source-tracked, and composite catalogs.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/data-storage)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Data Storage
 
 > A pluggable catalog pattern for CRUD operations on framework models, backed by YesSql with SQLite, SQL Server, or PostgreSQL.
@@ -35,7 +39,7 @@ The framework defines many model types (profiles, deployments, connections, sess
 - **`ISourceCatalog<T>`** — Adds source-based filtering
 - **`INamedSourceCatalog<T>`** — Combines both
 
-The YesSql implementation (`CrestApps.Data.YesSql`) provides concrete catalogs, but you can implement the interfaces with Entity Framework Core or any other persistence layer.
+The YesSql implementation (`CrestApps.Core.Data.YesSql`) provides concrete catalogs, but you can implement the interfaces with Entity Framework Core or any other persistence layer.
 
 ## Catalog Interfaces
 

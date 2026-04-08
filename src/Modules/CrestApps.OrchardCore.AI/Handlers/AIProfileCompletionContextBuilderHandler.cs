@@ -1,9 +1,10 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using OrchardCore.Entities;
-using CrestApps.AI.Completions;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
 

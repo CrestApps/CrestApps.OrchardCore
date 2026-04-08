@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.Extensions;
+namespace CrestApps.Core.Extensions;
 
 public static class HandlerExtensions
 {

@@ -1,4 +1,4 @@
-using CrestApps.AI.OpenXml;
+using CrestApps.Core.AI.OpenXml;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 

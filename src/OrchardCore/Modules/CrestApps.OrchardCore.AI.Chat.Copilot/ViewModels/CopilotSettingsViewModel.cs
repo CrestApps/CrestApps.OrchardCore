@@ -1,4 +1,4 @@
-using CrestApps.AI.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

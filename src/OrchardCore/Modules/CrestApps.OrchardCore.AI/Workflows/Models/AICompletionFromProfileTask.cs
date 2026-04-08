@@ -1,7 +1,7 @@
-using CrestApps.AI.Completions;
-using CrestApps.AI.Deployments;
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;

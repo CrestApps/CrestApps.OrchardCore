@@ -5,6 +5,10 @@ title: Context Builders
 description: Enrich AI completion and orchestration contexts with custom data, instructions, or constraints.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/context-builders)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Context Builders
 
 > Handler pipelines that enrich the AI context before completion — inject custom instructions, data, constraints, or metadata.

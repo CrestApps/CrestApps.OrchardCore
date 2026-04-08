@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.AI.A2A.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using CrestApps;
+using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 

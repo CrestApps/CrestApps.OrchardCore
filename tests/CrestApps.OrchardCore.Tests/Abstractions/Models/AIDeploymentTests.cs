@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Abstractions.Models;
 

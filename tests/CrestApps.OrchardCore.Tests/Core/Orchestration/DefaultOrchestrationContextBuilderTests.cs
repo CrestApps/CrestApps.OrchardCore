@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Orchestration;
-using CrestApps.AI.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Core.Orchestration;

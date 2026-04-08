@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI</RootNamespace>
+    <Title>CrestApps AI Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core AI service implementations including orchestration, tool registry, and completion services.
+      Framework-independent, usable in any ASP.NET Core application.
+    </Description>
+    <PackageTags>$(PackageTags) AI Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\Prompts\**\*" />
+    <EmbeddedResource Include="Templates\Profiles\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lucene.Net.Analysis.Common" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.DataIngestion" />
+    <PackageReference Include="ZString" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.Core/CrestApps.Core.csproj" />
+    <ProjectReference Include="../CrestApps.Core.Infrastructure/CrestApps.Core.Infrastructure.csproj" />
+    <ProjectReference Include="../CrestApps.Core.Templates/CrestApps.Core.Templates.csproj" />
+
+  </ItemGroup>
+</Project>

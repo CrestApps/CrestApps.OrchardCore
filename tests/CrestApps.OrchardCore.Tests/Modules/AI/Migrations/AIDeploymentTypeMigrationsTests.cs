@@ -1,5 +1,5 @@
 using System.Reflection;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 

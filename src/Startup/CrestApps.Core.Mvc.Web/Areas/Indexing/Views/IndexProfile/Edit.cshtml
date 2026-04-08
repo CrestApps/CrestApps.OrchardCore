@@ -1,0 +1,113 @@
+@using CrestApps.Core.Infrastructure.Indexing
+@using CrestApps.Core.Mvc.Web.Areas.Indexing.ViewModels
+@model IndexProfileViewModel
+@{
+    ViewData["Title"] = "Edit Index Profile";
+}
+
+<h2><i class="bi bi-pencil"></i> Edit Index Profile</h2>
+<hr />
+
+<form asp-action="Edit" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ItemId" />
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="DisplayText" class="form-label">Title</label>
+                <input asp-for="DisplayText" class="form-control" placeholder="e.g., My Documents Index" />
+                <span asp-validation-for="DisplayText" class="text-danger"></span>
+                <div class="form-text">A human-readable label (optional).</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="IndexName" class="form-label">Index name <span class="text-danger">*</span></label>
+                <input asp-for="IndexName" class="form-control" disabled />
+                <input type="hidden" asp-for="IndexName" />
+                <span asp-validation-for="IndexName" class="text-danger"></span>
+                <div class="form-text">The index name cannot be changed after creation because it corresponds to an actual index on the remote server.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ProviderName" class="form-label">Provider <span class="text-danger">*</span></label>
+                <select asp-for="ProviderName" asp-items="Model.Providers" class="form-select" disabled>
+                    <option value="">Select Provider</option>
+                </select>
+                <input type="hidden" asp-for="ProviderName" />
+                <span asp-validation-for="ProviderName" class="text-danger"></span>
+                <div class="form-text">The search backend provider cannot be changed after the index is created.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Type" class="form-label">Type <span class="text-danger">*</span></label>
+                <select asp-for="Type" asp-items="Model.Types" class="form-select" disabled>
+                    <option value="">Select Type</option>
+                </select>
+                <input type="hidden" asp-for="Type" />
+                <span asp-validation-for="Type" class="text-danger"></span>
+                <div class="form-text" id="typeDescription">The index type cannot be changed after the index is created.</div>
+            </div>
+
+            <div class="mb-3" id="embeddingDeploymentGroup">
+                <label asp-for="EmbeddingDeploymentId" class="form-label">Embedding deployment</label>
+                <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select" disabled>
+                    <option value="">Select an Embedding Deployment</option>
+                </select>
+                <input type="hidden" asp-for="EmbeddingDeploymentId" />
+                <span asp-validation-for="EmbeddingDeploymentId" class="text-danger"></span>
+                <div class="form-text">The embedding deployment cannot be changed after the index is created.</div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save
+                </button>
+                <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sources = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sources));
+        const articleType = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(IndexProfileTypes.Articles));
+        const providerSelect = document.getElementById('@Html.IdFor(m => m.ProviderName)');
+        const typeSelect = document.getElementById('@Html.IdFor(m => m.Type)');
+        const embeddingGroup = document.getElementById('embeddingDeploymentGroup');
+        const typeDescription = document.getElementById('typeDescription');
+
+        function syncTypes() {
+            const selectedProvider = providerSelect.value;
+            const currentType = typeSelect.value;
+            const matches = sources.filter(source => !selectedProvider || source.ProviderName === selectedProvider);
+            const unique = [...new Map(matches.map(source => [source.Type, source])).values()];
+
+            typeSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select type';
+            typeSelect.appendChild(placeholder);
+
+            unique.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.Type;
+                option.textContent = source.DisplayName;
+                typeSelect.appendChild(option);
+            });
+
+            if (unique.some(source => source.Type === currentType))
+            {
+                typeSelect.value = currentType;
+            }
+
+            const selected = matches.find(source => source.Type === typeSelect.value);
+            typeDescription.textContent = selected?.Description ?? 'Determines how this index is used.';
+            embeddingGroup.classList.toggle('d-none', typeSelect.value === articleType);
+        }
+
+        providerSelect.addEventListener('change', syncTypes);
+        typeSelect.addEventListener('change', syncTypes);
+        syncTypes();
+    });
+</script>

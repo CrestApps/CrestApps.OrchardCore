@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace CrestApps.Models;
+namespace CrestApps.Core.Models;
 
 public class CatalogEntryOptions<TOptions>
 {

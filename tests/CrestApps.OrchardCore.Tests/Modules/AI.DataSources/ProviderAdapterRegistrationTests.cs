@@ -1,5 +1,5 @@
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;

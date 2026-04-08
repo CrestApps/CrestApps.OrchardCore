@@ -1,4 +1,4 @@
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;

@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.AI.Tooling;
-using CrestApps.Templates.Rendering;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Templates.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 

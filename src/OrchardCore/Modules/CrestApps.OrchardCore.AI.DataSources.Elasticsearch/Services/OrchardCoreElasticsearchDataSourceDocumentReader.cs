@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Nodes;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.DataSources;
-using CrestApps.Infrastructure.Indexing.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using Elastic.Clients.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;

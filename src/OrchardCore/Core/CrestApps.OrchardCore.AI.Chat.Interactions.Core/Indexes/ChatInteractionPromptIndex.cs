@@ -1,4 +1,4 @@
-using CrestApps.Data.YesSql.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Core.Indexes;
 

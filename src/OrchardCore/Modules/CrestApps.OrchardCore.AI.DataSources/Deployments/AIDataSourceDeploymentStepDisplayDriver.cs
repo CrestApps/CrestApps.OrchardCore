@@ -1,5 +1,5 @@
-using CrestApps.AI.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;

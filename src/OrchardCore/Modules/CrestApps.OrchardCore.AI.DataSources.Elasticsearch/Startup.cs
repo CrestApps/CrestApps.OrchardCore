@@ -1,6 +1,6 @@
-using CrestApps.AI.Models;
-using CrestApps.Infrastructure;
-using CrestApps.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;

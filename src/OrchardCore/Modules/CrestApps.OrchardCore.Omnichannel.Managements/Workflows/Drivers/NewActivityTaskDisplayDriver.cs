@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels;
 using CrestApps.OrchardCore.Users;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;

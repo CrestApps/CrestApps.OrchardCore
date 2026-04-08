@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.AI.Models;
-using CrestApps.Handlers;
-using CrestApps.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;

@@ -5,6 +5,10 @@ title: Model Context Protocol (MCP)
 description: MCP client and server support for connecting to remote tool servers and exposing your application's tools.
 ---
 
+:::info Canonical framework docs
+The shared framework guidance now lives in **[CrestApps.Core](https://core.crestapps.com/docs/framework/mcp/index)**. This Orchard Core page is kept for Orchard-specific integration context and cross-links.
+:::
+
 # Model Context Protocol (MCP)
 
 > Connect to remote MCP servers as a client and expose your application's tools, prompts, and resources as an MCP server.

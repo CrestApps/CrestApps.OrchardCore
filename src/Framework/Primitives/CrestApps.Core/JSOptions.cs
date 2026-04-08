@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace CrestApps;
+namespace CrestApps.Core;
 
 public static class JSOptions
 {

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.SignalR.Services;
-using CrestApps.SignalR.Services;
+using CrestApps.Core.SignalR.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;

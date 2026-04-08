@@ -1,6 +1,7 @@
-using CrestApps.AI.Clients;
-using CrestApps.AI.Deployments;
-using CrestApps.Infrastructure;
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
@@ -9,7 +10,6 @@ using OrchardCore.Infrastructure.Entities;
 using OrchardCore.Search.Elasticsearch;
 using OrchardCore.Search.Elasticsearch.Core.Models;
 using OrchardCore.Search.Elasticsearch.Models;
-using CrestApps;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 

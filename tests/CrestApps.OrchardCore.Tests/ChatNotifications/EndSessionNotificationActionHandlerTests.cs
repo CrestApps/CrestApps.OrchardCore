@@ -1,6 +1,6 @@
-using CrestApps.AI.Chat;
-using CrestApps.AI.Chat.Services;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Services;
+using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;

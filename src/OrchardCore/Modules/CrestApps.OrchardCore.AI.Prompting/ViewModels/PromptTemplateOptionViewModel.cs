@@ -1,4 +1,4 @@
-using CrestApps.Templates.Models;
+using CrestApps.Core.Templates.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;

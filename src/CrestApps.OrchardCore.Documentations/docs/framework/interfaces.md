@@ -10,15 +10,15 @@ A comprehensive reference for all public interfaces in the CrestApps AI Framewor
 
 ## Core Abstractions
 
-The foundation layer that all other modules build upon. These interfaces live in `CrestApps.Abstractions` and define the generic catalog/manager patterns, model markers, and cloning contracts used throughout the framework.
+The foundation layer that all other modules build upon. These interfaces live in `CrestApps.Core.Abstractions` and define the generic catalog/manager patterns, model markers, and cloning contracts used throughout the framework.
 
 ### IDisplayTextAwareModel
 
 Marks a model that carries a user-facing display name. Used by drivers and admin UI to show a friendly label.
 
-- **Namespace**: `CrestApps.Models`
+- **Namespace**: `CrestApps.Core.Models`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface IDisplayTextAwareModel
@@ -31,9 +31,9 @@ public interface IDisplayTextAwareModel
 
 Marks a model that has a unique technical name. Used by catalog stores and managers for name-based look-ups.
 
-- **Namespace**: `CrestApps.Models`
+- **Namespace**: `CrestApps.Core.Models`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface INameAwareModel
@@ -46,9 +46,9 @@ public interface INameAwareModel
 
 Marks a model that tracks its originating source (e.g., a provider name or module identifier).
 
-- **Namespace**: `CrestApps.Models`
+- **Namespace**: `CrestApps.Core.Models`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ISourceAwareModel
@@ -63,7 +63,7 @@ Strongly-typed cloning contract. Produces a deep copy of the implementing model.
 
 - **Namespace**: `CrestApps`
 - **Extends**: `ICloneable`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ICloneable<T> : ICloneable
@@ -78,7 +78,7 @@ Validates OData filter expressions before they are passed to a search backend.
 
 - **Namespace**: `CrestApps`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface IODataValidator
@@ -97,9 +97,9 @@ The catalog pattern provides a layered data-access abstraction. **Read catalogs*
 
 Read-only data access for catalog entries. Implement this when you only need queries.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface IReadCatalog<T>
@@ -118,9 +118,9 @@ public interface IReadCatalog<T>
 
 Full CRUD catalog for a model type. Adds create, update, delete, and save-changes to the read catalog.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `IReadCatalog<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ICatalog<T> : IReadCatalog<T>
@@ -139,9 +139,9 @@ public interface ICatalog<T> : IReadCatalog<T>
 
 A catalog that also supports look-up by the model's unique name.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `ICatalog<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface INamedCatalog<T> : ICatalog<T>
@@ -154,9 +154,9 @@ public interface INamedCatalog<T> : ICatalog<T>
 
 A catalog that supports retrieval by source identifier.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `ICatalog<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ISourceCatalog<T> : ICatalog<T>
@@ -169,9 +169,9 @@ public interface ISourceCatalog<T> : ICatalog<T>
 
 A catalog that supports look-up by the combination of name and source.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface INamedSourceCatalog<T>
@@ -190,9 +190,9 @@ Managers wrap catalog stores with handler lifecycle events and validation. Use m
 
 Read-only manager. Exposes query methods with handler pipeline support.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface IReadCatalogManager<T>
@@ -209,9 +209,9 @@ public interface IReadCatalogManager<T>
 
 Full CRUD manager with handler pipeline, validation, and factory methods.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `IReadCatalogManager<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ICatalogManager<T> : IReadCatalogManager<T>
@@ -232,9 +232,9 @@ public interface ICatalogManager<T> : IReadCatalogManager<T>
 
 Adds name-based look-up to the catalog manager.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `ICatalogManager<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface INamedCatalogManager<T> : ICatalogManager<T>
@@ -247,9 +247,9 @@ public interface INamedCatalogManager<T> : ICatalogManager<T>
 
 Adds source-aware factory and retrieval methods.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: `ICatalogManager<T>`
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ISourceCatalogManager<T> : ICatalogManager<T>
@@ -266,9 +266,9 @@ public interface ISourceCatalogManager<T> : ICatalogManager<T>
 
 Adds look-up by the combination of name and source to the catalog manager.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface INamedSourceCatalogManager<T>
@@ -283,9 +283,9 @@ public interface INamedSourceCatalogManager<T>
 
 Handles lifecycle events for catalog entries. Implement this to run custom logic when entries are created, updated, deleted, validated, or loaded.
 
-- **Namespace**: `CrestApps.Services`
+- **Namespace**: `CrestApps.Core.Services`
 - **Extends**: None
-- **Project**: `CrestApps.Abstractions`
+- **Project**: `CrestApps.Core.Abstractions`
 
 ```csharp
 public interface ICatalogEntryHandler<T>
@@ -324,9 +324,9 @@ Interfaces for sending prompts to AI models and receiving responses — both one
 
 The primary service for sending AI completion requests. Inject this to generate AI responses from any configured provider. It resolves the correct client from the deployment and delegates to it.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionService
@@ -355,9 +355,9 @@ public interface IAICompletionService
 
 Provider-specific completion client. Each AI provider (OpenAI, Azure OpenAI, Ollama) implements this interface. You rarely inject this directly — use `IAICompletionService` instead.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionClient
@@ -389,9 +389,9 @@ public interface IAICompletionClient
 
 Intercepts completed AI responses. Implement this to inspect or transform messages and streaming updates after the model returns them.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionHandler
@@ -412,9 +412,9 @@ public interface IAICompletionHandler
 
 Called on every completion request to configure `ChatOptions` dynamically. Use this to inject custom temperature, stop sequences, or other model parameters per request.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionServiceHandler
@@ -430,9 +430,9 @@ public interface IAICompletionServiceHandler
 
 Builds `AICompletionContext` instances from a resource object (e.g., an AI profile or chat interaction). The builder runs a handler pipeline around an optional caller delegate.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionContextBuilder
@@ -450,9 +450,9 @@ public interface IAICompletionContextBuilder
 
 Handles lifecycle events while an `AICompletionContext` is being built. Implement this to enrich the context with additional data (e.g., inject system messages, tools, or memory).
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAICompletionContextBuilderHandler
@@ -479,9 +479,9 @@ Interfaces for creating and providing low-level AI clients (chat, embedding, ima
 
 Factory for creating AI clients. Returns `IChatClient`, `IEmbeddingGenerator`, `IImageGenerator`, `ISpeechToTextClient`, and `Microsoft.Extensions.AI.ITextToSpeechClient` instances from provider, connection, and deployment names.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIClientFactory
@@ -542,9 +542,9 @@ public interface IAIClientFactory
 
 Provider-specific client factory. Each AI provider (OpenAI, Azure OpenAI, Ollama) implements this to create chat clients, embedding generators, image generators, and speech clients from its connection configuration.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIClientProvider
@@ -602,7 +602,7 @@ public interface IAIClientProvider
 
 Configures OpenAI-specific `ChatCompletionOptions` before each completion request. Implement this to set vendor-specific options that the generic `IAICompletionServiceHandler` cannot express.
 
-- **Namespace**: `CrestApps.AI.OpenAI`
+- **Namespace**: `CrestApps.Core.AI.OpenAI`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.OpenAI.Core`
 
@@ -627,9 +627,9 @@ Orchestrators manage the execution loop for an AI session — planning, tool sco
 
 The pluggable orchestration runtime. Each chat session binds to exactly one orchestrator. Implement this to create custom planning or execution strategies.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IOrchestrator
@@ -652,9 +652,9 @@ public interface IOrchestrator
 
 Resolves the appropriate orchestrator by name. Falls back to the system default when the name is null or unrecognized.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IOrchestratorResolver
@@ -670,9 +670,9 @@ public interface IOrchestratorResolver
 
 Builds `OrchestrationContext` instances from a resource object. Runs a handler pipeline around an optional caller delegate.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IOrchestrationContextBuilder
@@ -690,9 +690,9 @@ public interface IOrchestrationContextBuilder
 
 Handles lifecycle events while an `OrchestrationContext` is being built. Implement this to inject tools, system prompts, or RAG context into the orchestration pipeline.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IOrchestrationContextBuilderHandler
@@ -713,9 +713,9 @@ public interface IOrchestrationContextBuilderHandler
 
 Processes preemptive RAG (Retrieval-Augmented Generation) for a specific data source type. Receives pre-extracted search queries and injects relevant context into the system message.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IPreemptiveRagHandler
@@ -742,9 +742,9 @@ Manage AI profile definitions, profile templates, deployments, and provider conn
 
 Manages AI profiles (chat, utility, etc.) with name-based look-up and type filtering.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `INamedCatalogManager<AIProfile>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIProfileManager : INamedCatalogManager<AIProfile>
@@ -760,9 +760,9 @@ public interface IAIProfileManager : INamedCatalogManager<AIProfile>
 
 Persistence store for AI profiles. Adds an efficient indexed query by profile type.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `INamedCatalog<AIProfile>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIProfileStore : INamedCatalog<AIProfile>
@@ -778,9 +778,9 @@ public interface IAIProfileStore : INamedCatalog<AIProfile>
 
 Manages AI model deployments with look-up by client, connection, type, and a full fallback resolution chain.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `INamedSourceCatalogManager<AIDeployment>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
@@ -828,9 +828,9 @@ public interface IAIDeploymentManager : INamedSourceCatalogManager<AIDeployment>
 
 Manages AI profile templates from both database and file-based sources.
 
-- **Namespace**: `CrestApps.AI.Models`
+- **Namespace**: `CrestApps.Core.AI.Models`
 - **Extends**: `INamedSourceCatalogManager<AIProfileTemplate>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIProfileTemplateManager : INamedSourceCatalogManager<AIProfileTemplate>
@@ -846,9 +846,9 @@ public interface IAIProfileTemplateManager : INamedSourceCatalogManager<AIProfil
 
 Provides AI profile templates from a specific source (e.g., module files). Implement this to register templates from custom locations.
 
-- **Namespace**: `CrestApps.AI.Models`
+- **Namespace**: `CrestApps.Core.AI.Models`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIProfileTemplateProvider
@@ -864,9 +864,9 @@ public interface IAIProfileTemplateProvider
 
 Handles lifecycle events for AI provider connections during initialization and export.
 
-- **Namespace**: `CrestApps.AI.Models`
+- **Namespace**: `CrestApps.Core.AI.Models`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIProviderConnectionHandler
@@ -887,9 +887,9 @@ Manage chat sessions, prompt history, response routing, and interaction settings
 
 Manages AI chat sessions — creating, saving, deleting, and paginating sessions with ownership checks.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIChatSessionManager
@@ -938,9 +938,9 @@ public interface IAIChatSessionManager
 
 Handles lifecycle events for chat sessions, including a callback after a message exchange completes. Extends `ICatalogEntryHandler<AIChatSession>` for standard lifecycle hooks.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalogEntryHandler<AIChatSession>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIChatSessionHandler : ICatalogEntryHandler<AIChatSession>
@@ -957,9 +957,9 @@ public interface IAIChatSessionHandler : ICatalogEntryHandler<AIChatSession>
 
 Persistence store for AI chat session prompts. Supports listing, counting, and bulk deletion by session.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<AIChatSessionPrompt>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIChatSessionPromptStore : ICatalog<AIChatSessionPrompt>
@@ -985,7 +985,7 @@ public interface IAIChatSessionPromptStore : ICatalog<AIChatSessionPrompt>
 
 Persistence store for chat interaction prompts. Supports listing and bulk deletion by interaction.
 
-- **Namespace**: `CrestApps.AI.Chat`
+- **Namespace**: `CrestApps.Core.AI.Chat`
 - **Extends**: `ICatalog<ChatInteractionPrompt>`
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1008,9 +1008,9 @@ public interface IChatInteractionPromptStore : ICatalog<ChatInteractionPrompt>
 
 A pluggable handler for processing chat prompts and producing responses. The default routes through the AI orchestration pipeline; custom implementations can route to live-agent platforms or other backends.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatResponseHandler
@@ -1033,9 +1033,9 @@ public interface IChatResponseHandler
 
 Resolves the appropriate `IChatResponseHandler` by name. Falls back to the default AI handler when unrecognized.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatResponseHandlerResolver
@@ -1058,9 +1058,9 @@ public interface IChatResponseHandlerResolver
 
 Handles lifecycle events when chat interaction settings are saved from the client (e.g., SignalR hub). Implement this to validate or enrich settings before persistence.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatInteractionSettingsHandler
@@ -1087,7 +1087,7 @@ Client-side contracts for real-time chat communication over SignalR.
 
 Defines the SignalR client methods the AI Chat hub invokes. Covers text chat, conversation mode (STT/TTS), and notification system messages.
 
-- **Namespace**: `CrestApps.AI.Chat.Hubs`
+- **Namespace**: `CrestApps.Core.AI.Chat.Hubs`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1137,7 +1137,7 @@ public interface IAIChatHubClient
 
 Defines the SignalR client methods the Chat Interaction hub invokes for ad-hoc chat sessions.
 
-- **Namespace**: `CrestApps.AI.Chat.Hubs`
+- **Namespace**: `CrestApps.Core.AI.Chat.Hubs`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1164,9 +1164,9 @@ Interfaces for discovering, authorizing, and registering AI tools that the orche
 
 Retrieves a registered AI tool by name. Used by the orchestration pipeline to resolve tools before invocation.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIToolsService
@@ -1182,9 +1182,9 @@ public interface IAIToolsService
 
 Evaluates whether a user is authorized to invoke a specific AI tool. Implement this to add custom permission checks.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIToolAccessEvaluator
@@ -1200,9 +1200,9 @@ public interface IAIToolAccessEvaluator
 
 A unified index of all available tools (local and MCP) that supports retrieval and relevance-based searching for tool scoping during orchestration.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IToolRegistry
@@ -1229,9 +1229,9 @@ public interface IToolRegistry
 
 Provides tool metadata entries to the unified tool registry. Implement this to supply tools from custom sources (local registrations, MCP servers, etc.).
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IToolRegistryProvider
@@ -1255,9 +1255,9 @@ Real-time notification infrastructure and persistent relay connections to extern
 
 Sends transient UI notifications to chat clients via SignalR. Use this from webhooks, background tasks, or response handlers.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatNotificationSender
@@ -1292,9 +1292,9 @@ public interface IChatNotificationSender
 
 Low-level transport for delivering chat notifications to clients connected to a specific hub. Registered as a keyed service using `ChatContextType` as the key.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatNotificationTransport
@@ -1320,9 +1320,9 @@ public interface IChatNotificationTransport
 
 Handles user-initiated actions on chat notifications. Registered as keyed services where the key matches the action name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IChatNotificationActionHandler
@@ -1340,9 +1340,9 @@ public interface IChatNotificationActionHandler
 
 Defines a persistent relay connection to an external system (e.g., a live-agent platform) for real-time bidirectional communication. Protocol-agnostic — supports WebSocket, SSE, gRPC, or any transport.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `IAsyncDisposable`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IExternalChatRelay : IAsyncDisposable
@@ -1383,9 +1383,9 @@ public interface IExternalChatRelay : IAsyncDisposable
 
 Manages the lifecycle of `IExternalChatRelay` instances. Registered as a singleton to persist relay connections across scoped service lifetimes.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IExternalChatRelayManager
@@ -1417,9 +1417,9 @@ public interface IExternalChatRelayManager
 
 Handles events received from an external relay. The default resolves a keyed `IExternalChatRelayNotificationBuilder` by event type and delegates to `IExternalChatRelayNotificationHandler`.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IExternalChatRelayEventHandler
@@ -1439,9 +1439,9 @@ public interface IExternalChatRelayEventHandler
 
 Populates a `ChatNotification` for a specific relay event type. Registered as keyed scoped services where the key is the event type string.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IExternalChatRelayNotificationBuilder
@@ -1466,9 +1466,9 @@ public interface IExternalChatRelayNotificationBuilder
 
 Handles sending and removing chat notifications described by an `ExternalChatRelayNotificationResult`. This is the handler half of the builder/handler pattern.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IExternalChatRelayNotificationHandler
@@ -1494,9 +1494,9 @@ Interfaces for managing search indexes, data sources, and vector similarity sear
 
 Persistence store for `AIDataSource` records.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<AIDataSource>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIDataSourceStore : ICatalog<AIDataSource>
@@ -1508,9 +1508,9 @@ public interface IAIDataSourceStore : ICatalog<AIDataSource>
 
 Resolves the active data source retrieval settings for the current host.
 
-- **Namespace**: `CrestApps.AI.Services`
+- **Namespace**: `CrestApps.Core.AI.Services`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIDataSourceSettingsProvider
@@ -1526,9 +1526,9 @@ public interface IAIDataSourceSettingsProvider
 
 Searches for and deletes document chunks in a data source index using embedding vectors.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IDataSourceContentManager
@@ -1558,9 +1558,9 @@ public interface IDataSourceContentManager
 
 Reads documents from a source index in batches. Registered as keyed services by provider name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IDataSourceDocumentReader
@@ -1592,9 +1592,9 @@ public interface IDataSourceDocumentReader
 
 Manages documents within a search index (add, update, delete). Registered as keyed services by provider name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface ISearchDocumentManager
@@ -1628,9 +1628,9 @@ public interface ISearchDocumentManager
 
 Manages the lifecycle of search indexes (create, check, delete). Registered as keyed services by provider name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface ISearchIndexManager
@@ -1663,9 +1663,9 @@ public interface ISearchIndexManager
 
 Persistence store for `SearchIndexProfile` records with name and type look-ups.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<SearchIndexProfile>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface ISearchIndexProfileStore : ICatalog<SearchIndexProfile>
@@ -1686,9 +1686,9 @@ public interface ISearchIndexProfileStore : ICatalog<SearchIndexProfile>
 
 Provides index profile information for data source and vector search operations. Decouples the AI framework from specific indexing implementations.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IIndexProfileInfo
@@ -1719,9 +1719,9 @@ public interface IIndexProfileInfo
 
 Searches document embeddings in an index provider. Registered as keyed services by provider name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IVectorSearchService
@@ -1743,9 +1743,9 @@ public interface IVectorSearchService
 
 Translates OData filter expressions into provider-specific filter queries. Registered as keyed services by provider name.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IODataFilterTranslator
@@ -1761,9 +1761,9 @@ public interface IODataFilterTranslator
 
 Tokenizes text into normalized terms for matching and scoring. Handles code identifiers, stop words, stemming, and case normalization.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface ITextTokenizer
@@ -1779,9 +1779,9 @@ public interface ITextTokenizer
 
 Resolves links for AI completion references based on the reference type. Registered as keyed services by reference type.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIReferenceLinkResolver
@@ -1805,9 +1805,9 @@ Manage AI documents, document chunks, file processing, and tabular batch analysi
 
 Persistence store for `AIDocument` records with reference-based retrieval.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<AIDocument>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIDocumentStore : ICatalog<AIDocument>
@@ -1822,9 +1822,9 @@ public interface IAIDocumentStore : ICatalog<AIDocument>
 
 Persistence store for `AIDocumentChunk` records with document-based and reference-based retrieval and deletion.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<AIDocumentChunk>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIDocumentChunkStore : ICatalog<AIDocumentChunk>
@@ -1843,7 +1843,7 @@ public interface IAIDocumentChunkStore : ICatalog<AIDocumentChunk>
 
 Processes uploaded files into AI documents and embedded chunks. Handles text extraction, chunking, and embedding generation.
 
-- **Namespace**: `CrestApps.AI.Chat.Services`
+- **Namespace**: `CrestApps.Core.AI.Chat.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1874,9 +1874,9 @@ public interface IAIDocumentProcessingService
 
 Resolves the active document retrieval settings for the current host.
 
-- **Namespace**: `CrestApps.AI.Services`
+- **Namespace**: `CrestApps.Core.AI.Services`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IInteractionDocumentSettingsProvider
@@ -1892,7 +1892,7 @@ public interface IInteractionDocumentSettingsProvider
 
 Processes tabular data batches using LLM. Splits documents into batches, executes LLM calls with bounded concurrency, and aggregates results.
 
-- **Namespace**: `CrestApps.AI.Chat`
+- **Namespace**: `CrestApps.Core.AI.Chat`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1926,7 +1926,7 @@ public interface ITabularBatchProcessor
 
 Caches tabular batch processing results to avoid re-processing documents on every chat message.
 
-- **Namespace**: `CrestApps.AI.Chat`
+- **Namespace**: `CrestApps.Core.AI.Chat`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -1982,9 +1982,9 @@ Interfaces for storing and validating per-user AI memory entries.
 
 Persistence store for `AIMemoryEntry` records with user-scoped queries.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: `ICatalog<AIMemoryEntry>`
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIMemoryStore : ICatalog<AIMemoryEntry>
@@ -2003,9 +2003,9 @@ public interface IAIMemoryStore : ICatalog<AIMemoryEntry>
 
 Validates AI memory entries for safety before storage.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface IAIMemorySafetyService
@@ -2028,7 +2028,7 @@ Interfaces for MCP client/server communication, capability resolution, resource 
 
 Resolves MCP capabilities semantically relevant to a user prompt using in-memory vector similarity over cached capability embeddings.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2051,7 +2051,7 @@ public interface IMcpCapabilityResolver
 
 Caches embedding vectors for MCP capability metadata. Embeddings are recomputed when the underlying metadata is invalidated.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2077,7 +2077,7 @@ public interface IMcpCapabilityEmbeddingCacheProvider
 
 Provides transport instances for MCP client connections. Implement this to add support for custom MCP transports.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2100,7 +2100,7 @@ public interface IMcpClientTransportProvider
 
 Resolves an `IFileProvider` by provider name. Register additional named providers (e.g., media, web root) for MCP resource access.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2118,7 +2118,7 @@ public interface IMcpFileProviderResolver
 
 Generates a structured system prompt describing MCP server capabilities. The prompt is injected into the model context so the AI can reason about when to invoke MCP capabilities.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2136,7 +2136,7 @@ public interface IMcpMetadataPromptGenerator
 
 Handles MCP resource events like exporting. Implement this to redact sensitive data during resource export.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2154,7 +2154,7 @@ public interface IMcpResourceHandler
 
 Defines a handler for reading MCP resource content based on its type. Each resource type (File, FTP, SQL, etc.) has its own implementation.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2180,7 +2180,7 @@ public interface IMcpResourceTypeHandler
 
 Provides cached metadata about MCP server capabilities. Queries MCP servers and caches results with a configurable TTL.
 
-- **Namespace**: `CrestApps.AI.Mcp`
+- **Namespace**: `CrestApps.Core.AI.Mcp`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2203,7 +2203,7 @@ public interface IMcpServerMetadataCacheProvider
 
 Provides server-side MCP prompt listing and retrieval.
 
-- **Namespace**: `CrestApps.AI.Mcp.Services`
+- **Namespace**: `CrestApps.Core.AI.Mcp.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2222,7 +2222,7 @@ public interface IMcpServerPromptService
 
 Provides server-side MCP resource listing and reading.
 
-- **Namespace**: `CrestApps.AI.Mcp.Services`
+- **Namespace**: `CrestApps.Core.AI.Mcp.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2243,7 +2243,7 @@ public interface IMcpServerResourceService
 
 Acquires OAuth 2.0 access tokens using various grant types. Used by MCP server authentication.
 
-- **Namespace**: `CrestApps.AI.Mcp.Services`
+- **Namespace**: `CrestApps.Core.AI.Mcp.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2294,7 +2294,7 @@ Interfaces for the Agent-to-Agent protocol — cached agent cards and connection
 
 Provides cached access to agent cards from remote A2A host connections.
 
-- **Namespace**: `CrestApps.AI.A2A.Services`
+- **Namespace**: `CrestApps.Core.AI.A2A.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2320,7 +2320,7 @@ public interface IA2AAgentCardCacheService
 
 Builds HTTP authentication headers for A2A connections.
 
-- **Namespace**: `CrestApps.AI.A2A.Services`
+- **Namespace**: `CrestApps.Core.AI.A2A.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2354,7 +2354,7 @@ Discover, parse, render, and compose templates.
 
 Parses template content into metadata and body. Implement this to add support for additional file formats.
 
-- **Namespace**: `CrestApps.Templates.Parsing`
+- **Namespace**: `CrestApps.Core.Templates.Parsing`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2377,7 +2377,7 @@ public interface ITemplateParser
 
 Provides prompt templates from a specific source. Implement this to add custom template discovery.
 
-- **Namespace**: `CrestApps.Templates.Providers`
+- **Namespace**: `CrestApps.Core.Templates.Providers`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2395,7 +2395,7 @@ public interface ITemplateProvider
 
 Processes AI Liquid templates: renders them with arguments and validates their syntax.
 
-- **Namespace**: `CrestApps.Templates.Rendering`
+- **Namespace**: `CrestApps.Core.Templates.Rendering`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2420,7 +2420,7 @@ public interface ITemplateEngine
 
 High-level service for discovering, listing, rendering, and composing templates.
 
-- **Namespace**: `CrestApps.Templates.Services`
+- **Namespace**: `CrestApps.Core.Templates.Services`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 
@@ -2464,9 +2464,9 @@ Interfaces for text-to-speech synthesis and speech voice resolution.
 
 Resolves available speech voices for a deployment by delegating to the matching AI client provider.
 
-- **Namespace**: `CrestApps.AI`
+- **Namespace**: `CrestApps.Core.AI`
 - **Extends**: None
-- **Project**: `CrestApps.AI.Abstractions`
+- **Project**: `CrestApps.Core.AI.Abstractions`
 
 ```csharp
 public interface ISpeechVoiceResolver
@@ -2522,7 +2522,7 @@ Interfaces for the GitHub Copilot-style embedded chat experience.
 
 Abstracts storage and retrieval of GitHub OAuth credentials per user. Implement with your preferred user store.
 
-- **Namespace**: `CrestApps.AI.Copilot`
+- **Namespace**: `CrestApps.Core.AI.Copilot`
 - **Extends**: None
 - **Project**: `CrestApps.OrchardCore.AI.Abstractions`
 

@@ -14,7 +14,7 @@ This page describes the project architecture and how the various layers depend o
 │                        Application Layer                            │
 │                                                                     │
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
-│  │  CrestApps.Mvc   │  │  Orchard Core    │  │  Blazor / Other  │  │
+│  │  CrestApps.Core.Mvc   │  │  Orchard Core    │  │  Blazor / Other  │  │
 │  │  .Web (MVC App)  │  │  Modules         │  │  (Future)        │  │
 │  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘  │
 │           │                     │                      │            │
@@ -25,7 +25,7 @@ This page describes the project architecture and how the various layers depend o
 │                    Optional Middle Layer                             │
 │                                                                     │
 │  ┌──────────────────────────┐  ┌──────────────────────────────┐    │
-│  │  CrestApps.Data.YesSql  │  │  OrchardCore.DisplayManagement│    │
+│  │  CrestApps.Core.Data.YesSql  │  │  OrchardCore.DisplayManagement│    │
 │  │  (Document Store)        │  │  (Shape-based UI)             │    │
 │  └────────────┬─────────────┘  └──────────────┬───────────────┘    │
 │               │                                │                    │
@@ -39,26 +39,26 @@ This page describes the project architecture and how the various layers depend o
 │  │                        Core Projects                         │   │
 │  │                                                              │   │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │   │
-│  │  │ CrestApps    │  │ CrestApps    │  │ CrestApps.AI     │  │   │
+│  │  │ CrestApps    │  │ CrestApps    │  │ CrestApps.Core.AI     │  │   │
 │  │  │ .AI.Core     │  │ .AI.Chat     │  │ .OpenAI.Core     │  │   │
 │  │  │              │  │ .Core        │  │                   │  │   │
 │  │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘  │   │
 │  │         │                 │                    │             │   │
 │  │  ┌──────┴───────┐  ┌─────┴────────┐  ┌───────┴─────────┐  │   │
-│  │  │ CrestApps    │  │ CrestApps    │  │ CrestApps.AI    │  │   │
+│  │  │ CrestApps    │  │ CrestApps    │  │ CrestApps.Core.AI    │  │   │
 │  │  │ .Core        │  │ .SignalR     │  │ .OpenAI.Azure   │  │   │
 │  │  │              │  │ .Core        │  │ .Core           │  │   │
 │  │  └──────┬───────┘  └──────┬───────┘  └────────┬────────┘  │   │
 │  │         │                 │                    │            │   │
 │  │  ┌──────┴───────┐  ┌─────┴────────┐  ┌───────┴─────────┐  │   │
-│  │  │ CrestApps.AI │  │ CrestApps.AI │  │ CrestApps.AI    │  │   │
+│  │  │ CrestApps.Core.AI │  │ CrestApps.Core.AI │  │ CrestApps.Core.AI    │  │   │
 │  │  │ .Ollama.Core │  │ .AzureAI     │  │ .Mcp.Core       │  │   │
 │  │  │              │  │ Inference    │  │                   │  │   │
 │  │  │              │  │ .Core        │  │                   │  │   │
 │  │  └──────┬───────┘  └──────┬───────┘  └────────┬────────┘  │   │
 │  │         │                 │                    │            │   │
 │  │  ┌──────┴───────┐  ┌─────┴────────┐  ┌───────┴─────────┐  │   │
-│  │  │ CrestApps.AI │  │ CrestApps.AI │  │ CrestApps.AI    │  │   │
+│  │  │ CrestApps.Core.AI │  │ CrestApps.Core.AI │  │ CrestApps.Core.AI    │  │   │
 │  │  │ .Chat        │  │ .DataSources │  │ .DataSources    │  │   │
 │  │  │ .Copilot     │  │ .AzureAI     │  │ .Elasticsearch  │  │   │
 │  │  └──────────────┘  └──────────────┘  └─────────────────┘  │   │
@@ -69,7 +69,7 @@ This page describes the project architecture and how the various layers depend o
 │  │                    Abstractions                               │   │
 │  │                                                              │   │
 │  │  ┌──────────────────┐  ┌────────────────────────────────┐   │   │
-│  │  │ CrestApps        │  │ CrestApps.AI.Abstractions      │   │   │
+│  │  │ CrestApps        │  │ CrestApps.Core.AI.Abstractions      │   │   │
 │  │  │ .Abstractions    │  │ (IAICompletionService,          │   │   │
 │  │  │ (ICatalog,       │  │  IAIProfileManager,             │   │   │
 │  │  │  INamedEntity)   │  │  IOrchestrator, etc.)           │   │   │
@@ -80,7 +80,7 @@ This page describes the project architecture and how the various layers depend o
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                      Resources                                │   │
 │  │  ┌──────────────────────────────────────────────────────┐     │   │
-│  │  │ CrestApps.AI.Resources (shared JS: ai-chat,          │     │   │
+│  │  │ CrestApps.Core.AI.Resources (shared JS: ai-chat,          │     │   │
 │  │  │  chat-interaction)                                    │     │   │
 │  │  └──────────────────────────────────────────────────────┘     │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -88,7 +88,7 @@ This page describes the project architecture and how the various layers depend o
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                      Utilities                                │   │
 │  │  ┌────────────────┐  ┌──────────────────────┐                │   │
-│  │  │ CrestApps      │  │ CrestApps.AI         │                │   │
+│  │  │ CrestApps      │  │ CrestApps.Core.AI         │                │   │
 │  │  │ .Support       │  │ .Prompting           │                │   │
 │  │  └────────────────┘  └──────────────────────┘                │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -104,37 +104,37 @@ The **Framework Layer** contains all abstractions, core services, and provider i
 
 | Project | Role |
 |---------|------|
-| `CrestApps.Abstractions` | Core interfaces: `ICatalog<T>`, `INamedEntity`, `ExtensibleEntity`, `IODataValidator` |
-| `CrestApps.AI.Abstractions` | AI interfaces: `IAICompletionService`, `IAIProfileManager`, `IOrchestrator`, models |
+| `CrestApps.Core.Abstractions` | Core interfaces: `ICatalog<T>`, `INamedEntity`, `ExtensibleEntity`, `IODataValidator` |
+| `CrestApps.Core.AI.Abstractions` | AI interfaces: `IAICompletionService`, `IAIProfileManager`, `IOrchestrator`, models |
 | `CrestApps.Core` | Default implementations of core abstractions, `IServiceCollection` extensions |
-| `CrestApps.AI.Core` | AI orchestration, `DefaultOrchestrator`, tool execution, completion services |
-| `CrestApps.AI.Chat.Core` | Chat session management, prompt storage, `IAIChatSessionManager` |
-| `CrestApps.AI.OpenAI.Core` | OpenAI provider (`ChatClient`, streaming, tool calls) |
-| `CrestApps.AI.OpenAI.Azure.Core` | Azure OpenAI provider with data source integration |
-| `CrestApps.AI.Ollama.Core` | Ollama provider for locally hosted LLMs |
-| `CrestApps.AI.AzureAIInference.Core` | Azure AI Inference / GitHub Models provider |
-| `CrestApps.AI.Copilot` | GitHub Copilot chat orchestration, OAuth flow, credential management |
-| `CrestApps.Azure.AISearch` | Azure AI Search provider integration for indexing, document management, vector search, and OData filters |
-| `CrestApps.Elasticsearch` | Elasticsearch provider integration for indexing, document management, vector search, and query/filter translation |
-| `CrestApps.AI.Mcp.Core` | Model Context Protocol (MCP) client and server |
-| `CrestApps.Azure.Core` | Azure-specific utilities (data protection, connection settings) |
-| `CrestApps.SignalR.Core` | SignalR hub abstractions for real-time AI chat |
-| `CrestApps.Support` | General utility classes |
-| `CrestApps.AI.Resources` | Shared frontend JavaScript resources for AI chat UI |
-| `CrestApps.Templates` | Prompt template engine |
+| `CrestApps.Core.AI.Core` | AI orchestration, `DefaultOrchestrator`, tool execution, completion services |
+| `CrestApps.Core.AI.Chat.Core` | Chat session management, prompt storage, `IAIChatSessionManager` |
+| `CrestApps.Core.AI.OpenAI.Core` | OpenAI provider (`ChatClient`, streaming, tool calls) |
+| `CrestApps.Core.AI.OpenAI.Azure.Core` | Azure OpenAI provider with data source integration |
+| `CrestApps.Core.AI.Ollama.Core` | Ollama provider for locally hosted LLMs |
+| `CrestApps.Core.AI.AzureAIInference.Core` | Azure AI Inference / GitHub Models provider |
+| `CrestApps.Core.AI.Copilot` | GitHub Copilot chat orchestration, OAuth flow, credential management |
+| `CrestApps.Core.Azure.AISearch` | Azure AI Search provider integration for indexing, document management, vector search, and OData filters |
+| `CrestApps.Core.Elasticsearch` | Elasticsearch provider integration for indexing, document management, vector search, and query/filter translation |
+| `CrestApps.Core.AI.Mcp.Core` | Model Context Protocol (MCP) client and server |
+| `CrestApps.Core.Azure.Core` | Azure-specific utilities (data protection, connection settings) |
+| `CrestApps.Core.SignalR.Core` | SignalR hub abstractions for real-time AI chat |
+| `CrestApps.Core.Support` | General utility classes |
+| `CrestApps.Core.AI.Resources` | Shared frontend JavaScript resources for AI chat UI |
+| `CrestApps.Core.Templates` | Prompt template engine |
 
 ### Optional Middle Layer
 
 | Project | Role |
 |---------|------|
-| `CrestApps.Data.YesSql` | YesSql-based document catalog implementation (SQLite, PostgreSQL, SQL Server) |
+| `CrestApps.Core.Data.YesSql` | YesSql-based document catalog implementation (SQLite, PostgreSQL, SQL Server) |
 | OrchardCore.DisplayManagement | Shape-based UI rendering (optional, for apps that want shape-driven UI) |
 
 ### Application Layer
 
 | Project | Role |
 |---------|------|
-| `CrestApps.Mvc.Web` | Standalone ASP.NET Core MVC application with full admin UI |
+| `CrestApps.Core.Mvc.Web` | Standalone ASP.NET Core MVC application with full admin UI |
 | Orchard Core Modules | CMS modules providing feature-gated UI, recipes, deployments, workflows |
 | Blazor / Other | Future: Blazor Server/WASM, minimal APIs, etc. |
 

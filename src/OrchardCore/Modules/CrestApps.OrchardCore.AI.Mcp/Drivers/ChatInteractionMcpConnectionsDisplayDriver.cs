@@ -1,7 +1,7 @@
-using CrestApps.AI.Mcp.Models;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.Services;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;

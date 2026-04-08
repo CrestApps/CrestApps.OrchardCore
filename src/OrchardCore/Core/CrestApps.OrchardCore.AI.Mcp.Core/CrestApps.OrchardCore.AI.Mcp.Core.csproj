@@ -5,7 +5,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      OrchardCore-specific MCP services that extend the framework-independent CrestApps.AI.Mcp.Core.
+      OrchardCore-specific MCP services that extend the framework-independent CrestApps.Core.AI.Mcp.Core.
     </Description>
     <PackageTags>$(PackageTags) AI MCP ModelContextProtocol</PackageTags>
   </PropertyGroup>
@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.Mcp/CrestApps.AI.Mcp.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.Mcp/CrestApps.Core.AI.Mcp.csproj" />
   </ItemGroup>
 
 </Project>

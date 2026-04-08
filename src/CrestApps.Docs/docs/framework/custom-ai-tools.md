@@ -81,7 +81,7 @@ public sealed class CalculatorTool : AIFunction
 In your `Program.cs` or service registration:
 
 ```csharp
-using CrestApps.AI.ResponseHandling;
+using CrestApps.Core.AI.ResponseHandling;
 
 builder.Services.AddAITool<CalculatorTool>(CalculatorTool.TheName)
     .WithTitle("Calculator")

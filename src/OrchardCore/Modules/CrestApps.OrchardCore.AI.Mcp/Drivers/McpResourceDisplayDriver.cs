@@ -1,4 +1,4 @@
-using CrestApps.AI.Mcp.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;

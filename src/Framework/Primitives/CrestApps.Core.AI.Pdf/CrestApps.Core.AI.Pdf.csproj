@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.AI.Pdf</RootNamespace>
+    <Title>CrestApps AI PDF</Title>
+    <Description>
+			$(CrestAppsDescription)
+
+			PDF document ingestion services for CrestApps AI.
+		</Description>
+    <PackageTags>$(PackageTags) AI PDF</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+  </ItemGroup>
+
+</Project>

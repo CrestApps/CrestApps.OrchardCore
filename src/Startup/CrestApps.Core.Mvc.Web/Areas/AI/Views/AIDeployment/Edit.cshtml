@@ -1,0 +1,124 @@
+@using CrestApps.Core.Mvc.Web.Areas.AI.ViewModels
+@model AIDeploymentViewModel
+@{
+    ViewData["Title"] = "Edit AI Deployment";
+}
+
+<h2><i class="bi bi-pencil"></i> Edit AI Deployment</h2>
+<hr />
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" asp-for="ItemId" />
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                <label asp-for="ModelName" class="form-label">Model name <span class="text-danger">*</span></label>
+                <input asp-for="ModelName" class="form-control" id="deploymentModelName" required placeholder="e.g., gpt-4o-mini" />
+                <span asp-validation-for="ModelName" class="text-danger"></span>
+                <div class="form-text">The provider model or deployment name used when connecting to the AI provider.</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="TechnicalName" class="form-label">Technical name <span class="text-danger">*</span></label>
+                <input asp-for="TechnicalName" class="form-control" id="deploymentTechName" required disabled />
+                <input type="hidden" asp-for="TechnicalName" />
+                <span asp-validation-for="TechnicalName" class="text-danger"></span>
+                <div class="form-text">This deployment identifier is shown throughout the app and cannot be changed after creation.</div>
+            </div>
+            <div class="mb-3">
+                <label asp-for="ClientName" class="form-label">Provider</label>
+                <select asp-for="ClientName" class="form-select" asp-items="Model.Providers" id="providerSelect">
+                    <option value="">Select provider</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Deployment types <span class="text-danger">*</span></label>
+                @foreach (var type in Model.Types)
+                {
+                    var isChecked = Model.SelectedTypes?.Contains(type.Value, StringComparer.OrdinalIgnoreCase) ?? false;
+                    <div class="form-check">
+                        <input id="SelectedTypes_@type.Value"
+                               name="SelectedTypes"
+                               type="checkbox"
+                               value="@type.Value"
+                               class="form-check-input"
+                        @(isChecked ? "checked" : "") />
+                        <label class="form-check-label" for="SelectedTypes_@type.Value">@type.Text</label>
+                    </div>
+                }
+                <span asp-validation-for="SelectedTypes" class="text-danger"></span>
+                <div class="form-text">Select one or more capability types for this deployment.</div>
+            </div>
+            <div class="mb-3" id="connectionGroup">
+                <label asp-for="ConnectionName" class="form-label">Connection</label>
+                <select asp-for="ConnectionName" class="form-select" asp-items="Model.Connections">
+                    <option value="">No connection</option>
+                </select>
+                <div class="form-text">The connection this deployment belongs to.</div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Default deployment fallbacks are configured from <strong>Settings</strong>, not on individual deployments.
+            </div>
+
+            <!-- Standalone deployment fields (Azure AI Services) -->
+            <div id="standaloneFields" style="display: none;">
+                <div class="mb-3">
+                    <label asp-for="Endpoint" class="form-label">Endpoint</label>
+                    <input asp-for="Endpoint" class="form-control" placeholder="e.g., https://your-resource.cognitiveservices.azure.com/" />
+                    <div class="form-text">The service endpoint URL.</div>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="AuthenticationType" class="form-label">Authentication type</label>
+                    <select asp-for="AuthenticationType" class="form-select" asp-items="Model.AuthenticationTypes" id="authTypeSelect">
+                        <option value="">Select authentication type</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="apiKeyGroup">
+                    <label asp-for="ApiKey" class="form-label">API key</label>
+                    <input asp-for="ApiKey" class="form-control" type="password" placeholder="Enter API key (leave blank to keep existing)" autocomplete="new-password" />
+                    <div class="form-text">The API key or secret used for authentication. Leave blank to keep the existing key.</div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> Save
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var providerSelect = document.getElementById('providerSelect');
+            var connectionGroup = document.getElementById('connectionGroup');
+            var standaloneFields = document.getElementById('standaloneFields');
+            var apiKeyGroup = document.getElementById('apiKeyGroup');
+            var authTypeSelect = document.getElementById('authTypeSelect');
+            var standaloneProviders = ['AzureSpeech'];
+
+            function updateVisibility() {
+                var provider = providerSelect.value;
+                var isStandalone = standaloneProviders.indexOf(provider) >= 0;
+
+                connectionGroup.style.display = isStandalone ? 'none' : '';
+                standaloneFields.style.display = isStandalone ? '' : 'none';
+
+                if (isStandalone) {
+                    var authType = authTypeSelect.value;
+                    apiKeyGroup.style.display = (authType === 'ApiKey') ? '' : 'none';
+                }
+            }
+
+            providerSelect.addEventListener('change', updateVisibility);
+            if (authTypeSelect) {
+                authTypeSelect.addEventListener('change', updateVisibility);
+            }
+            updateVisibility();
+        });
+    </script>
+}

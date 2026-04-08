@@ -1,6 +1,6 @@
-using CrestApps.AI.A2A.Models;
-using CrestApps.Models;
-using CrestApps.Services;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;

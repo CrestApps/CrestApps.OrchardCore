@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
 using Azure.Search.Documents;
 using Azure.Search.Documents.Models;
-using CrestApps.Infrastructure.Indexing;
-using CrestApps.Infrastructure.Indexing.DataSources;
-using CrestApps.Infrastructure.Indexing.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;

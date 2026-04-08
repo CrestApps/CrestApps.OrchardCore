@@ -5,13 +5,13 @@
     <Description>
       $(CrestAppsDescription)
 
-      OrchardCore-specific Azure OpenAI constants that extend the framework-independent CrestApps.AI.OpenAI.Azure.Core.
+      OrchardCore-specific Azure OpenAI constants that extend the framework-independent CrestApps.Core.AI.OpenAI.Azure.Core.
     </Description>
     <PackageTags>$(PackageTags) Azure OpenAI</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../Framework/Primitives/CrestApps.AI.OpenAI.Azure/CrestApps.AI.OpenAI.Azure.csproj" />
+    <ProjectReference Include="../../../Framework/Primitives/CrestApps.Core.AI.OpenAI.Azure/CrestApps.Core.AI.OpenAI.Azure.csproj" />
   </ItemGroup>
 
 </Project>

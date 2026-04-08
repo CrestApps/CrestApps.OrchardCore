@@ -1,7 +1,7 @@
-using CrestApps.Templates;
-using CrestApps.Templates.Models;
-using CrestApps.Templates.Parsing;
-using CrestApps.Templates.Providers;
+using CrestApps.Core.Templates;
+using CrestApps.Core.Templates.Models;
+using CrestApps.Core.Templates.Parsing;
+using CrestApps.Core.Templates.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -253,12 +253,12 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     public async Task GetTemplatesAsync_FrameworkAssemblyIncludesDocumentContextHeader()
     {
         var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
-        var assembly = typeof(CrestApps.AI.AITemplateIds).Assembly;
+        var assembly = typeof(CrestApps.Core.AI.AITemplateIds).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
 
         var templates = await provider.GetTemplatesAsync();
 
-        var template = Assert.Single(templates, t => t.Id == CrestApps.AI.AITemplateIds.DocumentContextHeader);
+        var template = Assert.Single(templates, t => t.Id == CrestApps.Core.AI.AITemplateIds.DocumentContextHeader);
         Assert.Equal("Document Context Header", template.Metadata.Title);
         Assert.Contains("[Uploaded Document Context]", template.Content);
     }
@@ -267,12 +267,12 @@ public sealed class EmbeddedResourceAITemplateProviderTests
     public async Task GetTemplatesAsync_FrameworkAssemblyIncludesExtractedDataAvailability()
     {
         var parsers = new ITemplateParser[] { new DefaultMarkdownTemplateParser() };
-        var assembly = typeof(CrestApps.AI.AITemplateIds).Assembly;
+        var assembly = typeof(CrestApps.Core.AI.AITemplateIds).Assembly;
         var provider = new EmbeddedResourceTemplateProvider(assembly, parsers);
 
         var templates = await provider.GetTemplatesAsync();
 
-        var template = Assert.Single(templates, t => t.Id == CrestApps.AI.AITemplateIds.ExtractedDataAvailability);
+        var template = Assert.Single(templates, t => t.Id == CrestApps.Core.AI.AITemplateIds.ExtractedDataAvailability);
         Assert.Equal("Extracted Data Availability", template.Metadata.Title);
         Assert.Contains("[Collected Session Data]", template.Content);
     }

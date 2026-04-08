@@ -1,9 +1,9 @@
-@using CrestApps
-@using CrestApps.AI
+@using CrestApps.Core
+@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.AI.Models
-@using CrestApps.SignalR.Services
+@using CrestApps.Core.AI.Models
+@using CrestApps.Core.SignalR.Services
 @using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement
 @using OrchardCore.Entities
@@ -11,10 +11,10 @@
 @using OrchardCore.Environment.Shell.Scope
 @using Microsoft.Extensions.DependencyInjection
 @using CrestApps.OrchardCore.AI.Chat.Hubs
-@using CrestApps.Services
+@using CrestApps.Core.Services
 @using Microsoft.Extensions.Options
 @using System.Text.Json
-@using CrestApps.AI.Profiles
+@using CrestApps.Core.AI.Profiles
 
 @inject IAIProfileStore ProfileCatalog
 @inject IAuthorizationService AuthorizationService

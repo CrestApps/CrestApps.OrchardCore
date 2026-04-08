@@ -1,5 +1,5 @@
-using CrestApps.AI;
-using CrestApps.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
