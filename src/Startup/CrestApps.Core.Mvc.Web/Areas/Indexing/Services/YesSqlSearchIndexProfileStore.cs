@@ -5,7 +5,6 @@ using CrestApps.Core.Mvc.Web.Areas.Indexing.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.Indexing.Services;
 
@@ -88,8 +87,4 @@ public sealed class YesSqlSearchIndexProfileStore : ISearchIndexProfileStore
         return ValueTask.FromResult(true);
     }
 
-    public async ValueTask SaveChangesAsync()
-    {
-        await _session.SaveChangesAsync();
-    }
 }

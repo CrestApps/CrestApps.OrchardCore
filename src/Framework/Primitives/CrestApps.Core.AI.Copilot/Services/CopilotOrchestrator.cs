@@ -18,7 +18,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Copilot.Services;
 

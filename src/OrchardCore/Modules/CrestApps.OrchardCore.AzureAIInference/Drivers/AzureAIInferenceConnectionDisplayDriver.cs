@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.AzureAIInference;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Azure.Models;
@@ -9,7 +10,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Drivers;
 

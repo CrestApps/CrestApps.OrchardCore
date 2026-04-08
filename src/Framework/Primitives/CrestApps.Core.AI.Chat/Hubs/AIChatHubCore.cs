@@ -20,7 +20,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 #pragma warning disable MEAI001 // Text-to-speech APIs from Microsoft.Extensions.AI are preview and require explicit opt-in at each usage site.
 

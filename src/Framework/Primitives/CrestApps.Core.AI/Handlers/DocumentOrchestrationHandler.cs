@@ -5,7 +5,6 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Handlers;
 

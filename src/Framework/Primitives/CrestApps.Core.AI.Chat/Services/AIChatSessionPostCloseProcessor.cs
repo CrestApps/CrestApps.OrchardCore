@@ -1,6 +1,5 @@
 using CrestApps.Core.AI.Models;
 using Microsoft.Extensions.Logging;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Chat.Services;
 

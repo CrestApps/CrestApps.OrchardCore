@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Memory.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes.AIMemory;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using YesSql;

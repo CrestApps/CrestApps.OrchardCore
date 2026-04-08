@@ -3,7 +3,6 @@ using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.Logging;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Handlers;
 

@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
@@ -9,9 +10,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-
 using OrchardCore.Mvc.ModelBinding;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 

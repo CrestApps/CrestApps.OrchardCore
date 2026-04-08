@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Chat.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules;
 using YesSql;

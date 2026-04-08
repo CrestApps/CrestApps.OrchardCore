@@ -37,6 +37,7 @@
     <Project Path="src/Framework/Primitives/CrestApps.Core/CrestApps.Core.csproj" />
   </Folder>
   <Folder Name="/Framework/Stores/">
+    <Project Path="src/Framework/Stores/CrestApps.Core.Data.EntityCore/CrestApps.Core.Data.EntityCore.csproj" />
     <Project Path="src/Framework/Stores/CrestApps.Core.Data.YesSql/CrestApps.Core.Data.YesSql.csproj" />
   </Folder>
   <Folder Name="/Framework/Utilities/">

@@ -300,8 +300,10 @@ builder.Services.AddAITool<SendEmailTool>(SendEmailTool.TheName)
 // implementations of the store interfaces (IAIProfileManager,
 // IAIChatSessionManager, IAIChatSessionPromptStore, IAIDocumentStore, etc.).
 //
-// This example uses YesSql with SQLite. To use Entity Framework Core or another
-// ORM, replace this entire section with your own implementations.
+// This sample uses YesSql with SQLite. CrestApps.Core also ships the
+// CrestApps.Core.Data.EntityCore package for EF Core-based stores, and hosts
+// can provide their own implementations as long as they satisfy the same
+// store/catalog abstractions.
 // =============================================================================
 builder.Services.AddYesSqlDataStore(appDataPath);
 
@@ -436,5 +438,7 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.UseMiddleware<YesSqlUnitOfWorkMiddleware>();
 
 await app.RunAsync();

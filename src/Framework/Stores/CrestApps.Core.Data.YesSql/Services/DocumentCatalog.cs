@@ -3,7 +3,6 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using YesSql;
 using YesSql.Services;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Data.YesSql.Services;
 
@@ -146,11 +145,6 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         await SavingAsync(record);
 
         await Session.SaveAsync(record, CollectionName);
-    }
-
-    public async ValueTask SaveChangesAsync()
-    {
-        await Session.SaveChangesAsync();
     }
 
     protected virtual ValueTask DeletingAsync(T model)

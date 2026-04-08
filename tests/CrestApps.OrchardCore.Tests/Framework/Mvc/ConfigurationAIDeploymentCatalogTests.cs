@@ -191,8 +191,6 @@ public sealed class ConfigurationAIDeploymentCatalogTests
                 Entries = deployments.ToArray(),
             });
 
-        public ValueTask SaveChangesAsync() => ValueTask.CompletedTask;
-
         public ValueTask UpdateAsync(AIDeployment entry) => ValueTask.CompletedTask;
     }
 }

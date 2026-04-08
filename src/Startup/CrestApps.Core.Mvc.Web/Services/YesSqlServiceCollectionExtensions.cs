@@ -1,3 +1,4 @@
+using System.Data.Common;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.Chat;
@@ -33,15 +34,25 @@ using CrestApps.Core.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Core.Mvc.Web.Areas.Mcp.Indexes;
 using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
-using CrestApps.Core;
+using SharedAIChatSessionMetricsIndexProvider = CrestApps.Core.Data.YesSql.Indexes.AIChat.AIChatSessionMetricsIndexProvider;
+using SharedAIChatSessionMetricsIndexSchemaOptions = CrestApps.Core.Data.YesSql.Indexes.AIChat.AIChatSessionMetricsIndexSchemaOptions;
+using SharedAIChatSessionMetricsSchemaBuilderExtensions = CrestApps.Core.Data.YesSql.Indexes.AIChat.AIChatSessionMetricsIndexSchemaBuilderExtensions;
 
 namespace CrestApps.Core.Mvc.Web.Services;
 
 internal static class YesSqlServiceCollectionExtensions
 {
+    private static readonly (string LegacyValue, string CurrentValue)[] _legacyDocumentTypeReplacements =
+    [
+        ("CrestApps.AI.", "CrestApps.Core.AI."),
+        ("CrestApps.Infrastructure.", "CrestApps.Core.Infrastructure."),
+        ("CrestApps.Mvc.Web", "CrestApps.Core.Mvc.Web"),
+    ];
+
     /// <summary>
     /// Registers YesSql with SQLite, all index providers, and the catalog/manager
     /// services that the MVC sample application needs. Call this from Program.cs to
@@ -51,40 +62,9 @@ internal static class YesSqlServiceCollectionExtensions
     {
         var dbPath = Path.Combine(appDataPath, "crestapps.db");
 
-        services.AddSingleton(sp =>
-        {
-            var store = StoreFactory.CreateAndInitializeAsync(
-                new Configuration()
-                    .UseSqLite($"Data Source={dbPath};Cache=Shared")
-                    .SetTablePrefix("CA_"))
-                .GetAwaiter().GetResult();
-
-            store.RegisterIndexes<AIProfileIndexProvider>();
-            store.RegisterIndexes<AIProviderConnectionIndexProvider>();
-            store.RegisterIndexes<A2AConnectionIndexProvider>();
-            store.RegisterIndexes<McpConnectionIndexProvider>();
-            store.RegisterIndexes<McpPromptIndexProvider>();
-            store.RegisterIndexes<McpResourceIndexProvider>();
-            store.RegisterIndexes<AIDeploymentIndexProvider>();
-            store.RegisterIndexes<AIProfileTemplateIndexProvider>();
-            store.RegisterIndexes<AIChatSessionIndexProvider>();
-            store.RegisterIndexes<AIChatSessionMetricsIndexProvider>();
-            store.RegisterIndexes<AICompletionUsageIndexProvider>();
-            store.RegisterIndexes<AIChatSessionExtractedDataIndexProvider>();
-            store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
-            store.RegisterIndexes<AIDocumentIndexProvider>();
-            store.RegisterIndexes<AIDocumentChunkIndexProvider>();
-            store.RegisterIndexes<SearchIndexProfileIndexProvider>();
-            store.RegisterIndexes<AIDataSourceIndexProvider>();
-            store.RegisterIndexes<AIMemoryEntryIndexProvider>();
-            store.RegisterIndexes<ChatInteractionIndexProvider>();
-            store.RegisterIndexes<ChatInteractionPromptIndexProvider>();
-            store.RegisterIndexes<ArticleIndexProvider>();
-
-            return store;
-        });
-
-        services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
+        CrestApps.Core.Data.YesSql.ServiceCollectionExtensions.AddYesSqlDataStore(services, configuration => configuration
+            .UseSqLite($"Data Source={dbPath};Cache=Shared")
+            .SetTablePrefix("CA_"));
 
         // YesSql-backed catalogs and managers.
         services
@@ -156,11 +136,15 @@ internal static class YesSqlServiceCollectionExtensions
     public static async Task InitializeYesSqlSchemaAsync(this IServiceProvider services)
     {
         var store = services.GetRequiredService<IStore>();
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("CrestApps.Core.Mvc.Web.YesSql");
+        RegisterIndexes(store);
         await using var connection = store.Configuration.ConnectionFactory.CreateConnection();
 
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
+
+        await NormalizeLegacyDocumentTypeNamesAsync(store, connection, transaction, logger);
 
         await TryCreateTableAsync(() =>
             schemaBuilder.CreateMapIndexTableAsync<AIProfileIndex>(t => t
@@ -218,35 +202,9 @@ internal static class YesSqlServiceCollectionExtensions
                 .Column<DateTime>(nameof(AIChatSessionIndex.LastActivityUtc))));
 
         await TryCreateTableAsync(() =>
-            schemaBuilder.CreateMapIndexTableAsync<AIChatSessionMetricsIndex>(t => t
-                .Column<string>(nameof(AIChatSessionMetricsIndex.SessionId), c => c.WithLength(44))
-                .Column<string>(nameof(AIChatSessionMetricsIndex.ProfileId), c => c.WithLength(26))
-                .Column<string>(nameof(AIChatSessionMetricsIndex.VisitorId), c => c.WithLength(255))
-                .Column<string>(nameof(AIChatSessionMetricsIndex.UserId), c => c.WithLength(255))
-                .Column<bool>(nameof(AIChatSessionMetricsIndex.IsAuthenticated))
-                .Column<DateTime>(nameof(AIChatSessionMetricsIndex.SessionStartedUtc))
-                .Column<DateTime?>(nameof(AIChatSessionMetricsIndex.SessionEndedUtc))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.MessageCount))
-                .Column<double>(nameof(AIChatSessionMetricsIndex.HandleTimeSeconds))
-                .Column<bool>(nameof(AIChatSessionMetricsIndex.IsResolved))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.HourOfDay))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.DayOfWeek))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.TotalInputTokens))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.TotalOutputTokens))
-                .Column<double>(nameof(AIChatSessionMetricsIndex.AverageResponseLatencyMs))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.CompletionCount))
-                .Column<bool?>(nameof(AIChatSessionMetricsIndex.UserRating))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsUpCount))
-                .Column<int>(nameof(AIChatSessionMetricsIndex.ThumbsDownCount))
-                .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionScore))
-                .Column<int?>(nameof(AIChatSessionMetricsIndex.ConversionMaxScore))
-                .Column<DateTime>(nameof(AIChatSessionMetricsIndex.CreatedUtc))));
-
-        await TryAlterTableAsync(() =>
-            schemaBuilder.AlterIndexTableAsync<AIChatSessionMetricsIndex>(table =>
-            {
-                table.AddColumn<int>(nameof(AIChatSessionMetricsIndex.CompletionCount));
-            }));
+            SharedAIChatSessionMetricsSchemaBuilderExtensions.CreateAIChatSessionMetricsSchemaAsync(
+                schemaBuilder,
+                new SharedAIChatSessionMetricsIndexSchemaOptions()));
 
         await TryCreateTableAsync(() =>
             schemaBuilder.CreateMapIndexTableAsync<AICompletionUsageIndex>(t => t
@@ -345,6 +303,43 @@ internal static class YesSqlServiceCollectionExtensions
         await transaction.CommitAsync();
     }
 
+    private static async Task NormalizeLegacyDocumentTypeNamesAsync(
+        IStore store,
+        DbConnection connection,
+        DbTransaction transaction,
+        ILogger logger)
+    {
+        var dialect = store.Configuration.SqlDialect;
+        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(string.Empty);
+        var table = $"{store.Configuration.TablePrefix}{documentTableName}";
+        var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
+        var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
+
+        foreach (var (legacyValue, currentValue) in _legacyDocumentTypeReplacements)
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText =
+                $"""
+                UPDATE {quotedTableName}
+                SET {quotedTypeColumnName} = REPLACE({quotedTypeColumnName}, '{legacyValue}', '{currentValue}')
+                WHERE {quotedTypeColumnName} LIKE '%{legacyValue}%'
+                """;
+
+            var updated = await command.ExecuteNonQueryAsync();
+
+            if (updated > 0)
+            {
+                logger.LogInformation(
+                    "Updated {Count} stored YesSql document type names in {TableName} from '{LegacyValue}' to '{CurrentValue}'.",
+                    updated,
+                    table,
+                    legacyValue,
+                    currentValue);
+            }
+        }
+    }
+
     private static async Task TryCreateTableAsync(Func<Task> createTable)
     {
         try { await createTable(); }
@@ -355,6 +350,31 @@ internal static class YesSqlServiceCollectionExtensions
     {
         try { await alterTable(); }
         catch { /* Column already exists or table is missing. */ }
+    }
+
+    private static void RegisterIndexes(IStore store)
+    {
+        store.RegisterIndexes<AIProfileIndexProvider>();
+        store.RegisterIndexes<AIProviderConnectionIndexProvider>();
+        store.RegisterIndexes<A2AConnectionIndexProvider>();
+        store.RegisterIndexes<McpConnectionIndexProvider>();
+        store.RegisterIndexes<McpPromptIndexProvider>();
+        store.RegisterIndexes<McpResourceIndexProvider>();
+        store.RegisterIndexes<AIDeploymentIndexProvider>();
+        store.RegisterIndexes<AIProfileTemplateIndexProvider>();
+        store.RegisterIndexes<AIChatSessionIndexProvider>();
+        store.RegisterIndexes<SharedAIChatSessionMetricsIndexProvider>();
+        store.RegisterIndexes<AICompletionUsageIndexProvider>();
+        store.RegisterIndexes<AIChatSessionExtractedDataIndexProvider>();
+        store.RegisterIndexes<AIChatSessionPromptIndexProvider>();
+        store.RegisterIndexes<AIDocumentIndexProvider>();
+        store.RegisterIndexes<AIDocumentChunkIndexProvider>();
+        store.RegisterIndexes<SearchIndexProfileIndexProvider>();
+        store.RegisterIndexes<AIDataSourceIndexProvider>();
+        store.RegisterIndexes<AIMemoryEntryIndexProvider>();
+        store.RegisterIndexes<ChatInteractionIndexProvider>();
+        store.RegisterIndexes<ChatInteractionPromptIndexProvider>();
+        store.RegisterIndexes<ArticleIndexProvider>();
     }
 
     /// <summary>
@@ -554,6 +574,6 @@ internal static class YesSqlServiceCollectionExtensions
             await catalog.CreateAsync(article);
         }
 
-        await catalog.SaveChangesAsync();
+        await services.GetRequiredService<YesSql.ISession>().SaveChangesAsync();
     }
 }

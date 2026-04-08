@@ -1,4 +1,3 @@
-using CrestApps.Core;
 namespace CrestApps.Core.Models;
 
 public class SourceCatalogEntry : CatalogItem, ISourceAwareModel

@@ -127,7 +127,6 @@ public sealed class AIConnectionController : Controller
         model.ApplyTo(connection);
 
         await _catalog.CreateAsync(connection);
-        await _catalog.SaveChangesAsync();
         await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));
@@ -200,7 +199,6 @@ public sealed class AIConnectionController : Controller
         model.ApplyTo(existing);
 
         await _catalog.UpdateAsync(existing);
-        await _catalog.SaveChangesAsync();
         await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));
@@ -230,7 +228,6 @@ public sealed class AIConnectionController : Controller
         }
 
         await _catalog.DeleteAsync(connection);
-        await _catalog.SaveChangesAsync();
         await RefreshProviderOptionsAsync();
 
         return RedirectToAction(nameof(Index));

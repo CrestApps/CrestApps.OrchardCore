@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 

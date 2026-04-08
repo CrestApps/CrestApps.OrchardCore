@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
@@ -88,7 +88,6 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
             await _memoryManager.DeleteAsync(memory);
         }
 
-        await _memoryStore.SaveChangesAsync();
         await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
 
         return Edit(user, context);

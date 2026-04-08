@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.AI.Models;
@@ -11,7 +12,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
 using OrchardCore.Users;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 

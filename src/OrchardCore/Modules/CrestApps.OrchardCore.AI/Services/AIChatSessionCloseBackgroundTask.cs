@@ -2,15 +2,14 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Workflows.Services;
 using YesSql;
-
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Services;

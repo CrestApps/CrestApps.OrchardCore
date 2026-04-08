@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using CrestApps.Core.AI.A2A.Models;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.A2A.ViewModels;
 

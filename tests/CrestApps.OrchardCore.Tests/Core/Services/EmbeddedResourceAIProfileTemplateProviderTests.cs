@@ -1,8 +1,8 @@
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Templates.Parsing;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services;
 

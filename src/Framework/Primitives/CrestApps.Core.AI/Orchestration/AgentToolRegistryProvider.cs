@@ -2,7 +2,6 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Tooling;
 using Microsoft.Extensions.AI;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Orchestration;
 

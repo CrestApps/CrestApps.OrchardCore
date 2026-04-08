@@ -148,13 +148,14 @@ public sealed class ConfigurationAIDeploymentCatalog : IAIDeploymentStore
             string.Equals(deployment.Source, source, StringComparison.OrdinalIgnoreCase));
     }
 
-    public ValueTask<bool> DeleteAsync(AIDeployment entry) => _inner.DeleteAsync(entry);
+    public ValueTask<bool> DeleteAsync(AIDeployment entry) =>
+        _inner.DeleteAsync(entry);
 
-    public ValueTask CreateAsync(AIDeployment entry) => _inner.CreateAsync(entry);
+    public ValueTask CreateAsync(AIDeployment entry) =>
+        _inner.CreateAsync(entry);
 
-    public ValueTask UpdateAsync(AIDeployment entry) => _inner.UpdateAsync(entry);
-
-    public ValueTask SaveChangesAsync() => _inner.SaveChangesAsync();
+    public ValueTask UpdateAsync(AIDeployment entry)
+        => _inner.UpdateAsync(entry);
 
     private AIDeployment FindConfigDeployment(Func<AIDeployment, bool> predicate)
         => GetConfigDeployments().FirstOrDefault(predicate)?.Clone();

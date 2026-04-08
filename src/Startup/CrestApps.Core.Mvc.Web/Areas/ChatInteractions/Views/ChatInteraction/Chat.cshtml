@@ -1596,14 +1596,6 @@
                         },
                         complete: function () {
                             vm.finishStreaming();
-                            if (textToSpeechEnabled && !isConversationMode) {
-                                var last = vm.messages[vm.messages.length - 1];
-                                if (last && last.role === 'assistant' && last.rawContent) {
-                                    connection.invoke('SynthesizeSpeech', itemId, last.rawContent, ttsVoiceName).catch(function (err) {
-                                        console.error('Failed to synthesize response:', err);
-                                    });
-                                }
-                            }
                             isSending = false;
                             sendBtn.disabled = false;
                             inputEl.focus();

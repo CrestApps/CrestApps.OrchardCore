@@ -77,7 +77,6 @@ public sealed class RemoveUserMemoryTool : AIFunction
         }
 
         await manager.DeleteAsync(existingMemory);
-        await store.SaveChangesAsync();
 
         return JsonSerializer.Serialize(new
         {

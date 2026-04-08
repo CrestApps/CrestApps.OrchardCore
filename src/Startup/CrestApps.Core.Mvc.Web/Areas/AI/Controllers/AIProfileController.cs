@@ -21,7 +21,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.AI.Controllers;
 
@@ -149,9 +148,7 @@ public sealed class AIProfileController : Controller
         // Assign ItemId early so document processing can use it as a reference.
         profile.ItemId = Guid.NewGuid().ToString("N");
 
-        var hasDocumentChanges = Documents is { Count: > 0 };
-
-        if (hasDocumentChanges)
+        if (Documents is { Count: > 0 })
         {
             await _profileDocumentService.UploadDocumentsAsync(profile, Documents);
         }
@@ -163,16 +160,10 @@ public sealed class AIProfileController : Controller
             if (template != null)
             {
                 await _templateDocumentService.CloneDocumentsToProfileAsync(template, profile);
-                hasDocumentChanges = true;
             }
         }
 
         await _profileManager.CreateAsync(profile);
-
-        if (hasDocumentChanges)
-        {
-            await _documentStore.SaveChangesAsync();
-        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -225,26 +216,17 @@ public sealed class AIProfileController : Controller
 
         model.ApplyTo(existing);
 
-        var hasDocumentChanges = false;
-
         if (RemovedDocumentIds is { Length: > 0 })
         {
             await _profileDocumentService.RemoveDocumentsAsync(existing, RemovedDocumentIds);
-            hasDocumentChanges = true;
         }
 
         if (Documents is { Count: > 0 })
         {
             await _profileDocumentService.UploadDocumentsAsync(existing, Documents);
-            hasDocumentChanges = true;
         }
 
         await _profileManager.UpdateAsync(existing);
-
-        if (hasDocumentChanges)
-        {
-            await _documentStore.SaveChangesAsync();
-        }
 
         return RedirectToAction(nameof(Index));
     }

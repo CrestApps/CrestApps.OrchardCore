@@ -1,11 +1,12 @@
 using System.Security.Claims;
+using CrestApps.Core;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
-using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -19,7 +20,6 @@ using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 

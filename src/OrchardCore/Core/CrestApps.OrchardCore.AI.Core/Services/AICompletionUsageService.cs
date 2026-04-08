@@ -1,6 +1,6 @@
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using YesSql;

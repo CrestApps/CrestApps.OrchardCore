@@ -220,9 +220,6 @@ public sealed class SearchIndexProfileProvisioningServiceTests
             where TQuery : QueryContext
             => ValueTask.FromResult(new PageResult<AIDeployment>());
 
-        public ValueTask SaveChangesAsync()
-            => ValueTask.CompletedTask;
-
         public ValueTask UpdateAsync(AIDeployment entry)
             => ValueTask.CompletedTask;
     }

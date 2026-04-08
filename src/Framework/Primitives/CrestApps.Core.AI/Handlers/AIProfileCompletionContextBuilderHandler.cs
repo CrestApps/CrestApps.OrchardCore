@@ -2,7 +2,6 @@ using System.Text.Json;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Templates.Services;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Handlers;
 

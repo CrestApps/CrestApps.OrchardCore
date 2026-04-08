@@ -3,7 +3,6 @@ using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Client;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Mcp.Services;
 

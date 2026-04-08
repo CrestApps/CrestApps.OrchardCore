@@ -6,7 +6,6 @@ using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.A2A.Controllers;
 
@@ -55,7 +54,6 @@ public sealed class A2AConnectionController : Controller
         ApplyToConnection(model, connection);
 
         await _catalog.CreateAsync(connection);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -93,7 +91,6 @@ public sealed class A2AConnectionController : Controller
         ApplyToConnection(model, connection);
 
         await _catalog.UpdateAsync(connection);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -110,7 +107,6 @@ public sealed class A2AConnectionController : Controller
         }
 
         await _catalog.DeleteAsync(connection);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }

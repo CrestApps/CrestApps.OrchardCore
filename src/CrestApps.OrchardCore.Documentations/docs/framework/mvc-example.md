@@ -276,16 +276,16 @@ builder.Services
         .WithPurpose(AIToolPurposes.DataSourceSearch);
 ```
 
-### Section 11 — Data Store (YesSql + SQLite)
+### Section 11 — Data Store (YesSql + SQLite sample)
 
-Configures YesSql with SQLite for persistent storage:
+The sample host configures YesSql with SQLite for persistent storage:
 
 - Creates the SQLite database in `App_Data/crestapps.db`
 - Registers 17 index providers for all framework models
 - Registers catalog services for each model type
 - Sets up manager and store implementations
 
-This entire section is replaceable with Entity Framework Core or another persistence layer.
+The framework now also ships `CrestApps.Core.Data.EntityCore` as a first-party EF Core alternative. The MVC sample stays on YesSql so it can continue demonstrating the document-store flow and YesSql index providers, but other hosts can swap in the EntityCore package or a custom store implementation.
 
 ## Validation Feedback
 

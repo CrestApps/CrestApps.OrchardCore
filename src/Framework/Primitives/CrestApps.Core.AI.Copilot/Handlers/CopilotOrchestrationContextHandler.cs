@@ -1,7 +1,6 @@
 using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Copilot.Handlers;
 

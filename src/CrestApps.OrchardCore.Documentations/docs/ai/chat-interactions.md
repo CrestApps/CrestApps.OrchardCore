@@ -88,6 +88,8 @@ Once configured:
 - **Audio Input**: A microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
 - **Conversation**: A headset button appears in the Chat Interaction editor. Click it to start a persistent two-way voice conversation — the mic, send button, and text input are hidden. Speak naturally and your transcribed prompt appears as a user message and is automatically sent. The AI responds with streamed text **and** spoken audio simultaneously. If you speak while the AI is responding, the current response is interrupted to process your new prompt. Click the headset button again to end the conversation and restore the text interface.
 
+Typed prompts and **Audio Input** dictation keep the assistant response in text only. Automatic spoken playback is reserved for the turns generated while **Conversation** mode is actively running.
+
 :::info
 If the speech-to-text service encounters an error during transcription, the error is reported immediately and the recording stops automatically.
 :::

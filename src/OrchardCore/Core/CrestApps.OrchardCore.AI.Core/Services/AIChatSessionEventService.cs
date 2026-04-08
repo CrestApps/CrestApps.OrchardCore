@@ -1,5 +1,5 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using YesSql;
 using ISession = YesSql.ISession;
 

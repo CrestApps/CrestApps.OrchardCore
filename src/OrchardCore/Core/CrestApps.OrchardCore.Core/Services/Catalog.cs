@@ -1,8 +1,8 @@
-using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Models;
-using CrestApps.Core.Services;
-using OrchardCore.Documents;
 using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Models;
+using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
 
@@ -119,11 +119,6 @@ public class Catalog<T> : ICatalog<T>
         document.Records[record.ItemId] = record;
 
         await DocumentManager.UpdateAsync(document);
-    }
-
-    public ValueTask SaveChangesAsync()
-    {
-        return ValueTask.CompletedTask;
     }
 
     protected virtual void Deleting(T model, DictionaryDocument<T> document)

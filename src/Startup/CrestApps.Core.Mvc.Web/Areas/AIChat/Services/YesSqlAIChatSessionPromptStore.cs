@@ -5,7 +5,6 @@ using CrestApps.Core.Mvc.Web.Areas.AIChat.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.AIChat.Services;
 
@@ -98,8 +97,4 @@ public sealed class YesSqlAIChatSessionPromptStore : IAIChatSessionPromptStore
         return ValueTask.FromResult(true);
     }
 
-    public async ValueTask SaveChangesAsync()
-    {
-        await _session.SaveChangesAsync();
-    }
 }

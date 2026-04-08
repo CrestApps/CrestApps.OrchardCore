@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.Mcp.Controllers;
 
@@ -69,7 +68,6 @@ public sealed class McpResourceController : Controller
         Apply(model, resource);
 
         await _catalog.CreateAsync(resource);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -111,7 +109,6 @@ public sealed class McpResourceController : Controller
         Apply(model, resource);
 
         await _catalog.UpdateAsync(resource);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -128,7 +125,6 @@ public sealed class McpResourceController : Controller
         }
 
         await _catalog.DeleteAsync(resource);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }

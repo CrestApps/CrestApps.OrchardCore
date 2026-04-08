@@ -5,7 +5,6 @@ using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ModelContextProtocol.Protocol;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.Mcp.Controllers;
 
@@ -52,7 +51,6 @@ public sealed class McpPromptController : Controller
         Apply(model, prompt, arguments);
 
         await _catalog.CreateAsync(prompt);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -102,7 +100,6 @@ public sealed class McpPromptController : Controller
         Apply(model, prompt, arguments);
 
         await _catalog.UpdateAsync(prompt);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -119,7 +116,6 @@ public sealed class McpPromptController : Controller
         }
 
         await _catalog.DeleteAsync(prompt);
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }

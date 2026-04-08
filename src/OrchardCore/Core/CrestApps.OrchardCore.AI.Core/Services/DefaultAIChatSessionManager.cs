@@ -1,21 +1,17 @@
 using System.Security.Claims;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
-
 using CrestApps.Core.AI.ResponseHandling;
-using CrestApps.OrchardCore.AI.Core.Indexes;
-
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
-
 using YesSql;
-
 using ISession = YesSql.ISession;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 

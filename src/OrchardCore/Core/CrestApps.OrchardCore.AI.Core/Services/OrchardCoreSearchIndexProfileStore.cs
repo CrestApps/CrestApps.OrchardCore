@@ -65,9 +65,6 @@ internal sealed class OrchardCoreSearchIndexProfileStore : ISearchIndexProfileSt
     public async ValueTask<bool> DeleteAsync(SearchIndexProfile entry)
         => await _store.DeleteAsync(Map(entry));
 
-    public async ValueTask SaveChangesAsync()
-        => await _store.SaveChangesAsync();
-
     private static SearchIndexProfile Map(IndexProfile profile)
     {
         if (profile == null)

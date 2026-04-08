@@ -7,7 +7,6 @@ using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Chat.Services;
 

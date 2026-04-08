@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
@@ -5,7 +6,6 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Handlers;
 

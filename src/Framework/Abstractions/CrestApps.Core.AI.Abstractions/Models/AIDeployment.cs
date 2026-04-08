@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.Core;
 
 namespace CrestApps.Core.AI.Models;
 

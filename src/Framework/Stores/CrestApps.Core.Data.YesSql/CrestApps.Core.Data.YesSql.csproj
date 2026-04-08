@@ -16,8 +16,11 @@ Optional - consumers can provide their own store implementations.
 <PackageReference Include="YesSql.Core" />
 </ItemGroup>
 
-<ItemGroup>
-<ProjectReference Include="../../Abstractions/CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
-</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.Abstractions/CrestApps.Core.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.Core.AI.Abstractions/CrestApps.Core.AI.Abstractions.csproj" />
+    <ProjectReference Include="../../Primitives/CrestApps.Core.AI/CrestApps.Core.AI.csproj" />
+    <ProjectReference Include="../../Utilities/CrestApps.Core.Support/CrestApps.Core.Support.csproj" />
+  </ItemGroup>
 
 </Project>

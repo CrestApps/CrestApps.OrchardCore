@@ -32,8 +32,9 @@ Add the framework packages your application needs:
 <!-- Optional: Real-time chat via SignalR -->
 <PackageReference Include="CrestApps.Core.SignalR.Core" />
 
-<!-- Optional: YesSql document store (for profile/connection/session persistence) -->
+<!-- Optional: pick a persistence flavor for durable catalogs/stores -->
 <PackageReference Include="CrestApps.Core.Data.YesSql" />
+<!-- or CrestApps.Core.Data.EntityCore -->
 
 <!-- Optional: Chat session management -->
 <PackageReference Include="CrestApps.Core.AI.Chat.Core" />
@@ -134,9 +135,13 @@ Add provider configuration to `appsettings.json`:
 }
 ```
 
-## 4. Data Persistence with YesSql
+## 4. Data Persistence
 
-If you want to persist AI profiles, connections, and chat sessions, use the YesSql store:
+If you want to persist AI profiles, connections, and chat sessions, pick the storage package that matches your host.
+
+### YesSql
+
+Use the YesSql store when you want the shared document-store implementation:
 
 ```csharp
 using CrestApps.Core.AI.ResponseHandling;
@@ -173,6 +178,27 @@ builder.Services.AddNamedSourceDocumentCatalog<AIProfile, AIProfileIndex>();
 builder.Services.AddNamedSourceDocumentCatalog<AIProviderConnection, AIProviderConnectionIndex>();
 builder.Services.AddNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>();
 ```
+
+### Entity Framework Core
+
+Use the EF Core store package when your host already standardizes on `DbContext`-based persistence:
+
+```csharp
+builder.Services.AddEntityCoreSqliteDataStore(
+    $"Data Source={Path.Combine(builder.Environment.ContentRootPath, "App_Data", "crestapps.db")}");
+
+builder.Services.AddEntityCoreCoreStores();
+```
+
+Create the schema during startup:
+
+```csharp
+var app = builder.Build();
+
+await app.Services.InitializeEntityCoreSchemaAsync();
+```
+
+If you use another ORM or persistence model, implement the same catalog/store abstractions and register those instead.
 
 :::tip
 YesSql supports SQLite, PostgreSQL, SQL Server, and MySQL. Simply swap the provider:

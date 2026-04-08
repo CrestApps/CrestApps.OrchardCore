@@ -5,7 +5,6 @@ using CrestApps.Core.Mvc.Web.Areas.DataSources.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.DataSources.Services;
 
@@ -74,8 +73,4 @@ public sealed class YesSqlAIDataSourceStore : IAIDataSourceStore
         return ValueTask.FromResult(true);
     }
 
-    public async ValueTask SaveChangesAsync()
-    {
-        await _session.SaveChangesAsync();
-    }
 }

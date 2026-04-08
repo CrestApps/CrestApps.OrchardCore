@@ -5,12 +5,22 @@ using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using YesSql;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Data.YesSql;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddYesSqlDataStore(this IServiceCollection services, Func<Configuration, IConfiguration> configure)
+    {
+        services.AddSingleton<IStore>(_ => StoreFactory.CreateAndInitializeAsync(configure(new Configuration()))
+            .GetAwaiter()
+            .GetResult());
+
+        services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
+
+        return services;
+    }
+
     public static IServiceCollection AddDocumentCatalogs(this IServiceCollection services)
     {
         services.TryAddScoped(typeof(ICatalog<>), typeof(DocumentCatalog<,>));

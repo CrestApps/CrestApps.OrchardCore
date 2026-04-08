@@ -18,6 +18,8 @@
     <PackageVersion Include="Markdig" Version="1.1.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.4.0-preview.1.26160.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.4.0-preview.1.26160.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
 <PackageVersion Include="NLog" Version="6.1.1" />

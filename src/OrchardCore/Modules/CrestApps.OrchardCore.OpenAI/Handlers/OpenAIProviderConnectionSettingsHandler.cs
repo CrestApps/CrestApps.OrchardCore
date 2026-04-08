@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI;
 using CrestApps.Core.AI.OpenAI.Models;
@@ -8,7 +9,6 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.OpenAI.Handlers;
 

@@ -2,7 +2,7 @@ namespace CrestApps.Core.Services;
 
 /// <summary>
 /// Provides full CRUD operations for catalog entries, extending read-only access
-/// with the ability to create, update, delete, and persist changes.
+/// with the ability to create, update, and delete entries.
 /// </summary>
 /// <typeparam name="T">The type of catalog entry.</typeparam>
 public interface ICatalog<T> : IReadCatalog<T>
@@ -25,9 +25,4 @@ public interface ICatalog<T> : IReadCatalog<T>
     /// </summary>
     /// <param name="entry">The entry to update.</param>
     ValueTask UpdateAsync(T entry);
-
-    /// <summary>
-    /// Asynchronously saves all pending changes in the catalog.
-    /// </summary>
-    ValueTask SaveChangesAsync();
 }

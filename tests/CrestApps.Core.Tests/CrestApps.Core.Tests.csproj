@@ -23,6 +23,7 @@
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../src/OrchardCore/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
+    <ProjectReference Include="../../src/Framework/Stores/CrestApps.Core.Data.EntityCore/CrestApps.Core.Data.EntityCore.csproj" />
     <ProjectReference Include="../../src/Framework/Primitives/CrestApps.Core.AI.Copilot/CrestApps.Core.AI.Copilot.csproj" />
     <ProjectReference Include="../../src/Framework/Primitives/CrestApps.Core.AI.Markdown/CrestApps.Core.AI.Markdown.csproj" />
     <ProjectReference Include="../../src/Framework/Primitives/CrestApps.Core.AI.OpenXml/CrestApps.Core.AI.OpenXml.csproj" />

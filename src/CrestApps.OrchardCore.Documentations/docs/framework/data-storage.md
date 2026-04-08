@@ -2,7 +2,7 @@
 sidebar_label: Data Storage
 sidebar_position: 12
 title: Data Storage
-description: Pluggable catalog pattern for persistent data storage using YesSql, with support for named, source-tracked, and composite catalogs.
+description: Pluggable catalog pattern for persistent data storage with first-party YesSql and Entity Framework Core implementations.
 ---
 
 :::info Canonical framework docs
@@ -11,23 +11,21 @@ The shared framework guidance now lives in **[CrestApps.Core](https://core.crest
 
 # Data Storage
 
-> A pluggable catalog pattern for CRUD operations on framework models, backed by YesSql with SQLite, SQL Server, or PostgreSQL.
+> A pluggable catalog pattern for CRUD operations on framework models, with first-party `CrestApps.Core.Data.YesSql` and `CrestApps.Core.Data.EntityCore` packages plus support for custom implementations.
 
 ## Quick Start
 
 ```csharp
-// Register YesSql store (SQLite example)
-IStore store = await StoreFactory.CreateAndInitializeAsync(
-    new Configuration()
-        .UseSqLite("Data Source=app.db;Cache=Shared")
-        .SetTablePrefix("CA_"));
+// YesSql + SQLite
+builder.Services.AddYesSqlDataStore(configuration => configuration
+    .UseSqLite("Data Source=app.db;Cache=Shared")
+    .SetTablePrefix("CA_"));
 
-builder.Services.AddSingleton(store);
-builder.Services.AddScoped(sp => sp.GetRequiredService<IStore>().CreateSession());
-
-// Register catalogs for your models
 builder.Services.AddNamedSourceDocumentCatalog<AIProfile, AIProfileIndex>();
-builder.Services.AddDocumentCatalog<AIChatSession, AIChatSessionIndex>();
+
+// Entity Framework Core + SQLite
+builder.Services.AddEntityCoreSqliteDataStore("Data Source=app.db");
+builder.Services.AddEntityCoreCoreStores();
 ```
 
 ## Problem & Solution
@@ -39,7 +37,14 @@ The framework defines many model types (profiles, deployments, connections, sess
 - **`ISourceCatalog<T>`** — Adds source-based filtering
 - **`INamedSourceCatalog<T>`** — Combines both
 
-The YesSql implementation (`CrestApps.Core.Data.YesSql`) provides concrete catalogs, but you can implement the interfaces with Entity Framework Core or any other persistence layer.
+The repository now ships two first-party persistence flavors:
+
+| Package | Backing technology | Typical fit |
+|---------|--------------------|-------------|
+| `CrestApps.Core.Data.YesSql` | YesSql document store | Hosts that want YesSql collections, indexes, and a request-scoped unit of work |
+| `CrestApps.Core.Data.EntityCore` | Entity Framework Core | Hosts that already standardize on EF Core and want SQLite or another EF-supported relational provider |
+
+You can also implement the same interfaces with another ORM, a remote service, or any custom storage approach.
 
 ## Catalog Interfaces
 
@@ -53,9 +58,10 @@ public interface ICatalog<T> : IReadCatalog<T>
     ValueTask CreateAsync(T entry);
     ValueTask UpdateAsync(T entry);
     ValueTask<bool> DeleteAsync(T entry);
-    ValueTask SaveChangesAsync();
 }
 ```
+
+The YesSql implementation stages writes and expects the host to own the session flush boundary. The Entity Framework Core implementation commits inside its store methods, so it does not require a separate unit-of-work middleware.
 
 ### `INamedCatalog<T>`
 
@@ -99,6 +105,17 @@ public interface INamedSourceCatalog<T> : INamedCatalog<T>, ISourceCatalog<T>
 | `AddNamedDocumentCatalog<TModel, TIndex>()` | `ICatalog<T>` + `INamedCatalog<T>` | + `INameAwareModel` + `INameAwareIndex` |
 | `AddSourceDocumentCatalog<TModel, TIndex>()` | `ICatalog<T>` + `ISourceCatalog<T>` | + `ISourceAwareModel` + `ISourceAwareIndex` |
 | `AddNamedSourceDocumentCatalog<TModel, TIndex>()` | All four interfaces | Both `INameAware*` + `ISourceAware*` |
+
+The Entity Framework Core package exposes the same service-registration shape without YesSql indexes:
+
+| Method | Registers | Requires |
+|--------|-----------|----------|
+| `AddDocumentCatalog<TModel>()` | `ICatalog<T>` | `CatalogItem` |
+| `AddNamedDocumentCatalog<TModel>()` | `ICatalog<T>` + `INamedCatalog<T>` | `CatalogItem` + `INameAwareModel` |
+| `AddSourceDocumentCatalog<TModel>()` | `ICatalog<T>` + `ISourceCatalog<T>` | `CatalogItem` + `ISourceAwareModel` |
+| `AddNamedSourceDocumentCatalog<TModel>()` | All four interfaces | `CatalogItem` + both awareness interfaces |
+
+`AddEntityCoreCoreStores()` registers the built-in CrestApps store interfaces (`IAIChatSessionManager`, prompt stores, document stores, memory stores, search index profile store, and related catalog registrations) against the Entity Framework Core package.
 
 ## Catalog Entry Handlers
 

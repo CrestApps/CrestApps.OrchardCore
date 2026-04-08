@@ -1,10 +1,10 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Templates.Providers;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Prompting.Drivers;
 using CrestApps.OrchardCore.AI.Prompting.Providers;
 using CrestApps.OrchardCore.AI.Prompting.Services;
-using CrestApps.Core.Templates.Providers;
-using CrestApps.Core.Templates.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.DisplayManagement.Handlers;

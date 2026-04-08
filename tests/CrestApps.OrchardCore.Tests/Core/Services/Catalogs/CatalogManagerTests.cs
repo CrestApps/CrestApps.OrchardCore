@@ -1,6 +1,6 @@
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -134,16 +134,13 @@ public sealed class CatalogManagerTests
     }
 
     [Fact]
-    public async Task DeleteAsync_SavesCatalogChanges()
+    public async Task DeleteAsync_DeletesWithoutCallingCommit()
     {
         var entry = new TestCatalogEntry { ItemId = "1" };
         var catalogMock = new Mock<ICatalog<TestCatalogEntry>>();
         catalogMock
             .Setup(catalog => catalog.DeleteAsync(entry))
             .ReturnsAsync(true);
-        catalogMock
-            .Setup(catalog => catalog.SaveChangesAsync())
-            .Returns(ValueTask.CompletedTask);
 
         var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
         var manager = new CatalogManager<TestCatalogEntry>(catalogMock.Object, [], logger);
@@ -151,7 +148,6 @@ public sealed class CatalogManagerTests
         await manager.DeleteAsync(entry);
 
         catalogMock.Verify(catalog => catalog.DeleteAsync(entry), Times.Once);
-        catalogMock.Verify(catalog => catalog.SaveChangesAsync(), Times.Once);
     }
 
     [Fact]

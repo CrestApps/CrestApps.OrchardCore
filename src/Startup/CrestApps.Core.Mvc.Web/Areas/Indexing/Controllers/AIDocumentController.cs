@@ -8,7 +8,6 @@ using CrestApps.Core.Mvc.Web.Areas.Indexing.Services;
 using CrestApps.Core.Mvc.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.Indexing.Controllers;
 
@@ -105,7 +104,6 @@ public sealed class AIDocumentController : Controller
         profile.Put(documentsMetadata);
 
         await _profileManager.UpdateAsync(profile);
-        await _documentStore.SaveChangesAsync();
 
         return Ok(new
         {
@@ -144,7 +142,6 @@ public sealed class AIDocumentController : Controller
         profile.Put(documentsMetadata);
 
         await _profileManager.UpdateAsync(profile);
-        await _documentStore.SaveChangesAsync();
 
         return Ok(new { success = true });
     }

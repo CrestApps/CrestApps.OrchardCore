@@ -1,4 +1,5 @@
 using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -12,7 +13,6 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Tasks;
-using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;

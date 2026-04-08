@@ -1,6 +1,5 @@
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Infrastructure.Indexing.Models;
 

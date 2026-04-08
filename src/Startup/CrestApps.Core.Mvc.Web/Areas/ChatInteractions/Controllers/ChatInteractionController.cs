@@ -26,7 +26,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.ChatInteractions.Controllers;
 
@@ -278,9 +277,6 @@ public sealed class ChatInteractionController : Controller
         await _promptStore.DeleteAllPromptsAsync(id);
 
         await _interactionManager.DeleteAsync(interaction);
-        await _promptStore.SaveChangesAsync();
-
-        await _interactionCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -737,7 +733,6 @@ public sealed class ChatInteractionController : Controller
         }
 
         await _interactionManager.UpdateAsync(interaction);
-        await _documentStore.SaveChangesAsync();
     }
 
     private async Task PopulateCopilotStatusAsync(ChatInteractionViewModel model)

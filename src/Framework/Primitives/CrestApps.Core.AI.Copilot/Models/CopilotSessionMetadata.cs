@@ -1,4 +1,3 @@
-using CrestApps.Core;
 namespace CrestApps.Core.AI.Copilot.Models;
 
 /// <summary>

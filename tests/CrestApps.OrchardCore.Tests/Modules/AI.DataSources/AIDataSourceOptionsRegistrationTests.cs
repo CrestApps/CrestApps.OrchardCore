@@ -6,7 +6,6 @@ using Moq;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Search.AzureAI;
 using OrchardCore.Settings;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
 

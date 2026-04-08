@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Dapper;
@@ -10,7 +11,6 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 

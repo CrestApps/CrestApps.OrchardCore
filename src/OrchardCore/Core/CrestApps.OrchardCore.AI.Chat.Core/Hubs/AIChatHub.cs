@@ -24,7 +24,6 @@ using OrchardCore;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Settings;
-using CrestApps.Core;
 
 namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 

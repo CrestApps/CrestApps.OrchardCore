@@ -5,7 +5,6 @@ using CrestApps.Core.Mvc.Web.Areas.ChatInteractions.Indexes;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Mvc.Web.Areas.ChatInteractions.Services;
 
@@ -118,8 +117,4 @@ public sealed class YesSqlChatInteractionPromptStore : IChatInteractionPromptSto
         return ValueTask.FromResult(true);
     }
 
-    public async ValueTask SaveChangesAsync()
-    {
-        await _session.SaveChangesAsync();
-    }
 }

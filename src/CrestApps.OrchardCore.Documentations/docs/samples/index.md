@@ -23,4 +23,6 @@ The standalone framework samples now live with **CrestApps.Core**:
 - **[MVC example](https://core.crestapps.com/docs/framework/mvc-example)** — full feature-by-feature reference host
 - **[Framework docs](https://core.crestapps.com/docs/framework)** — canonical guidance for the shared `CrestApps.Core.*` packages
 
+The shared framework docs also describe the reusable `CrestApps.Core.Data.YesSql` bootstrap/extensions, shared AI index-provider registrations/schema helpers, and the host-owned YesSql unit-of-work pattern that the MVC example now follows.
+
 Most samples are designed to run with the **Aspire AppHost** (`CrestApps.Core.Aspire.AppHost`). Start the Aspire host first, then access the sample endpoints from the Aspire dashboard.

@@ -113,7 +113,6 @@ public sealed class AIDeploymentController : Controller
         model.ApplyTo(deployment);
 
         await _deploymentCatalog.CreateAsync(deployment);
-        await _deploymentCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -194,7 +193,6 @@ public sealed class AIDeploymentController : Controller
         model.ApplyTo(existing);
 
         await _deploymentCatalog.UpdateAsync(existing);
-        await _deploymentCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }
@@ -217,7 +215,6 @@ public sealed class AIDeploymentController : Controller
         }
 
         await _deploymentCatalog.DeleteAsync(deployment);
-        await _deploymentCatalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
     }

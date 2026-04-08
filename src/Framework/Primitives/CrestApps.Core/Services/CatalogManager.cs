@@ -2,7 +2,6 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.Extensions;
 using CrestApps.Core.Models;
 using Microsoft.Extensions.Logging;
-using CrestApps.Core;
 
 namespace CrestApps.Core.Services;
 
@@ -46,7 +45,6 @@ public class CatalogManager<T> : ICatalogManager<T>
         }
 
         var removed = await Catalog.DeleteAsync(entry);
-        await Catalog.SaveChangesAsync();
 
         await DeletedAsync(entry);
 
@@ -114,7 +112,6 @@ public class CatalogManager<T> : ICatalogManager<T>
         await Handlers.InvokeAsync((handler, ctx) => handler.CreatingAsync(ctx), creatingContext, Logger);
 
         await Catalog.CreateAsync(entry);
-        await Catalog.SaveChangesAsync();
 
         var createdContext = new CreatedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.CreatedAsync(ctx), createdContext, Logger);
@@ -128,7 +125,6 @@ public class CatalogManager<T> : ICatalogManager<T>
         await Handlers.InvokeAsync((handler, ctx) => handler.UpdatingAsync(ctx), updatingContext, Logger);
 
         await Catalog.UpdateAsync(entry);
-        await Catalog.SaveChangesAsync();
 
         var updatedContext = new UpdatedContext<T>(entry);
         await Handlers.InvokeAsync((handler, ctx) => handler.UpdatedAsync(ctx), updatedContext, Logger);

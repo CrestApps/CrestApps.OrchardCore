@@ -137,21 +137,12 @@ public sealed class AITemplateController : Controller
 
         model.ApplyTo(template);
 
-        var hasDocumentChanges = Documents is { Count: > 0 };
-
-        if (hasDocumentChanges)
+        if (Documents is { Count: > 0 })
         {
             await _templateDocumentService.UploadDocumentsAsync(template, Documents);
         }
 
         await _catalog.CreateAsync(template);
-
-        await _catalog.SaveChangesAsync();
-
-        if (hasDocumentChanges)
-        {
-            await _documentStore.SaveChangesAsync();
-        }
 
         return RedirectToAction(nameof(Index));
 
@@ -211,28 +202,17 @@ public sealed class AITemplateController : Controller
 
         model.ApplyTo(existing);
 
-        var hasDocumentChanges = false;
-
         if (RemovedDocumentIds is { Length: > 0 })
         {
             await _templateDocumentService.RemoveDocumentsAsync(existing, RemovedDocumentIds);
-            hasDocumentChanges = true;
         }
 
         if (Documents is { Count: > 0 })
         {
             await _templateDocumentService.UploadDocumentsAsync(existing, Documents);
-            hasDocumentChanges = true;
         }
 
         await _catalog.UpdateAsync(existing);
-
-        await _catalog.SaveChangesAsync();
-
-        if (hasDocumentChanges)
-        {
-            await _documentStore.SaveChangesAsync();
-        }
 
         return RedirectToAction(nameof(Index));
 
@@ -252,8 +232,6 @@ public sealed class AITemplateController : Controller
         }
 
         await _catalog.DeleteAsync(template);
-
-        await _catalog.SaveChangesAsync();
 
         return RedirectToAction(nameof(Index));
 
