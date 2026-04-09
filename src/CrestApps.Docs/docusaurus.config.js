@@ -47,7 +47,7 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl:
-            'https://github.com/CrestApps/CrestApps.OrchardCore/tree/main/src/CrestApps.OrchardCore.Documentations/',
+            'https://github.com/CrestApps/CrestApps.OrchardCore/tree/main/src/CrestApps.Docs/',
           lastVersion: 'current',
           versions: {
             current: {
@@ -108,10 +108,6 @@ const config = {
                 to: '/docs/getting-started',
               },
               {
-                label: 'Framework',
-                to: '/docs/framework',
-              },
-              {
                 label: 'AI Suite',
                 to: '/docs/orchardcore/ai',
               },
@@ -152,7 +148,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.Core.`,
+        copyright: `Copyright © ${new Date().getFullYear()} CrestApps.`,
       },
       prism: {
         theme: prismThemes.github,

@@ -11,6 +11,8 @@ description: Guide for migrating from connection-based deployment names to the n
 
 Previously, AI model deployments were configured as string properties on `AIProviderConnection` — for example, `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName`. This meant deployments were tightly coupled to their connection and had no independent identity.
 
+Current CrestApps.Core builds now persist that legacy compatibility data in the model `Properties` bag instead of dedicated CLR properties on `AIProviderConnection` and `AIDeployment`. CrestApps.OrchardCore continues to read, export, and migrate those legacy values automatically, so upgraded tenants and older recipes keep working while custom code moves to the typed deployment APIs.
+
 In the new architecture, **AIDeployment** is a first-class typed entity with:
 
 - **`Type`** — One or more deployment purposes: `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, or `TextToSpeech`

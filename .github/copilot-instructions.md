@@ -77,7 +77,7 @@ dotnet run
 **Aspire Orchestration**: For full-stack local development with Ollama, Elasticsearch, and Redis, use the Aspire AppHost:
 
 ```bash
-cd src/Startup/CrestApps.Core.Aspire.AppHost
+cd src/Startup/CrestApps.Aspire.AppHost
 dotnet run
 ```
 
@@ -159,9 +159,9 @@ src/
 │   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
 │   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
 │   └── CrestApps.OrchardCore.Users/               # Enhanced user management
-├── CrestApps.OrchardCore.Documentations/  # Docusaurus documentation site
+├── CrestApps.Docs/  # Docusaurus documentation site
 ├── Startup/                    # Runnable applications
-│   ├── CrestApps.Core.Aspire.AppHost/                   # .NET Aspire orchestration host
+│   ├── CrestApps.Aspire.AppHost/                        # .NET Aspire orchestration host
 │   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
 │   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
 └── Targets/                    # MSBuild package bundle targets
@@ -225,9 +225,9 @@ tests/
 
 ### Documentation Workflow
 
-Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.OrchardCore.Documentations`:
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
 
-1. **Update feature documentation first** – find the relevant page under `src/CrestApps.OrchardCore.Documentations/docs/` and keep it accurate with the latest behavior.
+1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
 2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
 3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 4. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
@@ -389,7 +389,7 @@ Every module MUST have a README.md file with:
 - Dependencies on other modules
 
 ### Documentation Project
-The Docusaurus documentation site is located at `src/CrestApps.OrchardCore.Documentations`. It contains:
+The Docusaurus documentation site is located at `src/CrestApps.Docs`. It contains:
 - Feature documentation under `docs/`
 - Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
 - A changelog under `docs/changelog/`
@@ -464,7 +464,7 @@ npm run watch
 1. **Build Validation**: Ensure both .NET and asset builds succeed
 2. **Test Coverage**: Add tests for new features and bug fixes
 3. **Code Quality**: Follow coding standards and conventions
-4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.OrchardCore.Documentations`
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs`
 5. **Commit Messages**: Write clear, descriptive commit messages
 6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
 

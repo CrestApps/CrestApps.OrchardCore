@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -54,7 +55,7 @@ public sealed class ConfigurationAIDeploymentCatalogTests
 
         var configuredDeployment = Assert.Single(deployments, deployment => deployment.Name == "whisper");
         Assert.Equal("AzureSpeech", configuredDeployment.ClientName);
-        Assert.True(configuredDeployment.IsDefault);
+        Assert.True(configuredDeployment.GetIsDefault());
         Assert.Equal(AIDeploymentType.SpeechToText, configuredDeployment.Type);
         Assert.NotNull(configuredDeployment.Properties);
         Assert.Equal("https://eastus.stt.speech.microsoft.com", configuredDeployment.Properties["Endpoint"]?.ToString());

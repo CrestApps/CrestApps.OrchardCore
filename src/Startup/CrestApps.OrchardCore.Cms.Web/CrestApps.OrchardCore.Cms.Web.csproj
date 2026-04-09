@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../OrchardCore/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
+    <ProjectReference Include="..\..\Targets\CrestApps.OrchardCore.Cms.Core.Targets\CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
   </ItemGroup>
 
 </Project>

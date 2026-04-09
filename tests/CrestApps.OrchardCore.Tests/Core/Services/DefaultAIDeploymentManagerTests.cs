@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -97,7 +98,7 @@ public sealed class DefaultAIDeploymentManagerTests
 
         Assert.NotNull(result);
         Assert.Equal("dep-2", result.ItemId);
-        Assert.True(result.IsDefault);
+        Assert.True(result.GetIsDefault());
     }
 
     [Fact]
@@ -337,7 +338,10 @@ public sealed class DefaultAIDeploymentManagerTests
             Name = name,
             ModelName = modelName,
             Type = type,
-            IsDefault = isDefault,
+            Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["IsDefault"] = isDefault,
+            },
             ClientName = clientName,
             ConnectionName = connectionName,
         };

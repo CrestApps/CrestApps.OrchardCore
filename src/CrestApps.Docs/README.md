@@ -7,7 +7,7 @@ Documentation site for the [CrestApps.OrchardCore](https://github.com/CrestApps/
 ## Local Development
 
 ```bash
-cd src/CrestApps.OrchardCore.Documentations
+cd src/CrestApps.Docs
 npm install
 npm start
 ```
@@ -27,7 +27,7 @@ Generates static content into the `build` directory.
 ### Project Structure
 
 ```
-src/CrestApps.OrchardCore.Documentations/
+src/CrestApps.Docs/
 ├── docs/                  # All documentation pages (Markdown)
 │   ├── intro.md           # Homepage / Introduction
 │   ├── getting-started.md # Getting started guide

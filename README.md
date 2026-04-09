@@ -32,7 +32,7 @@ src/
 │   ├── CrestApps.OrchardCore.Cms.Web/
 │   ├── CrestApps.OrchardCore.Samples.A2AClient/
 │   └── CrestApps.OrchardCore.Samples.McpClient/
-└── CrestApps.OrchardCore.Documentations/
+└── CrestApps.Docs/
 ```
 
 ## Getting Started

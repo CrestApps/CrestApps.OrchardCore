@@ -9,14 +9,14 @@ description: Overview of CrestApps open-source modules for Orchard Core CMS
 
 CrestApps provides a collection of open-source modules designed to enhance **[Orchard Core](https://orchardcore.net/)**, a powerful application framework built on **ASP.NET Core**.
 
-The project is built on the **CrestApps AI Framework** — a reusable set of .NET libraries that can power AI in any ASP.NET Core application. See [Framework Overview](framework/) to learn more.
+These modules build on the published **CrestApps.Core** packages, adding Orchard Core UI, admin experiences, feature wiring, recipes, and CMS-specific integrations.
 
 ## Key Focus Areas
 
 - **Modularity** – Independent modules allow for seamless integration based on project requirements.
 - **Security** – Designed following industry best practices to ensure application safety.
 - **Performance** – Optimized for speed and efficiency to maximize Orchard Core's potential.
-- **Framework-First** – Core AI services are framework-agnostic, reusable by any .NET application.
+- **Orchard-Focused** – Documentation in this repository is scoped to Orchard Core modules, startup apps, and CMS integration guidance.
 
 ## Module Categories
 

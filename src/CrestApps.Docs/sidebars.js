@@ -7,19 +7,6 @@ const sidebars = {
     'getting-started',
     {
       type: 'category',
-      label: 'Framework',
-      collapsed: false,
-      items: [
-        'framework/index',
-        'framework/architecture',
-        'framework/getting-started-aspnet',
-        'framework/custom-ai-tools',
-        'framework/chat-interactions',
-        'framework/profiles-orchestration',
-      ],
-    },
-    {
-      type: 'category',
       label: 'Orchard Core',
       collapsed: false,
       items: [
@@ -137,6 +124,7 @@ const sidebars = {
       label: 'Changelog',
       items: [
         'changelog/index',
+        'changelog/v2.0.1',
         'changelog/v2.0.0',
       ],
     },
