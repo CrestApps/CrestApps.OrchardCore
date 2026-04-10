@@ -204,7 +204,12 @@ internal sealed class OrchardCoreElasticsearchDataSourceDocumentReader : IDataSo
             return null;
         }
 
-        return node is JsonValue jsonValue ? jsonValue.ToString() : node.ToJsonString();
+        if (node is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var stringValue))
+        {
+            return stringValue;
+        }
+
+        return node is JsonValue value ? value.ToString() : node.ToJsonString();
     }
 
     private static object GetRawValue(JsonNode node)

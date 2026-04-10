@@ -5,9 +5,9 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class AIProviderConnectionStore : NamedSourceCatalog<AIProviderConnection>
+public sealed class DefaultAIDeploymentStore : NamedSourceCatalog<AIDeployment>
 {
-    public AIProviderConnectionStore(IDocumentManager<DictionaryDocument<AIProviderConnection>> documentManager)
+    public DefaultAIDeploymentStore(IDocumentManager<DictionaryDocument<AIDeployment>> documentManager)
         : base(documentManager)
     {
     }

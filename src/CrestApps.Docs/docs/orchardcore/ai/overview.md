@@ -148,7 +148,7 @@ The appsettings-based `DefaultParameters` still provide the base values. Site se
 
 #### Typed AI Deployments
 
-Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.
+Each deployment is a first-class entity with a **Type** and an optional **IsDefault** flag. Deployments can be defined in the `Deployments` array on each connection in `appsettings.json`, in the top-level `Deployments` section, or created through the admin UI. Deployments defined in configuration are automatically available at runtime across all tenants without requiring per-tenant setup.
 
 | Property | Description | Required |
 |----------|-------------|----------|
@@ -209,7 +209,7 @@ Currently, the **Azure Speech** provider is the built-in contained-connection pr
 
 In addition to creating contained-connection deployments through the admin UI, you can define them in `appsettings.json` so they are automatically available across all tenants without per-tenant configuration.
 
-Non-connection deployments are defined in the `CrestApps_AI:Deployments` section as an array of deployment objects:
+Contained-connection deployments can be defined in the `CrestApps_AI:Deployments` section as an array of deployment objects:
 
 ```json
 {
@@ -239,7 +239,9 @@ Non-connection deployments are defined in the `CrestApps_AI:Deployments` section
 | `IsDefault` | Whether this is the default deployment for its type | No |
 | Provider-specific fields | Connection settings such as `Endpoint`, `AuthenticationType`, `ApiKey`, and `IdentityId` | Provider-specific |
 
-Deployments defined in configuration are **read-only** and **ephemeral** — they appear alongside database-managed deployments in dropdowns and API queries, but are not persisted to the database. Removing them from configuration removes them from the system.
+Deployments defined in configuration are **read-only** and **ephemeral** — they appear alongside database-managed deployments in dropdowns and API queries, but are not persisted to the database. Removing them from configuration removes them from the system. The same `Deployments` section can also contain connection-based deployments by setting `ConnectionName` instead of embedding provider-specific connection settings.
+
+Hosts can register additional configuration paths such as `OrchardCore:CrestApps:AI:Connections`, `OrchardCore:CrestApps:AI:Providers`, and `OrchardCore:CrestApps:AI:Deployments`. Every registered section is evaluated as a secondary source, so configuration-backed connections and deployments stay merged with database-managed records.
 
 For providers that need more complex metadata objects, you can also use a nested `Properties` object. Flat top-level fields are recommended for contained-connection providers like `AzureSpeech`.
 

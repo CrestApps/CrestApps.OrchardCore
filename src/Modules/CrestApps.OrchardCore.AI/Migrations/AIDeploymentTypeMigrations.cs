@@ -502,7 +502,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         return deployments
             .Where(deployment => deployment.SupportsType(type))
             .OrderByDescending(deployment => deployment.GetIsDefault())
-            .ThenBy(deployment => deployment.GetConnectionNameAlias() ?? deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(deployment => deployment.Name)
             .FirstOrDefault();
@@ -531,9 +531,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             .Where(deployment =>
         deployment.SupportsType(type) &&
             (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(deployment.GetConnectionNameAlias() ?? string.Empty, connectionId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(deployment.GetConnectionNameAlias() ?? string.Empty, connectionAlias, StringComparison.OrdinalIgnoreCase)))
+                        string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
 
             .ToList();
 

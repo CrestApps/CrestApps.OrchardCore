@@ -34,7 +34,7 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
         services
             .AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>()
-            .AddDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
+            .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
             .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()

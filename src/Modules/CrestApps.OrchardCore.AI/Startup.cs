@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Services;
@@ -75,6 +76,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddAIDeploymentServices()
+            .AddDataMigration<AIDeploymentIndexMigrations>()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
@@ -103,14 +105,11 @@ public sealed class Startup : StartupBase
 
         // AI Profile Template services.
         services
-            .AddScoped<DefaultAIProfileTemplateStore>()
-            .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<INamedSourceCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>()
-            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<CrestApps.Core.AI.Services.DefaultAIProfileTemplateManager>())
+            .AddYesSqlNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>(AIConstants.AICollectionName)
+            .AddScoped<Core.Services.DefaultAIProfileTemplateManager>()
+            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
+            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
             .AddIndexProvider<AIProfileTemplateIndexProvider>()
@@ -126,17 +125,17 @@ public sealed class Startup : StartupBase
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
 
-        services.Configure<AIProviderConnectionCatalogOptions>(o =>
-        {
-            o.ConnectionSections.Add("OrchardCore:CrestApps:AI:Connections");
-            o.ConnectionSections.Add("OrcahrdCore:CrestApps:AI:Connections");
+        services
+            .AddDataMigration<AIProviderConnectionIndexMigrations>()
+            .Configure<AIProviderConnectionCatalogOptions>(o =>
+            {
+                o.ConnectionSections.Add("OrchardCore:CrestApps:AI:Connections");
 
-            o.ProviderSections.Add("OrchardCore:CrestApps:AI:Providers");
-            o.ProviderSections.Add("OrcahrdCore:CrestApps:AI:Providers");
+                o.ProviderSections.Add("OrchardCore:CrestApps:AI:Providers");
 
-            // This should be removed in the next major release.
-            o.ProviderSections.Add("OrcahrdCore:CrestApps_AI:Providers");
-        });
+                // This should be removed in the next major release.
+                o.ProviderSections.Add("OrcahrdCore:CrestApps_AI:Providers");
+            });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -121,7 +121,7 @@ public sealed class ConfigurationAIDeploymentCatalogTests
     }
 
     [Fact]
-    public async Task GetAllAsync_ShouldNormalizeAzureOpenAIStandaloneDeployments()
+    public async Task GetAllAsync_ShouldPreserveConfiguredClientName()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
@@ -137,7 +137,7 @@ public sealed class ConfigurationAIDeploymentCatalogTests
             .Build();
 
         var aiOptions = new AIOptions();
-        aiOptions.AddDeploymentProvider("Azure", entry => entry.SupportsContainedConnection = true);
+        aiOptions.AddDeploymentProvider("AzureOpenAI");
 
         var catalog = new ConfigurationAIDeploymentCatalog(
             new TestAIDeploymentStore([]),
@@ -148,7 +148,7 @@ public sealed class ConfigurationAIDeploymentCatalogTests
 
         var deployment = Assert.Single(await catalog.GetAllAsync());
 
-        Assert.Equal("Azure", deployment.ClientName);
+        Assert.Equal("AzureOpenAI", deployment.ClientName);
         Assert.Equal(AIDeploymentType.Embedding, deployment.Type);
     }
 

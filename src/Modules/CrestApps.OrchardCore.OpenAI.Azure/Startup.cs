@@ -30,7 +30,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIFeatureMigrations>();
-        services.AddSingleton<CrestApps.Core.Services.IODataValidator, CrestApps.Core.Services.ODataFilterValidator>();
+        services.AddSingleton<IODataValidator, ODataFilterValidator>();
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()

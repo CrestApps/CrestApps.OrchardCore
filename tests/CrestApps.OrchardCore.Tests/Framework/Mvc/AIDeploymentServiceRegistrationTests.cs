@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -28,8 +29,10 @@ public sealed class AIDeploymentServiceRegistrationTests
 
         var sourceCatalog = scope.ServiceProvider.GetRequiredService<INamedSourceCatalog<AIDeployment>>();
         var namedCatalog = scope.ServiceProvider.GetRequiredService<INamedCatalog<AIDeployment>>();
+        var persistedCatalog = scope.ServiceProvider.GetRequiredKeyedService<INamedSourceCatalog<AIDeployment>>(ConfigurationAIDeploymentCatalog.PersistedCatalogKey);
 
-        Assert.IsType<DefaultAIDeploymentStore>(sourceCatalog);
-        Assert.IsNotType<DefaultAIDeploymentStore>(namedCatalog);
+        Assert.IsType<ConfigurationAIDeploymentCatalog>(sourceCatalog);
+        Assert.IsType<ConfigurationAIDeploymentCatalog>(namedCatalog);
+        Assert.IsType<DefaultAIDeploymentStore>(persistedCatalog);
     }
 }
