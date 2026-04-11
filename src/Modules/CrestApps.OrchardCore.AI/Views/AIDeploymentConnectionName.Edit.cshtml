@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore
+
+@model EditDeploymentConnectionViewModel
+
+@if (Model.Connections == null || Model.Connections.Count == 0)
+{
+    <div class="alert alert-danger" role="alert">
+        @T["There are no configured connections."]
+    </div>
+
+    return;
+}
+
+<div class="@Orchard.GetWrapperClasses()">
+    <label asp-for="ConnectionName" class="@Orchard.GetLabelClasses()">@T["Connection name"]</label>
+    <div class="@Orchard.GetEndClasses()">
+        <select asp-for="ConnectionName" asp-items="Model.Connections" class="form-select"></select>
+        <span asp-validation-for="ConnectionName" class="text-danger"></span>
+        <span class="hint">@T["Connection name to use for this deployment."]</span>
+    </div>
+</div>
