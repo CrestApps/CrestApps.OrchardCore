@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -20,8 +20,8 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
     {
         return CombineAsync(
             View("McpConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-            View("McpConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-            View("McpConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+        View("McpConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+        View("McpConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
         );
     }
 

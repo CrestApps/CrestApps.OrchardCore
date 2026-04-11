@@ -1,9 +1,8 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -23,10 +22,7 @@ public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProf
         return Initialize<EditAIProfileSessionSettingsViewModel>("AIProfileSessionSettings_Edit", model =>
         {
             var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
-            var analyticsMetadata = profile.As<AnalyticsMetadata>();
-
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
-            model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
         }).Location("Content:1#Data Processing & Metrics;10");
     }
 
@@ -44,10 +40,6 @@ public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProf
         {
             settings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
         });
-
-        var analyticsMetadata = profile.As<AnalyticsMetadata>();
-        analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
-        profile.Put(analyticsMetadata);
 
         return Edit(profile, context);
     }

@@ -1,4 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Services;
 using static CrestApps.OrchardCore.AI.Core.AIConstants;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -20,7 +22,6 @@ public sealed class CitationReferenceCollector
     {
         _linkResolver = linkResolver;
     }
-
     /// <summary>
     /// Collects preemptive RAG references that are known before the streaming loop starts.
     /// Call this immediately after building the orchestration context, before entering the
@@ -44,7 +45,6 @@ public sealed class CitationReferenceCollector
         // Resolve links for the collected references.
         ResolveLinks(references, contentItemIds);
     }
-
     /// <summary>
     /// Collects any new tool references added during streaming (e.g., from
     /// <c>DataSourceSearchTool</c> or <c>SearchDocumentsTool</c> invoked by the AI model).

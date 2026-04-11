@@ -5,7 +5,6 @@ using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 
-
 public sealed class OmnichannelActivityIndexProvider : IndexProvider<OmnichannelActivity>
 {
     public OmnichannelActivityIndexProvider()

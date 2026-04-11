@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;

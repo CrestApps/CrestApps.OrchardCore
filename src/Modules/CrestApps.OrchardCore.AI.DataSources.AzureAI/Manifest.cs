@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.DataSources,
-        "OrchardCore.Indexing",
-        "OrchardCore.Search.AzureAI",
+    AIConstants.Feature.DataSources,
+    "OrchardCore.Indexing",
+    "OrchardCore.Search.AzureAI",
     ]
-)]
+    )]

@@ -1,13 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.AI.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 
@@ -80,7 +83,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
                 }
                 else if (!provider.Connections.TryGetValue(context.Model.ConnectionName, out var _) &&
                     !provider.Connections.Any(x => x.Value.TryGetValue("ConnectionNameAlias", out var r) &&
-                    string.Equals(r.ToString(), context.Model.ConnectionName, StringComparison.OrdinalIgnoreCase)))
+                        string.Equals(r.ToString(), context.Model.ConnectionName, StringComparison.OrdinalIgnoreCase)))
                 {
                     context.Result.Fail(new ValidationResult(S["Invalid connection name provided."], [nameof(AIDeployment.ConnectionName)]));
                 }
@@ -126,7 +129,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         }
 
         var clientName = data[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
-            ?? data["ProviderName"]?.GetValue<string>()?.Trim();
+        ?? data["ProviderName"]?.GetValue<string>()?.Trim();
 
         if (!string.IsNullOrEmpty(clientName))
         {
@@ -145,19 +148,22 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             deployment.Type = type;
         }
 
-        var isDefault = data[nameof(AIDeployment.IsDefault)]?.GetValue<bool>();
+        var isDefault = data["IsDefault"]?.GetValue<bool>();
 
         if (isDefault.HasValue)
         {
-            deployment.IsDefault = isDefault.Value;
+            deployment.SetIsDefault(isDefault.Value);
         }
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
 
         if (properties != null)
         {
-            deployment.Properties ??= [];
-            deployment.Properties.Merge(properties);
+            deployment.Properties ??= new Dictionary<string, object>();
+
+            var currentJson = JsonSerializer.SerializeToNode(deployment.Properties)?.AsObject() ?? [];
+            currentJson.Merge(properties);
+            deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         return Task.CompletedTask;
@@ -178,7 +184,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             {
                 if (item is null ||
                     !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                    parsedType == AIDeploymentType.None)
+                        parsedType == AIDeploymentType.None)
                 {
                     type = AIDeploymentType.None;
                     return false;
@@ -194,11 +200,11 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         return !string.IsNullOrEmpty(typeValue) &&
             Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-            type.IsValidSelection();
+                type.IsValidSelection();
     }
 
     private bool HasContainedConnection(string clientName)
         => !string.IsNullOrWhiteSpace(clientName) &&
-        _aiOptions.Deployments.TryGetValue(clientName, out var entry) &&
-        entry.SupportsContainedConnection;
+            _aiOptions.Deployments.TryGetValue(clientName, out var entry) &&
+                entry.SupportsContainedConnection;
 }

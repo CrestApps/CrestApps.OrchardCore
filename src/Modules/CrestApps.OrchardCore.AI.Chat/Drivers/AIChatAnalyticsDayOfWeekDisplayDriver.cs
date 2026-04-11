@@ -24,18 +24,18 @@ public sealed class AIChatAnalyticsDayOfWeekDisplayDriver : DisplayDriver<AIChat
         {
             var dayNames = new[]
             {
-                S["Sunday"].Value,
-                S["Monday"].Value,
-                S["Tuesday"].Value,
-                S["Wednesday"].Value,
-                S["Thursday"].Value,
-                S["Friday"].Value,
-                S["Saturday"].Value,
+            S["Sunday"].Value,
+            S["Monday"].Value,
+            S["Tuesday"].Value,
+            S["Wednesday"].Value,
+            S["Thursday"].Value,
+            S["Friday"].Value,
+            S["Saturday"].Value,
             };
 
             var dayGroups = context.Events
-                .GroupBy(e => (int)e.SessionStartedUtc.DayOfWeek)
-                .OrderBy(g => g.Key);
+            .GroupBy(e => (int)e.SessionStartedUtc.DayOfWeek)
+            .OrderBy(g => g.Key);
 
             for (var day = 0; day < 7; day++)
             {

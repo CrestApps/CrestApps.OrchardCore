@@ -1,7 +1,8 @@
 using System.Security.Claims;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
@@ -69,6 +70,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
         if (!model.ConfirmClearMemories)
         {
             context.Updater.ModelState.AddModelError($"{Prefix}.{nameof(model.ConfirmClearMemories)}", S["Please confirm that you want to permanently clear all saved AI memory."]);
+
             return Edit(user, context);
         }
 
@@ -77,6 +79,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
         if (memories.Count == 0)
         {
             await _notifier.WarningAsync(H["No saved AI memory was found for your account."]);
+
             return Edit(user, context);
         }
 
@@ -85,7 +88,6 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
             await _memoryManager.DeleteAsync(memory);
         }
 
-        await _memoryStore.SaveChangesAsync();
         await _notifier.SuccessAsync(H["All saved AI memory for your account has been cleared."]);
 
         return Edit(user, context);
@@ -97,6 +99,6 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
 
         return !string.IsNullOrEmpty(currentUserId) &&
             !string.IsNullOrEmpty(user?.UserId) &&
-            string.Equals(currentUserId, user.UserId, StringComparison.Ordinal);
+                string.Equals(currentUserId, user.UserId, StringComparison.Ordinal);
     }
 }

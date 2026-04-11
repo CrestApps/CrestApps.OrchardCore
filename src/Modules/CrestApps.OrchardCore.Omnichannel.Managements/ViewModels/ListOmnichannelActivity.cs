@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 public sealed class ListOmnichannelActivity : ShapeViewModel
 {
     public ListOmnichannelActivity()
-        : base("ListOmnichannelActivity")
+    : base("ListOmnichannelActivity")
     {
     }
 

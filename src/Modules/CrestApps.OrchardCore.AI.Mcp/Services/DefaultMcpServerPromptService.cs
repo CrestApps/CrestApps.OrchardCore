@@ -1,6 +1,6 @@
 using CrestApps.AgentSkills.Mcp.Abstractions;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -40,6 +40,7 @@ public sealed class DefaultMcpServerPromptService : IMcpServerPromptService
         }
 
         // Include prompts registered via the MCP C# SDK.
+
         foreach (var sdkPrompt in _sdkPrompts)
         {
             if (!prompts.Any(p => p.Name == sdkPrompt.ProtocolPrompt.Name))

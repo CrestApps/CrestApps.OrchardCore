@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -36,6 +37,7 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
                     DoNotChat = preference.DoNotChat,
                     DoNotChatUtc = preference.DoNotChatUtc,
                 };
+
             });
     }
 }

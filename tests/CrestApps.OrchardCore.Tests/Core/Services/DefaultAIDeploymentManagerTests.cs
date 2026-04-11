@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Settings;
 
@@ -11,15 +12,15 @@ namespace CrestApps.OrchardCore.Tests.Core.Services;
 
 public sealed class DefaultAIDeploymentManagerTests
 {
-    private readonly Mock<INamedSourceCatalog<AIDeployment>> _storeMock;
+    private readonly Mock<IAIDeploymentStore> _storeMock;
     private readonly Mock<ISiteService> _siteServiceMock;
     private readonly Mock<ISite> _siteMock;
     private readonly DefaultAIDeploymentSettings _settings;
-    private readonly DefaultAIDeploymentManager _manager;
+    private readonly SiteSettingsAIDeploymentManager _manager;
 
     public DefaultAIDeploymentManagerTests()
     {
-        _storeMock = new Mock<INamedSourceCatalog<AIDeployment>>();
+        _storeMock = new Mock<IAIDeploymentStore>();
         _siteServiceMock = new Mock<ISiteService>();
         _siteMock = new Mock<ISite>();
         _settings = new DefaultAIDeploymentSettings();
@@ -30,11 +31,11 @@ public sealed class DefaultAIDeploymentManagerTests
         _siteServiceMock.Setup(s => s.GetSiteSettingsAsync())
             .ReturnsAsync(_siteMock.Object);
 
-        _manager = new DefaultAIDeploymentManager(
+        _manager = new SiteSettingsAIDeploymentManager(
             _storeMock.Object,
             [],
             _siteServiceMock.Object,
-            NullLogger<DefaultAIDeploymentManager>.Instance);
+            NullLogger<SiteSettingsAIDeploymentManager>.Instance);
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public sealed class DefaultAIDeploymentManagerTests
 
         Assert.NotNull(result);
         Assert.Equal("dep-2", result.ItemId);
-        Assert.True(result.IsDefault);
+        Assert.True(result.GetIsDefault());
     }
 
     [Fact]
@@ -183,6 +184,7 @@ public sealed class DefaultAIDeploymentManagerTests
         {
             CreateDeployment("dep-scoped", "scoped-utility", AIDeploymentType.Utility, isDefault: true, connectionName: "conn-1", modelName: "gpt-4o"),
         };
+
         var globalDeployment = CreateDeployment("dep-global", "global-utility", AIDeploymentType.Utility, modelName: "gpt-4.1-mini");
 
         _storeMock.Setup(m => m.GetAllAsync())
@@ -332,7 +334,10 @@ public sealed class DefaultAIDeploymentManagerTests
             Name = name,
             ModelName = modelName,
             Type = type,
-            IsDefault = isDefault,
+            Properties = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["IsDefault"] = isDefault,
+            },
             ClientName = clientName,
             ConnectionName = connectionName,
         };

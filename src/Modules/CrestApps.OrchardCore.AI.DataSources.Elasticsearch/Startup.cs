@@ -1,8 +1,11 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
@@ -22,11 +25,11 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(ElasticsearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceContentManager, OrchardCoreElasticsearchDataSourceContentManager>(ElasticsearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreElasticsearchDataSourceDocumentReader>(ElasticsearchConstants.ProviderName);
         services.AddIndexProfileHandler<DataSourceElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceElasticsearchDocumentIndexHandler>();
-        services.AddKeyedScoped<IDataSourceContentManager, ElasticsearchDataSourceContentManager>(ElasticsearchConstants.ProviderName);
-        services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceElasticsearchDocumentReader>(ElasticsearchConstants.ProviderName);
-        services.AddKeyedSingleton<IODataFilterTranslator, ElasticsearchODataFilterTranslator>(ElasticsearchConstants.ProviderName);
 
         services.AddElasticsearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

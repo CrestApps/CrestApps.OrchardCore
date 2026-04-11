@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -14,12 +15,10 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     public string Channel { get; set; }
 
     public string ChannelEndpointId { get; set; }
-
     /// <summary>
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
-
     /// <summary>
     /// A clear description of what success looks like for this automated campaign.
     /// Used by the AI to determine when the chat can be terminated.
@@ -89,4 +88,3 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
         };
     }
 }
-

@@ -1,6 +1,7 @@
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -38,7 +39,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             var (availableModes, hasConversation) = GetAvailableModes();
             model.AvailableModes = availableModes;
             model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
-        }).Location("Content:10%Interactions;3")
+        }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
             if (profile.Type != AIProfileType.Chat)
@@ -65,8 +66,8 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
         {
             settings.ChatMode = model.ChatMode;
             settings.VoiceName = model.ChatMode == ChatMode.Conversation
-                ? model.VoiceName?.Trim()
-                : null;
+            ? model.VoiceName?.Trim()
+            : null;
         });
 
         return Edit(profile, context);

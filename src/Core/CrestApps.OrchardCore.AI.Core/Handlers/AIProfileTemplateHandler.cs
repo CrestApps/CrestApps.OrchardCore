@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Settings;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -136,18 +138,25 @@ public sealed class AIProfileTemplateHandler : CatalogEntryHandlerBase<AIProfile
 
         if (properties != null)
         {
-            template.Properties ??= [];
+            template.Properties ??= new Dictionary<string, object>();
+
+            // Convert current properties to JsonObject for merge.
+            var currentJson = JsonSerializer.SerializeToNode(template.Properties)?.AsObject() ?? [];
 
             // Snapshot existing properties before merge so named entries can be
             // merged by name (upsert) instead of being fully replaced.
-            var existingSnapshot = template.Properties.Clone();
+            var existingSnapshot = currentJson.Clone();
 
-            template.Properties.Merge(properties, new JsonMergeSettings
+            // Merge incoming properties.
+            currentJson.Merge(properties, new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
             });
 
-            AIPropertiesMergeHelper.MergeNamedEntries(template.Properties, existingSnapshot);
+            AIPropertiesMergeHelper.MergeNamedEntries(currentJson, existingSnapshot);
+
+            // Convert back to dictionary.
+            template.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         if (string.IsNullOrWhiteSpace(template.DisplayText))

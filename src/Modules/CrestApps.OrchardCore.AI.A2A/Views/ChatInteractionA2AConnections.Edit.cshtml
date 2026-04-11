@@ -9,11 +9,11 @@
     <div class="mb-3">
         @for (var i = 0; i < Model.Connections.Length; i++)
         {
-            <div class="form-check">
-                <input type="hidden" asp-for="Connections[i].ItemId" />
-                <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input">
-                <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
-            </div>
+                <div class="form-check">
+                    <input type="hidden" asp-for="Connections[i].ItemId" />
+                    <input asp-for="Connections[i].IsSelected" type="checkbox" class="form-check-input capability-checkbox" data-save-group="a2aConnectionIds" data-item-id="@Model.Connections[i].ItemId">
+                    <label class="form-check-label" asp-for="Connections[i].IsSelected">@Model.Connections[i].DisplayText</label>
+                </div>
         }
     </div>
 }

@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using System.Text.Json;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
-using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 
@@ -35,9 +35,11 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
                 var needsUpdate = false;
 
                 // Migrate legacy AzureAIDataSourceIndexMetadata to first-class fields.
-                if (dataSource.Has("AzureAIDataSourceIndexMetadata"))
+
+                if (dataSource.Properties?.ContainsKey("AzureAIDataSourceIndexMetadata") == true)
                 {
-                    var legacyIndex = dataSource.Properties?["AzureAIDataSourceIndexMetadata"];
+                    var propsJson = JsonSerializer.SerializeToNode(dataSource.Properties)?.AsObject();
+                    var legacyIndex = propsJson?["AzureAIDataSourceIndexMetadata"];
                     var indexName = legacyIndex?["IndexName"]?.GetValue<string>();
 
                     if (!string.IsNullOrWhiteSpace(indexName) && string.IsNullOrEmpty(dataSource.SourceIndexProfileName))

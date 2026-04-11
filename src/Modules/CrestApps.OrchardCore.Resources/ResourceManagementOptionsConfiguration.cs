@@ -16,116 +16,116 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.js"
-            )
-            .SetVersion("1.0.0");
+                )
+                    .SetVersion("1.0.0");
 
         _manifest
             .DefineScript("easymde")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
-            )
-            .SetVersion("2.18.0");
+                )
+                    .SetVersion("2.18.0");
 
         _manifest
             .DefineStyle("easymde")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
-            )
-            .SetVersion("2.18.0");
+                )
+                    .SetVersion("2.18.0");
 
         _manifest
-        .DefineScript("chart.js")
-        .SetUrl(
-            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
-            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
-        .SetCdn(
-            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
-            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
-        .SetCdnIntegrity(
-            "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
-            "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
-        .SetVersion("4.5.1");
+            .DefineScript("chart.js")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
+                    .SetCdn(
+                        "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+                        "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
+                            .SetCdnIntegrity(
+                                "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
+                                "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
+                                    .SetVersion("4.5.1");
 
         _manifest
             .DefineScript("marked")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/marked.js")
-            .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js")
-            .SetCdnIntegrity(
-                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==",
-                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==")
-            .SetVersion("15.0.6");
+                    .SetCdn(
+                        "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js",
+                        "https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.6/marked.min.js")
+                            .SetCdnIntegrity(
+                                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==",
+                                "sha512-rvRITpPeEKe4hV9M8XntuXX6nuohzqdR5O3W6nhjTLwkrx0ZgBQuaK4fv5DdOWzs2IaXsGt5h0+nyp9pEuoTXg==")
+                                    .SetVersion("15.0.6");
 
         _manifest
             .DefineScript("flatpickr")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/js/flatpickr.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/js/flatpickr.js")
-            .SetCdn(
-                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js",
-                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.js")
-            .SetCdnIntegrity(
-                "sha384-6MRMrUEhJMa1+Lu30o5HJn4S0FFOEKnFZFWDfQ5RGRs7aiW7M1I/OpF4G7jxWLsw",
-                "sha384-IYsDIK5FMbPNV17G3cUJm5KJ3w2tMrXt2z50E0x5YYGBVi8s2x/MLNW9pvVcITLF")
-            .SetVersion("4.6.13");
+                    .SetCdn(
+                        "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js",
+                        "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.js")
+                            .SetCdnIntegrity(
+                                "sha384-6MRMrUEhJMa1+Lu30o5HJn4S0FFOEKnFZFWDfQ5RGRs7aiW7M1I/OpF4G7jxWLsw",
+                                "sha384-IYsDIK5FMbPNV17G3cUJm5KJ3w2tMrXt2z50E0x5YYGBVi8s2x/MLNW9pvVcITLF")
+                                    .SetVersion("4.6.13");
 
         _manifest
             .DefineStyle("flatpickr")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/css/flatpickr.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/flatpickr/css/flatpickr.css")
-            .SetCdn(
-                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css",
-                "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.css")
-            .SetCdnIntegrity(
-                "sha384-RvLlU3fMPPFGDiYrj9DXiCNv6wPcoG++9Ae/3doVdoh/y8GC6Ya+E4F1oOH+m6w+",
-                "sha384-pBNX8OFzxVjH58gMO1pgMOJFt3NsWZTJhTLlyet+psDjRpz6jJhIVoKgvyf7KVJM")
-            .SetVersion("4.6.13");
+                    .SetCdn(
+                        "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css",
+                        "https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.css")
+                            .SetCdnIntegrity(
+                                "sha384-RvLlU3fMPPFGDiYrj9DXiCNv6wPcoG++9Ae/3doVdoh/y8GC6Ya+E4F1oOH+m6w+",
+                                "sha384-pBNX8OFzxVjH58gMO1pgMOJFt3NsWZTJhTLlyet+psDjRpz6jJhIVoKgvyf7KVJM")
+                                    .SetVersion("4.6.13");
 
         _manifest
             .DefineScript("flatpickr-culture")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/flatpickr-culture.js")
-            .SetVersion("1.0.0");
+                    .SetVersion("1.0.0");
 
         _manifest
             .DefineScript("dompurify")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.js")
-            .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.min.js",
-                "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.js")
-            .SetVersion("3.3.1");
+                    .SetCdn(
+                        "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.min.js",
+                        "https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.3.1/purify.js")
+                            .SetVersion("3.3.1");
 
         _manifest
             .DefineScript("highlightjs")
             .SetCdn(
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js",
                 "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js")
-            .SetCdnIntegrity(
-                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
-                "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
-            .SetVersion("11.11.1");
+                    .SetCdnIntegrity(
+                        "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU",
+                        "sha384-RH2xi4eIQ/gjtbs9fUXM68sLSi99C7ZWBRX1vDrVv6GQXRibxXLbwO2NGZB74MbU")
+                            .SetVersion("11.11.1");
 
         _manifest
             .DefineStyle("highlightjs")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/highlightjs/css/highlightjs.css")
-            .SetCdn(
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
-                "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
-            .SetCdnIntegrity(
-                "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
-                "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
-            .SetVersion("11.11.1");
+                    .SetCdn(
+                        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
+                        "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.css")
+                            .SetCdnIntegrity(
+                                "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
+                                "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
+                                    .SetVersion("11.11.1");
     }
 
     public void Configure(ResourceManagementOptions options)

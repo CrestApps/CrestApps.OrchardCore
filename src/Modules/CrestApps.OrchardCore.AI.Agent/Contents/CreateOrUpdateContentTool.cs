@@ -1,7 +1,7 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Settings;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
@@ -24,34 +24,40 @@ public sealed class CreateOrUpdateContentTool : AIFunction
     };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "contentItem": {
-              "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
-            },
-            "isDraft": {
-              "type": "boolean",
-              "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
-            },
-            "ownerUsername": {
-              "type": "string",
-              "description": "Optional. The username of the user who should own the content item. Used as a fallback when no user is authenticated."
-            },
-            "ownerUserId": {
-              "type": "string",
-              "description": "Optional. The user ID of the user who should own the content item. Used as a fallback when no user is authenticated."
-            },
-            "ownerEmail": {
-              "type": "string",
-              "description": "Optional. The email of the user who should own the content item. Used as a fallback when no user is authenticated."
-            }
-          },
-          "required": ["contentItem", "isDraft"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "contentItem": {
+          "description": "The content item to create or update. Can be a JSON object or a JSON-encoded string. To perform an update, include a valid 'ContentItemId'."
+        },
+        "isDraft": {
+          "type": "boolean",
+          "description": "Indicates whether the content item should be saved as a draft. If set to false, the item will be published immediately."
+        },
+        "ownerUsername": {
+          "type": "string",
+          "description": "Optional. The username of the user who should own the content item. Used as a fallback when no user is authenticated."
+        },
+        "ownerUserId": {
+          "type": "string",
+          "description": "Optional. The user ID of the user who should own the content item. Used as a fallback when no user is authenticated."
+        },
+        "ownerEmail": {
+          "type": "string",
+          "description": "Optional. The email of the user who should own the content item. Used as a fallback when no user is authenticated."
         }
-        """);
+      },
+      "required": [
+        "contentItem",
+        "isDraft"
+      ],
+
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -66,12 +72,14 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
+
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
@@ -88,14 +96,17 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         {
             json = je.GetRawText();
         }
+
         else
         {
+
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItem argument in the function arguments.", TheName);
 
             return "Unable to find a contentItem argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirst<bool>("isDraft", out var isDraft))
+
         {
             isDraft = false;
         }
@@ -103,8 +114,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         // Use Utf8JsonReader + JsonDocument.ParseValue to read only the first complete
         // JSON value, ignoring any trailing characters the model may have appended.
         var bytes = Encoding.UTF8.GetBytes(json);
+
         var reader = new Utf8JsonReader(bytes);
+
         using var doc = JsonDocument.ParseValue(ref reader);
+
         var model = doc.RootElement.Deserialize<ContentItem>(JsonSerializerOptions);
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
@@ -113,11 +127,14 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         if (contentItem is null)
         {
+
             if (string.IsNullOrEmpty(model?.ContentType))
             {
+
                 logger.LogWarning("AI tool '{ToolName}': A Content type is required to create a new content item.", TheName);
 
                 return "A Content type is required";
+
             }
 
             var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
@@ -125,9 +142,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (contentDefintions is null)
             {
+
                 logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, model.ContentType);
 
                 return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
+
             }
 
             contentItem = await contentManager.NewAsync(model.ContentType);
@@ -135,6 +154,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             contentItem.Merge(model);
 
             // When no user is authenticated, try to resolve an owner from optional parameters
+
             // so that contentItem.Owner is set correctly.
             await TrySetOwnerAsync(arguments, contentItem);
 
@@ -145,18 +165,21 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 logger.LogWarning("AI tool '{ToolName}': Unable to create content item due to validation errors: {Errors}.", TheName, string.Join(", ", result.Errors.Select(x => x.ErrorMessage)));
 
                 return
-                   $"""
-                    Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
-                    For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
-                    """;
+                $"""
+Unable to create the content item due to the following errors: {string.Join(", ", result.Errors.Select(x => x.ErrorMessage))}.
+For reference, here is the correct content type definition {JsonSerializer.Serialize(contentDefintions, JsonHelpers.ContentDefinitionSerializerOptions)}
+""";
             }
             else
             {
                 await contentManager.CreateAsync(contentItem, VersionOptions.Draft);
             }
         }
+
         else
+
         {
+
             contentItem.Merge(model, _updateJsonMergeSettings);
 
             await contentManager.UpdateAsync(contentItem);
@@ -168,6 +191,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 logger.LogWarning("AI tool '{ToolName}': Unable to update content item due to validation errors: {Errors}.", TheName, string.Join("; ", result.Errors.Select(x => x.ErrorMessage)));
 
                 return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
+
             }
         }
 
@@ -179,8 +203,10 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             response = $"A draft content item with id '{contentItem.ContentItemId}' was successfully saved.";
         }
+
         else
         {
+
             await contentManager.PublishAsync(contentItem);
 
             response = $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
@@ -195,11 +221,13 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         var httpContext = httpContextAccessor.HttpContext;
 
         if (httpContext is not null)
+
         {
             var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
             var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
             if (metadata.AdminRouteValues is not null)
+
             {
                 response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
             }
@@ -210,18 +238,20 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             }
         }
         else if (logger.IsEnabled(LogLevel.Debug))
+
         {
             logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Skipping URI generation.", TheName);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
+
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
+
         }
 
         return response;
     }
-
     /// <summary>
     /// Attempts to resolve a content owner from optional tool parameters when no user is authenticated.
     /// This allows the AI model to specify who should own the content item when invoked from anonymous contexts.
@@ -233,8 +263,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         // If a user is already authenticated, the content handlers will set the owner automatically.
         if (principal?.Identity?.IsAuthenticated == true)
+
         {
+
             return;
+
         }
 
         var userManager = arguments.Services.GetRequiredService<UserManager<Usr.IUser>>();
@@ -242,16 +275,19 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         Usr.IUser user = null;
 
         if (arguments.TryGetFirstString("ownerUserId", out var ownerUserId))
+
         {
             user = await userManager.FindByIdAsync(ownerUserId);
         }
 
         if (user is null && arguments.TryGetFirstString("ownerUsername", out var ownerUsername))
+
         {
             user = await userManager.FindByNameAsync(ownerUsername);
         }
 
         if (user is null && arguments.TryGetFirstString("ownerEmail", out var ownerEmail))
+
         {
             user = await userManager.FindByEmailAsync(ownerEmail);
         }

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -141,7 +141,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
                                 "Migrated AIProfile batch {BatchStart}-{BatchEnd} of {Total}.",
                                 batchStart + 1,
                                 Math.Min(batchStart + _batchSize, profiles.Count),
-                                profiles.Count);
+                            profiles.Count);
                         }
                     }
 

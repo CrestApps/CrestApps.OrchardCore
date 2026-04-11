@@ -1,23 +1,22 @@
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.ChatInteractions;
+using CrestApps.Core.Services;
+using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.SignalR.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -47,21 +46,20 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ChatInteractionPromptIndexProvider>()
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
+        // Register framework-level chat interaction handlers.
+        services.AddCoreAIChatInteractions();
+
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
-            .AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionEntryHandler>()
             .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
             .AddIndexProvider<ChatInteractionIndexProvider>()
-
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
-
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
-            .AddScoped<IAICompletionContextBuilderHandler, ChatInteractionCompletionContextBuilderHandler>()
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
 
@@ -69,31 +67,19 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        // Chat Interaction notification transport.
-        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
-
         // Configure RowLevelTabularBatchSettings from configuration
         services.Configure<RowLevelTabularBatchOptions>(_configuration.GetSection("CrestApps_AI:ChatInteractions:BatchProcessing"));
 
-        services.Configure<HubOptions<ChatInteractionHub>>(options =>
-        {
-            // Allow long-running operations (e.g., multi-step MCP tool calls)
-            // without the server dropping the connection prematurely.
-            options.ClientTimeoutInterval = TimeSpan.FromMinutes(10);
-            options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-
-            // Allow larger messages for audio transcription payloads.
-            options.MaximumReceiveMessageSize = 10 * 1024 * 1024;
-        });
+        // Chat Interaction notification transport and hub options.
+        services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
+        services.ConfigureCrestAppsChatHubOptions<ChatInteractionHub>();
 
         services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        var hubRouteManager = serviceProvider.GetRequiredService<HubRouteManager>();
-
-        hubRouteManager.MapHub<ChatInteractionHub>(routes);
+        HubRouteManager.MapHub<ChatInteractionHub>(routes);
     }
 }
 

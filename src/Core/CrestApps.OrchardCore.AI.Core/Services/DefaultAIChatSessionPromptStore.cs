@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Data.YesSql.Services;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -16,12 +17,11 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
     public DefaultAIChatSessionPromptStore(
         ISession session,
         IClock clock)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AICollectionName;
         _clock = clock;
     }
-
     /// <inheritdoc />
     public async Task<IReadOnlyList<AIChatSessionPrompt>> GetPromptsAsync(string sessionId)
     {
@@ -30,13 +30,13 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         var prompts = await Session.Query<AIChatSessionPrompt, AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .OrderBy(x => x.CreatedUtc)
-            .ThenBy(x => x.Id)
-            .ListAsync();
+                .ListAsync();
 
-        return prompts.ToArray();
+        return prompts
+            .OrderBy(prompt => prompt.CreatedUtc)
+            .ThenBy(prompt => prompt.ItemId)
+            .ToArray();
     }
-
     /// <inheritdoc />
     public async Task<int> DeleteAllPromptsAsync(string sessionId)
     {
@@ -45,9 +45,10 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         var prompts = await Session.Query<AIChatSessionPrompt, AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .ListAsync();
+                .ListAsync();
 
         var count = 0;
+
         foreach (var prompt in prompts)
         {
             Session.Delete(prompt, CollectionName);
@@ -56,7 +57,6 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
 
         return count;
     }
-
     /// <inheritdoc />
     public async Task<int> CountAsync(string sessionId)
     {
@@ -65,9 +65,8 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
         return await Session.QueryIndex<AIChatSessionPromptIndex>(
             x => x.SessionId == sessionId,
             collection: CollectionName)
-            .CountAsync();
+                .CountAsync();
     }
-
     /// <inheritdoc />
     protected override ValueTask SavingAsync(AIChatSessionPrompt record)
     {

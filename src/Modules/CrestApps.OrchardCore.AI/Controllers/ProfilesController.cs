@@ -1,9 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -17,7 +19,6 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -366,8 +367,8 @@ public sealed class ProfilesController : Controller
                     continue;
                 }
 
-                profile.Properties[property.Key] = property.Value?.DeepClone();
-                profile.Settings[property.Key] = property.Value?.DeepClone();
+                profile.Properties[property.Key] = property.Value;
+                profile.Settings[property.Key] = JsonSerializer.SerializeToNode(property.Value);
             }
         }
 

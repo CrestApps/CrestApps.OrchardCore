@@ -10,17 +10,17 @@ internal sealed class OminchannelActivityAIChatSessionIndexMigrations : DataMigr
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OminchannelActivityAIChatSessionIndex>(table => table
-                .Column<string>("SessionId", column => column.WithLength(26))
-                .Column<string>("ActivityId", column => column.WithLength(26)),
-            collection: OmnichannelConstants.CollectionName
+            .Column<string>("SessionId", column => column.WithLength(26))
+            .Column<string>("ActivityId", column => column.WithLength(26)),
+        collection: OmnichannelConstants.CollectionName
         );
 
         await SchemaBuilder.AlterIndexTableAsync<OminchannelActivityAIChatSessionIndex>(table => table
             .CreateIndex("IDX_OminchannelActivityAIChatSessionIndex_DocumentId",
-                "DocumentId",
-                "ActivityId",
-                "SessionId"),
-            collection: OmnichannelConstants.CollectionName
+        "DocumentId",
+        "ActivityId",
+        "SessionId"),
+        collection: OmnichannelConstants.CollectionName
         );
 
         return 1;

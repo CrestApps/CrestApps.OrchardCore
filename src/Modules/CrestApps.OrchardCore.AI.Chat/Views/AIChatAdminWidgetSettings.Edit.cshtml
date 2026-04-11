@@ -5,17 +5,17 @@
 @model AIChatAdminWidgetSettingsViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["AI profile"]</label>
+    <label asp-for="ProfileId" class="@Orchard.GetLabelClasses()">@T["Chat profile"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+        <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select" data-ai-chat-widget-profile-select="true">
             <option value="">@T["No profile (disabled)"]</option>
         </select>
         <span asp-validation-for="ProfileId" class="text-danger"></span>
-        <span class="hint">@T["Select the AI profile to use for the admin widget. Users with the appropriate permission can chat with this profile from any admin page."]</span>
+        <span class="hint">@T["Select the chat profile the floating admin widget should use. Leave this empty to disable the widget completely."]</span>
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses()" data-ai-chat-widget-options="true">
     <label asp-for="MaxSessions" class="@Orchard.GetLabelClasses()">@T["Max history sessions"]</label>
     <div class="@Orchard.GetEndClasses()">
         <input type="number" class="form-control" asp-for="MaxSessions"
@@ -27,7 +27,7 @@
     </div>
 </div>
 
-<div class="@Orchard.GetWrapperClasses()">
+<div class="@Orchard.GetWrapperClasses()" data-ai-chat-widget-options="true">
     <label asp-for="PrimaryColor" class="@Orchard.GetLabelClasses()">@T["Primary color"]</label>
     <div class="@Orchard.GetEndClasses()">
         <div class="input-group">
@@ -40,3 +40,25 @@
         <span class="hint">@T["The primary color for the admin chat widget (header, toggle button). Defaults to {0}.", AIChatAdminWidgetSettings.DefaultPrimaryColor]</span>
     </div>
 </div>
+
+<script asp-name="AIChatAdminWidgetSettings.Toggle" at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        const profileSelect = document.querySelector('[data-ai-chat-widget-profile-select="true"]');
+        const widgetOptionBlocks = document.querySelectorAll('[data-ai-chat-widget-options="true"]');
+
+        if (!profileSelect || widgetOptionBlocks.length === 0) {
+            return;
+        }
+
+        function toggleWidgetOptions() {
+            const isEnabled = !!profileSelect.value && profileSelect.value.trim() !== '';
+
+            widgetOptionBlocks.forEach(function (element) {
+                element.classList.toggle('d-none', !isEnabled);
+            });
+        }
+
+        profileSelect.addEventListener('change', toggleWidgetOptions);
+        toggleWidgetOptions();
+    });
+</script>

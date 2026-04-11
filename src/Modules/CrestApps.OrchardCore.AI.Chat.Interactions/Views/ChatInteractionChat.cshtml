@@ -1,11 +1,12 @@
+@using CrestApps.Core
 @using CrestApps.OrchardCore.AI
-@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.Core.SignalR.Services
 @using CrestApps.OrchardCore.AI.Core.Models
-@using CrestApps.OrchardCore.AI.Models
-@using CrestApps.OrchardCore.SignalR.Core.Services
+@using CrestApps.Core.AI.Models
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
 @using OrchardCore.Entities
@@ -142,6 +143,7 @@
         ["chatMode"] = chatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["saveIndicatorElementSelector"] = "#settings-save-indicator",
     };
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

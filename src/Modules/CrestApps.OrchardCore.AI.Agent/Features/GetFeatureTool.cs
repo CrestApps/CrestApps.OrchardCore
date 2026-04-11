@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,19 +13,23 @@ public sealed class GetFeatureTool : AIFunction
     public const string TheName = "getSiteFeature";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "featureId": {
-              "type": "string",
-              "description": "A unique feature ID to get info for."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["featureId"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "featureId": {
+          "type": "string",
+          "description": "A unique feature ID to get info for."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "featureId"
+      ]
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -35,24 +39,30 @@ public sealed class GetFeatureTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetFeatureTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
+
         }
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("featureId", out var featureId))
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureId' argument.", Name);
 
@@ -63,16 +73,19 @@ public sealed class GetFeatureTool : AIFunction
             .FirstOrDefault(feature => !feature.IsTheme() && feature.Id.Equals(featureId, StringComparison.OrdinalIgnoreCase));
 
         if (feature is null)
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: feature '{FeatureId}' not found.", Name, featureId);
 
             return $"Unable to find a feature with the ID: {featureId}.";
+
         }
 
         var isEnabled = await shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

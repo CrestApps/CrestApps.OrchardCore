@@ -24,15 +24,15 @@ public sealed class ContactMethodMigrations : DataMigration
             .WithDisplayName("Email Info Part")
             .WithDescription("Provides a way to capture a required email address")
             .WithField("Email", field => field
-                .WithPosition("1")
-                .OfType("TextField")
-                .WithDisplayName("Email")
-                .WithEditor("Email")
-                .WithSettings(new TextFieldSettings()
-                {
-                    Required = true,
-                })
-            )
+            .WithPosition("1")
+            .OfType("TextField")
+            .WithDisplayName("Email")
+            .WithEditor("Email")
+            .WithSettings(new TextFieldSettings()
+            {
+                Required = true,
+            })
+        )
         );
 
         await _contentDefinitionManager.AlterPartDefinitionAsync(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part
@@ -41,63 +41,64 @@ public sealed class ContactMethodMigrations : DataMigration
             .WithDisplayName("Phone Number Info Part")
             .WithDescription("Provides a way to capture required phone number info")
             .WithField("Number", field => field
-                .WithPosition("1")
-                .OfType("TextField")
-                .WithDisplayName("Number")
-                .WithEditor("masked")
-                .WithSettings(new TextFieldSettings()
-                {
-                    Required = true,
-                }))
-            .WithField("Extension", field => field
-                .WithPosition("2")
-                .OfType("TextField")
-                .WithDisplayName("Extension")
-                )
+            .WithPosition("1")
+            .OfType("TextField")
+            .WithDisplayName("Number")
+            .WithEditor("masked")
+            .WithSettings(new TextFieldSettings()
+            {
+                Required = true,
+            }))
+        .WithField("Extension", field => field
+        .WithPosition("2")
+        .OfType("TextField")
+        .WithDisplayName("Extension")
+        )
             .WithField("Type", field => field
-                .WithPosition("3")
-                .OfType("TextField")
-                .WithDisplayName("Type")
-                .WithEditor("PredefinedList")
-                .MergeSettings<TextFieldPredefinedListEditorSettings>(settings =>
-                {
-                    settings.Editor = EditorOption.Dropdown;
-                    settings.DefaultValue = string.Empty;
-                    settings.Options =
-                    [
-                        new ListValueOption()
-                        {
-                            Name = "Home",
-                            Value = "Home",
-                        },
-                        new ListValueOption()
-                        {
-                            Name = "Cell",
-                            Value = "Cell",
-                        },
-                        new ListValueOption()
-                        {
-                            Name = "Fax",
-                            Value = "Fax",
-                        },
-                        new ListValueOption()
-                        {
-                            Name = "Work",
-                            Value = "Work",
-                        },
-                        new ListValueOption()
-                        {
-                            Name = "Office",
-                            Value = "Office",
-                        },
-                        new ListValueOption()
-                        {
-                            Name = "Other",
-                            Value = "Other",
-                        }
-                    ];
-                })
-            )
+            .WithPosition("3")
+            .OfType("TextField")
+            .WithDisplayName("Type")
+            .WithEditor("PredefinedList")
+            .MergeSettings<TextFieldPredefinedListEditorSettings>(settings =>
+            {
+                settings.Editor = EditorOption.Dropdown;
+                settings.DefaultValue = string.Empty;
+                settings.Options =
+                [
+                    new ListValueOption()
+                    {
+                    Name = "Home",
+                    Value = "Home",
+                    },
+                    new ListValueOption()
+                    {
+                    Name = "Cell",
+                    Value = "Cell",
+                    },
+                    new ListValueOption()
+                    {
+                    Name = "Fax",
+                    Value = "Fax",
+                    },
+                    new ListValueOption()
+                    {
+                    Name = "Work",
+                    Value = "Work",
+                    },
+                    new ListValueOption()
+                    {
+                    Name = "Office",
+                    Value = "Office",
+                    },
+                    new ListValueOption()
+                    {
+                    Name = "Other",
+                    Value = "Other",
+                    }
+
+                ];
+            })
+        )
         );
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.EmailAddress, type => type
@@ -105,16 +106,16 @@ public sealed class ContactMethodMigrations : DataMigration
             .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
             .WithDisplayName("Email Address")
             .WithPart("TitlePart", part => part
-                .WithPosition("1")
-                .WithSettings(new TitlePartSettings()
-                {
-                    Options = TitlePartOptions.GeneratedHidden,
-                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.EmailInfo + ".Email.Text }}",
-                })
-            )
+            .WithPosition("1")
+            .WithSettings(new TitlePartSettings()
+            {
+                Options = TitlePartOptions.GeneratedHidden,
+                Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.EmailInfo + ".Email.Text }}",
+            })
+        )
             .WithPart(OmnichannelConstants.ContentParts.EmailInfo, part =>
-                part.WithPosition("5")
-            )
+        part.WithPosition("5")
+        )
         );
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(OmnichannelConstants.ContentTypes.PhoneNumber, type => type
@@ -122,13 +123,13 @@ public sealed class ContactMethodMigrations : DataMigration
             .Creatable()
             .Stereotype(OmnichannelConstants.Sterotypes.ContactMethod)
             .WithPart<TitlePart>(part => part
-                .WithPosition("1")
-                .WithSettings(new TitlePartSettings()
-                {
-                    Options = TitlePartOptions.GeneratedHidden,
-                    Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.Text }}",
-                })
-            )
+            .WithPosition("1")
+            .WithSettings(new TitlePartSettings()
+            {
+                Options = TitlePartOptions.GeneratedHidden,
+                Pattern = "{{ Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Type.Text | append: ': ' | append: Model.ContentItem.Content." + OmnichannelConstants.ContentParts.PhoneNumberInfo + ".Number.Text }}",
+            })
+        )
             .WithPart(OmnichannelConstants.ContentParts.PhoneNumberInfo, part => part.WithPosition("5"))
         );
 

@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -25,10 +25,10 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
     public override Task<IDisplayResult> DisplayAsync(AIDataSourceDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIDataSourceDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIDataSourceDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIDataSourceDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIDataSourceDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIDataSourceDeploymentStep step, BuildEditorContext context)
@@ -42,7 +42,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
                 DisplayText = x.DisplayText,
                 IsSelected = step.SourceIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
-            .ToArray();
+        .ToArray();
         }).Location("Content");
     }
 
@@ -51,8 +51,8 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
         var model = new AIDataSourceDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DataSources);
+        p => p.IncludeAll,
+        p => p.DataSources);
 
         if (model.IncludeAll)
         {

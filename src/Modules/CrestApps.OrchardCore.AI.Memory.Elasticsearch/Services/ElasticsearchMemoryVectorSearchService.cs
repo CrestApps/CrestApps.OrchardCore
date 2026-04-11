@@ -1,8 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Memory;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 
@@ -20,7 +21,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
     }
 
     public async Task<IEnumerable<AIMemorySearchResult>> SearchAsync(
-        IndexProfile indexProfile,
+        SearchIndexProfile indexProfile,
         float[] embedding,
         string userId,
         int topN,
@@ -36,19 +37,20 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
             var response = await _elasticClient.SearchAsync<JsonObject>(s => s
                 .Indices(indexProfile.IndexFullName)
                 .Knn(k => k
-                    .Field(MemoryConstants.ColumnNames.Embedding)
-                    .QueryVector(embedding)
-                    .K(topN)
-                    .NumCandidates(topN * 10)
-                    .Filter(f => f.Term(t => t
-                        .Field(MemoryConstants.ColumnNames.UserId)
-                        .Value(userId))))
+                .Field(MemoryConstants.ColumnNames.Embedding)
+                .QueryVector(embedding)
+                .K(topN)
+                .NumCandidates(topN * 10)
+                .Filter(f => f.Term(t => t
+                .Field(MemoryConstants.ColumnNames.UserId)
+                .Value(userId))))
                 .Size(topN),
-                cancellationToken);
+            cancellationToken);
 
             if (!response.IsValidResponse)
             {
                 _logger.LogWarning("Elasticsearch AI memory search failed: {Error}", response.DebugInformation);
+
                 return [];
             }
 
@@ -67,8 +69,8 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
                 }
 
                 var updatedUtc = document.TryGetPropertyValue(MemoryConstants.ColumnNames.UpdatedUtc, out var updatedNode) && updatedNode != null
-                    ? updatedNode.GetValue<DateTime>()
-                    : null as DateTime?;
+                ? updatedNode.GetValue<DateTime>()
+                : null as DateTime?;
 
                 results.Add(new AIMemorySearchResult
                 {
@@ -90,6 +92,7 @@ public sealed class ElasticsearchMemoryVectorSearchService : IMemoryVectorSearch
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error performing AI memory search in Elasticsearch index '{IndexName}'.", indexProfile.IndexFullName);
+
             return [];
         }
     }

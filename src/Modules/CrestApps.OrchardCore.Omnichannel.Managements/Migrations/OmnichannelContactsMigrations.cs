@@ -28,17 +28,17 @@ public sealed class OmnichannelContactsMigrations : DataMigration
         );
 
         await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
-           .Column<string>("ContentItemId", column => column.WithLength(26))
-           .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
-           .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
-           .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("PrimaryCellPhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
+            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
         );
 
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table => table
             .CreateIndex("IDX_OmnichannelContactIndex_DocumentId",
-                "DocumentId",
-                "ContentItemId"
-            )
+        "DocumentId",
+        "ContentItemId"
+        )
         );
 
         return 2;

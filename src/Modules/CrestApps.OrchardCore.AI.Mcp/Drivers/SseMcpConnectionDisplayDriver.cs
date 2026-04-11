@@ -1,12 +1,12 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
@@ -39,6 +39,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             model.AuthenticationType = metadata.AuthenticationType;
 
             // Backward compatibility: if no auth type is set but headers exist, show as CustomHeaders.
+
             if (metadata.AuthenticationType == McpClientAuthenticationType.Anonymous &&
                 metadata.AdditionalHeaders is { Count: > 0 })
             {
@@ -69,6 +70,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             model.HasOAuth2ClientCertificatePassword = !string.IsNullOrEmpty(metadata.OAuth2ClientCertificatePassword);
 
             // Custom headers.
+
             if (metadata.AdditionalHeaders is not null)
             {
                 model.AdditionalHeaders = JsonSerializer.Serialize(metadata.AdditionalHeaders, McpJOptions.SchemaSerializerOptions);
@@ -76,14 +78,14 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
             model.Schema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
 
         }).Location("Content:1");
     }

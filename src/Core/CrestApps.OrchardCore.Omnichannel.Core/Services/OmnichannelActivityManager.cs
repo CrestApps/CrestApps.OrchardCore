@@ -1,7 +1,6 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -14,7 +13,7 @@ public sealed class OmnichannelActivityManager : CatalogManager<OmnichannelActiv
         IOmnichannelActivityStore omnichannelActivityStore,
         IEnumerable<ICatalogEntryHandler<OmnichannelActivity>> handlers,
         ILogger<CatalogManager<OmnichannelActivity>> logger)
-        : base(omnichannelActivityStore, handlers, logger)
+    : base(omnichannelActivityStore, handlers, logger)
     {
         _store = omnichannelActivityStore;
     }

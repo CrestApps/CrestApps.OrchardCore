@@ -23,7 +23,6 @@ public class EditAIDataSourceViewModel
 
     [Required(AllowEmptyStrings = false)]
     public string ContentFieldName { get; set; }
-
     /// <summary>
     /// Whether the index configuration is locked (already created and cannot be changed).
     /// </summary>

@@ -1,11 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Agent.Profiles;
 
@@ -14,22 +15,22 @@ public sealed class ViewAIProfileTool : AIFunction
     public const string TheName = "viewAIProfile";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "profileId": {
-              "type": "string",
-              "description": "The unique ID of the AI profile to view."
-            },
-            "profileName": {
-              "type": "string",
-              "description": "The technical name of the AI profile to view. Used if profileId is not provided."
-            }
-          },
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "description": "The unique ID of the AI profile to view."
+        },
+        "profileName": {
+          "type": "string",
+          "description": "The technical name of the AI profile to view. Used if profileId is not provided."
         }
-        """);
+      },
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 
@@ -51,6 +52,7 @@ public sealed class ViewAIProfileTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ViewAIProfileTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

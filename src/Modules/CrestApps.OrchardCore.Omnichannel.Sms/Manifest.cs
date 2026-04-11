@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
+    )]
 
 [assembly: Feature(
     Name = "SMS Omnichannel Automation",
@@ -17,9 +17,9 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Area,
-        AIConstants.Feature.ChatCore,
-        OmnichannelConstants.Features.Managements,
-        "OrchardCore.Sms",
+    AIConstants.Feature.Area,
+    AIConstants.Feature.ChatCore,
+    OmnichannelConstants.Features.Managements,
+    "OrchardCore.Sms",
     ]
-)]
+    )]

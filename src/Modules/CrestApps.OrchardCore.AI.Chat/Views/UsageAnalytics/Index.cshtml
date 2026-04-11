@@ -1,0 +1,95 @@
+@model CrestApps.OrchardCore.AI.Chat.ViewModels.UsageAnalyticsIndexViewModel
+@{
+    ViewData["Title"] = T["AI Usage Analytics"];
+}
+
+<div class="mb-3">
+    <h1>@T["AI Usage Analytics"]</h1>
+    <p class="text-muted mb-0">@T["Review provider usage by user, model, and conversation type across chat sessions and chat interactions."]</p>
+</div>
+
+@if (!Model.IsAIUsageTrackingEnabled)
+{
+    <div class="alert alert-warning">
+        @T["AI usage tracking is currently disabled. Enable AI usage tracking in Settings -> Artificial Intelligence to capture future provider usage data for this report."]
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Index" method="post" class="row g-3 align-items-end">
+            @Html.AntiForgeryToken()
+            <div class="col-md-4">
+                <label asp-for="StartDateUtc" class="form-label">@T["From"]</label>
+                <input asp-for="StartDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EndDateUtc" class="form-label">@T["To"]</label>
+                <input asp-for="EndDateUtc" class="form-control" type="date" />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">@T["Show"]</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (!Model.ShowReport)
+{
+    <div class="alert alert-info">@T["Use the filters above to generate the usage report."]</div>
+}
+else if (Model.Rows.Count == 0)
+{
+    <div class="alert alert-warning">@T["No usage data was found for the selected filters."]</div>
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Provider calls"]</div><div class="fs-3 fw-semibold">@Model.TotalCalls</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat sessions"]</div><div class="fs-3 fw-semibold">@Model.TotalSessions</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Chat interactions"]</div><div class="fs-3 fw-semibold">@Model.TotalChatInteractions</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">@T["Total tokens"]</div><div class="fs-3 fw-semibold">@Model.TotalTokens</div></div></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">@T["Usage by user and model"]</div>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>@T["User"]</th>
+                        <th>@T["Client"]</th>
+                        <th>@T["Model"]</th>
+                        <th class="text-end">@T["Calls"]</th>
+                        <th class="text-end">@T["Sessions"]</th>
+                        <th class="text-end">@T["Interactions"]</th>
+                        <th class="text-end">@T["Input"]</th>
+                        <th class="text-end">@T["Output"]</th>
+                        <th class="text-end">@T["Tokens"]</th>
+                        <th class="text-end">@T["Avg latency"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@row.UserLabel</div>
+                            <div class="text-muted small">@(row.IsAuthenticated ? T["Authenticated"] : T["Anonymous"])</div>
+                        </td>
+                        <td>@row.ClientName</td>
+                        <td>@row.ModelName</td>
+                        <td class="text-end">@row.TotalCalls</td>
+                        <td class="text-end">@row.TotalSessions</td>
+                        <td class="text-end">@row.TotalChatInteractions</td>
+                        <td class="text-end">@row.TotalInputTokens</td>
+                        <td class="text-end">@row.TotalOutputTokens</td>
+                        <td class="text-end fw-semibold">@row.TotalTokens</td>
+                        <td class="text-end">@(row.AverageResponseLatencyMs > 0 ? $"{row.AverageResponseLatencyMs} ms" : "-")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

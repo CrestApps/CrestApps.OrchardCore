@@ -109,8 +109,8 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
         // Deserializing an empty string doesn't return an array
         var items = string.IsNullOrWhiteSpace(model.Paths)
-            ? []
-            : JsonSerializer.Deserialize<List<EditMediaFieldItemInfo>>(model.Paths, JOptions.CamelCase);
+        ? []
+        : JsonSerializer.Deserialize<List<EditMediaFieldItemInfo>>(model.Paths, JOptions.CamelCase);
 
         part.Avatar ??= new MediaField();
         part.Avatar.Paths = items.Where(p => !p.IsRemoved).Select(p => p.Path).ToArray() ?? [];

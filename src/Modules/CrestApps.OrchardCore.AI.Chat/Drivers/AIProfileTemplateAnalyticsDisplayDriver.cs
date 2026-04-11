@@ -1,10 +1,10 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -25,16 +25,17 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
         {
             var analyticsMetadata = template.As<AnalyticsMetadata>();
             model.EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics;
+            model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics;
             model.ConversionGoals = analyticsMetadata.ConversionGoals
-                .Select(g => new ConversionGoalViewModel
-                {
-                    Name = g.Name,
-                    Description = g.Description,
-                    MinScore = g.MinScore,
-                    MaxScore = g.MaxScore,
-                })
-                .ToList();
+            .Select(g => new ConversionGoalViewModel
+            {
+                Name = g.Name,
+                Description = g.Description,
+                MinScore = g.MinScore,
+                MaxScore = g.MaxScore,
+            })
+        .ToList();
         }).Location("Content:15#Data Processing & Metrics;10")
         .RenderWhen(() =>
         {
@@ -111,6 +112,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
 
         var analyticsMetadata = template.As<AnalyticsMetadata>();
         analyticsMetadata.EnableSessionMetrics = model.EnableSessionMetrics;
+        analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         analyticsMetadata.EnableConversionMetrics = model.EnableConversionMetrics;
         analyticsMetadata.ConversionGoals = goals.Select(g => new ConversionGoal
         {

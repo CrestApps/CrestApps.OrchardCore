@@ -2,7 +2,7 @@
 
 Thank you for using a **CrestApps** packages!
 
-We at [CrestApps](https://CrestApps.com) are dedicated to building high-quality tools and extensions to make working with **Orchard Core** faster, easier, and more enjoyable.
+We at [CrestApps](https://CrestApps.Core.com) are dedicated to building high-quality tools and extensions to make working with **Orchard Core** faster, easier, and more enjoyable.
 
 ## 🚀 Getting Started
 
@@ -21,4 +21,4 @@ We hope this package helps you build amazing projects!
 ---
 
 **CrestApps Team**
-[https://CrestApps.com](https://CrestApps.com)
+[https://CrestApps.Core.com](https://CrestApps.Core.com)

@@ -139,6 +139,7 @@ public sealed class AvatarStartup : StartupBase
         {
             options.Filters.Add<AvatarStylesFilter>();
         });
+
         services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();

@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -22,7 +24,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         IAIDeploymentManager manager,
         IOptions<AIOptions> aiOptions,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
@@ -49,7 +51,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
 #pragma warning disable CS0618 // Type or member is obsolete
             var sourceName = token[nameof(AIDeployment.ClientName)]?.GetValue<string>()
-                ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
+            ?? token[nameof(AIDeployment.ProviderName)]?.GetValue<string>();
 #pragma warning restore CS0618 // Type or member is obsolete
             var hasSource = !string.IsNullOrEmpty(sourceName);
 
@@ -99,7 +101,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
                 deployment = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     deployment.ItemId = id;
                 }
@@ -116,7 +118,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 deployment.Type = AIDeploymentType.Chat;
             }
 
-            deployment.IsDefault = token[nameof(AIDeployment.IsDefault)]?.GetValue<bool>() ?? false;
+            deployment.SetIsDefault(token["IsDefault"]?.GetValue<bool>() ?? false);
 
             var validationResult = await _manager.ValidateAsync(deployment);
 
@@ -154,7 +156,7 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
             {
                 if (item is null ||
                     !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                    parsedType == AIDeploymentType.None)
+                        parsedType == AIDeploymentType.None)
                 {
                     type = AIDeploymentType.None;
                     return false;
@@ -170,6 +172,6 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
 
         return !string.IsNullOrEmpty(typeValue) &&
             Enum.TryParse(typeValue, ignoreCase: true, out type) &&
-            type.IsValidSelection();
+                type.IsValidSelection();
     }
 }

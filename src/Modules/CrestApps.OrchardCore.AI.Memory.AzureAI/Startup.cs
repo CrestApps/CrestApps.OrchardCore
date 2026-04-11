@@ -1,3 +1,5 @@
+using CrestApps.Core.AI.Memory;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +23,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIMemoryAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIMemoryAzureAISearchDocumentIndexHandler>();
         services.AddKeyedScoped<IMemoryVectorSearchService, AzureAISearchMemoryVectorSearchService>(AzureAISearchConstants.ProviderName);

@@ -67,7 +67,6 @@ public static class AIConstants
         /// Matches <c>IndexingConstants.ContentsIndexSource</c>.
         /// </summary>
         public const string Content = IndexingConstants.ContentsIndexSource;
-
         /// <summary>
         /// Reference type for uploaded documents in chat interactions or profiles.
         /// </summary>

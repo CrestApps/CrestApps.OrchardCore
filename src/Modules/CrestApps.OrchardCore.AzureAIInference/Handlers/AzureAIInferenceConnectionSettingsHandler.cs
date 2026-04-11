@@ -1,14 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.AzureAIInference;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Azure.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AzureAIInference.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 
@@ -84,3 +85,4 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         return Task.CompletedTask;
     }
 }
+

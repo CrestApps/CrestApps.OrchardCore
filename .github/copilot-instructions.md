@@ -109,9 +109,9 @@ src/
 │   ├── CrestApps.OrchardCore.AI.Abstractions/      # AI abstractions
 │   └── CrestApps.OrchardCore.Users.Abstractions/   # User abstractions
 ├── Common/                     # Shared utility libraries
-│   └── CrestApps.Support/                          # General support utilities
+│   └── CrestApps.Core.Support/                          # General support utilities
 ├── Core/                       # Core service libraries (not Orchard modules)
-│   ├── CrestApps.Azure.Core/                       # Azure utilities
+│   ├── CrestApps.Core.Azure.Core/                       # Azure utilities
 │   ├── CrestApps.OrchardCore.AI.Chat.Interactions.Core/  # Chat interaction core services
 │   ├── CrestApps.OrchardCore.AI.Core/              # AI core services
 │   ├── CrestApps.OrchardCore.AI.Mcp.Core/          # MCP core services
@@ -121,7 +121,6 @@ src/
 │   ├── CrestApps.OrchardCore.OpenAI.Core/          # OpenAI core services
 │   ├── CrestApps.OrchardCore.Recipes.Core/         # Recipes core services
 │   ├── CrestApps.OrchardCore.Roles.Core/           # Roles core services
-│   ├── CrestApps.OrchardCore.SignalR.Core/         # SignalR core services
 │   ├── CrestApps.OrchardCore.Users.Core/           # Users core services
 │   └── CrestApps.OrchardCore.YesSql.Core/          # YesSql core utilities
 ├── Modules/                    # All CrestApps Orchard Core modules
@@ -160,9 +159,9 @@ src/
 │   ├── CrestApps.OrchardCore.Roles/                # Enhanced roles management
 │   ├── CrestApps.OrchardCore.SignalR/              # SignalR integration
 │   └── CrestApps.OrchardCore.Users/               # Enhanced user management
-├── CrestApps.OrchardCore.Documentations/  # Docusaurus documentation site
+├── CrestApps.Docs/  # Docusaurus documentation site
 ├── Startup/                    # Runnable applications
-│   ├── CrestApps.Aspire.AppHost/                   # .NET Aspire orchestration host
+│   ├── CrestApps.Aspire.AppHost/                        # .NET Aspire orchestration host
 │   ├── CrestApps.OrchardCore.Cms.Web/              # Main CMS web application
 │   └── CrestApps.OrchardCore.Samples.McpClient/    # MCP client sample application
 └── Targets/                    # MSBuild package bundle targets
@@ -203,7 +202,7 @@ tests/
 - **MCP Server**: `CrestApps.OrchardCore.AI.Mcp` - exposes Orchard Core content as MCP resources
 - **AI Agents**: `CrestApps.OrchardCore.AI.Agent` - defines reusable AI agents/tools
 - **Provider modules**: `CrestApps.OrchardCore.OpenAI`, `CrestApps.OrchardCore.OpenAI.Azure`, `CrestApps.OrchardCore.Ollama`, `CrestApps.OrchardCore.AzureAIInference`
-- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `AITemplates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `IAITemplateService`.
+- **AI Prompt Templates**: Never hardcode AI system prompts or prompt-style recovery instructions in C# code. Store them in `Templates/Prompts/*.md`, add a constant in `AITemplateIds`, and render them through `ITemplateService`.
 
 ### Working with Omnichannel Modules
 - **Base Module**: `CrestApps.OrchardCore.Omnichannel` - unified communication layer
@@ -226,9 +225,9 @@ tests/
 
 ### Documentation Workflow
 
-Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.OrchardCore.Documentations`:
+Whenever code is modified, you MUST update the documentation project located at `src/CrestApps.Docs`:
 
-1. **Update feature documentation first** – find the relevant page under `src/CrestApps.OrchardCore.Documentations/docs/` and keep it accurate with the latest behavior.
+1. **Update feature documentation first** – find the relevant page under `src/CrestApps.Docs/docs/` and keep it accurate with the latest behavior.
 2. **Add a changelog entry** – add an entry to the changelog in the same documentation project describing what changed, why it changed, and any breaking or behavioral impact.
 3. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 4. **Validate the docs build** – after updating documentation, verify the Docusaurus site builds successfully and all internal links resolve correctly. The CI pipeline runs link-checking; failing to validate locally will cause workflow failures.
@@ -284,6 +283,9 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Implicit usings**: Enabled globally
 - **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
 - **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Dependency injection**: Prefer constructor injection over lazy service resolution. Only fall back to lazy resolution when it is absolutely necessary to break a real framework or container circular dependency.
+- **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
+- **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
 - **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
@@ -387,7 +389,7 @@ Every module MUST have a README.md file with:
 - Dependencies on other modules
 
 ### Documentation Project
-The Docusaurus documentation site is located at `src/CrestApps.OrchardCore.Documentations`. It contains:
+The Docusaurus documentation site is located at `src/CrestApps.Docs`. It contains:
 - Feature documentation under `docs/`
 - Module-specific guides under `docs/modules/`, `docs/ai/`, `docs/omnichannel/`, `docs/providers/`
 - A changelog under `docs/changelog/`
@@ -462,7 +464,7 @@ npm run watch
 1. **Build Validation**: Ensure both .NET and asset builds succeed
 2. **Test Coverage**: Add tests for new features and bug fixes
 3. **Code Quality**: Follow coding standards and conventions
-4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.OrchardCore.Documentations`
+4. **Documentation**: Update README files, code comments, and the Docusaurus docs in `src/CrestApps.Docs`
 5. **Commit Messages**: Write clear, descriptive commit messages
 6. **Branch Naming**: Use descriptive branch names (e.g., `feature/ai-chat-improvements`, `fix/user-avatar-bug`)
 

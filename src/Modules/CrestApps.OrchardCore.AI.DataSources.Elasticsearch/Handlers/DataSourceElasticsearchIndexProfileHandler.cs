@@ -1,6 +1,8 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.Infrastructure;
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
 using Elastic.Clients.Elasticsearch.Mapping;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
@@ -13,8 +15,10 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 
 internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceIndexProfileHandlerBase
 {
-    public DataSourceElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    public DataSourceElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -41,10 +45,9 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= [];
+        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
-        var profileMetadata = indexProfile.As<DataSourceIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(profileMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = DataSourceConstants.ColumnNames.ChunkId;
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.ChunkId] = new KeywordProperty();
@@ -61,6 +64,7 @@ internal sealed class DataSourceElasticsearchIndexProfileHandler : DataSourceInd
             Index = true,
             Similarity = DenseVectorSimilarity.Cosine,
         };
+
         metadata.IndexMappings.Mapping.Properties[DataSourceConstants.ColumnNames.Filters] = new ObjectProperty
         {
             Dynamic = DynamicMapping.True,

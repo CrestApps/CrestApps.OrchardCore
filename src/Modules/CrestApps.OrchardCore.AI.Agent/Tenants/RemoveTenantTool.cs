@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,19 +13,23 @@ public sealed class RemoveTenantTool : AIFunction
     public const string TheName = "removeTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                }
-            },
-            "additionalProperties": false,
-            "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -35,26 +39,32 @@ public sealed class RemoveTenantTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
+
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
+
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<RemoveTenantTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
+
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
         var shellRemovalManager = arguments.Services.GetRequiredService<IShellRemovalManager>();
 
         if (!shellSettings.IsDefaultShell())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
@@ -62,6 +72,7 @@ public sealed class RemoveTenantTool : AIFunction
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
@@ -69,6 +80,7 @@ public sealed class RemoveTenantTool : AIFunction
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
 
@@ -76,6 +88,7 @@ public sealed class RemoveTenantTool : AIFunction
         }
 
         if (tenantSettings.IsDefaultShell())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: cannot remove the default tenant.", Name);
 
@@ -83,15 +96,18 @@ public sealed class RemoveTenantTool : AIFunction
         }
 
         if (!tenantSettings.IsRemovable())
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not removable.", Name, name);
 
             return "This tenant cannot be removed.";
+
         }
 
         var result = await shellRemovalManager.RemoveAsync(tenantSettings);
 
         if (!result.Success)
+
         {
             logger.LogWarning("AI tool '{ToolName}' failed: removal of tenant '{TenantName}' failed.", Name, name);
 
@@ -100,6 +116,7 @@ public sealed class RemoveTenantTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
+
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

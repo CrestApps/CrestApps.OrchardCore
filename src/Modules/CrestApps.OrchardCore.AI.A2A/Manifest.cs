@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
+    )]
 
 [assembly: Feature(
     Id = A2AConstants.Feature.Area,
@@ -17,10 +17,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Area,
-        "CrestApps.OrchardCore.Resources",
+    AIConstants.Feature.Area,
+    "CrestApps.OrchardCore.Resources",
     ]
-)]
+    )]
 
 [assembly: Feature(
     Id = A2AConstants.Feature.Host,
@@ -29,6 +29,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        AIConstants.Feature.Area,
+    AIConstants.Feature.Area,
     ]
-)]
+    )]

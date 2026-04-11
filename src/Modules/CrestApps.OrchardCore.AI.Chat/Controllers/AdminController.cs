@@ -1,8 +1,11 @@
 using System.Security.Claims;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -11,7 +14,9 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
+
 using OrchardCore.DisplayManagement.Notify;
+
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
@@ -26,6 +31,7 @@ public sealed class AdminController : Controller
     private readonly IDisplayManager<AIChatSessionListOptions> _optionsDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IShapeFactory _shapeFactory;
+
     private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
@@ -56,6 +62,7 @@ public sealed class AdminController : Controller
         _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
+
         S = stringLocalizer;
     }
 
@@ -64,37 +71,44 @@ public sealed class AdminController : Controller
         string profileId,
         string sessionId,
         [FromServices] IOptions<PagerOptions> pagerOptions)
+
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 
         if (profile is null)
         {
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
+
             return Forbid();
         }
 
         var model = new ChatSessionViewModel
         {
             ProfileId = profile.ItemId,
+
             History = []
         };
 
         var userId = CurrentUserId();
         if (!string.IsNullOrEmpty(sessionId))
+
         {
             var chatSession = await _sessionManager.FindAsync(sessionId);
 
             if (chatSession == null || chatSession.ProfileId != profile.ItemId)
             {
+
                 return NotFound();
             }
 
             if (chatSession.UserId != userId)
             {
+
                 return Forbid();
             }
 
@@ -106,6 +120,7 @@ public sealed class AdminController : Controller
             var chatSession = new AIChatSession
             {
                 ProfileId = profileId,
+
                 UserId = userId,
             };
 
@@ -114,11 +129,13 @@ public sealed class AdminController : Controller
 
         var sessionResult = await _sessionManager.PageAsync(1, pagerOptions.Value.GetPageSize(), new AIChatSessionQueryContext
         {
+
             ProfileId = profileId,
         });
 
         foreach (var entry in sessionResult.Sessions)
         {
+
             var summary = await _shapeFactory.CreateAsync("AIChatSessionListItem");
             summary.Properties["Entry"] = entry;
 
@@ -135,41 +152,50 @@ public sealed class AdminController : Controller
         AIChatSessionListOptions options,
         [FromServices] IOptions<PagerOptions> pagerOptions,
         [FromServices] IShapeFactory shapeFactory)
+
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 
         if (profile is null)
         {
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
+
             return Forbid();
         }
 
         if (!string.IsNullOrWhiteSpace(options.SearchText))
         {
             // Populate route values to maintain previous route data when generating page links.
+
             options.RouteValues.TryAdd("q", options.SearchText);
+
         }
 
         var page = 1;
 
         if (pagerParameters.Page.HasValue && pagerParameters.Page.Value > 0)
         {
+
             page = pagerParameters.Page.Value;
         }
 
         var sessionResult = await _sessionManager.PageAsync(page, pagerOptions.Value.GetPageSize(), new AIChatSessionQueryContext
         {
             ProfileId = profileId,
+
             Name = options.SearchText
         });
 
         var itemsPerPage = pagerOptions.Value.MaxPagedCount > 0
-            ? pagerOptions.Value.MaxPagedCount
-            : sessionResult.Count;
+
+        ? pagerOptions.Value.MaxPagedCount
+
+        : sessionResult.Count;
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
@@ -181,6 +207,7 @@ public sealed class AdminController : Controller
             viewModel.ChatSessions = sessionResult.Sessions;
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
+
             viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
         });
 
@@ -195,19 +222,23 @@ public sealed class AdminController : Controller
 
         if (profile is null)
         {
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
+
             return Forbid();
         }
 
         var options = new AIChatSessionListOptions();
+
         // Evaluate the values provided in the form post and map them to the filter result and route values.
         await _optionsDisplayManager.UpdateEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
 
         // The route value must always be added after the editors have updated the models.
+
         options.RouteValues.TryAdd("q", options.SearchText);
         options.RouteValues.TryAdd("profileId", profileId);
 
@@ -215,6 +246,7 @@ public sealed class AdminController : Controller
     }
 
     [Admin("ai/chat/interact/{profileId}/", "AIChatNewSession")]
+
     public IActionResult Chat(string profileId)
         => RedirectToAction(nameof(Index), new { profileId });
 
@@ -224,25 +256,31 @@ public sealed class AdminController : Controller
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteChatSession))
         {
+
             return Forbid();
+
         }
 
         var chatSession = await _sessionManager.FindAsync(sessionId);
 
         if (chatSession == null)
         {
+
             return NotFound();
+
         }
 
         var profile = await _profileManager.FindByIdAsync(chatSession.ProfileId);
 
         if (profile == null)
         {
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
+
             return Forbid();
         }
 
@@ -252,6 +290,7 @@ public sealed class AdminController : Controller
         }
         else
         {
+
             await _notifier.ErrorAsync(H["Unable to delete the chat session."]);
         }
 
@@ -264,19 +303,24 @@ public sealed class AdminController : Controller
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.DeleteAllChatSessions))
         {
+
             return Forbid();
+
         }
 
         var profile = await _profileManager.FindByIdAsync(profileId);
 
         if (profile == null)
         {
+
             return NotFound();
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile, profile))
         {
+
             return Forbid();
+
         }
 
         var count = await _sessionManager.DeleteAllAsync(profileId);
@@ -287,6 +331,7 @@ public sealed class AdminController : Controller
         }
         else
         {
+
             await _notifier.InformationAsync(H["No chat sessions found to delete."]);
         }
 

@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for SystemPrompt-source AI templates.
+/// Display driver for SystemPrompt-source templates.
 /// Captures the system message stored in <see cref="SystemPromptTemplateMetadata"/>.
 /// </summary>
 internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>

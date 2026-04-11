@@ -1,11 +1,11 @@
 using Azure;
 using Azure.Search.Documents;
-using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Models;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Indexing.Models;
+using OrchardCore.Search.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 
@@ -15,20 +15,19 @@ namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 /// </summary>
 public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 {
-    private readonly SearchIndexClient _searchIndexClient;
+    private readonly AzureAIClientFactory _clientFactory;
     private readonly ILogger _logger;
 
     public AzureAISearchVectorSearchService(
-        SearchIndexClient searchIndexClient,
+        AzureAIClientFactory clientFactory,
         ILogger<AzureAISearchVectorSearchService> logger)
     {
-        _searchIndexClient = searchIndexClient;
+        _clientFactory = clientFactory;
         _logger = logger;
     }
-
     /// <inheritdoc />
     public async Task<IEnumerable<DocumentChunkSearchResult>> SearchAsync(
-        IndexProfile indexProfile,
+        IIndexProfileInfo indexProfile,
         float[] embedding,
         string referenceId,
         string referenceType,
@@ -47,7 +46,7 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
 
         try
         {
-            var searchClient = _searchIndexClient.GetSearchClient(indexProfile.IndexFullName);
+            var searchClient = _clientFactory.CreateSearchClient(indexProfile.IndexFullName);
 
             var vectorQuery = new VectorizedQuery(embedding)
             {
@@ -88,10 +87,11 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                 var document = result.Document;
 
                 var chunkText = document.TryGetValue(AIConstants.ColumnNames.Content, out var textObj)
-                    ? textObj?.ToString()
-                    : null;
+                ? textObj?.ToString()
+                : null;
 
                 var chunkIndex = 0;
+
                 if (document.TryGetValue(AIConstants.ColumnNames.ChunkIndex, out var indexObj))
                 {
                     if (indexObj is int intValue)
@@ -107,12 +107,12 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
                 if (!string.IsNullOrEmpty(chunkText))
                 {
                     var documentKey = document.TryGetValue(AIConstants.ColumnNames.DocumentId, out var docIdObj)
-                        ? docIdObj?.ToString()
-                        : null;
+                    ? docIdObj?.ToString()
+                    : null;
 
                     var fileName = document.TryGetValue(AIConstants.ColumnNames.FileName, out var fileNameObj)
-                        ? fileNameObj?.ToString()
-                        : null;
+                    ? fileNameObj?.ToString()
+                    : null;
 
                     results.Add(new DocumentChunkSearchResult
                     {
@@ -136,14 +136,14 @@ public sealed class AzureAISearchVectorSearchService : IVectorSearchService
         catch (RequestFailedException ex)
         {
             _logger.LogError(ex, "Azure AI Search request failed for index '{IndexName}': {Message}",
-                indexProfile.IndexFullName, ex.Message);
+            indexProfile.IndexFullName, ex.Message);
 
             return [];
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error performing vector search in Azure AI Search index '{IndexName}'",
-                indexProfile.IndexFullName);
+            indexProfile.IndexFullName);
 
             return [];
         }

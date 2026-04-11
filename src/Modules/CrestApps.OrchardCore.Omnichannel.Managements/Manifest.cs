@@ -9,7 +9,7 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Category = "Communications"
-)]
+    )]
 
 [assembly: Feature(
     Name = "Omnichannel Management",
@@ -18,12 +18,12 @@ using OrchardCore.Modules.Manifest;
     Description = "Provides way to manage Omnichannel Contacts",
     Dependencies =
     [
-        OmnichannelConstants.Features.Area,
-        UsersConstants.Feature.Area,
-        "CrestApps.OrchardCore.Resources",
-        "OrchardCore.ContentTypes",
-        "OrchardCore.Users",
-        "OrchardCore.Workflows",
-        "CrestApps.OrchardCore.Users",
+    OmnichannelConstants.Features.Area,
+    UsersConstants.Feature.Area,
+    "CrestApps.OrchardCore.Resources",
+    "OrchardCore.ContentTypes",
+    "OrchardCore.Users",
+    "OrchardCore.Workflows",
+    "CrestApps.OrchardCore.Users",
     ]
-)]
+    )]

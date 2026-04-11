@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -9,27 +9,22 @@ public sealed class OmnichannelActivity : CatalogItem
     /// The primary key in the database.
     /// </summary>
     public long Id { get; set; }
-
     /// <summary>
     /// 'SMS', 'Chat', 'Email', etc.
     /// </summary>
     public string Channel { get; set; }
-
     /// <summary>
     /// When the channel is SMS and the interaction type is Automatic, we specify which phone number to use to outreach to the Contact.
     /// </summary>
     public string ChannelEndpointId { get; set; }
-
     /// <summary>
     /// The type of interaction.
     /// </summary>
     public ActivityInteractionType InteractionType { get; set; }
-
     /// <summary>
     /// When the interaction is automated, we store the AI session Id.
     /// </summary>
     public string AISessionId { get; set; }
-
     /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
@@ -44,7 +39,6 @@ public sealed class OmnichannelActivity : CatalogItem
     public DateTime ScheduledUtc { get; set; }
 
     public string Instructions { get; set; }
-
     /// <summary>
     /// The attempt number of this activity. Default is 1 which indicate the very first attempt.
     /// </summary>

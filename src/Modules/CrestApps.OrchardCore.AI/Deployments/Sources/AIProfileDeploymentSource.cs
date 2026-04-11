@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using OrchardCore.Deployment;
 
@@ -20,8 +22,8 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
         var profilesData = new JsonArray();
 
         var profileNames = step.IncludeAll
-            ? []
-            : step.ProfileNames ?? [];
+        ? []
+        : step.ProfileNames ?? [];
 
         foreach (var profile in profiles)
         {
@@ -43,8 +45,8 @@ internal sealed class AIProfileDeploymentSource : DeploymentSourceBase<AIProfile
                 { "CreatedUtc", profile.CreatedUtc },
                 { "OwnerId", profile.OwnerId },
                 { "Author", profile.Author },
-                { "Settings", profile.Settings?.DeepClone() },
-                { "Properties", profile.Properties?.DeepClone() },
+                { "Settings", JsonSerializer.SerializeToNode(profile.Settings) },
+                { "Properties", JsonSerializer.SerializeToNode(profile.Properties) },
             };
 
             if (profile.TitleType.HasValue)

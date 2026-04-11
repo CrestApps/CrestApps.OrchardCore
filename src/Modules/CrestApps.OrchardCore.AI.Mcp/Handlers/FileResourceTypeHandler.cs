@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
@@ -24,7 +24,7 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
     public FileResourceTypeHandler(
         IMcpFileProviderResolver fileProviderResolver,
         ILogger<FileResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _fileProviderResolver = fileProviderResolver;
         _logger = logger;
@@ -93,9 +93,9 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
                 [
                     new TextResourceContents
                     {
-                        Uri = resource.Resource.Uri,
-                        MimeType = mimeType,
-                        Text = content,
+                    Uri = resource.Resource.Uri,
+                    MimeType = mimeType,
+                    Text = content,
                     }
                 ]
             };
@@ -110,9 +110,9 @@ public sealed class FileResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new BlobResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = mimeType,
-                    Blob = memoryStream.ToArray(),
+                Uri = resource.Resource.Uri,
+                MimeType = mimeType,
+                Blob = memoryStream.ToArray(),
                 }
             ]
         };

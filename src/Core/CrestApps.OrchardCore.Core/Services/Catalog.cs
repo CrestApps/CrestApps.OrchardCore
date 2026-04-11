@@ -1,6 +1,7 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
-using OrchardCore;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
@@ -59,12 +60,12 @@ public class Catalog<T> : ICatalog<T>
         var document = await DocumentManager.GetOrCreateImmutableAsync();
 
         return ids.Where(document.Records.ContainsKey)
-                .Select(id => Clone(document.Records[id]))
-                .ToArray();
+            .Select(id => Clone(document.Records[id]))
+            .ToArray();
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-            where TQuery : QueryContext
+        where TQuery : QueryContext
     {
         var records = await LocateInstancesAsync(context);
 
@@ -92,7 +93,7 @@ public class Catalog<T> : ICatalog<T>
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         Saving(record, document);
@@ -110,7 +111,7 @@ public class Catalog<T> : ICatalog<T>
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         Saving(record, document);
@@ -118,11 +119,6 @@ public class Catalog<T> : ICatalog<T>
         document.Records[record.ItemId] = record;
 
         await DocumentManager.UpdateAsync(document);
-    }
-
-    public ValueTask SaveChangesAsync()
-    {
-        return ValueTask.CompletedTask;
     }
 
     protected virtual void Deleting(T model, DictionaryDocument<T> document)
@@ -148,8 +144,8 @@ public class Catalog<T> : ICatalog<T>
         if (!string.IsNullOrEmpty(context.Name))
         {
             records = records.Where(x => (x is INameAwareModel named && named.Name.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
-             (x is IDisplayTextAwareModel displayModel && displayModel.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
-             (x is not INameAwareModel && x is not IDisplayTextAwareModel));
+                (x is IDisplayTextAwareModel displayModel && displayModel.DisplayText.Contains(context.Name, StringComparison.OrdinalIgnoreCase)) ||
+                    (x is not INameAwareModel && x is not IDisplayTextAwareModel));
         }
 
         if (context.Sorted)

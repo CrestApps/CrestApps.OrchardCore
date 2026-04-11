@@ -1,6 +1,6 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Memory;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
+    )]
 
 [assembly: Feature(
     Id = MemoryConstants.Feature.Memory,
@@ -18,7 +18,7 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-        AIConstants.Feature.ChatCore,
-        "OrchardCore.Indexing",
+    AIConstants.Feature.ChatCore,
+    "OrchardCore.Indexing",
     ]
-)]
+    )]

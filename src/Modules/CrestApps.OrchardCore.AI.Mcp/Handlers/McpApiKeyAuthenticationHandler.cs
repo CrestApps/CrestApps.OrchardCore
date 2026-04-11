@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -16,7 +16,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
         IOptionsMonitor<McpServerOptions> mcpServerOptionsMonitor,
         ILoggerFactory loggerFactory,
         UrlEncoder encoder)
-        : base(options, loggerFactory, encoder)
+    : base(options, loggerFactory, encoder)
     {
         _mcpServerOptionsMonitor = mcpServerOptionsMonitor;
     }
@@ -26,6 +26,7 @@ internal sealed class McpApiKeyAuthenticationHandler : AuthenticationHandler<Mcp
         var mcpServerOptions = _mcpServerOptionsMonitor.CurrentValue;
 
         // Only handle authentication if ApiKey authentication type is configured.
+
         if (mcpServerOptions.AuthenticationType != McpServerAuthenticationType.ApiKey)
         {
             return Task.FromResult(AuthenticateResult.NoResult());

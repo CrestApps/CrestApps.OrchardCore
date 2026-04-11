@@ -18,10 +18,10 @@ public sealed class AIChatAnalyticsOverviewDisplayDriver : DisplayDriver<AIChatA
 
             model.TotalSessions = events.Count;
             model.UniqueVisitors = events
-                .Where(e => !string.IsNullOrEmpty(e.VisitorId))
-                .Select(e => e.VisitorId)
-                .Distinct()
-                .Count();
+            .Where(e => !string.IsNullOrEmpty(e.VisitorId))
+            .Select(e => e.VisitorId)
+            .Distinct()
+            .Count();
 
             model.TotalVisits = events.Count;
             model.ResolvedSessions = events.Count(e => e.IsResolved);
@@ -35,16 +35,16 @@ public sealed class AIChatAnalyticsOverviewDisplayDriver : DisplayDriver<AIChatA
 
                 var sessionsWithHandleTime = events.Where(e => e.HandleTimeSeconds > 0).ToList();
                 model.AverageHandleTimeSeconds = sessionsWithHandleTime.Count > 0
-                    ? Math.Round(sessionsWithHandleTime.Average(e => e.HandleTimeSeconds), 1)
-                    : 0;
+                ? Math.Round(sessionsWithHandleTime.Average(e => e.HandleTimeSeconds), 1)
+                : 0;
 
                 model.AverageMessagesPerSession = Math.Round(events.Average(e => e.MessageCount), 1);
 
                 // Returning user rate: visitors who engaged in more than one session.
                 var visitorSessionCounts = events
-                    .Where(e => !string.IsNullOrEmpty(e.VisitorId))
-                    .GroupBy(e => e.VisitorId)
-                    .ToList();
+                .Where(e => !string.IsNullOrEmpty(e.VisitorId))
+                .GroupBy(e => e.VisitorId)
+                .ToList();
 
                 if (visitorSessionCounts.Count > 0)
                 {
@@ -54,6 +54,7 @@ public sealed class AIChatAnalyticsOverviewDisplayDriver : DisplayDriver<AIChatA
 
                 // Average steps to resolution: avg messages for resolved sessions.
                 var resolvedEvents = events.Where(e => e.IsResolved).ToList();
+
                 if (resolvedEvents.Count > 0)
                 {
                     model.AverageStepsToResolution = Math.Round(resolvedEvents.Average(e => e.MessageCount), 1);

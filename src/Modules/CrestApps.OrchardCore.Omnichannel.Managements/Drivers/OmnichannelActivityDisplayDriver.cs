@@ -1,10 +1,11 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI;
+using CrestApps.Core;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -15,7 +16,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
@@ -75,8 +75,8 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         {
             model.CampaignId = activity.CampaignId;
             model.ScheduleAt = context.IsNew || activity.ScheduledUtc == DateTime.MinValue
-                ? (await _localClock.GetLocalNowAsync()).DateTime
-                : activity.ScheduledUtc;
+            ? (await _localClock.GetLocalNowAsync()).DateTime
+            : activity.ScheduledUtc;
             model.SubjectContentType = activity.SubjectContentType;
             model.UserId = activity.AssignedToId ?? _httpContextAccessor.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
             model.Instructions = activity.Instructions;
@@ -292,7 +292,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
             if (activity.AssignedToId != model.UserId ||
                 string.IsNullOrEmpty(activity.AssignedToId) ||
-                !activity.AssignedToUtc.HasValue)
+                    !activity.AssignedToUtc.HasValue)
             {
                 activity.AssignedToUtc = _clock.UtcNow;
                 activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;

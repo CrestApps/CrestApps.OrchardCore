@@ -1,5 +1,7 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
@@ -8,7 +10,7 @@ public class NamedCatalog<T> : Catalog<T>, INamedCatalog<T>
     where T : CatalogItem, INameAwareModel
 {
     public NamedCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
     }
 

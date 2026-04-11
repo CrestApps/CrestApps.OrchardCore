@@ -10,7 +10,7 @@
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <input type="number" class="form-control" asp-for="MaxTokens" step="4" min="4" placeholder="@T["Default"]">
+    <input type="number" class="form-control setting-input" data-setting="maxTokens" asp-for="MaxTokens" step="4" min="4" placeholder="@T["Default"]">
 </div>
 
 <div class="row">
@@ -21,7 +21,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <input type="number" class="form-control" asp-for="Temperature" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <input type="number" class="form-control setting-input" data-setting="temperature" asp-for="Temperature" step="0.01" min="0" max="2" placeholder="@T["Default"]">
     </div>
 
     <div class="col-6 mb-3">
@@ -31,7 +31,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <input type="number" class="form-control" asp-for="TopP" step="0.01" min="0" max="1" placeholder="@T["Default"]">
+        <input type="number" class="form-control setting-input" data-setting="topP" asp-for="TopP" step="0.01" min="0" max="1" placeholder="@T["Default"]">
     </div>
 </div>
 
@@ -43,7 +43,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <input type="number" class="form-control" asp-for="FrequencyPenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <input type="number" class="form-control setting-input" data-setting="frequencyPenalty" asp-for="FrequencyPenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
     </div>
 
     <div class="col-6 mb-3">
@@ -53,7 +53,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <input type="number" class="form-control" asp-for="PresencePenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
+        <input type="number" class="form-control setting-input" data-setting="presencePenalty" asp-for="PresencePenalty" step="0.01" min="0" max="2" placeholder="@T["Default"]">
     </div>
 </div>
 
@@ -64,5 +64,5 @@
             <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
         </span>
     </label>
-    <input type="number" class="form-control" asp-for="PastMessagesCount" step="1" min="2" max="50" placeholder="@T["Default"]">
+    <input type="number" class="form-control setting-input" data-setting="pastMessagesCount" asp-for="PastMessagesCount" step="1" min="2" max="50" placeholder="@T["Default"]">
 </div>

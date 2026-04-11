@@ -137,7 +137,7 @@ internal static class AzureEventGridEndpoint
                 var root = doc.RootElement;
 
                 var properties = root.EnumerateObject()
-                     .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
+                    .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
 
                 // Attempt to extract common fields
                 omnichannelMessage.CustomerAddress = GetStringProperty(properties, "from", "sender", "customer");

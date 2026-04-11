@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Speech;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -45,9 +47,9 @@ internal static class GetVoicesEndpoint
         }
 
         var deployment = !string.IsNullOrWhiteSpace(deploymentName)
-            ? await deploymentManager.FindByNameAsync(deploymentSelector)
-            : await deploymentManager.FindByIdAsync(deploymentSelector)
-                ?? await deploymentManager.FindByNameAsync(deploymentSelector);
+        ? await deploymentManager.FindByNameAsync(deploymentSelector)
+        : await deploymentManager.FindByIdAsync(deploymentSelector)
+        ?? await deploymentManager.FindByNameAsync(deploymentSelector);
 
         if (deployment is null)
         {

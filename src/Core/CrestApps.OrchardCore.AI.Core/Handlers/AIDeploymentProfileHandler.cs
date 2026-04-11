@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
@@ -55,7 +55,7 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
 
             profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
@@ -79,7 +79,7 @@ public sealed class AIDeploymentProfileHandler : CatalogEntryHandlerBase<AIProfi
 
     private async Task<AIDeployment> FindDeploymentAsync(string selector)
         => await _deploymentsCatalog.FindByIdAsync(selector)
-        ?? await _deploymentsCatalog.FindByNameAsync(selector);
+    ?? await _deploymentsCatalog.FindByNameAsync(selector);
 
     private async Task<string> ResolveLegacyDeploymentIdAsync(string deploymentId, string currentValue)
     {

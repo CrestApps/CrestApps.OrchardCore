@@ -65,6 +65,7 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
             }
 
             // If the old Standard feature was enabled, ensure the main Area feature is enabled.
+
             if (enabledFeatureIds.Contains(OldStandardFeature) && !enabledFeatureIds.Contains(AzureOpenAIConstants.Feature.Area))
             {
                 var areaFeature = extensionManager.GetFeatures((IEnumerable<string>)[AzureOpenAIConstants.Feature.Area]).FirstOrDefault();

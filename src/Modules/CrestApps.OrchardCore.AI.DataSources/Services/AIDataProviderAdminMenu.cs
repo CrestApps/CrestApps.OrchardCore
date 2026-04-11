@@ -17,14 +17,14 @@ public sealed class AIDataProviderAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Data Sources"], S["Data Sources"].PrefixPosition(), dataSources => dataSources
-                    .AddClass("ai-data-sources")
-                    .Id("aiSources")
-                    .Action("Index", "DataSources", AIConstants.Feature.DataSources)
-                    .Permission(AIPermissions.ManageAIDataSources)
-                    .LocalNav()
-                )
-            );
+            .Add(S["Data Sources"], S["Data Sources"].PrefixPosition(), dataSources => dataSources
+            .AddClass("ai-data-sources")
+            .Id("aiSources")
+            .Action("Index", "DataSources", AIConstants.Feature.DataSources)
+            .Permission(AIPermissions.ManageAIDataSources)
+            .LocalNav()
+        )
+        );
 
         return ValueTask.CompletedTask;
     }

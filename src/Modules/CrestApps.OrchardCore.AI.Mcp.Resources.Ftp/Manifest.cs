@@ -7,7 +7,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
+    )]
 
 [assembly: Feature(
     Id = "CrestApps.OrchardCore.AI.Mcp.Resources.Ftp",
@@ -16,6 +16,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        McpConstants.Feature.Server,
+    McpPermissions.Feature.Server,
     ]
-)]
+    )]

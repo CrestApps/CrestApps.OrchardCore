@@ -5,7 +5,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services project for the OpenAI module.
+      OrchardCore-specific OpenAI services that extend the framework-independent CrestApps.Core.AI.OpenAI.Core.
     </Description>
     <PackageTags>$(PackageTags) OpenAI</PackageTags>
   </PropertyGroup>
@@ -14,14 +14,16 @@
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.AI" />
-    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CrestApps.Azure.Core\CrestApps.Azure.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Core\CrestApps.OrchardCore.AI.Core.csproj" />
+    <PackageReference Include="CrestApps.Core.Azure" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <PackageReference Include="CrestApps.Core.AI.OpenAI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Handlers\" />
   </ItemGroup>
 
 </Project>

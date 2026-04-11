@@ -1,5 +1,5 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Users.Core.Models;
-using CrestApps.Support;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Logging;
@@ -82,15 +82,15 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
     private async Task<string> GetDisplayFromTemplate(IUser user, UserFullNamePart userPart, DisplayNameSettings setting)
     {
         var customName = await _liquidTemplateManager.RenderStringAsync(setting.Template, NullEncoder.Default,
-            new Dictionary<string, FluidValue>()
-            {
-                ["User"] = new ObjectValue(user),
-                [nameof(userPart.FirstName)] = new StringValue(userPart.FirstName),
-                [nameof(userPart.MiddleName)] = new StringValue(userPart.MiddleName),
-                [nameof(userPart.LastName)] = new StringValue(userPart.LastName),
-                [nameof(userPart.DisplayName)] = new StringValue(userPart.DisplayName),
-                [nameof(IUser.UserName)] = new StringValue(user.UserName),
-            });
+        new Dictionary<string, FluidValue>()
+        {
+            ["User"] = new ObjectValue(user),
+            [nameof(userPart.FirstName)] = new StringValue(userPart.FirstName),
+            [nameof(userPart.MiddleName)] = new StringValue(userPart.MiddleName),
+            [nameof(userPart.LastName)] = new StringValue(userPart.LastName),
+            [nameof(userPart.DisplayName)] = new StringValue(userPart.DisplayName),
+            [nameof(IUser.UserName)] = new StringValue(user.UserName),
+        });
 
         if (!string.IsNullOrWhiteSpace(customName))
         {

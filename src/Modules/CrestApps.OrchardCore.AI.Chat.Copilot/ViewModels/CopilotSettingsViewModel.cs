@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -15,7 +15,6 @@ public class CopilotSettingsViewModel
     public string ClientSecret { get; set; }
 
     public bool HasSecret { get; set; }
-
     /// <summary>
     /// The auto-computed callback URL to display to the user (read-only).
     /// </summary>

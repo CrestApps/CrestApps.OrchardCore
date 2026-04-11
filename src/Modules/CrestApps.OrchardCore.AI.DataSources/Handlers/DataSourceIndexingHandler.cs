@@ -1,7 +1,7 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -34,7 +34,7 @@ internal sealed class DataSourceIndexingHandler : CatalogEntryHandlerBase<AIData
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error triggering initial indexing for data source '{DataSourceId}'.",
-                context.Model.ItemId);
+            context.Model.ItemId);
         }
     }
 
@@ -52,7 +52,7 @@ internal sealed class DataSourceIndexingHandler : CatalogEntryHandlerBase<AIData
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cleaning up master index documents for deleted data source '{DataSourceId}'.",
-                context.Model.ItemId);
+            context.Model.ItemId);
         }
     }
 }

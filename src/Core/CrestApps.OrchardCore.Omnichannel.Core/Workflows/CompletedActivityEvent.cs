@@ -1,5 +1,5 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -56,6 +56,7 @@ public sealed class CompletedActivityEvent : EventActivity
         var dispositions = await _dispositionsCatalog.GetAsync(dispositionIds);
 
         var outcomes = new List<Outcome>();
+
         foreach (var disposition in dispositions.OrderBy(x => x.DisplayText))
         {
             outcomes.Add(Outcome(new LocalizedString(disposition.DisplayText, disposition.DisplayText)));

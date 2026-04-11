@@ -1,12 +1,12 @@
 using A2A;
 using A2A.AspNetCore;
+using CrestApps.Core.AI.A2A;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
-using CrestApps.OrchardCore.AI.A2A.Functions;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -23,23 +23,15 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreAIA2AClient();
         services.AddDisplayDriver<AIProfile, AIProfileA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionA2AConnectionsDisplayDriver>();
-        services.AddScoped<IToolRegistryProvider, A2AToolRegistryProvider>();
         services.AddNavigationProvider<A2AAdminMenu>();
         services.AddPermissionProvider<A2APermissionsProvider>();
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionHandler>();
         services.AddScoped<ICatalogEntryHandler<A2AConnection>, A2AConnectionSettingsHandler>();
         services.AddDisplayDriver<A2AConnection, A2AConnectionDisplayDriver>();
-        services.AddScoped<IAICompletionContextBuilderHandler, A2AAICompletionContextBuilderHandler>();
-        services.AddSingleton<IA2AAgentCardCacheService, DefaultA2AAgentCardCacheService>();
-        services.AddScoped<IA2AConnectionAuthService, DefaultA2AConnectionAuthService>();
-
-        // Register AI system functions for agent and tool discovery.
-        services.AddAITool<ListAvailableAgentsFunction>(ListAvailableAgentsFunction.TheName);
-        services.AddAITool<FindAgentForTaskFunction>(FindAgentForTaskFunction.TheName);
-        services.AddAITool<FindToolsForTaskFunction>(FindToolsForTaskFunction.TheName);
     }
 }
 

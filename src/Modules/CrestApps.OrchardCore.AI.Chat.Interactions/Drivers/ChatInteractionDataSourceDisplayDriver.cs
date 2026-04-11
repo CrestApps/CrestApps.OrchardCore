@@ -1,11 +1,10 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
 
@@ -36,7 +35,7 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        return Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
+        var selectorAndBehaviorResult = Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSource_Edit", async model =>
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
@@ -51,7 +50,26 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.Filter = ragMetadata.Filter;
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Parameters:5#Settings;1");
+        }).Location("Parameters:4#Knowledge;2");
+
+        var retrievalResult = Initialize<EditChatInteractionDataSourceViewModel>("ChatInteractionDataSourceRetrieval_Edit", async model =>
+        {
+            var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
+
+            var metadata = interaction.As<DataSourceMetadata>();
+            model.DataSourceId = metadata?.DataSourceId;
+
+            var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+
+            model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
+            model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
+            model.IsInScope = ragMetadata.IsInScope;
+            model.Filter = ragMetadata.Filter;
+
+            model.DataSources = await _dataSourceStore.GetAllAsync();
+        }).Location("Parameters:5#Knowledge;2");
+
+        return Combine(selectorAndBehaviorResult, retrievalResult);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
@@ -66,16 +84,15 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
 
             if (dataSource != null)
             {
-                interaction.Put(new DataSourceMetadata
+                interaction.Alter<DataSourceMetadata>(metadata =>
                 {
-                    DataSourceId = dataSource.ItemId,
+                    metadata.DataSourceId = dataSource.ItemId;
                 });
             }
         }
         else
         {
-            // Clear the metadata if no data source is selected
-            interaction.Put(new DataSourceMetadata());
+            interaction.Alter<DataSourceMetadata>(metadata => metadata.DataSourceId = null);
         }
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
@@ -86,13 +103,13 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         if (strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),
-                S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
+            S["Invalid strictness value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinStrictness, AIDataSourceSettings.MaxStrictness]);
         }
 
         if (topN != model.TopNDocuments)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.TopNDocuments),
-                S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
+            S["Invalid total retrieved documents value. A valid value must be between {0} and {1}.", AIDataSourceSettings.MinTopNDocuments, AIDataSourceSettings.MaxTopNDocuments]);
         }
 
         if (!string.IsNullOrWhiteSpace(model.Filter) && !_oDataValidator.IsValidFilter(model.Filter))
@@ -100,12 +117,12 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
         }
 
-        interaction.Put(new AIDataSourceRagMetadata
+        interaction.Alter<AIDataSourceRagMetadata>(metadata =>
         {
-            Strictness = strictness,
-            TopNDocuments = topN,
-            IsInScope = model.IsInScope,
-            Filter = model.Filter,
+            metadata.Strictness = strictness;
+            metadata.TopNDocuments = topN;
+            metadata.IsInScope = model.IsInScope;
+            metadata.Filter = model.Filter;
         });
 
         return Edit(interaction, context);

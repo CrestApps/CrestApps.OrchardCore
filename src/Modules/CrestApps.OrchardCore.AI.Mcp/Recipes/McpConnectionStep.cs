@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Recipes.Models;
@@ -22,7 +22,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
         ISourceCatalogManager<McpConnection> manager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         IStringLocalizer<McpConnectionStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         _mcpClientOptions = mcpClientOptions.Value;
@@ -59,6 +59,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
                 if (!hasSource)
                 {
                     context.Errors.Add(S["Could not find provider name. The deployment will not be imported."]);
+
                     continue;
                 }
 
@@ -71,7 +72,7 @@ internal sealed class McpConnectionStep : NamedRecipeStepHandler
 
                 connection = await _manager.NewAsync(sourceName, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     connection.ItemId = id;
                 }

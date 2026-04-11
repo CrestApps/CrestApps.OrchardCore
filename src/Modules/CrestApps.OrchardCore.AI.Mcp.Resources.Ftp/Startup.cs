@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Ftp;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddMcpResourceType<FtpResourceTypeHandler>(FtpResourceConstants.Type, entry =>
+        services.AddCoreAIFtpMcpResources(entry =>
         {
             entry.DisplayName = S["FTP/FTPS"];
             entry.Description = S["Reads content from FTP/FTPS servers."];

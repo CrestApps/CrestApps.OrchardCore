@@ -4,10 +4,10 @@
 @model AIMemoryIndexProfileViewModel
 
 <div class="@Orchard.GetWrapperClasses()">
-    <label asp-for="EmbeddingConnection" class="@Orchard.GetLabelClasses()">@T["Embedding connection"]</label>
+    <label asp-for="EmbeddingDeploymentId" class="@Orchard.GetLabelClasses()">@T["Embedding deployment"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <select asp-for="EmbeddingConnection" asp-items="Model.EmbeddingConnections" class="form-select">
-            <option value="">@T["Select an embedding connection"]</option>
+        <select asp-for="EmbeddingDeploymentId" asp-items="Model.EmbeddingDeployments" class="form-select">
+            <option value="">@T["Select an embedding deployment"]</option>
         </select>
         <span class="hint">@T["Choose the embedding deployment that will be used to index and search user memories."]</span>
     </div>

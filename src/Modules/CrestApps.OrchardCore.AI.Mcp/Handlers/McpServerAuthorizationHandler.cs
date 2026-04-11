@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,16 +32,19 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
 
             case McpServerAuthenticationType.ApiKey:
                 // For API key auth, check if the user is authenticated via the McpApiKey scheme.
+
                 if (context.User.Identity?.IsAuthenticated == true &&
                     context.User.Identity.AuthenticationType == McpApiKeyAuthenticationDefaults.AuthenticationScheme)
                 {
                     context.Succeed(requirement);
                 }
+
                 break;
 
             case McpServerAuthenticationType.OpenId:
             default:
                 // For OpenId auth, check if the user is authenticated.
+
                 if (context.User.Identity?.IsAuthenticated == true)
                 {
                     if (!options.RequireAccessPermission)
@@ -60,6 +63,7 @@ internal sealed class McpServerAuthorizationHandler : AuthorizationHandler<McpSe
                         }
                     }
                 }
+
                 break;
         }
     }

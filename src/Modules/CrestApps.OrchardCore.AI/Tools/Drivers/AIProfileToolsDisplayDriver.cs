@@ -1,7 +1,7 @@
-using System.Text.Json;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,7 +9,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 
@@ -115,7 +114,6 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         return Edit(profile, context);
     }
-
     /// <summary>
     /// Reads tool names from the current key, falling back to the legacy key for backward compatibility.
     /// </summary>
@@ -129,14 +127,11 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         }
 
         // Fall back to the legacy property key used in earlier versions.
-        if (profile.Properties.TryGetPropertyValue("AIProfileFunctionInvocationMetadata", out var legacyNode))
-        {
-            var legacyMetadata = legacyNode.Deserialize<FunctionInvocationMetadata>();
+        var legacyMetadata = profile.Get<FunctionInvocationMetadata>("AIProfileFunctionInvocationMetadata");
 
-            if (legacyMetadata?.Names is { Length: > 0 })
-            {
-                return legacyMetadata.Names;
-            }
+        if (legacyMetadata?.Names is { Length: > 0 })
+        {
+            return legacyMetadata.Names;
         }
 
         return null;

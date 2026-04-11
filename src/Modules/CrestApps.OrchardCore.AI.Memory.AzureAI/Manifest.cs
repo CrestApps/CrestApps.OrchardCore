@@ -1,5 +1,5 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.AI.Memory;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        MemoryConstants.Feature.Memory,
-        "OrchardCore.Indexing",
-        "OrchardCore.Search.AzureAI",
+    MemoryConstants.Feature.Memory,
+    "OrchardCore.Indexing",
+    "OrchardCore.Search.AzureAI",
     ]
-)]
+    )]

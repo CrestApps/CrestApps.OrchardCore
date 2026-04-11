@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [ main, release/** ]
     paths:
-      - '**/AITemplates/**/*.md'
+      - '**/Templates/**/*.md'
 permissions:
   contents: read
 concurrency:
@@ -24,14 +24,14 @@ jobs:
           10.0.x
     - name: Build prompt validation tool
       run: |
-        dotnet build -c Release src/Common/CrestApps.AI.Prompting/CrestApps.AI.Prompting.csproj /p:NuGetAudit=false
+        dotnet build -c Release src/Common/CrestApps.Core.Templates/CrestApps.Core.Templates.csproj /p:NuGetAudit=false
     - name: Validate template file structure
       shell: bash
       run: |
         EXIT_CODE=0
         shopt -s globstar nullglob
 
-        for file in src/**/AITemplates/**/*.md; do
+        for file in src/**/Templates/**/*.md; do
           [ -f "$file" ] || continue
 
           # Check for valid front matter structure
@@ -55,7 +55,7 @@ jobs:
 
         if [ $EXIT_CODE -ne 0 ]; then
           echo ""
-          echo "::error::One or more AI template files have structural issues"
+          echo "::error::One or more template files have structural issues"
         fi
 
         exit $EXIT_CODE
@@ -66,7 +66,7 @@ jobs:
 
         exit_code = 0
 
-        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
+        for path in sorted(glob.glob('src/**/Templates/**/*.md', recursive=True)):
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -116,7 +116,7 @@ jobs:
 
         exit_code = 0
 
-        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
+        for path in sorted(glob.glob('src/**/Templates/**/*.md', recursive=True)):
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
@@ -150,7 +150,7 @@ jobs:
 
         exit_code = 0
 
-        for path in sorted(glob.glob('src/**/AITemplates/**/*.md', recursive=True)):
+        for path in sorted(glob.glob('src/**/Templates/**/*.md', recursive=True)):
             with open(path, 'r', encoding='utf-8') as f:
                 content = f.read()
 

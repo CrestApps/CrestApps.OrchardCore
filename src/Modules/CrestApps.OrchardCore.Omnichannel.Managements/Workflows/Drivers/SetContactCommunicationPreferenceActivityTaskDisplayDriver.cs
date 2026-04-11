@@ -33,8 +33,8 @@ internal sealed class SetContactCommunicationPreferenceActivityTaskDisplayDriver
 
         if (!model.SetDoNotCall.HasValue &&
             !model.SetDoNotSms.HasValue &&
-            !model.SetDoNotEmail.HasValue &&
-            !model.SetDoNotChat.HasValue)
+                !model.SetDoNotEmail.HasValue &&
+                    !model.SetDoNotChat.HasValue)
         {
             context.Updater.ModelState.AddModelError(Prefix, string.Empty, S["At least one of the preferences must be set"]);
         }

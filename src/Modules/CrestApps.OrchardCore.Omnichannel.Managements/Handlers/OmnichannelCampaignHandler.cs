@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -78,11 +78,14 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
 
         if (properties != null)
         {
-            campaign.Properties ??= [];
-            campaign.Properties.Merge(properties);
+            campaign.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties)
+            {
+                campaign.Properties[key] = value;
+            }
         }
 
         return Task.CompletedTask;
     }
 }
-

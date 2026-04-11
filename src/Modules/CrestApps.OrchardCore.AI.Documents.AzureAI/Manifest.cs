@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        "OrchardCore.Indexing",
-        "OrchardCore.Search.AzureAI",
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    "OrchardCore.Indexing",
+    "OrchardCore.Search.AzureAI",
     ]
-)]
+    )]

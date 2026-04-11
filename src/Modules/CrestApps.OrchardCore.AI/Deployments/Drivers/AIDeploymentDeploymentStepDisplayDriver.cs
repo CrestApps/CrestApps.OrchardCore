@@ -1,7 +1,7 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Deployments.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -27,10 +27,10 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
     public override Task<IDisplayResult> DisplayAsync(AIDeploymentDeploymentStep step, BuildDisplayContext context)
     {
         return
-            CombineAsync(
-                View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
-                View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
-            );
+        CombineAsync(
+            View("AIDeploymentDeploymentStep_Summary", step).Location("Summary", "Content"),
+        View("AIDeploymentDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content")
+        );
     }
 
     public override IDisplayResult Edit(AIDeploymentDeploymentStep step, BuildEditorContext context)
@@ -48,8 +48,8 @@ internal sealed class AIDeploymentDeploymentStepDisplayDriver : DisplayDriver<De
         var model = new AIDeploymentStepViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix,
-            p => p.IncludeAll,
-            p => p.DeploymentNames);
+        p => p.IncludeAll,
+        p => p.DeploymentNames);
 
         if (model.IncludeAll)
         {

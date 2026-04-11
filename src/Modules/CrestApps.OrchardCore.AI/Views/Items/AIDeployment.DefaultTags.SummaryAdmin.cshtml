@@ -1,4 +1,5 @@
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Core
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIDeployment>
@@ -14,7 +15,7 @@
 @if (!string.IsNullOrEmpty(Model.Value.ConnectionName))
 {
     <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Connection name"]">
-        <i class="text-secondary" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.ConnectionNameAlias) ? Model.Value.ConnectionName : Model.Value.ConnectionNameAlias)
+        <i class="text-secondary" aria-hidden="true"></i>@Model.Value.GetConnectionDisplayName()
     </span>
 }
 else

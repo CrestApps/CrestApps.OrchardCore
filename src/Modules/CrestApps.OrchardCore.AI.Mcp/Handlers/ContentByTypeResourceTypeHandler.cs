@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
@@ -27,7 +27,7 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
         ISession session,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
         ILogger<ContentByTypeResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _session = session;
         _jsonOptions = jsonOptions.Value;
@@ -66,10 +66,11 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
                 }
+
             ]
         };
     }

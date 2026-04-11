@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
 using OrchardCore.Recipes.Models;
@@ -20,7 +20,7 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
     public McpPromptStep(
         INamedCatalogManager<McpPrompt> manager,
         IStringLocalizer<McpPromptStep> stringLocalizer)
-         : base(StepKey)
+    : base(StepKey)
     {
         _manager = manager;
         S = stringLocalizer;
@@ -51,7 +51,7 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
                 entry = await _manager.NewAsync(token);
                 PopulateEntry(entry, token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     entry.ItemId = id;
                 }

@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -19,7 +19,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
     public AIDataSourceStep(
         ICatalogManager<AIDataSource> dataManager,
         IStringLocalizer<AIDataSourceStep> stringLocalizer)
-        : base(StepKey)
+    : base(StepKey)
     {
         _dataManager = dataManager;
         S = stringLocalizer;
@@ -51,7 +51,7 @@ internal sealed class AIDataSourceStep : NamedRecipeStepHandler
             {
                 dataSource = await _dataManager.NewAsync(token);
 
-                if (hasId && IdValidator.IsValid(id))
+                if (hasId && UniqueId.IsValid(id))
                 {
                     dataSource.ItemId = id;
                 }

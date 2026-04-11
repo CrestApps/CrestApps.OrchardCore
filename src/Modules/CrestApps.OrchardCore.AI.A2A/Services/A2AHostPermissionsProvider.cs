@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.AI.A2A.Services;
+namespace CrestApps.Core.AI.A2A.Services;
 
 public sealed class A2AHostPermissionsProvider : IPermissionProvider
 {

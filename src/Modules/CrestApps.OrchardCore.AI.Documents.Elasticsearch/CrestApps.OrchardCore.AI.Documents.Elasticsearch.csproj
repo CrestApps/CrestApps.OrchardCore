@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -21,7 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core\CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,7 +31,7 @@
       they won't need to manually include the AI Documents package. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Documents\CrestApps.OrchardCore.AI.Documents.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

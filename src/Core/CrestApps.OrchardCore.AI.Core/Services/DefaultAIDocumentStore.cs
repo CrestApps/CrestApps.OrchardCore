@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Indexes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql.Indexes.Indexing;
+using CrestApps.Core.Data.YesSql.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDocumentStore : DocumentCatalog<AIDocument, AIDocumentIndex>, IAIDocumentStore
 {
     public DefaultAIDocumentStore(ISession session)
-        : base(session)
+    : base(session)
     {
         CollectionName = AIConstants.AIDocsCollectionName;
     }

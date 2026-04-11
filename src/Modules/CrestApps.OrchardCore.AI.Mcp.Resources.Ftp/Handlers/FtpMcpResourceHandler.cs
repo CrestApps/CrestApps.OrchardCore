@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.Core.AI.Mcp;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Models;
 
 namespace CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;

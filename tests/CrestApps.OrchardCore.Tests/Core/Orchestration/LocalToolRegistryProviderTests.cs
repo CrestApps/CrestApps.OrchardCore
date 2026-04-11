@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core.Orchestration;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -38,7 +38,7 @@ public sealed class LocalToolRegistryProviderTests
             ("tool1", "Tool 1", "First tool"),
             ("tool2", "Tool 2", "Second tool"),
             ("tool3", "Tool 3", "Third tool"),
-        ]);
+            ]);
 
         var result = await provider.GetToolsAsync(new AICompletionContext { ToolNames = ["tool1", "tool3"] }, TestContext.Current.CancellationToken);
 
@@ -105,8 +105,8 @@ public sealed class LocalToolRegistryProviderTests
         var provider = CreateProviderWithOptions(options);
 
         var result = await provider.GetToolsAsync(
-            new AICompletionContext { ToolNames = ["local_tool", "system_tool"] },
-            TestContext.Current.CancellationToken);
+        new AICompletionContext { ToolNames = ["local_tool", "system_tool"] },
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("local_tool", result[0].Name);
@@ -118,8 +118,8 @@ public sealed class LocalToolRegistryProviderTests
         var provider = CreateProvider([("my_tool", "My Tool", "A test tool")]);
 
         var result = await provider.GetToolsAsync(
-            new AICompletionContext { ToolNames = ["my_tool"] },
-            TestContext.Current.CancellationToken);
+        new AICompletionContext { ToolNames = ["my_tool"] },
+        TestContext.Current.CancellationToken);
 
         Assert.Single(result);
         Assert.Equal("my_tool", result[0].Id);

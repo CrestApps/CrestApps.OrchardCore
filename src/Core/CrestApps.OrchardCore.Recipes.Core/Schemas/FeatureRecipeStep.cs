@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.Recipes.Core.Schemas;
 public sealed class FeatureRecipeStep : IRecipeStep
 {
     private readonly IShellFeaturesManager _shellFeaturesManager;
+
     private JsonSchema _cached;
     public string Name => "feature";
 
@@ -34,14 +35,14 @@ public sealed class FeatureRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("feature")),
-                ("enable", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(featureItemSchema)
-                    .Description("Feature IDs to enable.")),
-                ("disable", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(featureItemSchema)
-                    .Description("Feature IDs to disable.")))
+        ("enable", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(featureItemSchema)
+            .Description("Feature IDs to enable.")),
+        ("disable", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(featureItemSchema)
+            .Description("Feature IDs to disable.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

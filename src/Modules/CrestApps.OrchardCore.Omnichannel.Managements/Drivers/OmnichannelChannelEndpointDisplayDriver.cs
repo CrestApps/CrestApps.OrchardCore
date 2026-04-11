@@ -33,10 +33,10 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
         return CombineAsync(
             View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 

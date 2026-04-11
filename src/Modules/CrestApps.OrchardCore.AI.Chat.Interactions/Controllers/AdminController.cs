@@ -1,10 +1,11 @@
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -98,11 +99,11 @@ public sealed class AdminController : Controller
 
         // Build display shapes for each interaction
         viewModel.Models = (await Task.WhenAll(result.Entries.Select(async model =>
-            new CatalogEntryViewModel<ChatInteraction>
-            {
-                Model = model,
-                Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            }))).ToList();
+        new CatalogEntryViewModel<ChatInteraction>
+        {
+            Model = model,
+            Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+        }))).ToList();
 
         viewModel.Options.BulkActions =
         [
@@ -257,7 +258,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(interaction.Properties);
+        var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
         clonedInteraction.Title = GetNextTitle(interaction.Title);
         clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
         clonedInteraction.ConnectionName = interaction.ConnectionName;
@@ -268,7 +269,6 @@ public sealed class AdminController : Controller
         clonedInteraction.PresencePenalty = interaction.PresencePenalty;
         clonedInteraction.MaxTokens = interaction.MaxTokens;
         clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
-        clonedInteraction.DocumentTopN = interaction.DocumentTopN;
         clonedInteraction.ToolNames = interaction.ToolNames.ToList();
         clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
         clonedInteraction.Documents = interaction.Documents.ToList();

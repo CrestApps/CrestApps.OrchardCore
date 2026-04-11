@@ -44,11 +44,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         while (true)
         {
             var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
-                    x.Status == ActivityStatus.NotStated &&
-                    x.InteractionType == ActivityInteractionType.Automated &&
+            x.Status == ActivityStatus.NotStated &&
+                x.InteractionType == ActivityInteractionType.Automated &&
                     x.ScheduledUtc <= now &&
-                    x.Channel.IsIn(processors.Keys) &&
-                    x.DocumentId > documentId, collection: OmnichannelConstants.CollectionName)
+                        x.Channel.IsIn(processors.Keys) &&
+                            x.DocumentId > documentId, collection: OmnichannelConstants.CollectionName)
                 .OrderBy(x => x.DocumentId)
                 .Skip(iterationCount++ * _batchSize)
                 .Take(_batchSize)

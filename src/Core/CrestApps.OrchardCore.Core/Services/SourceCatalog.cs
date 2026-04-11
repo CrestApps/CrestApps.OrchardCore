@@ -1,5 +1,7 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.Core.Services;
@@ -10,7 +12,7 @@ public class SourceCatalog<T> : Catalog<T>, ISourceCatalog<T>
     private readonly IDocumentManager<DictionaryDocument<T>> _documentManager;
 
     public SourceCatalog(IDocumentManager<DictionaryDocument<T>> documentManager)
-        : base(documentManager)
+    : base(documentManager)
     {
         _documentManager = documentManager;
     }

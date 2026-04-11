@@ -23,6 +23,7 @@ public sealed class BuiltInRecipeStepTests
             {
                 var featureInfo = new Mock<IFeatureInfo>();
                 featureInfo.SetupGet(f => f.Id).Returns(id);
+
                 return featureInfo.Object;
             })
             .ToArray();
@@ -160,7 +161,6 @@ public sealed class BuiltInRecipeStepTests
         var step = CreateStep(stepType);
         Assert.Equal(expectedName, step.Name);
     }
-
     /// <summary>
     /// Verifies that every built-in recipe step produces a non-empty, serializable schema
     /// that contains the step's const name constraint.
@@ -226,7 +226,6 @@ public sealed class BuiltInRecipeStepTests
         Assert.StartsWith("{", json);
         Assert.Contains("\"const\"", json);
     }
-
     /// <summary>
     /// Verifies that every built-in recipe step caches the schema instance.
     /// </summary>
@@ -452,37 +451,37 @@ public sealed class BuiltInRecipeStepTests
 
     private static IContentDefinitionSchemaDefinition[] CreateContentDefinitionSchemaDefinitions()
         => typeof(IContentDefinitionSchemaDefinition).Assembly.ExportedTypes
-            .Where(type =>
-                typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
-                type is { IsAbstract: false, IsInterface: false })
-            .OrderBy(type => type.Name, StringComparer.Ordinal)
-            .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type))
-            .ToArray();
+        .Where(type =>
+    typeof(IContentDefinitionSchemaDefinition).IsAssignableFrom(type) &&
+        type is { IsAbstract: false, IsInterface: false })
+        .OrderBy(type => type.Name, StringComparer.Ordinal)
+        .Select(type => (IContentDefinitionSchemaDefinition)Activator.CreateInstance(type))
+        .ToArray();
 
     private static StubContentSchemaProvider CreateContentSchemaProvider()
         => new StubContentSchemaProvider(
             CreateContentDefinitionSchemaDefinitions()
-                .Select(definition => definition.Name)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Order(StringComparer.OrdinalIgnoreCase)
-                .ToArray(),
-            [
-                "BooleanField",
-                "ContentPickerField",
-                "DateField",
-                "DateTimeField",
-                "HtmlField",
-                "LinkField",
-                "LocalizationSetContentPickerField",
-                "MediaField",
-                "MultiTextField",
-                "NumericField",
-                "TaxonomyField",
-                "TextField",
-                "TimeField",
-                "UserPickerField",
-                "YoutubeField",
-            ]);
+            .Select(definition => definition.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray(),
+    [
+        "BooleanField",
+        "ContentPickerField",
+        "DateField",
+        "DateTimeField",
+        "HtmlField",
+        "LinkField",
+        "LocalizationSetContentPickerField",
+        "MediaField",
+        "MultiTextField",
+        "NumericField",
+        "TaxonomyField",
+        "TextField",
+        "TimeField",
+        "UserPickerField",
+        "YoutubeField",
+        ]);
 
     private sealed class StubContentSchemaProvider(
         IReadOnlyList<string> partNames,

@@ -22,4 +22,3 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<RolePickerMigrations>();
     }
 }
-

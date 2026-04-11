@@ -1,9 +1,9 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 
@@ -23,7 +23,7 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
                 var profileMetadata = template.As<ProfileTemplateMetadata>();
                 model.IsOnAdminMenu = profileMetadata.ProfileType == AIProfileType.Chat;
             }
-        }).Location("Content:10%General;1")
+        }).Location("Content:7%General;1")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Documents.Drivers;
 
@@ -16,7 +16,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
             var metadata = template.As<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
             model.HasIndexProfile = true;
-        }).Location("Content:5#Documents:10")
+        }).Location("Content:2#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

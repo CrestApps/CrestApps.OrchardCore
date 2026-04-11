@@ -10,4 +10,4 @@ using OrchardCore.Modules.Manifest;
     Version = CrestAppsManifestConstants.Version,
     Description = "Provides all services needed to use SignalR functionality.",
     Category = "Communication"
-)]
+    )]

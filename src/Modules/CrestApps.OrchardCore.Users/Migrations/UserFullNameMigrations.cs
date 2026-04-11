@@ -22,18 +22,18 @@ internal sealed class UserFullNameMigrations : DataMigration
 
             await SchemaBuilder.AlterIndexTableAsync<UserFullNameIndex>(table => table
                 .CreateIndex("IDX_UserFullNameIndex_DocumentId",
-                    "DocumentId",
-                    "FirstName",
-                    "LastName",
-                    "MiddleName"
-                )
+            "DocumentId",
+            "FirstName",
+            "LastName",
+            "MiddleName"
+            )
             );
 
             await SchemaBuilder.AlterIndexTableAsync<UserFullNameIndex>(table => table
                 .CreateIndex("IDX_UserDisplayNameIndex_DocumentId",
-                    "DocumentId",
-                    "DisplayName"
-                )
+            "DocumentId",
+            "DisplayName"
+            )
             );
         }
         catch { }

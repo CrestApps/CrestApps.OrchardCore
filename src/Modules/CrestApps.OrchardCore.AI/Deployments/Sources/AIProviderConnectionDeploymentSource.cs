@@ -1,7 +1,8 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Deployment;
 using OrchardCore.Modules;
@@ -31,8 +32,8 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         var connectionObjects = new JsonArray();
 
         var connectionIds = step.IncludeAll
-            ? []
-            : step.ConnectionIds ?? [];
+        ? []
+        : step.ConnectionIds ?? [];
 
         foreach (var connection in connections)
         {
@@ -46,17 +47,11 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
                 { "ItemId", connection.ItemId },
                 { "Source", connection.Source },
                 { "Name", connection.Name },
-#pragma warning disable CS0618 // Obsolete deployment name fields retained for backward compatibility
-                { "ChatDeploymentName", connection.ChatDeploymentName },
-                { "EmbeddingDeploymentName", connection.EmbeddingDeploymentName },
-                { "ImagesDeploymentName", connection.ImagesDeploymentName },
-                { "UtilityDeploymentName", connection.UtilityDeploymentName },
-#pragma warning restore CS0618
                 { "DisplayText", connection.DisplayText },
                 { "CreatedUtc", connection.CreatedUtc },
                 { "OwnerId", connection.OwnerId },
                 { "Author", connection.Author },
-                { "Properties", connection.Properties?.DeepClone() },
+                { "Properties", JsonSerializer.SerializeToNode(connection.Properties) },
             };
 
             var exportingContext = new ExportingAIProviderConnectionContext(connection, connectionObject);
@@ -73,4 +68,3 @@ internal sealed class AIProviderConnectionDeploymentSource : DeploymentSourceBas
         });
     }
 }
-

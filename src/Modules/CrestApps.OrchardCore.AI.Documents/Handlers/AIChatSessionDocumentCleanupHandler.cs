@@ -1,7 +1,9 @@
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -45,6 +47,7 @@ public sealed class AIChatSessionDocumentCleanupHandler : AIChatSessionHandlerBa
         foreach (var doc in documents)
         {
             var chunks = await _chunkStore.GetChunksByAIDocumentIdAsync(doc.ItemId);
+
             foreach (var chunk in chunks)
             {
                 chunkIds.Add(chunk.ItemId);
