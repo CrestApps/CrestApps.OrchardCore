@@ -11,12 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core.AI.Mcp" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <PackageReference Include="CrestApps.Core.AI.Mcp" />
   </ItemGroup>
 
 </Project>

@@ -53,14 +53,13 @@ public sealed class Startup : StartupBase
     {
         services.AddAICoreServices();
 
-        services.AddCatalogs();
-
         // Register embedded templates from this module so they are always
         // available, even when the Templating feature is not enabled.
         services.AddTemplatesFromAssembly(typeof(Startup).Assembly);
         services.AddPermissionProvider<AIPermissionsProvider>();
 
         services
+            .AddCatalogs()
             .AddKeyedScoped<IAIReferenceLinkResolver, ContentItemAILinkGenerator>(AIConstants.DataSourceReferenceTypes.Content)
             .AddScoped<CompositeAIReferenceLinkResolver>()
             .AddScoped<CitationReferenceCollector>()
@@ -106,10 +105,6 @@ public sealed class Startup : StartupBase
         // AI Profile Template services.
         services
             .AddYesSqlNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>(AIConstants.AICollectionName)
-            .AddScoped<Core.Services.DefaultAIProfileTemplateManager>()
-            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<Core.Services.DefaultAIProfileTemplateManager>())
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
             .AddDataMigration<AIProfileTemplateIndexMigrations>()
             .AddIndexProvider<AIProfileTemplateIndexProvider>()

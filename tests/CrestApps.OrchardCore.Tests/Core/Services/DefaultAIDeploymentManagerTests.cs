@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.Tests.Core.Services;
 
 public sealed class DefaultAIDeploymentManagerTests
 {
-    private readonly Mock<INamedSourceCatalog<AIDeployment>> _storeMock;
+    private readonly Mock<IAIDeploymentStore> _storeMock;
     private readonly Mock<ISiteService> _siteServiceMock;
     private readonly Mock<ISite> _siteMock;
     private readonly DefaultAIDeploymentSettings _settings;
-    private readonly DefaultAIDeploymentManager _manager;
+    private readonly SiteSettingsAIDeploymentManager _manager;
 
     public DefaultAIDeploymentManagerTests()
     {
-        _storeMock = new Mock<INamedSourceCatalog<AIDeployment>>();
+        _storeMock = new Mock<IAIDeploymentStore>();
         _siteServiceMock = new Mock<ISiteService>();
         _siteMock = new Mock<ISite>();
         _settings = new DefaultAIDeploymentSettings();
@@ -31,15 +31,11 @@ public sealed class DefaultAIDeploymentManagerTests
         _siteServiceMock.Setup(s => s.GetSiteSettingsAsync())
             .ReturnsAsync(_siteMock.Object);
 
-        var optionsMonitor = new Mock<IOptionsMonitor<DefaultAIDeploymentSettings>>();
-        optionsMonitor.Setup(o => o.CurrentValue).Returns(_settings);
-
-        _manager = new DefaultAIDeploymentManager(
+        _manager = new SiteSettingsAIDeploymentManager(
             _storeMock.Object,
             [],
-            optionsMonitor.Object,
             _siteServiceMock.Object,
-            NullLogger<DefaultAIDeploymentManager>.Instance);
+            NullLogger<SiteSettingsAIDeploymentManager>.Instance);
     }
 
     [Fact]

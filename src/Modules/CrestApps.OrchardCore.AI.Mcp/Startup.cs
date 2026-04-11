@@ -1,9 +1,6 @@
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
-using CrestApps.Core.AI.Mcp.Services;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
@@ -15,7 +12,6 @@ using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
-using CrestApps.OrchardCore.AI.Mcp.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -28,12 +24,6 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
-using OrchardDefaultMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerPromptService;
-using OrchardDefaultMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultMcpServerResourceService;
-using OrchardDefaultOAuth2TokenService = CrestApps.OrchardCore.AI.Mcp.Services.DefaultOAuth2TokenService;
-using OrchardMcpServerPromptService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerPromptService;
-using OrchardMcpServerResourceService = CrestApps.OrchardCore.AI.Mcp.Services.IMcpServerResourceService;
-using OrchardSseClientTransportProvider = CrestApps.OrchardCore.AI.Mcp.Services.SseClientTransportProvider;
 
 namespace CrestApps.OrchardCore.AI.Mcp;
 
@@ -48,44 +38,19 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register McpInvokeFunction as a keyed singleton only (not via AddAITool)
-        // so it can be resolved by name at runtime but does not appear in the UI tool list.
-        services.AddCoreAITool<McpInvokeFunction>(McpInvokeFunction.FunctionName);
-
-        services.AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>();
-        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>();
-        services.AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>();
-        services.AddScoped<McpService>();
-        services.AddScoped<IMcpServerMetadataCacheProvider, DefaultMcpServerMetadataProvider>();
-        services.AddSingleton<IMcpMetadataPromptGenerator, DefaultMcpMetadataPromptGenerator>();
-        services.AddSingleton<IMcpCapabilityEmbeddingCacheProvider, InMemoryMcpCapabilityEmbeddingCacheProvider>();
-        services.AddScoped<IMcpCapabilityResolver, DefaultMcpCapabilityResolver>();
-        services.AddOptions<McpCapabilityResolverOptions>();
-        services.AddScoped<IToolRegistryProvider, McpToolRegistryProvider>();
-        services.AddNavigationProvider<McpAdminMenu>();
-        services.AddPermissionProvider<McpPermissionsProvider>();
-        services.AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>();
-        services.AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>();
+        services
+            .AddCoreAIMcpClient(includeStdIoTransport: false)
+            .AddCoreAISseMcpClientTransport()
+            .AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>()
+            .AddNavigationProvider<McpAdminMenu>()
+            .AddPermissionProvider<McpPermissionsProvider>()
+            .AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>()
+            .AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>()
+            .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>();
 
         services.AddOrchardCoreAgentSkillServices();
-
-        services.AddOptions<McpMetadataCacheOptions>();
-
-        // Register SSE transport type.
-        services
-            .AddScoped<IMcpClientTransportProvider, OrchardSseClientTransportProvider>()
-            .AddScoped<IOAuth2TokenService, OrchardDefaultOAuth2TokenService>()
-            .AddScoped<ICatalogEntryHandler<McpConnection>, SseMcpConnectionSettingsHandler>()
-            .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>()
-            .Configure<McpClientAIOptions>(options =>
-            {
-                options.AddTransportType(McpConstants.TransportTypes.Sse, (entity) =>
-                {
-                    entity.DisplayName = S["Server-Sent Events"];
-                    entity.Description = S["Uses Server-Sent Events over HTTP to receive streaming responses from a remote model server. Great for real-time output from hosted models."];
-                });
-
-            });
     }
 }
 
@@ -102,17 +67,8 @@ public sealed class StdIoStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IMcpClientTransportProvider, StdioClientTransportProvider>()
-            .AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>()
-            .Configure<McpClientAIOptions>(options =>
-            {
-                options.AddTransportType(McpConstants.TransportTypes.StdIo, (entity) =>
-                {
-                    entity.DisplayName = S["Standard Input/Output"];
-                    entity.Description = S["Uses standard input/output streams to communicate with a locally running model process. Ideal for local subprocess integration."];
-                });
-
-            });
+            .AddCoreAIStdIoMcpClientTransport()
+            .AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>();
     }
 }
 
@@ -150,16 +106,12 @@ public sealed class McpServerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreAIMcpServer();
+
         services.AddOrchardCoreAgentSkillServices();
-        services.AddScoped<OrchardMcpServerPromptService, OrchardDefaultMcpServerPromptService>();
-        services.AddScoped<OrchardMcpServerResourceService, OrchardDefaultMcpServerResourceService>();
 
         // Also register OC implementations under the framework interfaces
         // so the shared WithCrestAppsHandlers() can resolve them.
-        services.AddScoped<CrestApps.Core.AI.Mcp.Services.IMcpServerPromptService>(sp =>
-            sp.GetRequiredService<OrchardMcpServerPromptService>());
-        services.AddScoped<CrestApps.Core.AI.Mcp.Services.IMcpServerResourceService>(sp =>
-            sp.GetRequiredService<OrchardMcpServerResourceService>());
         services.AddTransient<IConfigureOptions<McpServerOptions>, McpServerOptionsConfiguration>();
         services.AddPermissionProvider<McpServerPermissionsProvider>();
 

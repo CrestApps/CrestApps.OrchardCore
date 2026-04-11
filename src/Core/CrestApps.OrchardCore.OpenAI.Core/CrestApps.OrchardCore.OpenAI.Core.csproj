@@ -22,4 +22,8 @@
     <PackageReference Include="CrestApps.Core.AI.OpenAI" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Handlers\" />
+  </ItemGroup>
+
 </Project>

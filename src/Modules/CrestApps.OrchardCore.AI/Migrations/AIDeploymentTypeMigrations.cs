@@ -39,7 +39,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyEmbeddingDeploymentName(), AIDeploymentType.Embedding);
                 needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
                 needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyUtilityDeploymentName(), AIDeploymentType.Utility);
-
             }
 
             if (needsSave)
@@ -511,7 +510,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
     private static string FindDefaultChatDeploymentName(AIProfile profile, IEnumerable<AIDeployment> deployments)
     {
-        return FindDefaultDeploymentId(AIDeploymentType.Chat, profile.GetLegacyConnectionName(), null, deployments);
+        var legacyConnectionName = profile.GetLegacyConnectionName();
+
+        return FindDefaultDeploymentId(AIDeploymentType.Chat, legacyConnectionName, legacyConnectionName, deployments);
 
     }
 
@@ -529,11 +530,11 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         var candidates = deployments
             .Where(deployment =>
-        deployment.SupportsType(type) &&
-            (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
+                deployment.SupportsType(type) &&
+                (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(deployment.GetConnectionNameAlias(), connectionId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
+                    string.Equals(deployment.GetConnectionNameAlias(), connectionAlias, StringComparison.OrdinalIgnoreCase)))
 
             .ToList();
 

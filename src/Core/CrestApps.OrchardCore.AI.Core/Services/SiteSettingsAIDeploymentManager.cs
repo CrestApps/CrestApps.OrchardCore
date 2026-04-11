@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
@@ -15,7 +16,7 @@ public sealed class SiteSettingsAIDeploymentManager : AIDeploymentManagerBase
     private readonly ISiteService _siteService;
 
     public SiteSettingsAIDeploymentManager(
-        INamedSourceCatalog<AIDeployment> deploymentStore,
+        IAIDeploymentStore deploymentStore,
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
         ISiteService siteService,
         ILogger<SiteSettingsAIDeploymentManager> logger)
@@ -26,7 +27,7 @@ public sealed class SiteSettingsAIDeploymentManager : AIDeploymentManagerBase
 
     private DefaultAIDeploymentSettings _cachedSettings;
 
-    protected async override ValueTask<DefaultAIDeploymentSettings> GetDefaultAIDeploymentSettingsAsync()
+    protected override async ValueTask<DefaultAIDeploymentSettings> GetDefaultAIDeploymentSettingsAsync()
     {
         _cachedSettings ??= await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
 

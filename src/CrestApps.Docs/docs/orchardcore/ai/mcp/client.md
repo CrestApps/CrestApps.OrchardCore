@@ -27,6 +27,8 @@ Two transport types are supported:
 
 The **MCP Client Feature** enables your application to connect to remote MCP servers using standard HTTP requests with **Server-Sent Events (SSE)** transport, which allows real-time data flow between LLMs and external services.
 
+Internally, the Orchard Core module now composes the shared `CrestApps.Core.AI.Mcp` client registrations instead of re-registering those runtime services locally. The base feature enables the shared MCP client runtime with SSE transport, while the optional Stdio feature layers in the local-process transport separately.
+
 ### Connect to a Remote MCP Server
 
 1. Open your Orchard Core project.

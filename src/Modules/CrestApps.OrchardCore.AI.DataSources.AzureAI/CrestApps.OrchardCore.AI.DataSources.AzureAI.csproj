@@ -19,11 +19,11 @@
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
     <PackageReference Include="Azure.Search.Documents" />
+    <PackageReference Include="CrestApps.Core.Azure.AISearch" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <PackageReference Include="CrestApps.Core.Azure.AISearch" />
   </ItemGroup>
 
 </Project>

@@ -13,7 +13,6 @@ using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.Core;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,7 +32,6 @@ public static class ServiceCollectionExtensions
         );
 
         services
-            .AddCatalogs()
             .AddCatalogManagers()
             .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
@@ -41,13 +39,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<DefaultSpeechVoicePresenter>()
             .AddScoped<AIProviderConnectionStore>()
-            // .AddScoped<ConfigurationAIProviderConnectionCatalog>()
-            // .AddScoped<ICatalog<AIProviderConnection>>(sp => sp.GetRequiredService<ConfigurationAIProviderConnectionCatalog>())
-            // .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<ConfigurationAIProviderConnectionCatalog>())
-            // .AddScoped<INamedSourceCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<ConfigurationAIProviderConnectionCatalog>())
-            // 
-            // .AddNamedSourceDocumentCatalog<AIProviderConnection,  ConfigurationAIProviderConnectionCatalog>()
-
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
@@ -79,21 +70,12 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddCatalogs()
-            .AddScoped<DefaultAIDeploymentStore>()
-            .AddScoped<ConfigurationAIDeploymentCatalog>()
-            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
-            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
-            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentCatalog>())
+            .AddScoped<IAIDeploymentStore, ConfigurationAIDeploymentCatalog>()
+            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
+            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
+            .AddScoped<ISourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
-
-        // Register the named source catalog separately with the specific key, since it's consumed directly
-        // by the ConfigurationAIDeploymentCatalog and needs to be resolved by that key to store tenant specific deployments.
-        services.AddKeyedScoped<INamedSourceCatalog<AIDeployment>, DefaultAIDeploymentStore>(ConfigurationAIDeploymentCatalog.PersistedCatalogKey);
-
-        services.AddKeyedScoped<INamedSourceCatalog<AIDeployment>, NamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex>>(ConfigurationAIDeploymentCatalog.PersistedCatalogKey)
-            .AddYesSqlNamedSourceDocumentCatalog<AIDeployment, AIDeploymentIndex, ConfigurationAIDeploymentCatalog>();
 
         services
             .Configure<AIDeploymentCatalogOptions>(o =>

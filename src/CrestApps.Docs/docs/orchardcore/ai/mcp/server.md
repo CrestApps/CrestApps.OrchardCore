@@ -16,6 +16,8 @@ Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-co
 
 The **MCP Server Feature** allows your Orchard Core application to expose its AI tools and capabilities to external MCP clients. This feature supports the SSE transport type, enabling real-time communication.
 
+The Orchard Core server feature now builds on the shared `AddCoreAIMcpServer()` registrations from `CrestApps.Core.AI.Mcp`, then layers Orchard-specific prompt, resource, admin, and permission services on top.
+
 ## Supported Capabilities
 
 The MCP server exposes the following capabilities:

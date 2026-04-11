@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Drivers;
 using CrestApps.OrchardCore.AzureAIInference.Handlers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -26,8 +25,6 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIClientProvider, AzureAIInferenceClientProvider>());
-
         services
             .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
             .AddCoreAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ClientName, o =>
