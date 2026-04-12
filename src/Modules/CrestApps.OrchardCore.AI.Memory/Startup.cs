@@ -1,6 +1,7 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIMemory;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -28,6 +29,7 @@ public sealed class Startup : StartupBase
     {
         services
             .AddCoreAIMemory()
+            .AddCoreAIMemoryStoresYesSql()
             .AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
             .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
             .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()

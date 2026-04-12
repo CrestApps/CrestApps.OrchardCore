@@ -2,6 +2,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Endpoints;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -32,7 +33,10 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAIDocumentProcessing();
+        services.AddCoreAIDocumentProcessing()
+            .AddCoreAIDocumentProcessingStoresYesSql()
+            .AddCoreAIDataSourceStoresYesSql();
+
         services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()

@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AgentSkills.Mcp.Extensions;
 using CrestApps.OrchardCore.AI.Core;
@@ -40,6 +41,7 @@ public sealed class Startup : StartupBase
     {
         services
             .AddCoreAIMcpClient(includeStdIoTransport: false)
+            .AddCoreAIMcpClientStoresYesSql(AIConstants.AICollectionName)
             .AddCoreAISseMcpClientTransport()
             .AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>()

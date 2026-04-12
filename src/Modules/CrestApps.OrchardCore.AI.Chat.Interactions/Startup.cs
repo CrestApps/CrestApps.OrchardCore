@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.ChatInteractions;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
@@ -47,7 +48,8 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
         // Register framework-level chat interaction handlers.
-        services.AddCoreAIChatInteractions();
+        services.AddCoreAIChatInteractions()
+            .AddCoreAIChatInteractionStoresYesSql(AIConstants.AICollectionName);
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()

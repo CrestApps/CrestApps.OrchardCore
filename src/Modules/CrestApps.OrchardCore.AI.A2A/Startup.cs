@@ -4,9 +4,11 @@ using CrestApps.Core.AI.A2A;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.Core.AI.A2A.Services;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -23,7 +25,9 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAIA2AClient();
+        services.AddCoreAIA2AClient()
+            .AddCoreAIA2AClientStoresYesSql(AIConstants.AICollectionName);
+
         services.AddDisplayDriver<AIProfile, AIProfileA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionA2AConnectionsDisplayDriver>();

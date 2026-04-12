@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -8,6 +9,7 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Extensions;
 using CrestApps.OrchardCore.AI.Core;
@@ -51,7 +53,10 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddAICoreServices();
+        services.AddAICoreServices()
+            .AddCoreAIServicesStoresYesSql(AIConstants.AICollectionName)
+            .AddCatalogManagers()
+            .TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
 
         // Register embedded templates from this module so they are always
         // available, even when the Templating feature is not enabled.
@@ -76,6 +81,7 @@ public sealed class Startup : StartupBase
         services
             .AddAIDeploymentServices()
             .AddDataMigration<AIDeploymentIndexMigrations>()
+            .AddIndexProvider<AIDeploymentIndexProvider>()
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
@@ -126,6 +132,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddDataMigration<AIProviderConnectionIndexMigrations>()
+            .AddIndexProvider<AIProviderConnectionIndexProvider>()
             .Configure<AIProviderConnectionCatalogOptions>(o =>
             {
                 o.ConnectionSections.Add("OrchardCore:CrestApps:AI:Connections");
