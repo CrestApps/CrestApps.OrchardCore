@@ -42,7 +42,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = profile.As<CopilotSessionMetadata>();
+            var copilotSettings = profile.GetOrCreate<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;

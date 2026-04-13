@@ -37,7 +37,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         var connectionResult = Initialize<AIProfileTemplateConnectionViewModel>("AIProfileTemplateConnection_Edit", model =>
         {
@@ -106,7 +106,7 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             return null;
         }
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         var connectionModel = new AIProfileTemplateConnectionViewModel();
         await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);

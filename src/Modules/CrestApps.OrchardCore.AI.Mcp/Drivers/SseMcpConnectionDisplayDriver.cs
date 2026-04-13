@@ -34,7 +34,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
 
         return Initialize<SseConnectionFieldsViewModel>("SseMcpConnectionFields_Edit", model =>
         {
-            var metadata = connection.As<SseMcpConnectionMetadata>();
+            var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationType = metadata.AuthenticationType;
 
@@ -112,7 +112,7 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Invalid Endpoint value."]);
         }
 
-        var metadata = connection.As<SseMcpConnectionMetadata>();
+        var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(McpConstants.DataProtectionPurpose);
 
         // Preserve existing encrypted values before clearing.

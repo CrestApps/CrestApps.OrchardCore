@@ -18,7 +18,7 @@ public sealed class ChatInteractionPromptSelectionDisplayDriver : DisplayDriver<
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
     {
-        var promptMetadata = interaction.As<PromptTemplateMetadata>();
+        var promptMetadata = interaction.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

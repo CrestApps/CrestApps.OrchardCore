@@ -87,7 +87,7 @@
 
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
 
-    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
 
     var allowedExtensions = string.Empty;
 
@@ -105,9 +105,9 @@
 
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
 
-        && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
+        && profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
 
-    var profileMetadata = profile.As<AIProfileMetadata>();
+    var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
 
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
 

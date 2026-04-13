@@ -208,6 +208,13 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
@@ -232,6 +239,13 @@ public sealed class ProviderConnectionsController : Controller
         if (model == null)
         {
             return NotFound();
+        }
+
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         var viewModel = new EditCatalogEntryViewModel
@@ -271,6 +285,13 @@ public sealed class ProviderConnectionsController : Controller
             return NotFound();
         }
 
+        if (model.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This connection is defined in configuration and cannot be deleted."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         if (await _manager.DeleteAsync(model))
         {
             _shellReleaseManager.RequestRelease();
@@ -308,7 +329,7 @@ public sealed class ProviderConnectionsController : Controller
                     {
                         var instance = await _manager.FindByIdAsync(id);
 
-                        if (instance == null)
+                        if (instance == null || instance.IsReadOnly)
                         {
                             continue;
                         }

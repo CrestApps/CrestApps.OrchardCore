@@ -23,7 +23,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
     {
         return Initialize<AIProfileDataExtractionViewModel>("AIProfileDataExtraction_Edit", model =>
         {
-            var settings = template.As<AIProfileDataExtractionSettings>();
+            var settings = template.GetOrCreate<AIProfileDataExtractionSettings>();
 
             model.EnableDataExtraction = settings.EnableDataExtraction;
             model.ExtractionCheckInterval = settings.ExtractionCheckInterval;
@@ -85,7 +85,7 @@ public sealed class AIProfileTemplateDataExtractionDisplayDriver : DisplayDriver
             model.ExtractionCheckInterval = 1;
         }
 
-        var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
+        var dataExtractionSettings = template.GetOrCreate<AIProfileDataExtractionSettings>();
         dataExtractionSettings.EnableDataExtraction = model.EnableDataExtraction;
         dataExtractionSettings.ExtractionCheckInterval = model.ExtractionCheckInterval;
         dataExtractionSettings.DataExtractionEntries = entries.Select(e => new DataExtractionEntry

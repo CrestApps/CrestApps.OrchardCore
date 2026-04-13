@@ -41,7 +41,7 @@
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
 
         && Model.Profile != null
-        && Model.Profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+        && Model.Profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
 
     var allowedExtensions = string.Empty;
 
@@ -54,9 +54,9 @@
 
     var metricsEnabled = Model.Profile != null
         && enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-        && Model.Profile.As<AnalyticsMetadata>().EnableSessionMetrics;
+        && Model.Profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
 
-    var profileMetadata = Model.Profile?.As<AIProfileMetadata>();
+    var profileMetadata = Model.Profile?.GetOrCreate<AIProfileMetadata>();
 
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata?.InitialPrompt);
 
@@ -198,7 +198,7 @@
                 prompt.IsGeneratedPrompt,
                 prompt.UserRating,
                 prompt.References,
-                Appearance = prompt.As<AssistantMessageAppearance>(),
+                Appearance = prompt.GetOrCreate<AssistantMessageAppearance>(),
             });
         }
     }

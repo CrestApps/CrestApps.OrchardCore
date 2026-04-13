@@ -15,12 +15,12 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
         {
             if (template.Properties.ContainsKey(nameof(AIChatProfileSettings)))
             {
-                var settings = template.As<AIChatProfileSettings>();
+                var settings = template.GetOrCreate<AIChatProfileSettings>();
                 model.IsOnAdminMenu = settings.IsOnAdminMenu;
             }
             else
             {
-                var profileMetadata = template.As<ProfileTemplateMetadata>();
+                var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 model.IsOnAdminMenu = profileMetadata.ProfileType == AIProfileType.Chat;
             }
         }).Location("Content:7%General;1")
@@ -38,7 +38,7 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = template.As<AIChatProfileSettings>();
+        var settings = template.GetOrCreate<AIChatProfileSettings>();
         settings.IsOnAdminMenu = model.IsOnAdminMenu;
         template.Put(settings);
 

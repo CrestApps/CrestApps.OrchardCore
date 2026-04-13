@@ -42,7 +42,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
     {
         return Initialize<EditCopilotProfileViewModel>("ChatInteractionCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = interaction.As<CopilotSessionMetadata>();
+            var copilotSettings = interaction.GetOrCreate<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;

@@ -32,7 +32,7 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
         }
 
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
-        var metadata = connection.As<A2AConnectionMetadata>();
+        var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
 
         ProtectField(protector, metadataNode, nameof(A2AConnectionMetadata.ApiKey), val =>
         {

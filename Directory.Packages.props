@@ -2,30 +2,22 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <CrestAppsCoreVersion>1.0.0-preview-19</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-20</CrestAppsCoreVersion>
     <OrchardCoreVersion>[3.0.0-preview-18962, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.1.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
-    <PackageVersion Include="CrestApps.AgentSkills.OrchardCore" Version="1.0.0-preview-0003" />
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0004" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.19.18" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
-    <PackageVersion Include="FluentFTP" Version="54.0.2" />
     <PackageVersion Include="JsonSchema.Net" Version="9.1.3" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
     <PackageVersion Include="Markdig" Version="1.1.2" />
-    <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.4.0-preview.1.26160.2" />
-    <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.4.0-preview.1.26160.2" />
-    <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
     <PackageVersion Include="NLog" Version="6.1.1" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.1.2" />
     <PackageVersion Include="NuGet.Versioning" Version="7.3.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.4.25" />
-    <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
@@ -35,8 +27,6 @@
     <PackageVersion Include="ModelContextProtocol" Version="$(ModelContextProtocolVersion)" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="$(ModelContextProtocolVersion)" />
     <PackageVersion Include="ModelContextProtocol.Core" Version="$(ModelContextProtocolVersion)" />
-    <PackageVersion Include="PdfPig" Version="0.1.14" />
-    <PackageVersion Include="GitHub.Copilot.SDK" Version="0.2.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->

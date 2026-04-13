@@ -78,7 +78,7 @@ public sealed class ViewAIProfileTool : AIFunction
             return JsonSerializer.Serialize(new { error = "AI profile not found." });
         }
 
-        var analyticsMetadata = profile.As<AnalyticsMetadata>();
+        var analyticsMetadata = profile.GetOrCreate<AnalyticsMetadata>();
         var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
         var postSessionSettings = profile.GetSettings<AIProfilePostSessionSettings>();
 

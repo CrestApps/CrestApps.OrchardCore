@@ -39,7 +39,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<OpenAIConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (metadata.Endpoint is null)
         {
@@ -68,7 +68,7 @@ internal sealed class OpenAIProviderConnectionSettingsHandler : CatalogEntryHand
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<OpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 

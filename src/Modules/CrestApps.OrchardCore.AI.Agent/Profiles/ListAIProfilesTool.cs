@@ -87,7 +87,7 @@ public sealed class ListAIProfilesTool : AIFunction
 
         if (arguments.TryGetFirst<bool>("onlyWithMetricsEnabled", out var metricsEnabled) && metricsEnabled)
         {
-            profiles = profiles.Where(p => p.As<AnalyticsMetadata>().EnableSessionMetrics).ToList();
+            profiles = profiles.Where(p => p.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics).ToList();
         }
 
         if (arguments.TryGetFirst<bool>("onlyWithDataExtraction", out var dataExtraction) && dataExtraction)
@@ -106,7 +106,7 @@ public sealed class ListAIProfilesTool : AIFunction
             ["name"] = p.Name,
             ["displayText"] = p.DisplayText,
             ["type"] = p.Type.ToString(),
-            ["metricsEnabled"] = p.As<AnalyticsMetadata>().EnableSessionMetrics,
+            ["metricsEnabled"] = p.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics,
             ["dataExtractionEnabled"] = p.GetSettings<AIProfileDataExtractionSettings>().EnableDataExtraction,
             ["postSessionProcessingEnabled"] = p.GetSettings<AIProfilePostSessionSettings>().EnablePostSessionProcessing,
         }).ToList();

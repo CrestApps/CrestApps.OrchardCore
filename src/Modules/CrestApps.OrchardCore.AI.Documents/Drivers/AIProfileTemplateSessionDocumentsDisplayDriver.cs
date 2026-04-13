@@ -13,7 +13,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
     {
         return Initialize<EditAIProfileSessionDocumentsViewModel>("AIProfileSessionDocuments_Edit", model =>
         {
-            var metadata = template.As<AIProfileSessionDocumentsMetadata>();
+            var metadata = template.GetOrCreate<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
             model.HasIndexProfile = true;
         }).Location("Content:2#Knowledge;2")
@@ -31,7 +31,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<AIProfileSessionDocumentsMetadata>();
+        var metadata = template.GetOrCreate<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
         template.Put(metadata);
 

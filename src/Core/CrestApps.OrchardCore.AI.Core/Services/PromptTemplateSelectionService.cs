@@ -119,7 +119,7 @@ public sealed class PromptTemplateSelectionService
     private static Template ConvertToTemplate(AIProfileTemplate template)
     {
 
-        var metadata = template.As<SystemPromptTemplateMetadata>();
+        var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
 
         return new Template
         {

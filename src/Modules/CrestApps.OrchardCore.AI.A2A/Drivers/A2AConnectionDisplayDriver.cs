@@ -40,7 +40,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             model.DisplayText = connection.DisplayText;
             model.Endpoint = connection.Endpoint;
 
-            var metadata = connection.As<A2AConnectionMetadata>();
+            var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
             model.AuthenticationType = metadata.AuthenticationType;
 
             if (metadata.AuthenticationType == A2AClientAuthenticationType.Anonymous &&
@@ -109,7 +109,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         connection.DisplayText = model.DisplayText;
         connection.Endpoint = model.Endpoint;
 
-        var metadata = connection.As<A2AConnectionMetadata>();
+        var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
 
         var existingApiKey = metadata.ApiKey;

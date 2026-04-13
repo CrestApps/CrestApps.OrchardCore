@@ -17,7 +17,7 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
     {
         return Initialize<SystemPromptTemplateViewModel>("SystemPromptTemplate_Edit", model =>
         {
-            var metadata = template.As<SystemPromptTemplateMetadata>();
+            var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
             model.SystemMessage = metadata.SystemMessage;
         }).Location("Content:10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.SystemPrompt));
@@ -33,7 +33,7 @@ internal sealed class SystemPromptTemplateDisplayDriver : DisplayDriver<AIProfil
         var model = new SystemPromptTemplateViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<SystemPromptTemplateMetadata>();
+        var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
         metadata.SystemMessage = model.SystemMessage;
         template.Put(metadata);
 

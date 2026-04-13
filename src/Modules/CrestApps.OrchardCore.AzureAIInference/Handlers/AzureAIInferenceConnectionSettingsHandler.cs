@@ -40,7 +40,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
@@ -64,7 +64,7 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>() ?? AzureAuthenticationType.Default;
 

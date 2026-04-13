@@ -40,10 +40,10 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
-            var metadata = interaction.As<DataSourceMetadata>();
+            var metadata = interaction.GetOrCreate<DataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
 
-            var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+            var ragMetadata = interaction.GetOrCreate<AIDataSourceRagMetadata>();
 
             model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
@@ -57,10 +57,10 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
         {
             var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
-            var metadata = interaction.As<DataSourceMetadata>();
+            var metadata = interaction.GetOrCreate<DataSourceMetadata>();
             model.DataSourceId = metadata?.DataSourceId;
 
-            var ragMetadata = interaction.As<AIDataSourceRagMetadata>();
+            var ragMetadata = interaction.GetOrCreate<AIDataSourceRagMetadata>();
 
             model.Strictness = dataSourceSettings.GetStrictness(ragMetadata.Strictness);
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);

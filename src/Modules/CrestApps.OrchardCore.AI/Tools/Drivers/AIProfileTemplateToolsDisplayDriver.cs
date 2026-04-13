@@ -63,7 +63,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         return Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var selectedNames = metadata.ToolNames ?? [];
 
             model.Tools = accessibleTools
@@ -94,7 +94,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (selectedToolKeys is null || !selectedToolKeys.Any())
         {

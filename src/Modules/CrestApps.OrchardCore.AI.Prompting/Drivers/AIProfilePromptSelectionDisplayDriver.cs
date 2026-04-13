@@ -18,7 +18,7 @@ public sealed class AIProfilePromptSelectionDisplayDriver : DisplayDriver<AIProf
 
     public override async Task<IDisplayResult> EditAsync(AIProfile profile, BuildEditorContext context)
     {
-        var promptMetadata = profile.As<PromptTemplateMetadata>();
+        var promptMetadata = profile.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

@@ -34,7 +34,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         {
             if (template.Properties.ContainsKey(nameof(ChatModeProfileSettings)))
             {
-                var settings = template.As<ChatModeProfileSettings>();
+                var settings = template.GetOrCreate<ChatModeProfileSettings>();
                 model.ChatMode = settings.ChatMode;
                 model.VoiceName = settings.VoiceName;
             }
@@ -65,7 +65,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = template.As<ChatModeProfileSettings>();
+        var settings = template.GetOrCreate<ChatModeProfileSettings>();
         settings.ChatMode = model.ChatMode;
         settings.VoiceName = model.ChatMode == ChatMode.Conversation
         ? model.VoiceName?.Trim()

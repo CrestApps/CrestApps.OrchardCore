@@ -33,7 +33,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
 
         return Initialize<SftpConnectionViewModel>("SftpResourceConnection_Edit", model =>
         {
-            var metadata = resource.As<OrchardSftpConnectionMetadata>();
+            var metadata = resource.GetOrCreate<OrchardSftpConnectionMetadata>();
 
             model.Host = metadata?.Host;
             model.Port = metadata?.Port;
@@ -72,7 +72,7 @@ public sealed class SftpResourceDisplayDriver : DisplayDriver<McpResource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Username), S["The SFTP username is required."]);
         }
 
-        var metadata = resource.As<OrchardSftpConnectionMetadata>();
+        var metadata = resource.GetOrCreate<OrchardSftpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(SftpResourceConstants.DataProtectionPurpose);
 
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);

@@ -84,7 +84,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         if (profile.Type == AIProfileType.Chat)
         {
 
-            var profileMetadata = profile.As<AIProfileMetadata>();
+            var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
             var initialPrompt = profileMetadata.InitialPrompt;
 
             if (!string.IsNullOrEmpty(initialPrompt))

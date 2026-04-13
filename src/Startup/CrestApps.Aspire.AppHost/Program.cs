@@ -63,6 +63,18 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables.Add("OrchardCore__CrestApps_AI__A2AHost__ExposeAgentsAsSkill", "false");
     });
 
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_McpClient>("McpClientSample")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WithHttpsEndpoint(5002, name: "HttpsMcpClient")
+    .WithEnvironment("Mcp__Endpoint", "https://localhost:5001/mcp/sse");
+
+builder.AddProject<Projects.CrestApps_OrchardCore_Samples_A2AClient>("A2AClientSample")
+    .WithReference(orchardCore)
+    .WaitFor(orchardCore)
+    .WithHttpsEndpoint(5003, name: "HttpsA2AClient")
+    .WithEnvironment("A2A__Endpoint", "https://localhost:5001");
+
 var app = builder.Build();
 
 await app.RunAsync();

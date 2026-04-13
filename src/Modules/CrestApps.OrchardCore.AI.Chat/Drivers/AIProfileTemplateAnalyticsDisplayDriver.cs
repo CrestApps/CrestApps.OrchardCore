@@ -23,7 +23,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
     {
         return Initialize<EditAIProfileAnalyticsViewModel>("AIProfileAnalytics_Edit", model =>
         {
-            var analyticsMetadata = template.As<AnalyticsMetadata>();
+            var analyticsMetadata = template.GetOrCreate<AnalyticsMetadata>();
             model.EnableSessionMetrics = analyticsMetadata.EnableSessionMetrics;
             model.EnableAIResolutionDetection = analyticsMetadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = analyticsMetadata.EnableConversionMetrics;
@@ -44,7 +44,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
                 return Task.FromResult(false);
             }
 
-            var profileMetadata = template.As<ProfileTemplateMetadata>();
+            var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
             return Task.FromResult(profileMetadata.ProfileType == AIProfileType.Chat);
         });
     }
@@ -56,7 +56,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
             return null;
         }
 
-        var profileMetadata = template.As<ProfileTemplateMetadata>();
+        var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (profileMetadata.ProfileType != AIProfileType.Chat)
         {
@@ -110,7 +110,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
             }
         }
 
-        var analyticsMetadata = template.As<AnalyticsMetadata>();
+        var analyticsMetadata = template.GetOrCreate<AnalyticsMetadata>();
         analyticsMetadata.EnableSessionMetrics = model.EnableSessionMetrics;
         analyticsMetadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         analyticsMetadata.EnableConversionMetrics = model.EnableConversionMetrics;

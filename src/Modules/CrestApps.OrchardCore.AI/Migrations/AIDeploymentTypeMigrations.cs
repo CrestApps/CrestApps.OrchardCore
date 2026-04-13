@@ -338,7 +338,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         foreach (var template in await templateCatalog.GetAllAsync())
         {
 
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
             var updated = false;
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, metadata.ChatDeploymentName, value => metadata.ChatDeploymentName = value);

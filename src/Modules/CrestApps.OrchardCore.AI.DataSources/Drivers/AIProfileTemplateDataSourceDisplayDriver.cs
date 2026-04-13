@@ -64,7 +64,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
         var model = new EditProfileDataSourcesViewModel();
 
-        var metadata = template.As<DataSourceMetadata>();
+        var metadata = template.GetOrCreate<DataSourceMetadata>();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -121,7 +121,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 
     private async Task PopulateViewModelAsync(AIProfileTemplate template, EditProfileDataSourcesViewModel model)
     {
-        var ragMetadata = template.As<AIDataSourceRagMetadata>();
+        var ragMetadata = template.GetOrCreate<AIDataSourceRagMetadata>();
 
         var dataSourceSettings = await _siteService.GetSettingsAsync<AIDataSourceSettings>();
 
@@ -130,7 +130,7 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
         model.IsInScope = ragMetadata.IsInScope;
         model.Filter = ragMetadata.Filter;
 
-        var metadata = template.As<DataSourceMetadata>();
+        var metadata = template.GetOrCreate<DataSourceMetadata>();
         model.DataSourceId = metadata.DataSourceId;
         model.DataSources = await _dataSourceStore.GetAllAsync();
     }

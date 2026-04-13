@@ -21,11 +21,11 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
 
         var alwaysAvailableCount = allAgents
-            .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+            .Count(a => a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
 
         var onDemandAgents = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditChatInteractionAgentsViewModel>("ChatInteractionAgents_Edit", model =>
         {
@@ -53,7 +53,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
 
         var validAgentNames = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 

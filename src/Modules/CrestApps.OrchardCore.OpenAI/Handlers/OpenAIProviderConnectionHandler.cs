@@ -43,7 +43,7 @@ public sealed class OpenAIProviderConnectionHandler : IAIProviderConnectionHandl
             return;
         }
 
-        var metadata = context.Connection.As<OpenAIConnectionMetadata>();
+        var metadata = context.Connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (!string.IsNullOrEmpty(metadata.ApiKey))
         {

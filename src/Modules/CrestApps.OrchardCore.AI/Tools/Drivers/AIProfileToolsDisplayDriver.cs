@@ -119,7 +119,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
     /// </summary>
     private static string[] GetSelectedToolNames(AIProfile profile)
     {
-        var metadata = profile.As<FunctionInvocationMetadata>();
+        var metadata = profile.GetOrCreate<FunctionInvocationMetadata>();
 
         if (metadata.Names is { Length: > 0 })
         {

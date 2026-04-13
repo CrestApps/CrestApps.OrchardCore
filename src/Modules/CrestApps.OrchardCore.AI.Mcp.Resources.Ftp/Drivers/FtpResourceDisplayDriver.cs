@@ -33,7 +33,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
 
         return Initialize<FtpConnectionViewModel>("FtpResourceConnection_Edit", model =>
         {
-            var metadata = resource.As<OrchardFtpConnectionMetadata>();
+            var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
 
             model.Host = metadata?.Host;
             model.Port = metadata?.Port;
@@ -64,7 +64,7 @@ public sealed class FtpResourceDisplayDriver : DisplayDriver<McpResource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["The FTP host is required."]);
         }
 
-        var metadata = resource.As<OrchardFtpConnectionMetadata>();
+        var metadata = resource.GetOrCreate<OrchardFtpConnectionMetadata>();
 
         var hasNewPassword = !string.IsNullOrWhiteSpace(model.Password);
 

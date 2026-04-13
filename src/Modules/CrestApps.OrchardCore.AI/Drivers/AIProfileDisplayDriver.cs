@@ -61,8 +61,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
     {
         void PopulateProfileFields(EditProfileViewModel model)
         {
-            var metadata = profile.As<AIProfileMetadata>();
-            var agentMetadata = profile.As<AgentMetadata>();
+            var metadata = profile.GetOrCreate<AIProfileMetadata>();
+            var agentMetadata = profile.GetOrCreate<AgentMetadata>();
             model.PromptSubject = profile.PromptSubject;
             model.PromptTemplate = profile.PromptTemplate;
             model.WelcomeMessage = profile.WelcomeMessage;
@@ -95,7 +95,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         void PopulateParameters(ProfileMetadataViewModel model)
         {
-            var metadata = profile.As<AIProfileMetadata>();
+            var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
@@ -208,7 +208,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Description), S["Description is required for agent profiles."]);
             }
 
-            var agentMetadata = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            var agentMetadata = profile.GetOrCreate<AgentMetadata>();
             agentMetadata.Availability = model.AgentAvailability;
             profile.Put(agentMetadata);
         }
@@ -226,7 +226,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(parametersModel, Prefix);
 
-        var metadata = profile.As<AIProfileMetadata>();
+        var metadata = profile.GetOrCreate<AIProfileMetadata>();
         metadata.InitialPrompt = model.AddInitialPrompt ? model.InitialPrompt?.Trim() : null;
 
         metadata.FrequencyPenalty = parametersModel.FrequencyPenalty;

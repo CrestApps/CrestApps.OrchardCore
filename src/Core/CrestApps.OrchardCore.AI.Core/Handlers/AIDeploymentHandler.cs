@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using CrestApps.OrchardCore.AI.Core;
 
 namespace CrestApps.OrchardCore.AI.Core.Handlers;
 

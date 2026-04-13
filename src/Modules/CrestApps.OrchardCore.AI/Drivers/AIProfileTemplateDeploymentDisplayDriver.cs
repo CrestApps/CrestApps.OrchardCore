@@ -38,7 +38,7 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
                 return;
             }
 
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             model.ChatDeploymentName = metadata.ChatDeploymentName;
             model.UtilityDeploymentName = metadata.UtilityDeploymentName;
@@ -64,7 +64,7 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         var model = new EditProfileDeploymentViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
         metadata.ChatDeploymentName = model.ChatDeploymentName;
         metadata.UtilityDeploymentName = model.UtilityDeploymentName;
         template.Put(metadata);

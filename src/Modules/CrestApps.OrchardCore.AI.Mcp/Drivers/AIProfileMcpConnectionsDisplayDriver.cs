@@ -34,7 +34,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
 
         return Initialize<EditProfileMcpConnectionsViewModel>("EditProfileMcpConnection_Edit", model =>
         {
-            var mcpMetadata = profile.As<AIProfileMcpMetadata>();
+            var mcpMetadata = profile.GetOrCreate<AIProfileMcpMetadata>();
 
             model.Connections = connections
             .Select(entry => new ToolEntry

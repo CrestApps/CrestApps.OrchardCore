@@ -70,7 +70,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         {
             model.ProfileId = template.ItemId;
 
-            var documentsMetadata = template.As<DocumentsMetadata>();
+            var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
         }).Location("Content:7#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -79,7 +79,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         {
             model.ProfileId = template.ItemId;
 
-            var documentsMetadata = template.As<DocumentsMetadata>();
+            var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -111,7 +111,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         var model = new EditAIProfileDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var documentsMetadata = template.As<DocumentsMetadata>();
+        var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.Documents ??= [];
 
@@ -166,7 +166,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             // Handle file uploads.
             if (model.Files != null && model.Files.Length > 0)
             {
-                var profileMetadata = template.As<ProfileTemplateMetadata>();
+                var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 var deployment = await ResolveDeploymentAsync(profileMetadata);
                 var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
                     AIDeploymentType.Embedding,

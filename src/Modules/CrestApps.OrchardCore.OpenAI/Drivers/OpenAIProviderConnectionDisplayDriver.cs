@@ -35,7 +35,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         return Initialize<OpenAIConnectionViewModel>("OpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<OpenAIConnectionMetadata>();
+            var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
@@ -53,7 +53,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<OpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<OpenAIConnectionMetadata>();
 
         if (string.IsNullOrEmpty(model.Endpoint))
         {

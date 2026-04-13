@@ -24,7 +24,7 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
             return null;
         }
 
-        var promptMetadata = template.As<PromptTemplateMetadata>();
+        var promptMetadata = template.GetOrCreate<PromptTemplateMetadata>();
         var model = new AITemplateSelectionViewModel();
 
         await PromptTemplateSelectionEditorHelper.PopulateViewModelAsync(model, promptMetadata, _promptTemplateSelectionService);

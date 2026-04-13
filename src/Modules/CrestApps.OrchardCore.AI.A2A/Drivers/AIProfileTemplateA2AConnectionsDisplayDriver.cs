@@ -35,7 +35,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
 
         return Initialize<EditProfileA2AConnectionsViewModel>("EditProfileA2AConnection_Edit", model =>
         {
-            var a2aMetadata = template.As<AIProfileA2AMetadata>();
+            var a2aMetadata = template.GetOrCreate<AIProfileA2AMetadata>();
 
             model.Connections = connections
             .Select(entry => new ToolEntry

@@ -45,7 +45,7 @@
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
-        && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+        && profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
     var allowedExtensions = string.Empty;
     if (sessionDocumentsEnabled)
     {
@@ -54,8 +54,8 @@
     }
 
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-        && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
-    var profileMetadata = profile.As<AIProfileMetadata>();
+        && profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
+    var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
     ChatModeProfileSettings chatModeSettings = null;
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);

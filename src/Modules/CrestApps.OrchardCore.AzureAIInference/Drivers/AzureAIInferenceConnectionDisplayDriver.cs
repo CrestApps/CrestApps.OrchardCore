@@ -36,7 +36,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
         return Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model =>
         {
-            var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+            var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
@@ -63,7 +63,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {

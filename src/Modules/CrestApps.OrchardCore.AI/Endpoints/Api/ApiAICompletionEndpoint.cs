@@ -283,7 +283,7 @@ internal static class ApiAICompletionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
-                Appearance = message.As<AssistantMessageAppearance>(),
+                Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
 
             },
         });
@@ -415,7 +415,7 @@ internal static class ApiAICompletionEndpoint
     {
 
         var trimmedUserPrompt = userPrompt?.Trim();
-        var profileMetadata = profile.As<AIProfileMetadata>();
+        var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
         var initialPrompt = profileMetadata.InitialPrompt?.Trim();
 
         if (string.IsNullOrWhiteSpace(initialPrompt))

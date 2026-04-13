@@ -12,7 +12,7 @@
 }
 
 @{
-    var profileMetadata = Model.Value.As<ProfileTemplateMetadata>();
+    var profileMetadata = Model.Value.GetOrCreate<ProfileTemplateMetadata>();
 }
 
 @if (profileMetadata.ProfileType.HasValue)

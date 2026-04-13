@@ -43,7 +43,7 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
             return;
         }
 
-        var metadata = context.Connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = context.Connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();

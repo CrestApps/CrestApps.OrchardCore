@@ -23,7 +23,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
     {
         return Initialize<EditAIProfileSessionSettingsViewModel>("AIProfileSessionSettings_Edit", model =>
         {
-            var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
+            var dataExtractionSettings = template.GetOrCreate<AIProfileDataExtractionSettings>();
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
         }).Location("Content:1#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -45,7 +45,7 @@ public sealed class AIProfileTemplateSessionSettingsDisplayDriver : DisplayDrive
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SessionInactivityTimeoutInMinutes), S["Session Inactivity Timeout must be at least 1 minute."]);
         }
 
-        var dataExtractionSettings = template.As<AIProfileDataExtractionSettings>();
+        var dataExtractionSettings = template.GetOrCreate<AIProfileDataExtractionSettings>();
         dataExtractionSettings.SessionInactivityTimeoutInMinutes = model.SessionInactivityTimeoutInMinutes;
         template.Put(dataExtractionSettings);
 

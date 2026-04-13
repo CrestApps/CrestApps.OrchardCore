@@ -70,7 +70,7 @@ internal static class ApiAIChatSessionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
-                Appearance = message.As<AssistantMessageAppearance>(),
+                Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
             })
         });
     }

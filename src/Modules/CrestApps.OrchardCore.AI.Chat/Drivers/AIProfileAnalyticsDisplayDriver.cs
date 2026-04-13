@@ -22,7 +22,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
     {
         return Initialize<EditAIProfileAnalyticsViewModel>("AIProfileAnalytics_Edit", model =>
         {
-            var metadata = profile.As<AnalyticsMetadata>();
+            var metadata = profile.GetOrCreate<AnalyticsMetadata>();
             model.EnableSessionMetrics = metadata.EnableSessionMetrics;
             model.EnableAIResolutionDetection = metadata.EnableAIResolutionDetection;
             model.EnableConversionMetrics = metadata.EnableConversionMetrics;
@@ -93,7 +93,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
             }
         }
 
-        var metadata = profile.As<AnalyticsMetadata>();
+        var metadata = profile.GetOrCreate<AnalyticsMetadata>();
         metadata.EnableSessionMetrics = model.EnableSessionMetrics;
         metadata.EnableAIResolutionDetection = model.EnableAIResolutionDetection;
         metadata.EnableConversionMetrics = model.EnableConversionMetrics;

@@ -40,7 +40,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureOpenAIConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
@@ -64,7 +64,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 

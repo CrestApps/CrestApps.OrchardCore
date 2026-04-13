@@ -70,7 +70,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         {
             model.ProfileId = profile.ItemId;
 
-            var documentsMetadata = profile.As<DocumentsMetadata>();
+            var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
         }).Location("Content:7#Knowledge;2");
 
@@ -78,7 +78,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         {
             model.ProfileId = profile.ItemId;
 
-            var documentsMetadata = profile.As<DocumentsMetadata>();
+            var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -104,7 +104,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         var model = new EditAIProfileDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var documentsMetadata = profile.As<DocumentsMetadata>();
+        var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.Documents ??= [];
 

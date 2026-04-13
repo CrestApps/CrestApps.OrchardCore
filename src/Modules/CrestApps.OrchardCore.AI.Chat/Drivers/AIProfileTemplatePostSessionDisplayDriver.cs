@@ -44,7 +44,7 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
 
-            var settings = template.As<AIProfilePostSessionSettings>();
+            var settings = template.GetOrCreate<AIProfilePostSessionSettings>();
 
             model.EnablePostSessionProcessing = settings.EnablePostSessionProcessing;
             model.Tasks = settings.PostSessionTasks
@@ -167,7 +167,7 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
 
         }
 
-        var postSessionSettings = template.As<AIProfilePostSessionSettings>();
+        var postSessionSettings = template.GetOrCreate<AIProfilePostSessionSettings>();
         postSessionSettings.EnablePostSessionProcessing = model.EnablePostSessionProcessing;
         postSessionSettings.ToolNames = toolNames;
         postSessionSettings.PostSessionTasks = tasks.Select(t => new PostSessionTask

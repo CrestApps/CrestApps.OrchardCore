@@ -130,7 +130,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
                     Title = message.Title,
                     Content = message.Text,
                     References = message.References,
-                    Appearance = message.As<AssistantMessageAppearance>(),
+                    Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
                 })
             });
 

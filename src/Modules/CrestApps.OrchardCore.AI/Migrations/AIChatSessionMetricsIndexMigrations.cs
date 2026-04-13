@@ -27,7 +27,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
             CreateNamedIndexes = true,
         };
 
-        await SchemaBuilder.CreateAIChatSessionMetricsSchemaAsync(options);
+        await SchemaBuilder.CreateAIChatSessionMetricsSchemaAsync(_option, options);
 
         return 4;
     }

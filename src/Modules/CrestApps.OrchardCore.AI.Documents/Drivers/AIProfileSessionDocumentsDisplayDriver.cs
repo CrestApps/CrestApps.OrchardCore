@@ -20,7 +20,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
     {
         return Initialize<EditAIProfileSessionDocumentsViewModel>("AIProfileSessionDocuments_Edit", async model =>
         {
-            var metadata = profile.As<AIProfileSessionDocumentsMetadata>();
+            var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
             model.AllowSessionDocuments = metadata.AllowSessionDocuments;
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -33,7 +33,7 @@ internal sealed class AIProfileSessionDocumentsDisplayDriver : DisplayDriver<AIP
         var model = new EditAIProfileSessionDocumentsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = profile.As<AIProfileSessionDocumentsMetadata>();
+        var metadata = profile.GetOrCreate<AIProfileSessionDocumentsMetadata>();
         metadata.AllowSessionDocuments = model.AllowSessionDocuments;
         profile.Put(metadata);
 

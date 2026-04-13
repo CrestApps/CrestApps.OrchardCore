@@ -217,6 +217,13 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         var model = new EditCatalogEntryViewModel
         {
             DisplayName = deployment.Name,
@@ -241,6 +248,13 @@ public sealed class DeploymentsController : Controller
         if (deployment == null)
         {
             return NotFound();
+        }
+
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be modified."]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         var model = new EditCatalogEntryViewModel
@@ -277,6 +291,13 @@ public sealed class DeploymentsController : Controller
             return NotFound();
         }
 
+        if (deployment.IsReadOnly)
+        {
+            await _notifier.WarningAsync(H["This deployment is defined in configuration and cannot be deleted."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         await _deploymentManager.DeleteAsync(deployment);
 
         await _notifier.SuccessAsync(H["Deployment has been deleted successfully."]);
@@ -307,7 +328,7 @@ public sealed class DeploymentsController : Controller
                     {
                         var deployment = await _deploymentManager.FindByIdAsync(id);
 
-                        if (deployment == null)
+                        if (deployment == null || deployment.IsReadOnly)
                         {
                             continue;
                         }

@@ -28,7 +28,7 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
 
         return Initialize<StdioConnectionFieldsViewModel>("StdioMcpConnectionFields_Edit", model =>
         {
-            var metadata = connection.As<StdioMcpConnectionMetadata>();
+            var metadata = connection.GetOrCreate<StdioMcpConnectionMetadata>();
             model.Command = metadata.Command;
             model.WorkingDirectory = metadata.WorkingDirectory;
 
