@@ -2,7 +2,6 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.ChatInteractions;
 using CrestApps.Core.Services;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
@@ -19,7 +18,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
@@ -40,21 +38,22 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Register ChatInteractionPrompt store services
-        services.AddScoped<DefaultChatInteractionPromptStore>()
-            .AddScoped<IChatInteractionPromptStore>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
-            .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
-            .AddIndexProvider<ChatInteractionPromptIndexProvider>()
+        // Register framework-level chat interaction handlers.
+        services
+            .AddCoreAIChatInteractions()
+            .AddCoreAIChatInteractionStoresYesSql()
+            .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
-        // Register framework-level chat interaction handlers.
-        services.AddCoreAIChatInteractions()
-            .AddCoreAIChatInteractionStoresYesSql(AIConstants.AICollectionName);
+        // Register ChatInteractionPrompt store services
+        services
+            .AddScoped<DefaultChatInteractionPromptStore>()
+            .AddScoped<IChatInteractionPromptStore>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>())
+            .AddScoped<ICatalog<ChatInteractionPrompt>>(sp => sp.GetRequiredService<DefaultChatInteractionPromptStore>());
 
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddScoped<ICatalog<ChatInteraction>, DefaultChatInteractionCatalog>()
-            .AddIndexProvider<ChatInteractionIndexProvider>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
@@ -62,7 +61,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddNavigationProvider<ChatInteractionsAdminMenu>()
-            .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<DataSourceMetadataMigrations>();
 
         services

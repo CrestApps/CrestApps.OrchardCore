@@ -1,11 +1,19 @@
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.Indexing;
-using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.AI.Documents.Migrations;
 
 internal sealed class AIDocumentIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIDocumentIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
         await CreateAIDocumentIndexTableAsync();
@@ -23,6 +31,6 @@ internal sealed class AIDocumentIndexMigrations : DataMigration
 
     private async Task CreateAIDocumentIndexTableAsync()
     {
-        await SchemaBuilder.CreateAIDocumentIndexSchemaAsync(AIConstants.AIDocsCollectionName);
+        await SchemaBuilder.CreateAIDocumentIndexSchemaAsync(_option);
     }
 }

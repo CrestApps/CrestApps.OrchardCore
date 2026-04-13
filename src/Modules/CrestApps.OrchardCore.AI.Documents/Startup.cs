@@ -3,7 +3,6 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Endpoints;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
@@ -35,7 +34,8 @@ public sealed class Startup : StartupBase
     {
         services.AddCoreAIDocumentProcessing()
             .AddCoreAIDocumentProcessingStoresYesSql()
-            .AddCoreAIDataSourceStoresYesSql();
+            .AddDataMigration<AIDocumentIndexMigrations>()
+            .AddDataMigration<AIDocumentChunkIndexMigrations>();
 
         services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
         services
@@ -51,11 +51,6 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();
         services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
-
-        services.AddIndexProvider<AIDocumentIndexProvider>();
-        services.AddIndexProvider<AIDocumentChunkIndexProvider>();
-        services.AddDataMigration<AIDocumentIndexMigrations>();
-        services.AddDataMigration<AIDocumentChunkIndexMigrations>();
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());

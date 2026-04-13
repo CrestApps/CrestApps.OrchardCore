@@ -1,14 +1,22 @@
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AI;
-using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 public sealed class AIProviderConnectionIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIProviderConnectionIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateAIProviderConnectionIndexSchemaAsync(AIConstants.AICollectionName);
+        await SchemaBuilder.CreateAIProviderConnectionIndexSchemaAsync(_option);
 
         return 1;
     }

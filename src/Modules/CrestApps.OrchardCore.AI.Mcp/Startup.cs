@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.AI.Mcp.Deployments.Sources;
 using CrestApps.OrchardCore.AI.Mcp.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Mcp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
+using CrestApps.OrchardCore.AI.Mcp.Migrations;
 using CrestApps.OrchardCore.AI.Mcp.Recipes;
 using CrestApps.OrchardCore.AI.Mcp.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -41,7 +43,8 @@ public sealed class Startup : StartupBase
     {
         services
             .AddCoreAIMcpClient(includeStdIoTransport: false)
-            .AddCoreAIMcpClientStoresYesSql(AIConstants.AICollectionName)
+            .AddCoreAIMcpClientStoresYesSql()
+            .AddDataMigration<McpConnectionClientsMigrations>()
             .AddCoreAISseMcpClientTransport()
             .AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>()
@@ -108,7 +111,9 @@ public sealed class McpServerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreAIMcpServer();
+        services.AddCoreAIMcpServer()
+           .AddCoreAIMcpServerStoresYesSql()
+           .AddDataMigration<McpConnectionServerMigrations>();
 
         services.AddOrchardCoreAgentSkillServices();
 

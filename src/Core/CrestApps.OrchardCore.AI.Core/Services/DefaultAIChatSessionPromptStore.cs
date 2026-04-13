@@ -17,9 +17,8 @@ public sealed class DefaultAIChatSessionPromptStore : DocumentCatalog<AIChatSess
     public DefaultAIChatSessionPromptStore(
         ISession session,
         IClock clock)
-    : base(session)
+    : base(session, AIConstants.AICollectionName)
     {
-        CollectionName = AIConstants.AICollectionName;
         _clock = clock;
     }
     /// <inheritdoc />

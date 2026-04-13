@@ -1,16 +1,15 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
+using CrestApps.Core.AI.DataSources;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 
 internal sealed class AIDataSourceDeploymentSource : DeploymentSourceBase<AIDataSourceDeploymentStep>
 {
-    private readonly ICatalog<AIDataSource> _store;
+    private readonly IAIDataSourceStore _store;
 
-    public AIDataSourceDeploymentSource(ICatalog<AIDataSource> store)
+    public AIDataSourceDeploymentSource(IAIDataSourceStore store)
     {
         _store = store;
     }

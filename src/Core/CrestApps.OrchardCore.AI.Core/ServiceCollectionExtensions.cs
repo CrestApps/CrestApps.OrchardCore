@@ -1,13 +1,12 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Markdown;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
@@ -52,9 +51,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
-        // AI provider connections: wrap YesSql catalog as a writable multi-source binding source.
-        services.AddYesSqlNamedSourceBindingSource<AIProviderConnection, AIProviderConnectionIndex>(AIConstants.AICollectionName);
-
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
@@ -80,13 +76,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
-            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
-            .AddScoped<ISourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<IAIDeploymentStore>())
             .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
-
-        services.AddYesSqlNamedSourceBindingSource<AIDeployment, AIDeploymentIndex>(AIConstants.AICollectionName);
 
         services
             .Configure<AIDeploymentCatalogOptions>(o =>
@@ -100,7 +91,9 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
-            .AddScoped<ICatalog<AIDataSource>, DefaultAIDataSourceStore>()
+            .AddScoped<DefaultAIDataSourceStore>()
+            .AddScoped<IAIDataSourceStore>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
+            .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
             .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
             .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
 

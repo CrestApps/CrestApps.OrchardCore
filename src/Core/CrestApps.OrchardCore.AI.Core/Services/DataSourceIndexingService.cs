@@ -1,10 +1,10 @@
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
-using CrestApps.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DataSourceIndexingService
 {
     private readonly IIndexProfileStore _indexProfileStore;
-    private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAITextNormalizer _textNormalizer;
@@ -40,7 +40,7 @@ public sealed class DataSourceIndexingService
 
     public DataSourceIndexingService(
         IIndexProfileStore indexProfileStore,
-        ICatalog<AIDataSource> dataSourceStore,
+        IAIDataSourceStore dataSourceStore,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
         IAITextNormalizer textNormalizer,

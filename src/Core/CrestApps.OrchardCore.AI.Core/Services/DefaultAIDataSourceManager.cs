@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 public sealed class DefaultAIDataSourceManager : CatalogManager<AIDataSource>
 {
     public DefaultAIDataSourceManager(
-        ICatalog<AIDataSource> store,
+        IAIDataSourceStore store,
         IEnumerable<ICatalogEntryHandler<AIDataSource>> handlers,
         ILogger<DefaultAIDataSourceManager> logger)
     : base(store, handlers, logger)

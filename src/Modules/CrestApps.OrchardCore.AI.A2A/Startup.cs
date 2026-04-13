@@ -8,11 +8,12 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.A2A.Drivers;
 using CrestApps.OrchardCore.AI.A2A.Handlers;
-using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.A2A.Migrations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -26,7 +27,8 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreAIA2AClient()
-            .AddCoreAIA2AClientStoresYesSql(AIConstants.AICollectionName);
+            .AddCoreAIA2AClientStoresYesSql()
+            .AddDataMigration<A2AConnectionMigrations>();
 
         services.AddDisplayDriver<AIProfile, AIProfileA2AConnectionsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateA2AConnectionsDisplayDriver>();

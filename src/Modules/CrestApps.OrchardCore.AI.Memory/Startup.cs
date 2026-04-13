@@ -2,7 +2,6 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.AIMemory;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Memory.Drivers;
@@ -30,20 +29,21 @@ public sealed class Startup : StartupBase
         services
             .AddCoreAIMemory()
             .AddCoreAIMemoryStoresYesSql()
-            .AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
-            .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
-            .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()
-            .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
-            .AddScoped<AIMemoryIndexingService>()
-            .AddIndexProvider<AIMemoryEntryIndexProvider>()
-            .AddDataMigration<AIMemoryEntryMigrations>()
-            .AddDataMigration<MemoryMetadataMigrations>()
-            .AddDisplayDriver<AIProfile, AIProfileMemoryDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMemoryDisplayDriver>()
+            .AddDataMigration<AIMemoryEntryMigrations>();
 
-            .AddDisplayDriver<IndexProfile, AIMemoryIndexProfileDisplayDriver>()
-            .AddSiteDisplayDriver<AIMemorySettingsDisplayDriver>()
-            .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddTransient<IConfigureOptions<AIMemoryOptions>, AIMemoryOptionsConfiguration>()
+                .AddTransient<IConfigureOptions<ChatInteractionMemoryOptions>, ChatInteractionMemoryOptionsConfiguration>()
+                .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()
+                .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
+                .AddScoped<AIMemoryIndexingService>()
+
+                .AddDataMigration<MemoryMetadataMigrations>()
+                .AddDisplayDriver<AIProfile, AIProfileMemoryDisplayDriver>()
+                .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMemoryDisplayDriver>()
+
+                .AddDisplayDriver<IndexProfile, AIMemoryIndexProfileDisplayDriver>()
+                .AddSiteDisplayDriver<AIMemorySettingsDisplayDriver>()
+                .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.Configure<StoreCollectionOptions>(o => o.Collections.Add(MemoryConstants.CollectionName));
         services.AddIndexProfileHandler<AIMemoryIndexProfileHandler>();

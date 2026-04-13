@@ -42,23 +42,23 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
-            model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
+            var chatModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat);
+            model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
 
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
+            var utilities = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility);
+            model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
 
-            model.EmbeddingDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding));
+            var embeddingModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding);
+            model.EmbeddingDeployments = BuildGroupedDeploymentItems(embeddingModels);
 
-            model.ImageDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.Image));
+            var imageModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.Image);
+            model.ImageDeployments = BuildGroupedDeploymentItems(imageModels);
 
-            model.SpeechToTextDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText));
+            var speechToTextModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.SpeechToText);
+            model.SpeechToTextDeployments = BuildGroupedDeploymentItems(speechToTextModels);
 
-            model.TextToSpeechDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech));
+            var textToSpeechModels = await _deploymentManager.GetByTypeAsync(AIDeploymentType.TextToSpeech);
+            model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
         }).Location("Content:4%Default Deployments;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));

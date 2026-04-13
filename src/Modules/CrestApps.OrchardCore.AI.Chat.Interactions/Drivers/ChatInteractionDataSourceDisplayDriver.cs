@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -16,14 +17,14 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly ISiteService _siteService;
-    private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IODataValidator _oDataValidator;
 
     internal readonly IStringLocalizer<ChatInteractionDataSourceDisplayDriver> S;
 
     public ChatInteractionDataSourceDisplayDriver(
         ISiteService siteService,
-        ICatalog<AIDataSource> dataSourceStore,
+        IAIDataSourceStore dataSourceStore,
         IODataValidator oDataValidator,
         IStringLocalizer<ChatInteractionDataSourceDisplayDriver> stringLocalizer)
     {

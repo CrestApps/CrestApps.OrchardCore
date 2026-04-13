@@ -1,6 +1,5 @@
 using System.Text.Json;
-using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
+using CrestApps.Core.AI.DataSources;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
@@ -28,7 +27,7 @@ internal sealed class AzureOpenAIOwnDataAIDataSourceMigrations : DataMigration
         {
             // Previously, 'Azure' provider was different than 'AzureOpenAIOwnData', the two were merged into one.
             // Migrate legacy AzureAIDataSourceIndexMetadata to first-class properties.
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
 
             foreach (var dataSource in await dataSourceStore.GetAllAsync())
             {

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
@@ -15,14 +16,14 @@ internal sealed class AIProfileTemplateDataSourceDisplayDriver : DisplayDriver<A
 {
     private readonly ISiteService _siteService;
     private readonly IODataValidator _oDataValidator;
-    private readonly ICatalog<AIDataSource> _dataSourceStore;
+    private readonly IAIDataSourceStore _dataSourceStore;
 
     internal readonly IStringLocalizer S;
 
     public AIProfileTemplateDataSourceDisplayDriver(
         ISiteService siteService,
         IODataValidator oDataValidator,
-        ICatalog<AIDataSource> dataSourceStore,
+        IAIDataSourceStore dataSourceStore,
         IStringLocalizer<AIProfileTemplateDataSourceDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;

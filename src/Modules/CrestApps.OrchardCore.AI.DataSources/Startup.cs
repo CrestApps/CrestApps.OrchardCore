@@ -34,7 +34,9 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreAIDataSourceRag();
         services.AddAIDataSourceServices();
+
         services.AddTransient<IConfigureOptions<AIDataSourceOptions>, AIDataSourceOptionsConfiguration>();
         services.AddDataMigration<DataSourceMetadataMigrations>();
         services.AddDisplayDriver<AIDataSource, AIDataSourceDisplayDriver>();
@@ -46,8 +48,6 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
-
-        services.AddCoreAIDataSourceRag();
 
         services.AddScoped<DataSourceIndexingService>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();

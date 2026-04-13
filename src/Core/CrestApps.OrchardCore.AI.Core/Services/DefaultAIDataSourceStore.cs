@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
@@ -6,7 +7,7 @@ using OrchardCore.Documents;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
 
-public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>
+public sealed class DefaultAIDataSourceStore : Catalog<AIDataSource>, IAIDataSourceStore
 {
     public DefaultAIDataSourceStore(IDocumentManager<DictionaryDocument<AIDataSource>> documentManager)
         : base(documentManager)

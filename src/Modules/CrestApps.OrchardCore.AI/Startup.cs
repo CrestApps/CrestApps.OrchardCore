@@ -7,7 +7,6 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.Core.Data.YesSql.Indexes.AI;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Services;
@@ -54,7 +53,10 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAICoreServices()
-            .AddCoreAIServicesStoresYesSql(AIConstants.AICollectionName)
+            .AddCoreAIServicesStoresYesSql()
+            .AddDataMigration<AIDeploymentIndexMigrations>()
+            .AddDataMigration<AIProfileIndexMigrations>()
+            .AddDataMigration<AIProviderConnectionIndexMigrations>()
             .AddCatalogManagers()
             .TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
 
@@ -80,8 +82,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddAIDeploymentServices()
-            .AddDataMigration<AIDeploymentIndexMigrations>()
-            .AddIndexProvider<AIDeploymentIndexProvider>()
+
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
@@ -103,21 +104,18 @@ public sealed class Startup : StartupBase
 #pragma warning restore CS0618 // Type or member is obsolete
 
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
-        services.AddDataMigration<AIProfileIndexMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();
-        services.AddIndexProvider<AIProfileIndexProvider>();
 
         // AI Profile Template services.
         services
+            .AddCoreAIProfileTemplateStoresYesSql()
+            .AddDataMigration<AIProfileTemplateIndexMigrations>()
             .AddScoped<DefaultAIProfileTemplateManager>()
             .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
             .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
-            .AddYesSqlNamedSourceDocumentCatalog<AIProfileTemplate, AIProfileTemplateIndex>(AIConstants.AICollectionName)
             .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>()
-            .AddDataMigration<AIProfileTemplateIndexMigrations>()
-            .AddIndexProvider<AIProfileTemplateIndexProvider>()
             .AddScoped<IAIProfileTemplateProvider, ModuleAIProfileTemplateProvider>()
             .AddScoped<IAIProfileTemplateProvider, AppDataAIProfileTemplateProvider>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDisplayDriver>()
@@ -131,8 +129,6 @@ public sealed class Startup : StartupBase
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
 
         services
-            .AddDataMigration<AIProviderConnectionIndexMigrations>()
-            .AddIndexProvider<AIProviderConnectionIndexProvider>()
             .Configure<AIProviderConnectionCatalogOptions>(o =>
             {
                 o.ConnectionSections.Add("OrchardCore:CrestApps:AI:Connections");
@@ -206,9 +202,9 @@ public sealed class ChatCoreStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
+            .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
             .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddIndexProvider<AIChatSessionIndexProvider>()
             .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
@@ -216,7 +212,6 @@ public sealed class ChatCoreStartup : StartupBase
         // Register the AI chat session prompt store.
         services.AddScoped<DefaultAIChatSessionPromptStore>()
             .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
-            .AddIndexProvider<AIChatSessionPromptIndexProvider>()
             .AddDataMigration<AIChatSessionPromptIndexMigrations>()
             .AddDataMigration<AIChatSessionPromptDataMigrations>();
 
@@ -294,7 +289,6 @@ public sealed class ChatAnalyticsStartup : StartupBase
             .AddScoped<IAICompletionUsageObserver>(sp => sp.GetRequiredService<AICompletionUsageService>())
             .AddDataMigration<AIChatSessionMetricsIndexMigrations>()
             .AddDataMigration<AICompletionUsageIndexMigrations>()
-            .AddIndexProvider<AIChatSessionMetricsIndexProvider>()
             .AddIndexProvider<AICompletionUsageIndexProvider>();
 
         services.TryAddScoped<AIChatSessionEventPostCloseObserver>();

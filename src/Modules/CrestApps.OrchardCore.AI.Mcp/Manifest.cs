@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-    )]
+)]
 
 [assembly: Feature(
     Id = McpPermissions.Feature.Area,
@@ -16,10 +16,10 @@ using OrchardCore.Modules.Manifest;
     Description = "Offers core services and a user interface for connecting to Model Context Protocol (MCP) servers, enabling AI models to leverage additional capabilities and resources.",
     Category = "Artificial Intelligence",
     Dependencies =
-    [
-    AIConstants.Feature.Area,
-    "CrestApps.OrchardCore.Resources",
-    ]
+        [
+            AIConstants.Feature.Area,
+            "CrestApps.OrchardCore.Resources",
+        ]
     )]
 
 [assembly: Feature(
@@ -28,9 +28,9 @@ using OrchardCore.Modules.Manifest;
     Description = "Extends the Model Context Protocol Client with standard input/output (STDIO) transport for connecting to local MCP servers.",
     Category = "Artificial Intelligence",
     Dependencies =
-    [
-    McpPermissions.Feature.Area,
-    ]
+        [
+            McpPermissions.Feature.Area,
+        ]
     )]
 
 [assembly: Feature(
@@ -39,7 +39,7 @@ using OrchardCore.Modules.Manifest;
     Description = "Exposes Orchard Core AI tools through the MCP protocol, enabling external MCP-compatible clients to connect and invoke AI capabilities.",
     Category = "Artificial Intelligence",
     Dependencies =
-    [
-    AIConstants.Feature.Area,
-    ]
+        [
+            AIConstants.Feature.Area,
+        ]
     )]

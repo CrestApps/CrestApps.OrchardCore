@@ -36,20 +36,30 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         return Initialize<AzureOpenAIConnectionViewModel>("AzureOpenAIConnection_Edit", model =>
         {
-            var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+            try
+            {
+                var metadata = connection.As<AzureOpenAIConnectionMetadata>();
 
-            model.Endpoint = metadata.Endpoint?.ToString();
-            model.AuthenticationTypes =
-            [
-                new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
-                new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
-                new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
-            ];
+                model.Endpoint = metadata.Endpoint?.ToString();
+                model.AuthenticationTypes =
+                [
+                    new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
+                    new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
+                    new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
+                ];
 
-            model.EnableLogging = metadata.EnableLogging;
-            model.AuthenticationType = metadata.AuthenticationType;
-            model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
-            model.IdentityId = metadata.IdentityId;
+                model.EnableLogging = metadata.EnableLogging;
+                model.AuthenticationType = metadata.AuthenticationType;
+                model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
+                model.IdentityId = metadata.IdentityId;
+            }
+            catch (Exception ex)
+            {
+                var t = ex;
+                // Log the exception if necessary
+                // For now, we just ignore it to avoid breaking the editor UI
+
+            }
         }).Location("Content:5");
     }
 

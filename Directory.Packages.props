@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <CrestAppsCoreVersion>1.0.0-preview-14</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-19</CrestAppsCoreVersion>
     <OrchardCoreVersion>[3.0.0-preview-18962, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.1.0</ModelContextProtocolVersion>
   </PropertyGroup>
@@ -19,8 +19,6 @@
     <PackageVersion Include="Markdig" Version="1.1.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.4.0-preview.1.26160.2" />
     <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.4.0-preview.1.26160.2" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
     <PackageVersion Include="NLog" Version="6.1.1" />

@@ -1,6 +1,5 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.Core.SignalR.Services;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -18,7 +17,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -31,6 +29,11 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Chat notification services and hub options.
+        // Action handlers and sender are registered by the framework (AddChatNotificationServices).
+        // Only the OC-specific transport is registered here.
+        services.AddCoreAIChatNotifications();
+
         services
             .AddPermissionProvider<ChatSessionPermissionProvider>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
@@ -48,10 +51,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
 
-        // Chat notification services and hub options.
-        // Action handlers and sender are registered by the framework (AddChatNotificationServices).
-        // Only the OC-specific transport is registered here.
-        services.AddCoreAIChatNotifications();
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
     }
@@ -101,7 +100,6 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddNavigationProvider<ChatAnalyticsAdminMenu>()
             .AddScoped<AIChatSessionExtractedDataService>()
             .AddDataMigration<AIChatSessionExtractedDataMigrations>()
-            .AddIndexProvider<AIChatSessionExtractedDataIndexProvider>()
             .AddDisplayDriver<AIProfile, AIProfileAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateAnalyticsDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsFilter, AIChatAnalyticsDateRangeFilterDisplayDriver>()

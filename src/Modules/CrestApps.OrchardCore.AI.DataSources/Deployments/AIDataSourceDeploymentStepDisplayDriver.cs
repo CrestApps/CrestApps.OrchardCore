@@ -1,5 +1,4 @@
-using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
+using CrestApps.Core.AI.DataSources;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,12 +9,12 @@ namespace CrestApps.OrchardCore.AI.DataSources.Deployments;
 
 internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, AIDataSourceDeploymentStep>
 {
-    private readonly ICatalog<AIDataSource> _store;
+    private readonly IAIDataSourceStore _store;
 
     internal readonly IStringLocalizer S;
 
     public AIDataSourceDeploymentStepDisplayDriver(
-        ICatalog<AIDataSource> store,
+        IAIDataSourceStore store,
         IStringLocalizer<AIDataSourceDeploymentStepDisplayDriver> stringLocalizer)
     {
         _store = store;

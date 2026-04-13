@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Infrastructure;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,7 +48,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();
 
             // Migrate data sources to use first-class index properties
@@ -196,7 +196,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         ShellScope.AddDeferredTask(async scope =>
         {
-            var dataSourceStore = scope.ServiceProvider.GetRequiredService<ICatalog<AIDataSource>>();
+            var dataSourceStore = scope.ServiceProvider.GetRequiredService<IAIDataSourceStore>();
             var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
             var indexProfileManager = scope.ServiceProvider.GetRequiredService<IIndexProfileManager>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AzureOpenAIDataSourceMetadataMigrations>>();

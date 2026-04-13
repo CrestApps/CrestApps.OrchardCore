@@ -1,11 +1,20 @@
+using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIChatSessionMetricsIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
         var options = new AIChatSessionMetricsIndexSchemaOptions
@@ -35,7 +44,7 @@ internal sealed class AIChatSessionMetricsIndexMigrations : DataMigration
 
     public async Task<int> UpdateFrom3Async()
     {
-        await SchemaBuilder.AddAIChatSessionMetricsCompletionCountColumnAsync(AIConstants.AICollectionName);
+        await SchemaBuilder.AddAIChatSessionMetricsCompletionCountColumnAsync(_option);
 
         return 4;
     }

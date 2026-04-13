@@ -7,6 +7,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
@@ -222,7 +223,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
             if (!string.IsNullOrWhiteSpace(dataSourceId))
             {
-                var dataSourceStore = services.GetService<ICatalog<AIDataSource>>();
+                var dataSourceStore = services.GetService<IAIDataSourceStore>();
                 if (dataSourceStore is not null)
 
                 {
