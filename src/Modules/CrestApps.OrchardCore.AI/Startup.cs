@@ -42,7 +42,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -125,8 +124,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
-
-        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
 
         services
             .Configure<AIProviderConnectionCatalogOptions>(o =>

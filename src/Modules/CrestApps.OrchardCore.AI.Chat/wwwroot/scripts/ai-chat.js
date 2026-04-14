@@ -7,11 +7,11 @@ function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present,
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
@@ -128,9 +128,14 @@ window.openAIChatManager = function () {
 
   // Collector for charts discovered during marked parsing.
   var _pendingCharts = [];
+
+  // Global chart config map: any page (e.g., Chat Interactions) that uses
+  // the shared marked instance can call window.renderPendingCharts() after
+  // its DOM update to render charts it didn't create itself.
+  window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
     var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -161,6 +166,7 @@ window.openAIChatManager = function () {
           chartId: token.chartId,
           config: token.json
         });
+        window.__chartConfigs[token.chartId] = token.json;
         return createChartHtml(token.chartId);
       }
     }]
@@ -232,43 +238,71 @@ window.openAIChatManager = function () {
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
-    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
-      _step;
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var c = _step.value;
-        var canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-          continue;
-        }
-        if (typeof Chart === 'undefined') {
-          console.error('Chart.js is not available on the page.');
-          continue;
-        }
-        try {
-          var _cfg$options;
-          // Destroy existing chart instance if re-rendering
-          if (canvas._chartInstance) {
-            canvas._chartInstance.destroy();
-          }
-          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
-          cfg.options.responsive = true;
-          cfg.options.maintainAspectRatio = false;
-          canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-          console.error('Error creating chart:', e);
-        }
-      }
 
-      // Prevent re-render work
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
     message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator = _createForOfIteratorHelper(charts),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var c = _step.value;
+          renderChartOnCanvas(c.chartId, c.config);
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+    });
   }
+  function renderChartOnCanvas(chartId, config) {
+    var canvas = document.getElementById(chartId);
+    if (!canvas) {
+      return;
+    }
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+      return;
+    }
+    try {
+      var _cfg$options;
+      if (canvas._chartInstance) {
+        canvas._chartInstance.destroy();
+      }
+      var cfg = typeof config === 'string' ? JSON.parse(config) : config;
+      (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+      cfg.options.responsive = true;
+      cfg.options.maintainAspectRatio = false;
+      canvas._chartInstance = new Chart(canvas, cfg);
+      delete window.__chartConfigs[chartId];
+    } catch (e) {
+      console.error('Error creating chart:', e);
+    }
+  }
+
+  // Global function: renders any chart canvases whose configs are in the
+  // global __chartConfigs map. Called by pages (e.g., Chat Interactions)
+  // that share the marked instance but have their own rendering pipeline.
+  window.renderPendingCharts = function () {
+    if (typeof Chart === 'undefined') {
+      return;
+    }
+    var configs = window.__chartConfigs;
+    if (!configs) {
+      return;
+    }
+    requestAnimationFrame(function () {
+      for (var _i2 = 0, _Object$keys = Object.keys(configs); _i2 < _Object$keys.length; _i2++) {
+        var chartId = _Object$keys[_i2];
+        renderChartOnCanvas(chartId, configs[chartId]);
+      }
+    });
+  };
 
   // Parse markdown content via marked (which natively handles [chart:...] markers
   // through the registered extension) and collect pending chart configs for later
@@ -280,7 +314,8 @@ window.openAIChatManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
-      ADD_ATTR: ['target']
+      ADD_ATTR: ['target'],
+      ADD_TAGS: ['canvas']
     });
   }
   var initialize = function initialize(instanceConfig) {
@@ -1286,9 +1321,9 @@ window.openAIChatManager = function () {
                 message.title = chunk.title;
               }
               if (chunk.references && _typeof(chunk.references) === "object" && Object.keys(chunk.references).length) {
-                for (var _i2 = 0, _Object$entries2 = Object.entries(chunk.references); _i2 < _Object$entries2.length; _i2++) {
+                for (var _i3 = 0, _Object$entries2 = Object.entries(chunk.references); _i3 < _Object$entries2.length; _i3++) {
                   var _normalizeReference2;
-                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i2], 2),
+                  var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
                     key = _Object$entries2$_i[0],
                     value = _Object$entries2$_i[1];
                   references[key] = (_normalizeReference2 = normalizeReference(value)) !== null && _normalizeReference2 !== void 0 ? _normalizeReference2 : {};
@@ -1304,8 +1339,8 @@ window.openAIChatManager = function () {
                   lastResponseId = chunk.responseId;
                 }
                 var processedContent = chunk.content;
-                for (var _i3 = 0, _Object$entries3 = Object.entries(references); _i3 < _Object$entries3.length; _i3++) {
-                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i3], 2),
+                for (var _i4 = 0, _Object$entries3 = Object.entries(references); _i4 < _Object$entries3.length; _i4++) {
+                  var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i4], 2),
                     _key2 = _Object$entries3$_i[0],
                     _value3 = _Object$entries3$_i[1];
                   processedContent = processedContent.replaceAll(_key2, "<sup><strong>".concat(_value3.index, "</strong></sup>"));
@@ -1372,6 +1407,7 @@ window.openAIChatManager = function () {
           return newMessage;
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this9 = this;
           references = normalizeReferences(references);
           if (Object.keys(references).length) {
             var message = this.messages[messageIndex];
@@ -1454,7 +1490,10 @@ window.openAIChatManager = function () {
             message.content = processed;
             message.htmlContent = parseMarkdownContent(processed, message);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this9.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
@@ -1497,7 +1536,7 @@ window.openAIChatManager = function () {
           }
         },
         synthesizeSpeech: function synthesizeSpeech(text) {
-          var _this9 = this;
+          var _this0 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
@@ -1505,7 +1544,7 @@ window.openAIChatManager = function () {
           this.isPlayingAudio = true;
           this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this9.isPlayingAudio = false;
+            _this0.isPlayingAudio = false;
           });
         },
         playCollectedAudio: function playCollectedAudio() {
@@ -1546,26 +1585,26 @@ window.openAIChatManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this0 = this;
+          var _this1 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.playNextInQueue();
+            _this1.currentAudioElement = null;
+            _this1.playNextInQueue();
           });
           audio.addEventListener('error', function () {
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.playNextInQueue();
+            _this1.currentAudioElement = null;
+            _this1.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
             URL.revokeObjectURL(url);
-            _this0.currentAudioElement = null;
-            _this0.isPlayingAudio = false;
+            _this1.currentAudioElement = null;
+            _this1.isPlayingAudio = false;
           });
         },
         playNextInQueue: function playNextInQueue() {
@@ -1595,7 +1634,7 @@ window.openAIChatManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this1 = this;
+          var _this10 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1615,12 +1654,12 @@ window.openAIChatManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this1.mediaRecorder = new MediaRecorder(stream, {
+            _this10.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this1._conversationSubject = new signalR.Subject();
-            _this1._conversationStream = stream;
+            _this10._conversationSubject = new signalR.Subject();
+            _this10._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             // During TTS playback, detect when the user speaks above
@@ -1629,20 +1668,20 @@ window.openAIChatManager = function () {
             // speaker echo so the STT stream has no gaps.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this1._conversationAudioCtx = new AudioCtx();
-              _this1._conversationAnalyser = _this1._conversationAudioCtx.createAnalyser();
-              _this1._conversationAnalyser.fftSize = 256;
-              var micSource = _this1._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this1._conversationAnalyser);
+              _this10._conversationAudioCtx = new AudioCtx();
+              _this10._conversationAnalyser = _this10._conversationAudioCtx.createAnalyser();
+              _this10._conversationAnalyser.fftSize = 256;
+              var micSource = _this10._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this10._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this1._conversationAnalyser;
+            var analyser = _this10._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this1.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this10.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this1.isPlayingAudio && analyser) {
+                if (_this10.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1652,7 +1691,7 @@ window.openAIChatManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this1.stopAudio();
+                    _this10.stopAudio();
                   }
                 }
 
@@ -1674,7 +1713,7 @@ window.openAIChatManager = function () {
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this1._conversationSubject.next(base64);
+                          _this10._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
@@ -1685,28 +1724,28 @@ window.openAIChatManager = function () {
                 })));
               }
             });
-            _this1.mediaRecorder.addEventListener('stop', function () {
+            _this10.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this1._conversationSubject.complete();
+                  _this10._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var profileId = _this1.getProfileId();
-            var sessionId = _this1.getSessionId() || '';
+            var profileId = _this10.getProfileId();
+            var sessionId = _this10.getSessionId() || '';
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this1.connection.send("StartConversation", profileId, sessionId, _this1._conversationSubject, mimeType, language);
-            _this1.mediaRecorder.start(250);
-            _this1.isRecording = true;
+            _this10.connection.send("StartConversation", profileId, sessionId, _this10._conversationSubject, mimeType, language);
+            _this10.mediaRecorder.start(250);
+            _this10.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this1.isConversationMode = false;
-            _this1.updateConversationButton();
+            _this10.isConversationMode = false;
+            _this10.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -1833,7 +1872,7 @@ window.openAIChatManager = function () {
           return removedCount;
         },
         receiveNotification: function receiveNotification(notification) {
-          var _this10 = this;
+          var _this11 = this;
           if (!notification || !notification.type) {
             return;
           }
@@ -1848,7 +1887,7 @@ window.openAIChatManager = function () {
           }
           this.scheduleNotificationDismiss(notification);
           this.$nextTick(function () {
-            _this10.scrollToBottom();
+            _this11.scrollToBottom();
           });
         },
         updateNotification: function updateNotification(notification) {
@@ -1865,12 +1904,12 @@ window.openAIChatManager = function () {
           }
         },
         scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
-          var _this11 = this;
+          var _this12 = this;
           if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
             return;
           }
           this.notificationDismissTimers[notification.type] = setTimeout(function () {
-            _this11.removeNotification(notification.type);
+            _this12.removeNotification(notification.type);
           }, notification.autoDismissMs);
         },
         clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
@@ -1900,12 +1939,12 @@ window.openAIChatManager = function () {
           });
         },
         scrollToBottom: function scrollToBottom() {
-          var _this12 = this;
+          var _this13 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this12.chatContainer.scrollTop = _this12.chatContainer.scrollHeight - _this12.chatContainer.clientHeight;
+            _this13.chatContainer.scrollTop = _this13.chatContainer.scrollHeight - _this13.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -1947,7 +1986,7 @@ window.openAIChatManager = function () {
           });
         },
         initializeApp: function initializeApp() {
-          var _this13 = this;
+          var _this14 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1976,7 +2015,7 @@ window.openAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this13.handleFileInputChange(e);
+                return _this14.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -1984,13 +2023,13 @@ window.openAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this13.handleDragOver(e);
+                  return _this14.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this13.handleDragLeave(e);
+                  return _this14.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this13.handleDrop(e);
+                  return _this14.handleDrop(e);
                 });
               }
             }
@@ -1998,55 +2037,55 @@ window.openAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this13.stream) {
+            if (!_this14.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this13.chatContainer.scrollHeight - _this13.chatContainer.clientHeight - _this13.chatContainer.scrollTop <= threshold;
-            _this13.autoScroll = atBottom;
+            var atBottom = _this14.chatContainer.scrollHeight - _this14.chatContainer.clientHeight - _this14.chatContainer.scrollTop <= threshold;
+            _this14.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this13.stream != null) {
+            if (_this14.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this13.buttonElement.click();
+              _this14.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this13.handleUserInput(e);
+            _this14.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this13.buttonElement.removeAttribute('disabled');
+              _this14.buttonElement.removeAttribute('disabled');
             } else {
-              _this13.buttonElement.setAttribute('disabled', true);
+              _this14.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this13.stream != null) {
-              _this13.stream.dispose();
-              _this13.stream = null;
-              _this13.streamingFinished();
-              _this13.hideTypingIndicator();
+            if (_this14.stream != null) {
+              _this14.stream.dispose();
+              _this14.stream = null;
+              _this14.streamingFinished();
+              _this14.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this13.messages.length > 0) {
-                var lastMsg = _this13.messages[_this13.messages.length - 1];
+              if (_this14.messages.length > 0) {
+                var lastMsg = _this14.messages[_this14.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this13.messages.pop();
+                  _this14.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this13.sendMessage();
+            _this14.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this13.generatePrompt(e.target);
+              _this14.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -2058,17 +2097,17 @@ window.openAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this13.loadSession(sessionId);
-              _this13.showChatScreen();
+              _this14.loadSession(sessionId);
+              _this14.showChatScreen();
             });
           }
-          for (var _i4 = 0; _i4 < config.messages.length; _i4++) {
-            this.addMessage(config.messages[_i4]);
+          for (var _i5 = 0; _i5 < config.messages.length; _i5++) {
+            this.addMessage(config.messages[_i5]);
           }
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this13.refreshAllFeedbackIcons();
+            _this14.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -2100,7 +2139,7 @@ window.openAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this13.toggleRecording();
+                _this14.toggleRecording();
               });
             }
           }
@@ -2110,7 +2149,7 @@ window.openAIChatManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this13.toggleConversationMode();
+                _this14.toggleConversationMode();
               });
             }
           }
@@ -2142,7 +2181,7 @@ window.openAIChatManager = function () {
           }
         },
         initializeWidget: function initializeWidget() {
-          var _this14 = this;
+          var _this15 = this;
           if (!config.widget.chatWidgetContainer) {
             console.error('The widget chatWidgetContainer is required.');
             return;
@@ -2171,14 +2210,14 @@ window.openAIChatManager = function () {
             var showHistoryButton = document.querySelector(config.widget.showHistoryButton);
             if (showHistoryButton) {
               showHistoryButton.addEventListener('click', function () {
-                _this14.chatHistorySection.classList.toggle('show');
+                _this15.chatHistorySection.classList.toggle('show');
               });
             }
             if (config.widget.closeHistoryButton) {
               var closeHistoryButton = document.querySelector(config.widget.closeHistoryButton);
               if (closeHistoryButton) {
                 closeHistoryButton.addEventListener('click', function () {
-                  _this14.showChatScreen();
+                  _this15.showChatScreen();
                 });
               }
             }
@@ -2187,8 +2226,8 @@ window.openAIChatManager = function () {
             var newChatButton = document.querySelector(config.widget.newChatButton);
             if (newChatButton) {
               newChatButton.addEventListener('click', function () {
-                _this14.resetSession();
-                _this14.showChatScreen();
+                _this15.resetSession();
+                _this15.showChatScreen();
               });
             }
           }
@@ -2324,17 +2363,17 @@ window.openAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this15 = this;
+        var _this16 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
           return _regenerator().w(function (_context6) {
             while (1) switch (_context6.n) {
               case 0:
                 _context6.n = 1;
-                return _this15.startConnection();
+                return _this16.startConnection();
               case 1:
-                _this15.initializeApp();
+                _this16.initializeApp();
                 if (config.widget) {
-                  _this15.initializeWidget();
+                  _this16.initializeWidget();
                 }
               case 2:
                 return _context6.a(2);
@@ -2362,9 +2401,14 @@ window.openAIChatManager = function () {
   };
 }();
 
-// Global function for downloading charts as images
-window.downloadChart = function (chartId) {
-  var canvas = document.getElementById(chartId);
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
   if (!canvas) {
     console.error('Chart canvas not found:', chartId);
     return;
@@ -2373,7 +2417,7 @@ window.downloadChart = function (chartId) {
   link.download = 'chart-' + chartId + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
 // Intercept download clicks for data-URI images and convert to blob downloads.
 document.addEventListener('click', function (e) {

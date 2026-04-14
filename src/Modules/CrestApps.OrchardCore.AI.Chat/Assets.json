@@ -1,9 +1,17 @@
 [
   {
+    "copy": true,
     "inputs": [
-      "../../Resources/CrestApps.AI.Resources/Assets/js/ai-chat.js"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.js"
     ],
     "output": "wwwroot/scripts/ai-chat.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.min.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat.min.js"
   },
   {
     "inputs": [

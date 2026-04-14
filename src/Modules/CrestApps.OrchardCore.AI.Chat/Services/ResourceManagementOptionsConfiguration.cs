@@ -14,6 +14,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
         _manifest
             .DefineScript("AIChatApp")
             .SetUrl("~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.min.js", "~/CrestApps.OrchardCore.AI.Chat/scripts/ai-chat.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/ai-chat.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/ai-chat.js")
+            .SetCdnIntegrity(
+                "sha384-gS5dQ4TGQSegk5aW0Z6Ub0qmuhZ7qyYAuJTAs4AFOBw36akepPzF6nI4FpqhkxPn",
+                "sha384-AwSZFzL0YLz+vZgBG+aMsgSwY3KglOs9gFnn0lTGY755BrKlwBMaft5yUJdigreF")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify")
             .SetVersion("1.0.0");
 

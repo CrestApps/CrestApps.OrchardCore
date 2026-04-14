@@ -12,12 +12,12 @@ function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present,
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.chatInteractionManager = function () {
   // Defaults (can be overridden by instanceConfig)
@@ -105,9 +105,12 @@ window.chatInteractionManager = function () {
 
   // Collector for charts discovered during marked parsing.
   var _pendingCharts = [];
+
+  // Global chart config map shared with ai-chat.js
+  window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
     var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -138,6 +141,7 @@ window.chatInteractionManager = function () {
           chartId: token.chartId,
           config: token.json
         });
+        window.__chartConfigs[token.chartId] = token.json;
         return createChartHtml(token.chartId);
       }
     }]
@@ -209,42 +213,48 @@ window.chatInteractionManager = function () {
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
-    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
-      _step;
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var c = _step.value;
-        var canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-          continue;
-        }
-        if (typeof Chart === 'undefined') {
-          console.error('Chart.js is not available on the page.');
-          continue;
-        }
-        try {
-          var _cfg$options;
-          // Destroy existing chart instance if re-rendering
-          if (canvas._chartInstance) {
-            canvas._chartInstance.destroy();
-          }
-          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
-          cfg.options.responsive = true;
-          cfg.options.maintainAspectRatio = false;
-          canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-          console.error('Error creating chart:', e);
-        }
-      }
 
-      // Prevent re-render work
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
     message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator = _createForOfIteratorHelper(charts),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var c = _step.value;
+          var canvas = document.getElementById(c.chartId);
+          if (!canvas) {
+            continue;
+          }
+          if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+            continue;
+          }
+          try {
+            var _cfg$options;
+            // Destroy existing chart instance if re-rendering
+            if (canvas._chartInstance) {
+              canvas._chartInstance.destroy();
+            }
+            var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+            (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = false;
+            canvas._chartInstance = new Chart(canvas, cfg);
+          } catch (e) {
+            console.error('Error creating chart:', e);
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+    });
   }
 
   // Parse markdown content via marked (which natively handles [chart:...] markers
@@ -257,7 +267,8 @@ window.chatInteractionManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
-      ADD_ATTR: ['target']
+      ADD_ATTR: ['target'],
+      ADD_TAGS: ['canvas']
     });
   }
   var initialize = function initialize(instanceConfig) {
@@ -886,6 +897,7 @@ window.chatInteractionManager = function () {
           };
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this6 = this;
           if (Object.keys(references).length) {
             var message = this.messages[messageIndex];
             var content = message.content || '';
@@ -967,7 +979,10 @@ window.chatInteractionManager = function () {
             message.content = processed;
             message.htmlContent = parseMarkdownContent(processed, message);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this6.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
@@ -1008,7 +1023,7 @@ window.chatInteractionManager = function () {
           }
         },
         synthesizeSpeech: function synthesizeSpeech(text) {
-          var _this6 = this;
+          var _this7 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
@@ -1016,7 +1031,7 @@ window.chatInteractionManager = function () {
           this.isPlayingAudio = true;
           this.connection.invoke("SynthesizeSpeech", this.getItemId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this6.isPlayingAudio = false;
+            _this7.isPlayingAudio = false;
           });
         },
         playCollectedAudio: function playCollectedAudio() {
@@ -1057,26 +1072,26 @@ window.chatInteractionManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this7 = this;
+          var _this8 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this8.currentAudioElement = null;
+            _this8.playNextInQueue();
           });
           audio.addEventListener('error', function () {
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this8.currentAudioElement = null;
+            _this8.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.isPlayingAudio = false;
+            _this8.currentAudioElement = null;
+            _this8.isPlayingAudio = false;
           });
         },
         playNextInQueue: function playNextInQueue() {
@@ -1106,7 +1121,7 @@ window.chatInteractionManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this8 = this;
+          var _this9 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1126,30 +1141,30 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this8.mediaRecorder = new MediaRecorder(stream, {
+            _this9.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this8._conversationSubject = new signalR.Subject();
-            _this8._conversationStream = stream;
+            _this9._conversationSubject = new signalR.Subject();
+            _this9._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this8._conversationAudioCtx = new AudioCtx();
-              _this8._conversationAnalyser = _this8._conversationAudioCtx.createAnalyser();
-              _this8._conversationAnalyser.fftSize = 256;
-              var micSource = _this8._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this8._conversationAnalyser);
+              _this9._conversationAudioCtx = new AudioCtx();
+              _this9._conversationAnalyser = _this9._conversationAudioCtx.createAnalyser();
+              _this9._conversationAnalyser.fftSize = 256;
+              var micSource = _this9._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this9._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this8._conversationAnalyser;
+            var analyser = _this9._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this8.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this9.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this8.isPlayingAudio && analyser) {
+                if (_this9.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1159,7 +1174,7 @@ window.chatInteractionManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this8.stopAudio();
+                    _this9.stopAudio();
                   }
                 }
 
@@ -1181,7 +1196,7 @@ window.chatInteractionManager = function () {
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this8._conversationSubject.next(base64);
+                          _this9._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
@@ -1192,27 +1207,27 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this8.mediaRecorder.addEventListener('stop', function () {
+            _this9.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this8._conversationSubject.complete();
+                  _this9._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var itemId = _this8.getItemId();
+            var itemId = _this9.getItemId();
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this8.connection.send("StartConversation", itemId, _this8._conversationSubject, mimeType, language);
-            _this8.mediaRecorder.start(250);
-            _this8.isRecording = true;
+            _this9.connection.send("StartConversation", itemId, _this9._conversationSubject, mimeType, language);
+            _this9.mediaRecorder.start(250);
+            _this9.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this8.isConversationMode = false;
-            _this8.updateConversationButton();
+            _this9.isConversationMode = false;
+            _this9.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -1316,19 +1331,19 @@ window.chatInteractionManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this9 = this;
+          var _this0 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this9.chatContainer.scrollTop = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight;
+            _this0.chatContainer.scrollTop = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
           this.prompt = event.target.value;
         },
         getItemId: function getItemId() {
-          return this.inputElement.getAttribute('data-interaction-id');
+          return this.inputElement.getAttribute('data-interaction-id') || this.inputElement.getAttribute('data-item-id');
         },
         getSaveIndicatorElement: function getSaveIndicatorElement() {
           if (config.saveIndicatorElementSelector) {
@@ -1337,7 +1352,7 @@ window.chatInteractionManager = function () {
           return document.querySelector('[data-chat-interaction-save-indicator]');
         },
         showSaveIndicator: function showSaveIndicator(text, className) {
-          var _this0 = this;
+          var _this1 = this;
           var indicator = this.getSaveIndicatorElement();
           if (!indicator) {
             return;
@@ -1353,7 +1368,7 @@ window.chatInteractionManager = function () {
           }
           this.saveIndicatorTimeout = setTimeout(function () {
             indicator.textContent = '';
-            _this0.saveIndicatorTimeout = null;
+            _this1.saveIndicatorTimeout = null;
           }, 3000);
         },
         clearPendingSettingsSave: function clearPendingSettingsSave() {
@@ -1427,10 +1442,10 @@ window.chatInteractionManager = function () {
           return false;
         },
         validateSettings: function validateSettings() {
-          var _this1 = this;
+          var _this10 = this;
           var isValid = true;
           this.getSettingInputs().forEach(function (input) {
-            isValid = _this1.validateSettingInput(input) && isValid;
+            isValid = _this10.validateSettingInput(input) && isValid;
           });
           return isValid;
         },
@@ -1526,12 +1541,12 @@ window.chatInteractionManager = function () {
           }
         },
         scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
-          var _this10 = this;
+          var _this11 = this;
           if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
             return;
           }
           this.notificationDismissTimers[notification.type] = setTimeout(function () {
-            _this10.removeNotification(notification.type);
+            _this11.removeNotification(notification.type);
           }, notification.autoDismissMs);
         },
         clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
@@ -1562,6 +1577,7 @@ window.chatInteractionManager = function () {
         },
         setItemId: function setItemId(itemId) {
           this.inputElement.setAttribute('data-interaction-id', itemId || '');
+          this.inputElement.setAttribute('data-item-id', itemId || '');
         },
         resetInteraction: function resetInteraction() {
           this.setItemId('');
@@ -1570,7 +1586,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this11 = this;
+          var _this12 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1582,59 +1598,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this11.stream) {
+            if (!_this12.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this11.chatContainer.scrollHeight - _this11.chatContainer.clientHeight - _this11.chatContainer.scrollTop <= threshold;
-            _this11.autoScroll = atBottom;
+            var atBottom = _this12.chatContainer.scrollHeight - _this12.chatContainer.clientHeight - _this12.chatContainer.scrollTop <= threshold;
+            _this12.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this11.stream != null) {
+            if (_this12.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this11.buttonElement.click();
+              _this12.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this11.handleUserInput(e);
+            _this12.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this11.buttonElement.removeAttribute('disabled');
+              _this12.buttonElement.removeAttribute('disabled');
             } else {
-              _this11.buttonElement.setAttribute('disabled', true);
+              _this12.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this11.prompt = _this11.inputElement.value;
-              if (_this11.inputElement.value.trim()) {
-                _this11.buttonElement.removeAttribute('disabled');
+              _this12.prompt = _this12.inputElement.value;
+              if (_this12.inputElement.value.trim()) {
+                _this12.buttonElement.removeAttribute('disabled');
               } else {
-                _this11.buttonElement.setAttribute('disabled', true);
+                _this12.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this11.stream != null) {
-              _this11.stream.dispose();
-              _this11.stream = null;
-              _this11.streamingFinished();
-              _this11.hideTypingIndicator();
+            if (_this12.stream != null) {
+              _this12.stream.dispose();
+              _this12.stream = null;
+              _this12.streamingFinished();
+              _this12.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this11.messages.length > 0) {
-                var lastMsg = _this11.messages[_this11.messages.length - 1];
+              if (_this12.messages.length > 0) {
+                var lastMsg = _this12.messages[_this12.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this11.messages.pop();
+                  _this12.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this11.sendMessage();
+            _this12.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -1645,7 +1661,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this11.loadInteraction(itemId);
+              _this12.loadInteraction(itemId);
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1676,20 +1692,20 @@ window.chatInteractionManager = function () {
           }
           document.addEventListener('input', function (event) {
             if (event.target.matches('.setting-input[data-setting]')) {
-              _this11.validateSettingInput(event.target);
-              _this11.queueSettingsSave();
+              _this12.validateSettingInput(event.target);
+              _this12.queueSettingsSave();
             }
           });
           document.addEventListener('change', function (event) {
             if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .group-toggle, .ci-agent-global-toggle')) {
               if (event.target.matches('.setting-input[data-setting]')) {
-                _this11.validateSettingInput(event.target);
+                _this12.validateSettingInput(event.target);
               }
-              _this11.queueSettingsSave();
+              _this12.queueSettingsSave();
               return;
             }
             if (event.target.closest('.prompt-template-parameters-input, .prompt-template-id-input')) {
-              _this11.queueSettingsSave();
+              _this12.queueSettingsSave();
             }
           });
           document.addEventListener('click', function (event) {
@@ -1697,7 +1713,7 @@ window.chatInteractionManager = function () {
               return;
             }
             setTimeout(function () {
-              _this11.queueSettingsSave();
+              _this12.queueSettingsSave();
             }, 0);
           });
 
@@ -1707,7 +1723,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this11.clearHistory(itemId);
+                _this12.clearHistory(itemId);
               }
             });
           }
@@ -1718,7 +1734,7 @@ window.chatInteractionManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this11.toggleRecording();
+                _this12.toggleRecording();
               });
             }
           }
@@ -1728,7 +1744,7 @@ window.chatInteractionManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this11.toggleConversationMode();
+                _this12.toggleConversationMode();
               });
             }
           }
@@ -1768,7 +1784,7 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this12 = this;
+          var _this13 = this;
           // Clear any existing timeout to reset the debounce timer
           this.clearPendingSettingsSave();
 
@@ -1779,11 +1795,11 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this12.settingsDirty) {
-              _this12.saveSettings();
-              _this12.settingsDirty = false;
+            if (_this13.settingsDirty) {
+              _this13.saveSettings();
+              _this13.settingsDirty = false;
             }
-            _this12.saveSettingsTimeout = null;
+            _this13.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
@@ -1799,7 +1815,7 @@ window.chatInteractionManager = function () {
           return this.getSelectedGroupValues('agentNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
         },
         saveSettings: function saveSettings() {
-          var _this13 = this;
+          var _this14 = this;
           var itemId = this.getItemId();
           if (!itemId) {
             return Promise.resolve();
@@ -1844,7 +1860,7 @@ window.chatInteractionManager = function () {
           }
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
             console.error('Error saving settings:', err);
-            _this13.showSaveIndicator('Save failed', 'text-danger');
+            _this14.showSaveIndicator('Save failed', 'text-danger');
           });
         },
         flushPendingSave: function flushPendingSave() {
@@ -1874,7 +1890,7 @@ window.chatInteractionManager = function () {
           navigator.clipboard.writeText(message);
         },
         startRecording: function startRecording() {
-          var _this14 = this;
+          var _this15 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1886,16 +1902,16 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this14.mediaRecorder = new MediaRecorder(stream, {
+            _this15.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this14.preRecordingPrompt = _this14.prompt;
-            _this14._audioInputSent = false;
+            _this15.preRecordingPrompt = _this15.prompt;
+            _this15._audioInputSent = false;
             var subject = new signalR.Subject();
-            var itemId = _this14.getItemId();
+            var itemId = _this15.getItemId();
             var pendingChunk = Promise.resolve();
-            _this14.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this15.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                   var data, uint8Array, binaryString, base64;
@@ -1919,7 +1935,7 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this14.mediaRecorder.addEventListener('stop', function () {
+            _this15.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
@@ -1928,10 +1944,10 @@ window.chatInteractionManager = function () {
               });
             });
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this14.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-            _this14.mediaRecorder.start(250);
-            _this14.isRecording = true;
-            _this14.updateMicButton();
+            _this15.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this15.mediaRecorder.start(250);
+            _this15.isRecording = true;
+            _this15.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
@@ -1985,15 +2001,15 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this15 = this;
+        var _this16 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
           return _regenerator().w(function (_context5) {
             while (1) switch (_context5.n) {
               case 0:
                 _context5.n = 1;
-                return _this15.startConnection();
+                return _this16.startConnection();
               case 1:
-                _this15.initializeApp();
+                _this16.initializeApp();
               case 2:
                 return _context5.a(2);
             }
@@ -2020,20 +2036,23 @@ window.chatInteractionManager = function () {
   };
 }();
 
-// Global function for downloading charts as images
-window.downloadChart = function (chartId) {
-  var canvas = document.getElementById(chartId);
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
   if (!canvas) {
     console.error('Chart canvas not found:', chartId);
     return;
   }
-
-  // Create a temporary link element
   var link = document.createElement('a');
   link.download = 'chart-' + chartId + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
 // Intercept download clicks for data-URI images and convert to blob downloads.
 document.addEventListener('click', function (e) {

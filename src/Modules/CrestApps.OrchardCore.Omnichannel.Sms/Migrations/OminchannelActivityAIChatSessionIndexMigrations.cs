@@ -17,9 +17,9 @@ internal sealed class OminchannelActivityAIChatSessionIndexMigrations : DataMigr
 
         await SchemaBuilder.AlterIndexTableAsync<OminchannelActivityAIChatSessionIndex>(table => table
             .CreateIndex("IDX_OminchannelActivityAIChatSessionIndex_DocumentId",
-        "DocumentId",
-        "ActivityId",
-        "SessionId"),
+                "DocumentId",
+                "ActivityId",
+                "SessionId"),
         collection: OmnichannelConstants.CollectionName
         );
 
