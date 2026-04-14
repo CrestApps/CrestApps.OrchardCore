@@ -189,7 +189,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             var context = new AICompletionContext
             {
-                ConnectionName = campaign.ConnectionName,
                 ChatDeploymentName = campaign.DeploymentName,
                 Temperature = campaign.Temperature,
                 TopP = campaign.TopP,
@@ -199,7 +198,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                 MaxTokens = campaign.MaxTokens,
                 ToolNames = campaign.ToolNames,
-
             };
 
             context.AdditionalProperties["Session"] = chatSession;
@@ -259,11 +257,19 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var dispositionCatalog = scope.ServiceProvider.GetRequiredService<ICatalog<OmnichannelDisposition>>();
 
                     var clientFactory = scope.ServiceProvider.GetRequiredService<IAIClientFactory>();
+                    var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();
 
                     var deferredPromptStore = scope.ServiceProvider.GetRequiredService<IAIChatSessionPromptStore>();
                     var dispositions = await dispositionCatalog.GetAsync(campaign.DispositionIds);
 
-                    var client = await clientFactory.CreateChatClientAsync(campaign.ProviderName, campaign.ConnectionName, campaign.DeploymentName);
+                    var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, campaign.DeploymentName, campaign.ProviderName);
+
+                    if (deployment == null)
+                    {
+                        return;
+                    }
+
+                    var client = await clientFactory.CreateChatClientAsync(deployment);
 
                     var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
 

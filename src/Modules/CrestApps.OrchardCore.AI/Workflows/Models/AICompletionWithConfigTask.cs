@@ -139,7 +139,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
                 return Outcomes("Failed");
             }
 
-            var client = await _aIClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
+            var client = await _aIClientFactory.CreateChatClientAsync(deployment);
 
             var chatOptions = new ChatOptions
             {

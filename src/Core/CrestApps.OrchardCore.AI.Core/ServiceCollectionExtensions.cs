@@ -131,6 +131,7 @@ public static class ServiceCollectionExtensions
             ServiceLifetime.Scoped,
             static sp => new ConfigurationAIDeploymentSource(
                 sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<IOptions<AIOptions>>(),
                 sp.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>(),
                 sp.GetRequiredService<ILogger<ConfigurationAIDeploymentSource>>()));
@@ -140,6 +141,7 @@ public static class ServiceCollectionExtensions
             ServiceLifetime.Scoped,
             static sp => new ConfigurationAIProviderConnectionSource(
                 sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
                 sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionSource>>()));
     }

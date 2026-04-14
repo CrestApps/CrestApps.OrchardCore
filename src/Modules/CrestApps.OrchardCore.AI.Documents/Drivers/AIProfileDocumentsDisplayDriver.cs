@@ -164,14 +164,10 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                 var deployment = await ResolveDeploymentAsync(profile);
                 var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
                     AIDeploymentType.Embedding,
-                    clientName: deployment?.ClientName,
-                    connectionName: deployment?.ConnectionName);
+                    clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
-                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(
-                        embeddingDeployment.ClientName,
-                        embeddingDeployment.ConnectionName,
-                        embeddingDeployment.ModelName);
+                    : await _aiClientFactory.CreateEmbeddingGeneratorAsync(embeddingDeployment);
                 var processedDocuments = new List<AIDocument>();
 
                 foreach (var file in model.Files)

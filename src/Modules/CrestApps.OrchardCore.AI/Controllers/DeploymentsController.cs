@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -67,13 +68,26 @@ public sealed class DeploymentsController : Controller
             return Forbid();
         }
 
+        var allEntries = await _deploymentManager.GetAllAsync();
+
+        IEnumerable<AIDeployment> filtered = allEntries;
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            filtered = filtered.Where(e => e.Name.Contains(options.Search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        filtered = filtered.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase);
+
+        var editableEntries = filtered.Where(e => !e.IsReadOnly);
+        var readOnlyEntries = filtered.Where(e => e.IsReadOnly);
+
+        var editableCount = editableEntries.Count();
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
 
-        var result = await _deploymentManager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Sorted = true,
-            Name = options.Search,
-        });
+        var pagedEditable = editableEntries
+            .Skip((pager.Page - 1) * pager.PageSize)
+            .Take(pager.PageSize);
 
         // Maintain previous route data when generating page links.
         var routeData = new RouteData();
@@ -83,17 +97,27 @@ public sealed class DeploymentsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceCatalogEntryViewModel<AIDeployment>
+        var viewModel = new ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
         {
             Models = [],
+            ReadOnlyModels = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, editableCount, routeData),
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in result.Entries)
+        foreach (var record in pagedEditable)
         {
             viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
+            {
+                Model = record,
+                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
+            });
+        }
+
+        foreach (var record in readOnlyEntries)
+        {
+            viewModel.ReadOnlyModels.Add(new CatalogEntryViewModel<AIDeployment>
             {
                 Model = record,
                 Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")

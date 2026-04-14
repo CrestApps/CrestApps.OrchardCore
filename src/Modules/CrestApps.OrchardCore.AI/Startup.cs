@@ -136,7 +136,7 @@ public sealed class Startup : StartupBase
                 o.ProviderSections.Add("OrchardCore:CrestApps:AI:Providers");
 
                 // This should be removed in the next major release.
-                o.ProviderSections.Add("OrcahrdCore:CrestApps_AI:Providers");
+                o.ProviderSections.Add("OrchardCore:CrestApps_AI:Providers");
             });
     }
 
