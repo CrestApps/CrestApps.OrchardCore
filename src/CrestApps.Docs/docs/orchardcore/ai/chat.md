@@ -112,6 +112,16 @@ Text-to-speech synthesis occurs after the full response text has been received â
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
 
+### Invoking Utility and Agent Profiles
+
+For **Utility** and **Agent** profile types, the AI profile list includes an **Invoke Profile** action in the actions menu. Clicking **Invoke Profile** opens a dedicated single-response screen where you can:
+
+- Send a message to the profile and see the streamed response in real time.
+- Each new message clears the previous response so only the latest prompt and its reply are visible.
+- Invoke your profile without creating persistent chat sessions.
+
+This is useful for quickly iterating on system instructions, verifying tool integrations, or confirming that the profile produces the expected output.
+
 ---
 
 ### Admin Chat Widget

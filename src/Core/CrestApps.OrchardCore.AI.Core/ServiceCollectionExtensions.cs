@@ -79,12 +79,6 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
-        services
-            .Configure<AIDeploymentCatalogOptions>(o =>
-            {
-                o.DeploymentSections.Add("OrchardCore:CrestApps:AI:Deployments");
-            });
-
         return services;
     }
 
@@ -109,7 +103,6 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
     /// <summary>
     /// Replaces core CrestApps.Core.AI configuration-backed services that inject
     /// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> (host-level) with

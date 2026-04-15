@@ -123,6 +123,45 @@
         if (configEl) {
             chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
         }
+
+        // Provide a renderPendingCharts fallback for chart-interaction.js which
+        // stores unrendered chart configs in window.__chartConfigs but does not
+        // include a retry mechanism (unlike ai-chat.js).
+        if (typeof window.renderPendingCharts !== 'function') {
+            window.renderPendingCharts = function () {
+                if (typeof Chart === 'undefined') return;
+                var configs = window.__chartConfigs;
+                if (!configs) return;
+                requestAnimationFrame(function () {
+                    Object.keys(configs).forEach(function (chartId) {
+                        var canvas = document.getElementById(chartId);
+                        if (!canvas || canvas.offsetParent === null) return;
+                        try {
+                            if (canvas._chartInstance) canvas._chartInstance.destroy();
+                            var cfg = typeof configs[chartId] === 'string' ? JSON.parse(configs[chartId]) : configs[chartId];
+                            cfg.options = cfg.options || {};
+                            cfg.options.responsive = true;
+                            cfg.options.maintainAspectRatio = true;
+                            cfg.options.aspectRatio = cfg.options.aspectRatio || 4 / 3;
+                            canvas._chartInstance = new Chart(canvas, cfg);
+                            delete configs[chartId];
+                        } catch (e) {
+                            console.error('Error creating chart:', e);
+                        }
+                    });
+                });
+            };
+        }
+
+        // Observe the chat container for newly added canvas elements that may
+        // need chart rendering. This catches charts that were deferred because
+        // the canvas was not yet visible or was replaced during streaming.
+        var chatContainer = document.getElementById('@chatContainerHtmlId');
+        if (chatContainer) {
+            new MutationObserver(function () {
+                window.renderPendingCharts();
+            }).observe(chatContainer, { childList: true, subtree: true });
+        }
     });
 </script>
 @{

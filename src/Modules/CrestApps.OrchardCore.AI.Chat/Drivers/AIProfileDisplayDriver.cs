@@ -22,9 +22,15 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
     public override IDisplayResult Display(AIProfile profile, BuildDisplayContext context)
     {
-        return View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
-            .Location("ActionsMenu:5")
-            .RenderWhen(async () => profile.Type == AIProfileType.Chat &&
-            await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile));
+        return Combine(
+            View("AIProfile_ChatActionsMenu_SummaryAdmin", profile)
+                .Location("ActionsMenu:5")
+                .RenderWhen(async () => profile.Type == AIProfileType.Chat &&
+                await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile)),
+            View("AIProfile_TestActionsMenu_SummaryAdmin", profile)
+                .Location("ActionsMenu:5")
+                .RenderWhen(async () => (profile.Type == AIProfileType.Utility || profile.Type == AIProfileType.Agent) &&
+                await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
+        );
     }
 }

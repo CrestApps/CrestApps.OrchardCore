@@ -1,0 +1,112 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.OrchardCore.AI.Chat.ViewModels
+@using CrestApps.Core.SignalR.Services
+@using System.Text.Json
+
+@model TestProfileViewModel
+
+@inject HubRouteManager HubRouteManager
+
+@{
+    var baseId = Html.IdForModel();
+    var chatAppHtmlId = $"{baseId}_ChatApp";
+    var buttonHtmlId = $"{baseId}_SendButton";
+    var userPromptHtmlId = $"{baseId}_UserPrompt";
+    var chatContainerHtmlId = $"{baseId}_ChatContainer";
+    var placeholderHtmlId = $"{baseId}_Placeholder";
+}
+
+<div class="container-fluid d-flex flex-column" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
+    <div class="flex-grow-1 overflow-y-auto p-3 mb-3 rounded-2 border bg-theme" id="@chatContainerHtmlId">
+        <div class="w-100 ai-chat-messages">
+            <div id="@placeholderHtmlId" class="text-center p-3">
+                <h1 class="mb-3">@T["Invoke {0}", Model.Profile?.DisplayText ?? Model.Profile?.Name ?? "Profile"]</h1>
+                <p class="text-muted">@T["Send a message to invoke this profile. Only the last response is shown."]</p>
+            </div>
+
+            <div id="@chatAppHtmlId"></div>
+        </div>
+    </div>
+
+    <div class="flex-shrink-0">
+        <div class="text-bg-light rounded border w-100">
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4"
+                      id="@userPromptHtmlId"
+                      data-session-id=""
+                      data-profile-id="@Model.ProfileId"
+                      placeholder="@T["Enter a message"] ..."
+                      aria-label="@T["Enter a message"]"
+                      aria-describedby="@buttonHtmlId"></textarea>
+
+            <div class="d-flex justify-content-end px-3 my-2">
+                <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled
+                        data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                        data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style asp-name="AIChatApp" at="Head"></style>
+<style asp-name="highlightjs" at="Head"></style>
+
+<script asp-name="AIChatApp" at="Foot"></script>
+
+<script at="Foot" depends-on="AIChatApp">
+    document.addEventListener('DOMContentLoaded', function () {
+        var configEl = document.getElementById('@($"{baseId}_Config")');
+
+        if (configEl) {
+            var config = JSON.parse(configEl.getAttribute('data-config'));
+            var app = openAIChatManager.initialize(config);
+
+            // In test mode, reset the session and clear all messages before
+            // each send so every request is independent with no history.
+            var originalSendMessage = app.sendMessage;
+            app.sendMessage = function () {
+                app.resetSession();
+                app.messages.splice(0, app.messages.length);
+                originalSendMessage.call(app);
+            };
+        }
+    });
+</script>
+
+@{
+    var chatConfig = new Dictionary<string, object>
+    {
+        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext),
+        ["appElementSelector"] = $"#{chatAppHtmlId}",
+        ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
+        ["inputElementSelector"] = $"#{userPromptHtmlId}",
+        ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
+        ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
+        ["autoCreateSession"] = false,
+        ["messages"] = Array.Empty<object>(),
+        ["metricsEnabled"] = false,
+        ["chatMode"] = "TextInput",
+        ["isOrchestratorAvailable"] = true,
+        ["widget"] = (object)null,
+    };
+}
+
+<div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
+
+<style at="Head">
+    .ta-content {
+        height: 100% !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    .chat-user-prompt-input:focus {
+        border: none;
+        box-shadow: none;
+    }
+</style>

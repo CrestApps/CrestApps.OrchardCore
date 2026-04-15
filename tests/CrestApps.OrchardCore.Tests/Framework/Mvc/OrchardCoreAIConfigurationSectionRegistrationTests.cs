@@ -10,13 +10,14 @@ using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Documents;
 using OrchardCore.Documents.Models;
+using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.Tests.Framework.Mvc;
 
 public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
 {
     [Fact]
-    public void AddAIDeploymentServices_ShouldRegisterCorrectAndLegacyDeploymentSections()
+    public void AddAIDeploymentServices_ShouldRegisterCorrectDeploymentSections()
     {
         var services = new ServiceCollection();
         services.AddOptions();
@@ -27,12 +28,11 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
 
         var options = serviceProvider.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>().Value;
 
-        Assert.Contains("OrchardCore:CrestApps:AI:Deployments", options.DeploymentSections);
-        Assert.Contains("OrcahrdCore:CrestApps:AI:Deployments", options.DeploymentSections);
+        Assert.Contains("CrestApps_AI:Deployments", options.DeploymentSections);
     }
 
     [Fact]
-    public void Startup_ShouldRegisterCorrectAndLegacyConnectionAndProviderSections()
+    public void Startup_ShouldRegisterCorrectConnectionAndProviderSections()
     {
         var services = new ServiceCollection();
         services.AddOptions();
@@ -43,30 +43,33 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
 
         var options = serviceProvider.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>().Value;
 
-        Assert.Contains("OrchardCore:CrestApps:AI:Connections", options.ConnectionSections);
-        Assert.Contains("OrcahrdCore:CrestApps:AI:Connections", options.ConnectionSections);
-        Assert.Contains("OrchardCore:CrestApps:AI:Providers", options.ProviderSections);
-        Assert.Contains("OrcahrdCore:CrestApps:AI:Providers", options.ProviderSections);
+        Assert.Contains("CrestApps_AI:Connections", options.ConnectionSections);
+        Assert.Contains("CrestApps_AI:Providers", options.ProviderSections);
     }
 
     [Fact]
-    public void Startup_ShouldMergeOrchardCoreConnectionSectionsIntoProviderOptions()
+    public void Startup_ShouldMergeConnectionSectionsIntoProviderOptions()
     {
+        // IShellConfiguration is scoped to the OrchardCore: section, so section
+        // paths registered without the OrchardCore: prefix resolve correctly.
+        // Core defaults (CrestApps:AI:*) and Orchard-registered (CrestApps_AI:*)
+        // both map through IShellConfiguration.
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["OrchardCore:CrestApps:AI:Connections:0:Name"] = "primary-openai",
-                ["OrchardCore:CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
-                ["OrcahrdCore:CrestApps:AI:Connections:0:Name"] = "legacy-openai",
-                ["OrcahrdCore:CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
-                ["OrchardCore:CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:Endpoint"] = "https://example.openai.azure.com/",
-                ["OrchardCore:CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:AuthenticationType"] = "ApiKey",
-                ["OrchardCore:CrestApps:AI:Providers:AzureOpenAI:Connections:azure-shared:ApiKey"] = "secret",
+                ["CrestApps:AI:Connections:0:Name"] = "primary-openai",
+                ["CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
+                ["CrestApps_AI:Connections:0:Name"] = "legacy-openai",
+                ["CrestApps_AI:Connections:0:ClientName"] = "OpenAI",
+                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:Endpoint"] = "https://example.openai.azure.com/",
+                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:AuthenticationType"] = "ApiKey",
+                ["CrestApps_AI:Providers:AzureOpenAI:Connections:azure-shared:ApiKey"] = "secret",
             })
             .Build();
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton<IShellConfiguration>(new MockShellConfiguration(configuration));
         services.AddLogging();
         services.AddOptions();
 
@@ -87,13 +90,14 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string>
             {
-                ["OrchardCore:CrestApps:AI:Connections:0:Name"] = "primary-openai",
-                ["OrchardCore:CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
+                ["CrestApps:AI:Connections:0:Name"] = "primary-openai",
+                ["CrestApps:AI:Connections:0:ClientName"] = "OpenAI",
             })
             .Build();
 
         var services = new ServiceCollection();
         services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton<IShellConfiguration>(new MockShellConfiguration(configuration));
         services.AddLogging();
         services.AddOptions();
         services.AddSingleton(CreateDocumentManager<AIProviderConnection>());
@@ -121,5 +125,35 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
             .ReturnsAsync(new DictionaryDocument<T>());
 
         return manager.Object;
+    }
+
+    /// <summary>
+    /// A minimal IShellConfiguration wrapper around an IConfiguration for testing.
+    /// In production, IShellConfiguration is scoped to the OrchardCore: section
+    /// and includes App_Data/appsettings.json. In tests, we use the config directly.
+    /// </summary>
+    private sealed class MockShellConfiguration : IShellConfiguration
+    {
+        private readonly IConfiguration _configuration;
+
+        public MockShellConfiguration(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        public string this[string key]
+        {
+            get => _configuration[key];
+            set => _configuration[key] = value;
+        }
+
+        public IEnumerable<IConfigurationSection> GetChildren()
+            => _configuration.GetChildren();
+
+        public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken()
+            => _configuration.GetReloadToken();
+
+        public IConfigurationSection GetSection(string key)
+            => _configuration.GetSection(key);
     }
 }

@@ -81,7 +81,6 @@ public sealed class Startup : StartupBase
 
         services
             .AddAIDeploymentServices()
-
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
@@ -128,12 +127,8 @@ public sealed class Startup : StartupBase
         services
             .Configure<AIProviderConnectionCatalogOptions>(o =>
             {
-                o.ConnectionSections.Add("OrchardCore:CrestApps:AI:Connections");
-
-                o.ProviderSections.Add("OrchardCore:CrestApps:AI:Providers");
-
                 // This should be removed in the next major release.
-                o.ProviderSections.Add("OrchardCore:CrestApps_AI:Providers");
+                o.ProviderSections.Add("CrestApps_AI:Providers");
             });
     }
 
