@@ -25,7 +25,6 @@ window.openAIChatManager = function () {
     // UI defaults for generated media
     generatedImageAltText: 'Generated Image',
     generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 900,
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
@@ -134,8 +133,7 @@ window.openAIChatManager = function () {
   // its DOM update to render charts it didn't create itself.
   window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
-    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -263,25 +261,37 @@ window.openAIChatManager = function () {
   function renderChartOnCanvas(chartId, config) {
     var canvas = document.getElementById(chartId);
     if (!canvas) {
-      return;
+      return false;
     }
     if (typeof Chart === 'undefined') {
       console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
-      return;
+      return false;
+    }
+
+    // When the canvas is inside a hidden container (e.g., a widget panel with
+    // display:none), it has zero dimensions and Chart.js cannot render correctly.
+    // Keep the config in __chartConfigs so renderPendingCharts() can retry later
+    // once the container becomes visible.
+    if (canvas.offsetParent === null) {
+      window.__chartConfigs[chartId] = config;
+      return false;
     }
     try {
-      var _cfg$options;
+      var _cfg$options, _cfg$options2, _cfg$options2$aspectR;
       if (canvas._chartInstance) {
         canvas._chartInstance.destroy();
       }
       var cfg = typeof config === 'string' ? JSON.parse(config) : config;
       (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
       cfg.options.responsive = true;
-      cfg.options.maintainAspectRatio = false;
+      cfg.options.maintainAspectRatio = true;
+      (_cfg$options2$aspectR = (_cfg$options2 = cfg.options).aspectRatio) !== null && _cfg$options2$aspectR !== void 0 ? _cfg$options2$aspectR : _cfg$options2.aspectRatio = 4 / 3;
       canvas._chartInstance = new Chart(canvas, cfg);
       delete window.__chartConfigs[chartId];
+      return true;
     } catch (e) {
       console.error('Error creating chart:', e);
+      return false;
     }
   }
 
@@ -314,8 +324,8 @@ window.openAIChatManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
-      ADD_ATTR: ['target'],
-      ADD_TAGS: ['canvas']
+      ADD_TAGS: ['canvas'],
+      ADD_ATTR: ['target']
     });
   }
   var initialize = function initialize(instanceConfig) {

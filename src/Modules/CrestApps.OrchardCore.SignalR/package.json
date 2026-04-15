@@ -9,6 +9,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@microsoft/signalr": "8.0.7"
+    "@microsoft/signalr": "10.0.0"
   }
 }

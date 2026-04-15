@@ -49,7 +49,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfilePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePostSessionDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileChatModeDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>();
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateChatModeDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>();
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
