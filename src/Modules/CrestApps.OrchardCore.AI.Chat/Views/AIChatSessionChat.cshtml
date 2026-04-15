@@ -70,7 +70,7 @@
 
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
 
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation;
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
 
     var ttsVoiceName = chatModeSettings?.VoiceName;
 
@@ -264,7 +264,9 @@
 
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
 
-        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
+        ["textToSpeechEnabled"] = textToSpeechEnabled,
+
+        ["isOrchestratorAvailable"]= orchestratorAvailability.IsAvailable,
 
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
 

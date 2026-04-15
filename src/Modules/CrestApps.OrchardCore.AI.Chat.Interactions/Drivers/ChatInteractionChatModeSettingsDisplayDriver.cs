@@ -40,6 +40,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         return Initialize<ChatInteractionChatModeSettingsViewModel>("ChatInteractionChatModeSettings_Edit", async model =>
         {
             model.ChatMode = settings.ChatMode;
+            model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             model.AvailableModes = await GetAvailableModesAsync();
         }).Location("Content:4.5%Chat Interactions;1")
         .OnGroup(SettingsGroupId)
@@ -58,6 +59,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.ChatMode = model.ChatMode;
+        settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
 
         return Edit(site, settings, context);
     }

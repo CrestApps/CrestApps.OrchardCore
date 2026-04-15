@@ -10,6 +10,8 @@ public class AIProfileChatModeViewModel
 
     public string VoiceName { get; set; }
 
+    public bool EnableTextToSpeechPlayback { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> AvailableModes { get; set; }
 

@@ -13,7 +13,7 @@
     "vuejs": "npm:vue@2.6.13"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "1.0.0-preview-22-preview.4",
+    "@crestapps/ai-chat-ui": "1.0.0-preview-22.5",
     "chart.js": "^4.5.1"
   }
 }

@@ -133,11 +133,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/technical-name-generator.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/technical-name-generator.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/technical-name-generator.js")
             .SetCdnIntegrity(
-                "sha384-YP42+M1PsB+ES6JWyn4STNK++OzNd0hpR3OjDwv8k1CjbiKeNACrczpH1kWf0QdL",
-                "sha384-tjJ7clzOuQCtIdKqFfVnbf4WPnLoh0oCX0Ywz893wLLz2xpbv91wvpKM2WmT0zKC")
+                "sha384-YHKJmamXRxgV9J2W8b/mQ4yepyK8eX6XsAlwq0Yj1PDrGzHh+xdq3LcR4dxpszIq",
+                "sha384-d5UXDN0rRqVvHS5hQ2GGCjoHorUFlsaZ66ITQr4F5oKANLGTJxpTUVxTI45yM5j3")
              .SetVersion("1.0.0");
 
         _manifest
@@ -146,11 +146,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/document-drop-zone.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/document-drop-zone.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/document-drop-zone.js")
             .SetCdnIntegrity(
-                "sha384-AeQ80M3+HjtZR9rtn3WklqHR73PT2TyZeu0nE8r6kp1WkG1XnY1CA0P7NJCo0z2L",
-                "sha384-QYkkDBQLzwG9ZB6n5MLR+hXvZUB9bGUld4tESCKILtiRs/u4J4LTAymeCCqPEsXV")
+                "sha384-KFkL+SiquJoYpKSCo7vyhEATgbpE+FKizywY9qfjbI5QLNFnZxIz9sFQjqh3yMfa",
+                "sha384-h8+pletFGnYtxUtoPyQVEfBY0O3gz/DwxtjsDGQq7xX93GOpcx0LZlDwdguQkV1B")
              .SetVersion("1.0.0");
 
         _manifest
@@ -159,11 +159,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/document-drop-zone.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22-preview.2/dist/document-drop-zone.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview-22.5/dist/document-drop-zone.css")
             .SetCdnIntegrity(
                 "sha384-rQeaRUVX3mFuO9odBEzwKV4akVEHz3MLSl5+e0h43rKLtxKQnRwh0ARsiJMXBlnZ",
-                "sha384-Ang/pm5AM02s0LfFvORo2x/NrkMJr+OxisaCiFc1xLnpQm8NiUDPSj4YY6gwNiY7")
+                "sha384-Nej+SC8Gi+UVsc5GZ9b4NlJ7tGxoqyyAuoB3lMOur7MN0vjxNxpEa3N4qNh7peOO")
             .SetVersion("1.0.0");
     }
 

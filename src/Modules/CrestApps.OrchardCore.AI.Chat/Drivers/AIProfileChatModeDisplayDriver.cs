@@ -34,6 +34,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.ChatMode = settings.ChatMode;
                 model.VoiceName = settings.VoiceName;
+                model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             }
 
             var (availableModes, hasConversation) = GetAvailableModes();
@@ -68,6 +69,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             settings.VoiceName = model.ChatMode == ChatMode.Conversation
             ? model.VoiceName?.Trim()
             : null;
+            settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
         return Edit(profile, context);

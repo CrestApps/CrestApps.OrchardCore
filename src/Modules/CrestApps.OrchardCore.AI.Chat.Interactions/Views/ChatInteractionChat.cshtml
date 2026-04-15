@@ -35,7 +35,7 @@
     var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation
+    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings.EnableTextToSpeechPlayback)
         && textToSpeechDeployment != null;
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
@@ -183,6 +183,7 @@
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
         ["saveIndicatorElementSelector"] = "#settings-save-indicator",
+        ["textToSpeechEnabled"] = textToSpeechEnabled,
     };
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

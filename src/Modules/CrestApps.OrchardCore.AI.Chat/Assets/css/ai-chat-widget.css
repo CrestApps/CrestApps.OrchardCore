@@ -333,13 +333,24 @@
 
 .ai-admin-widget .message-buttons-container {
     position: absolute;
-    bottom: 0.25rem;
+    top: 0;
     right: 0.25rem;
     display: none;
+    padding: 0.25rem;
+    background: #fff;
+    z-index: 1;
 }
 
 .ai-admin-widget .ai-chat-message-item:hover .message-buttons-container {
     display: inline-block;
+}
+
+.ai-admin-widget .tts-playing .message-buttons-container {
+    display: inline-block;
+}
+
+.ai-admin-widget .tts-playing .message-buttons-container .tts-btn {
+    color: var(--ai-widget-primary, #41b670);
 }
 
 .ai-admin-widget .spark-effect i,

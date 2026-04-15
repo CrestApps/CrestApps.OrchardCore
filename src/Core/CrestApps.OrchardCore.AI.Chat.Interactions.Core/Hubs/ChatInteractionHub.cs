@@ -1501,7 +1501,7 @@ public class ChatInteractionHub : ChatHubBase<IChatInteractionHubClient>
 
                 var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
 
-                if (chatModeSettings.ChatMode != ChatMode.Conversation)
+                if (chatModeSettings.ChatMode != ChatMode.Conversation && !chatModeSettings.EnableTextToSpeechPlayback)
                 {
                     await Clients.Caller.ReceiveError(S["Text-to-speech is not enabled for chat interactions."].Value);
                     return;

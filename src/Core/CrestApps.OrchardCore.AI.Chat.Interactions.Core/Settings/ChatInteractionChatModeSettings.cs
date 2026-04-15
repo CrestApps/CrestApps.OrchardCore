@@ -12,4 +12,12 @@ public sealed class ChatInteractionChatModeSettings
     /// Defaults to <see cref="ChatMode.TextInput"/>.
     /// </summary>
     public ChatMode ChatMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to show text-to-speech playback controls on
+    /// assistant messages in chat interactions. When enabled the UI displays
+    /// a play button on each assistant message, allowing the user to listen
+    /// to the response via the configured TTS deployment.
+    /// </summary>
+    public bool EnableTextToSpeechPlayback { get; set; }
 }

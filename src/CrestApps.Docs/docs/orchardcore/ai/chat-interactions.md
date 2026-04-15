@@ -93,7 +93,17 @@ If the speech-to-text service encounters an error during transcription, the erro
 Text-to-speech synthesis occurs after the full response text has been received — it does not interrupt or delay the text streaming experience.
 :::
 
-## Related Features
+### Text-to-Speech Playback
+
+You can enable on-demand text-to-speech playback independently of the Conversation chat mode. When enabled, a playback button (🔊) appears on each AI-generated message, allowing users to click and listen to the response.
+
+To enable TTS playback for Chat Interactions:
+
+1. Navigate to **Settings → Artificial Intelligence → Chat Interactions**.
+2. Check **Enable text-to-speech playback**.
+3. Save the settings.
+
+A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.## Related Features
 
 ### AI Memory
 

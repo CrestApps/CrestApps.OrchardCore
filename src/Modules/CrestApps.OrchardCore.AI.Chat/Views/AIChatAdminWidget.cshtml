@@ -61,7 +61,7 @@
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
     var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation;
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
     var ttsVoiceName = chatModeSettings?.VoiceName;
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
@@ -222,6 +222,7 @@
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["textToSpeechEnabled"] = textToSpeechEnabled,
         ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
     };

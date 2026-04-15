@@ -53,3 +53,4 @@
   });
   window.initAutoGenerateTechnicalName = initAutoGenerateTechnicalName;
 })();
+//# sourceMappingURL=technical-name-generator.js.map

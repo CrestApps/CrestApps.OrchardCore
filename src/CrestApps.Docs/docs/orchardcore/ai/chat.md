@@ -108,6 +108,28 @@ If the speech-to-text service encounters an error (e.g., authentication failure)
 Text-to-speech synthesis occurs after the full response text has been received — it does not interrupt or delay the text streaming experience.
 :::
 
+### Text-to-Speech Playback
+
+Even when a profile is not using the full **Conversation** chat mode, you can enable on-demand text-to-speech playback for AI-generated messages. When enabled, a playback button (🔊) appears on each AI message, allowing users to click and listen to the response as synthesized speech.
+
+#### Enabling TTS Playback
+
+TTS playback can be enabled at two levels:
+
+- **Site level (Chat Interactions)**: Navigate to **Settings → Artificial Intelligence → Chat Interactions** and check **Enable text-to-speech playback**. This enables playback across all Chat Interaction sessions.
+- **Profile level**: On the AI Profile editor, under the **Chat Mode** section, check **Enable text-to-speech playback**. This enables playback for all chat UIs associated with that specific profile.
+
+#### Prerequisites
+
+- A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments**.
+- The playback feature works with any chat mode (Text Only, Audio Input, or Conversation). In Conversation mode, TTS is already built-in and always active.
+
+#### Behavior
+
+- When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser.
+- During playback, the playback button is highlighted and message action buttons remain visible.
+- Users can stop playback by clicking the button again.
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
