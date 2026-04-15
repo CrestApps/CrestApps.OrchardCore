@@ -38,13 +38,24 @@
 
 .ai-chat-messages .message-buttons-container {
     position: absolute;
-    bottom: 0.25rem;
+    top: 0;
     right: 0.25rem;
     display: none;
+    padding: 0.25rem;
+    background: #fff;
+    z-index: 1;
 }
 
 .ai-chat-messages .ai-chat-message-item:hover .message-buttons-container {
     display: inline-block;
+}
+
+.ai-chat-messages .message-buttons-container:has(.tts-playing) {
+    display: inline-block;
+}
+
+.ai-chat-messages .message-buttons-container .tts-playing {
+    color: var(--ai-chat-primary, #198754);
 }
 
 @keyframes spark-burst {

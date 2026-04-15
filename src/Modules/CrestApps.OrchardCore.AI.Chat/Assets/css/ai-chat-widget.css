@@ -345,11 +345,11 @@
     display: inline-block;
 }
 
-.ai-admin-widget .tts-playing .message-buttons-container {
+.ai-admin-widget .message-buttons-container:has(.tts-playing) {
     display: inline-block;
 }
 
-.ai-admin-widget .tts-playing .message-buttons-container .tts-btn {
+.ai-admin-widget .message-buttons-container .tts-playing {
     color: var(--ai-widget-primary, #41b670);
 }
 
