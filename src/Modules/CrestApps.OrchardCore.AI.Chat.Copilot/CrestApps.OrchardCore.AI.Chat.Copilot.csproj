@@ -21,10 +21,10 @@
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="CrestApps.Core.AI.Copilot" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CrestApps.Core.AI.Copilot" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
   </ItemGroup>

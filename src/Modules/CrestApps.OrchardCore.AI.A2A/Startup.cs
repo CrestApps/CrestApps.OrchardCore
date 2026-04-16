@@ -55,7 +55,7 @@ public sealed class A2AHostStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<A2AHostOptions>(_shellConfiguration.GetSection("CrestApps_AI:A2AHost"));
+        services.Configure<A2AHostOptions>(_shellConfiguration.GetSection("CrestApps:A2AHost"));
 
         services.AddPermissionProvider<A2AHostPermissionsProvider>();
 

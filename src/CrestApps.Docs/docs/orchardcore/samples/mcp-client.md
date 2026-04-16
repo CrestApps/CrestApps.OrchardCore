@@ -46,12 +46,29 @@ After enabling the feature, refresh the sample UI to see tools, prompts, and res
 
 ## Configuration
 
-The MCP endpoint is configured via `Mcp:Endpoint`. Aspire sets it automatically, but you can override it in `appsettings.json`:
+The MCP endpoint and authentication are configured via the `Mcp` section. Aspire sets the endpoint automatically, but you can override it in `appsettings.json`:
 
 ```json
 {
   "Mcp": {
-    "Endpoint": "https://localhost:5001/mcp/sse"
+    "Endpoint": "https://localhost:5001/mcp/sse",
+    "ApiKey": ""
   }
 }
 ```
+
+### Authentication
+
+The MCP server requires authentication by default (OpenId mode). The sample client supports **API Key** authentication. To connect:
+
+1. In the Orchard Core admin dashboard, navigate to **Settings → Artificial Intelligence**.
+2. Set the MCP server authentication type to **API Key** and define a key.
+3. Set the same key in the sample client's `appsettings.json` under `Mcp:ApiKey`.
+
+Alternatively, for local development, you can disable authentication on the server by setting the authentication type to **None**. You can do this by uncommenting the relevant section in the CMS app's `appsettings.development.json`, or by setting the environment variable:
+
+```
+OrchardCore__CrestApps__McpServer__AuthenticationType=None
+```
+
+When authentication is set to **None**, the client connects without sending any credentials.

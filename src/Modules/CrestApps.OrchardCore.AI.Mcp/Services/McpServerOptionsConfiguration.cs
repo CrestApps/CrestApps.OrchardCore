@@ -16,6 +16,6 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
 
     public void Configure(McpServerOptions options)
     {
-        _shellConfiguration.GetSection("CrestApps_AI:McpServer").Bind(options);
+        _shellConfiguration.GetSection("CrestApps:McpServer").Bind(options);
     }
 }

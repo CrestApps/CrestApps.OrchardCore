@@ -123,13 +123,6 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<AIProfile, AIProfileTemplateSelectionDisplayDriver>()
             .AddNavigationProvider<AITemplateAdminMenu>()
             .AddPermissionProvider<AIProfileTemplatePermissionsProvider>();
-
-        services
-            .Configure<AIProviderConnectionCatalogOptions>(o =>
-            {
-                // This should be removed in the next major release.
-                o.ProviderSections.Add("CrestApps_AI:Providers");
-            });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -60,7 +60,7 @@
             @* Copilot Model Selection — dropdown, toggled by JS *@
             <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-model-group">
                 <label asp-for="CopilotModel" class="form-label">@T["Copilot Model"]</label>
-                <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+                <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select setting-input" data-setting="copilotModel">
                 </select>
                 <span asp-validation-for="CopilotModel" class="text-danger"></span>
                 <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
@@ -69,7 +69,7 @@
             @* Allow All — toggled by JS *@
             <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
                 <div class="form-check">
-                    <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
+                    <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
                     <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
                 </div>
                 <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
@@ -81,14 +81,14 @@
         @* BYOK mode — no GitHub sign-in needed *@
         <div class="mb-3">
             <label asp-for="CopilotModel" class="form-label">@T["Model Override"]</label>
-            <input asp-for="CopilotModel" class="form-control" placeholder="@T["Leave empty to use the default model from settings"]" />
+            <input asp-for="CopilotModel" class="form-control setting-input" data-setting="copilotModel" placeholder="@T["Leave empty to use the default model from settings"]" />
             <span asp-validation-for="CopilotModel" class="text-danger"></span>
             <span class="hint">@T["Optionally override the model name for this interaction. Leave empty to use the default model configured in Copilot settings."]</span>
         </div>
 
         <div class="mb-3">
             <div class="form-check">
-                <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
+                <input asp-for="IsAllowAll" class="form-check-input setting-input" data-setting="isAllowAll" type="checkbox" />
                 <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
             </div>
             <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag, permitting all tool executions without confirmation."]</span>
