@@ -103,7 +103,11 @@ To enable TTS playback for Chat Interactions:
 2. Check **Enable text-to-speech playback**.
 3. Save the settings.
 
-A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.## Related Features
+A **Default Text-to-Speech Deployment** must be configured in **Settings → Artificial Intelligence → Default Deployments** for the playback button to appear.
+
+When playback is enabled, the message action buttons are anchored at the bottom-right of each response, the playback icon switches between play and pause while audio is active, and starting playback on a different message automatically stops the current one. In Conversation mode, the per-message playback button is hidden so the live voice flow remains uninterrupted.
+
+## Related Features
 
 ### AI Memory
 

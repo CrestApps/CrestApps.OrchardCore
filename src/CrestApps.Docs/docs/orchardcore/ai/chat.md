@@ -127,8 +127,14 @@ TTS playback can be enabled at two levels:
 #### Behavior
 
 - When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser.
-- During playback, the playback button is highlighted and message action buttons remain visible.
+- Message actions now sit at the bottom-right of each response so they stay aligned above the divider line instead of covering the top edge of the message.
+- During playback, the playback button switches between play and pause, stays highlighted while audio is active, and starting another message playback automatically stops the current one.
+- In Conversation mode, the per-message playback button is hidden so the live voice conversation is not interrupted by manual playback.
 - Users can stop playback by clicking the button again.
+
+### Session document uploads
+
+If a profile allows session documents, the chat session upload request now uses the same resolved profile ID that the page used to decide whether the attachment UI should be shown. This keeps the session upload endpoint aligned with the visible Attach file experience for newly started chats.
 
 ### Admin Chat User Interface
 
