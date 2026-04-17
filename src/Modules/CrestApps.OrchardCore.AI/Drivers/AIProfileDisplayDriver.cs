@@ -99,7 +99,7 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
             model.SystemMessage = metadata.SystemMessage;
             model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
-            model.PastMessagesCount = context.IsNew ? _defaultAIOptions.PastMessagesCount : metadata.PastMessagesCount;
+            model.PastMessagesCount = metadata.PastMessagesCount ?? _defaultAIOptions.PastMessagesCount;
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : metadata.PresencePenalty;
             model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : metadata.Temperature;
             model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : metadata.MaxTokens;

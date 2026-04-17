@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <CrestAppsCoreVersion>1.0.0-preview-29</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-32</CrestAppsCoreVersion>
     <OrchardCoreVersion>[3.0.0-preview-18962, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
@@ -92,15 +92,15 @@
     <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Ftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Ftp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Markdown" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Mcp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Ollama" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.OpenAI" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.OpenAI.Azure" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.OpenXml" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Pdf" Version="$(CrestAppsCoreVersion)" />
-    <PackageVersion Include="CrestApps.Core.AI.Sftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Documents.OpenXml" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Documents.Pdf" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Sftp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Azure" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />

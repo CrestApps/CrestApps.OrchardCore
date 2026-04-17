@@ -38,6 +38,8 @@ Profile-source AI Templates now follow the same top-level card grouping:
 
 Additional advanced sections such as capabilities, response handling, analytics, documents, and post-session processing continue to appear below these cards in their existing sections.
 
+For chat profiles, the required **Past messages included** parameter now loads with the current default value automatically when a profile is opened without an explicit saved value, so administrators do not have to populate it manually before saving.
+
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
 - **OpenAI AI Chat** (`CrestApps.OrchardCore.OpenAI`): AI-powered chat using OpenAI service.
@@ -134,7 +136,9 @@ TTS playback can be enabled at two levels:
 
 ### Session document uploads
 
-If a profile allows session documents, the chat session upload request now uses the same resolved profile ID that the page used to decide whether the attachment UI should be shown. This keeps the session upload endpoint aligned with the visible Attach file experience for newly started chats.
+If a profile allows session documents, the chat UI now keeps restored widget sessions aligned with the current profile before uploading files. This prevents stale session state from sending the attachment request through a different profile and triggering a misleading "session document uploads are not enabled" response.
+
+The admin and frontend chat widgets now also restore their saved toggle and panel positions before the chat app finishes initializing. This removes the brief flash where an open widget could render in its default corner and then jump to the persisted position.
 
 ### Admin Chat User Interface
 

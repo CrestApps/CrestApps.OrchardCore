@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -46,6 +47,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
+            model.CopilotReasoningEffort = copilotSettings.ReasoningEffort;
 
             // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
@@ -88,7 +90,7 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
                             if (models.Count > 0)
                             {
                                 model.AvailableModels = models
-                                    .Select(m => new SelectListItem(m.Name, m.Id))
+                                    .Select(m => new SelectListItem(CopilotModelDisplayTextFormatter.Format(m), m.Id))
                                     .ToList();
                             }
                         }

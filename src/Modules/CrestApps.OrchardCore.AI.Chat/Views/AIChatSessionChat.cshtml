@@ -1,5 +1,6 @@
 @using CrestApps.Core
 @using CrestApps.Core.AI
+@using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Core.Services
@@ -217,14 +218,19 @@
 }
 
 <script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatAppPatch" at="Foot"></script>
 
-<script at="Foot" depends-on="AIChatApp">
+<script at="Foot" depends-on="AIChatAppPatch">
 
     var configEl = document.getElementById('@($"{baseId}_Config")');
 
     if (configEl) {
 
-    openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+    var chatApp = openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+
+    if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
+        window.crestAppsAIChat.patchSessionProfileSync(chatApp);
+    }
 
     }
 

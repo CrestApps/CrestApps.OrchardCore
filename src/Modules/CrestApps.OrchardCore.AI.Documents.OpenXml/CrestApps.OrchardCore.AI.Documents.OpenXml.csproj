@@ -26,7 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <PackageReference Include="CrestApps.Core.AI.OpenXml" />
+    <PackageReference Include="CrestApps.Core.AI.Documents.OpenXml" />
   </ItemGroup>
 
 </Project>

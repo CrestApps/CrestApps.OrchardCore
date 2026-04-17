@@ -1,5 +1,6 @@
 @using CrestApps.Core
 @using CrestApps.Core.AI
+@using CrestApps.Core.AI.Documents.Models
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Core
@@ -200,6 +201,8 @@
     <style asp-name="SpeechToText" at="Head"></style>
 }
 <script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatWidgetApp" at="Foot"></script>
+<script asp-name="AIChatAppPatch" at="Foot"></script>
 @{
     var chatConfig = new Dictionary<string, object>
     {
@@ -233,191 +236,45 @@
     }
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
-<script at="Foot" depends-on="AIChatApp">
+<script at="Foot" depends-on="AIChatAppPatch">
     (function () {
-    var configEl = document.getElementById('@($"{baseId}_Config")');
-    var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
-    var widgetContainer = document.getElementById('@widgetContainerId');
-    var toggleButton = document.getElementById('@toggleBtnId');
-    var closeButton = document.getElementById('@closeBtnId');
-    var shell = document.getElementById('@($"{baseId}_Shell")');
     var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
-    var widgetOpenStateKey = '@(storagePrefix + "-ai-admin-widget-state")';
-
-    chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-    chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
-
-    chatConfig.widget = {
-    chatWidgetContainer: '#@widgetContainerId',
-    chatWidgetStateName: widgetStateName,
-    chatHistorySection: '#@historyPanelId',
-    closeHistoryButton: '#@closeHistoryBtnId',
-    showHistoryButton: '#@historyBtnId',
-    newChatButton: '#@newChatBtnId',
+    window.openAIChatWidgetManager.initialize({
+    configElementSelector: '#@($"{baseId}_Config")',
+    messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
+    indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
+    shellSelector: '#@($"{baseId}_Shell")',
+    widgetContainerSelector: '#@widgetContainerId',
     toggleButtonSelector: '#@toggleBtnId',
-    resetSizeButtonSelector: '#@restoreSizeBtnId',
-    dragHandleSelector: '.ai-chat-widget-header',
-    enableDragging: true,
-    enableResizing: true,
-    persistLayout: true,
-    minWidth: 288,
-    minHeight: 320
-    };
-
-    var widgetApp = window.openAIChatManager.initialize(chatConfig);
-
-    function revealShell() {
-    if (!shell) {
-    return;
-    }
-
-    shell.style.visibility = '';
-    }
-
-    function syncOpenPanelPosition() {
-    if (!widgetApp || typeof widgetApp.syncPanelPositionToToggle !== 'function') {
-    return;
-    }
-
-    widgetApp.syncPanelPositionToToggle(false);
-    }
-
-    function updateTtsPlaybackButtons() {
-    var buttons = widgetContainer.querySelectorAll('[data-tts-message-index]');
-
-    buttons.forEach(function (button) {
-    var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
-    var isPlaying = buttonIndex === widgetApp.ttsPlayingMessageIndex;
-    var iconHtml = isPlaying
-        ? '<span class="fa-solid fa-circle-pause" style="font-size: 0.9rem;"></span>'
-        : '<span class="fa-solid fa-circle-play" style="font-size: 0.9rem;"></span>';
-
-    button.classList.toggle('tts-playing', isPlaying);
-    button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
-    button.replaceChildren(DOMPurify.sanitize(iconHtml, { RETURN_DOM_FRAGMENT: true }));
-    });
-    }
-
-    function queueTtsPlaybackButtonUpdate() {
-    requestAnimationFrame(updateTtsPlaybackButtons);
-    }
-
-    function revealShellWhenStable(initialOpen) {
-    if (!initialOpen) {
-    revealShell();
-    return;
-    }
-
-    var hasRevealed = false;
-    var resizeObserver = null;
-
-    function finalizeReveal() {
-    if (hasRevealed) {
-    return;
-    }
-
-    hasRevealed = true;
-
-    if (resizeObserver) {
-    resizeObserver.disconnect();
-    }
-
-    requestAnimationFrame(function () {
-    syncOpenPanelPosition();
-    requestAnimationFrame(function () {
-    revealShell();
-    });
-    });
-    }
-
-    if (typeof ResizeObserver === 'undefined') {
-    window.setTimeout(finalizeReveal, 0);
-    return;
-    }
-
-    var lastWidth = 0;
-    var lastHeight = 0;
-    var stablePasses = 0;
-
-    resizeObserver = new ResizeObserver(function (entries) {
-    var entry = entries && entries[0];
-
-    if (!entry) {
-    return;
-    }
-
-    var width = Math.round(entry.contentRect.width);
-    var height = Math.round(entry.contentRect.height);
-
-    if (!width || !height) {
-    return;
-    }
-
-    syncOpenPanelPosition();
-
-    if (width === lastWidth && height === lastHeight) {
-    stablePasses++;
-    } else {
-    lastWidth = width;
-    lastHeight = height;
-    stablePasses = 0;
-    }
-
-    if (stablePasses >= 1) {
-    finalizeReveal();
-    }
-    });
-
-    resizeObserver.observe(widgetContainer);
-    window.setTimeout(finalizeReveal, 150);
-    }
-
-    function setWidgetOpen(isOpen) {
-    if (widgetApp) {
-    var isCurrentlyOpen = widgetContainer.classList.contains('open');
-    if (isOpen && !isCurrentlyOpen && typeof widgetApp.syncPanelPositionToToggle === 'function') {
-    widgetApp.syncPanelPositionToToggle();
-    } else if (!isOpen && isCurrentlyOpen && typeof widgetApp.syncTogglePositionToPanel === 'function') {
-    widgetApp.syncTogglePositionToPanel();
-    }
-    }
-
-    widgetContainer.classList.toggle('open', isOpen);
-    widgetContainer.style.display = isOpen ? 'flex' : 'none';
-    widgetContainer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-    toggleButton.innerHTML = isOpen
-        ? '<i class="fas fa-times"></i>'
-        : '<i class="fa fa-robot"></i>';
-    localStorage.setItem(widgetOpenStateKey, isOpen ? 'open' : 'closed');
-
-    if (isOpen && typeof window.renderPendingCharts === 'function') {
-    setTimeout(function () { window.renderPendingCharts(); }, 100);
-    }
-    }
-
-    var initialOpen = localStorage.getItem(widgetOpenStateKey) === 'open';
-    setWidgetOpen(initialOpen);
-    revealShellWhenStable(initialOpen);
-
-    if (widgetApp && typeof widgetApp.$watch === 'function') {
-    widgetApp.$watch('ttsPlayingMessageIndex', function () {
-    queueTtsPlaybackButtonUpdate();
-    });
-    }
-
-    queueTtsPlaybackButtonUpdate();
-
-    toggleButton.addEventListener('click', function () {
-    if (toggleButton.dataset.dragSuppressClick === 'true') {
-    toggleButton.dataset.dragSuppressClick = 'false';
-    return;
-    }
-
-    setWidgetOpen(!widgetContainer.classList.contains('open'));
-    });
-
-    closeButton.addEventListener('click', function () {
-    setWidgetOpen(false);
+    closeButtonSelector: '#@closeBtnId',
+    inputSelector: '#@userPromptHtmlId',
+    widgetStateName: widgetStateName,
+    widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
+    openStateValue: 'open',
+    closedStateValue: 'closed',
+    openIconHtml: '<i class="fas fa-times"></i>',
+    closedIconHtml: '<i class="fa fa-robot"></i>',
+    chatConfig: Object.assign(
+        {},
+        JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
+        {
+            widget: {
+                chatWidgetContainer: '#@widgetContainerId',
+                chatWidgetStateName: widgetStateName,
+                chatHistorySection: '#@historyPanelId',
+                closeHistoryButton: '#@closeHistoryBtnId',
+                showHistoryButton: '#@historyBtnId',
+                newChatButton: '#@newChatBtnId',
+                toggleButtonSelector: '#@toggleBtnId',
+                resetSizeButtonSelector: '#@restoreSizeBtnId',
+                dragHandleSelector: '.ai-chat-widget-header',
+                enableDragging: true,
+                enableResizing: true,
+                persistLayout: true,
+                minWidth: 288,
+                minHeight: 320
+            }
+        })
     });
     })();
 </script>

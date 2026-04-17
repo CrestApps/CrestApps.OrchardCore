@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;

@@ -1,5 +1,5 @@
-using CrestApps.Core.AI.Ftp;
 using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Ftp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Handlers;

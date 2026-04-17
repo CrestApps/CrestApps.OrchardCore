@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -177,6 +178,7 @@ public sealed class CopilotAuthController : Controller
 
         var userId = await _userManager.GetUserIdAsync(user);
         var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
+        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
         string gitHubUsername = null;
 
         if (isAuthenticated)
@@ -185,7 +187,12 @@ public sealed class CopilotAuthController : Controller
             gitHubUsername = credential?.GitHubUsername;
         }
 
-        return Json(new { isAuthenticated, gitHubUsername });
+        return Json(new
+        {
+            isAuthenticated,
+            gitHubUsername,
+            isConfigured = settings.IsConfigured(),
+        });
     }
     /// <summary>
     /// Returns the list of available Copilot models for the authenticated user.
@@ -202,7 +209,7 @@ public sealed class CopilotAuthController : Controller
         var userId = await _userManager.GetUserIdAsync(user);
         var models = await _oauthService.ListModelsAsync(userId);
 
-        return Json(models.Select(m => new { m.Id, m.Name }));
+        return Json(models.Select(m => new { m.Id, m.Name, m.CostMultiplier }));
     }
     /// <summary>
     /// Disconnects the user's GitHub account via AJAX.

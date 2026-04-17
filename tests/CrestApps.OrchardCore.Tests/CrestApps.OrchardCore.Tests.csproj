@@ -23,8 +23,8 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
     <PackageReference Include="CrestApps.Core.AI.Copilot" />
     <PackageReference Include="CrestApps.Core.AI.Markdown" />
-    <PackageReference Include="CrestApps.Core.AI.OpenXml" />
-    <PackageReference Include="CrestApps.Core.AI.Pdf" />
+    <PackageReference Include="CrestApps.Core.AI.Documents.OpenXml" />
+    <PackageReference Include="CrestApps.Core.AI.Documents.Pdf" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />

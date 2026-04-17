@@ -1,6 +1,8 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
-using CrestApps.Core.AI.Chat.Endpoints;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Endpoints;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;

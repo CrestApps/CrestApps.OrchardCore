@@ -16,6 +16,20 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat-widget.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat-widget.min.js"
+    ],
+    "output": "wwwroot/scripts/ai-chat-widget.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css"
     ],
     "output": "wwwroot/css/ai-chat.css"

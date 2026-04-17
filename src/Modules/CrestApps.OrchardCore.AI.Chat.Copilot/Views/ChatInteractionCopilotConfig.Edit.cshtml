@@ -66,6 +66,17 @@
                 <span class="hint">@T["Select the Copilot model to use for this interaction."]</span>
             </div>
 
+            <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-effort-group">
+                <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
+                <select asp-for="CopilotReasoningEffort" class="form-select setting-input" data-setting="copilotReasoningEffort">
+                    <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
+                    <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
+                    <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
+                    <option value="@CopilotReasoningEffort.High">@T["High"]</option>
+                </select>
+                <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
+            </div>
+
             @* Allow All — toggled by JS *@
             <div class="mb-3 @(Model.IsAuthenticated ? "" : "d-none")" id="ci-copilot-flags-group">
                 <div class="form-check">
@@ -84,6 +95,17 @@
             <input asp-for="CopilotModel" class="form-control setting-input" data-setting="copilotModel" placeholder="@T["Leave empty to use the default model from settings"]" />
             <span asp-validation-for="CopilotModel" class="text-danger"></span>
             <span class="hint">@T["Optionally override the model name for this interaction. Leave empty to use the default model configured in Copilot settings."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
+            <select asp-for="CopilotReasoningEffort" class="form-select setting-input" data-setting="copilotReasoningEffort">
+                <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
+                <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
+                <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
+                <option value="@CopilotReasoningEffort.High">@T["High"]</option>
+            </select>
+            <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
         </div>
 
         <div class="mb-3">
@@ -108,6 +130,7 @@
         const usernameEl = document.getElementById('ci-github-username');
         const modelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
         const modelGroup = document.getElementById('ci-copilot-model-group');
+        const effortGroup = document.getElementById('ci-copilot-effort-group');
         const flagsGroup = document.getElementById('ci-copilot-flags-group');
 
         const statusUrl = '@Url.Action("GetAuthStatus", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
@@ -131,6 +154,7 @@
             // Show model/flags fields only when connected.
             const showFields = state === 'connected';
             if (modelGroup) modelGroup.classList.toggle('d-none', !showFields);
+            if (effortGroup) effortGroup.classList.toggle('d-none', !showFields);
             if (flagsGroup) flagsGroup.classList.toggle('d-none', !showFields);
         }
 
@@ -146,7 +170,10 @@
                 models.forEach(function (m) {
                     const opt = document.createElement('option');
                     opt.value = m.id;
-                    opt.textContent = m.name;
+                    const costMultiplier = typeof m.costMultiplier === 'number'
+                        ? m.costMultiplier.toFixed(2).replace(/\.?0+$/, '')
+                        : '';
+                    opt.textContent = m.costMultiplier > 0 ? m.name + ' (x' + costMultiplier + ')' : m.name;
                     modelSelect.appendChild(opt);
                 });
 

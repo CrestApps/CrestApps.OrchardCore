@@ -24,6 +24,8 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 - **Data Source Support**: Data source context (documents) is handled by the orchestration context pipeline before reaching the orchestrator
 - **Streaming Responses**: Supports real-time streaming of AI responses via `AssistantMessageDeltaEvent`
 - **Per-Profile Model Selection**: The model is configured per AI Profile or Chat Interaction
+- **Model Cost Visibility**: Copilot model pickers show the model cost multiplier next to each available model (for example, `GPT-5.4 (x1)` or `Claude Opus 4.6 (x3)`)
+- **Per-Session Effort Level**: AI Profiles and Chat Interactions can override the Copilot reasoning effort level (`Default`, `Low`, `Medium`, `High`)
 - **Allow All Tool Executions**: Configurable checkbox that passes the `--allow-all` flag via `CliArgs`
 - **GitHub OAuth Authentication**: User-scoped or profile-scoped authentication with GitHub for Copilot access
 - **Profile-Level Credential Storage**: AI Profiles can store GitHub credentials so all chat sessions using the profile share the same token
@@ -118,13 +120,14 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 
 1. The user authenticates with GitHub (via the **Sign in with GitHub** button).
 2. The **Copilot Model** dropdown shows available models from the user's GitHub account.
-3. The first model is auto-selected; there is no site-level “Default model” because model availability depends on the signed-in identity.
+3. Each model label includes its Copilot cost multiplier when GitHub reports one, making it easier to compare premium and standard models before saving.
+4. The first model is auto-selected; there is no site-level “Default model” because model availability depends on the signed-in identity.
 
 #### AI Profiles
 
 1. Select **GitHub Copilot Orchestrator** from the Orchestrator dropdown.
 2. The Connection and Deployment fields are hidden (not used by Copilot).
-3. The **Copilot Configuration** section includes GitHub sign-in and a model picker.
+3. The **Copilot Configuration** section includes GitHub sign-in, a model picker, an **Effort level** selector, and the **Allow all tool executions** option.
 
 #### Credential scope
 
@@ -137,6 +140,7 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 
 - No GitHub sign-in is required.
 - The session uses the **Default Model** configured in **Settings → Copilot**.
+- AI Profiles and Chat Interactions can still override the model name and **Effort level** for that specific Copilot-backed session.
 
 #### AI Profiles
 
@@ -149,7 +153,7 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 
 The module uses `IChatInteractionSettingsHandler` to decouple Copilot-specific settings from the core chat infrastructure:
 
-- `CopilotChatInteractionSettingsHandler` reads `copilotModel` and `isAllowAll` from the generic form data and stores them as `CopilotSessionMetadata` on the interaction entity
+- `CopilotChatInteractionSettingsHandler` reads `copilotModel`, `copilotReasoningEffort`, and `isAllowAll` from the generic form data and stores them as `CopilotSessionMetadata` on the interaction entity
 - Adding new orchestrator-specific fields does not require changes to `chat-interaction.js` or `ChatInteractionHub`
 
 ### Orchestration Context Flow

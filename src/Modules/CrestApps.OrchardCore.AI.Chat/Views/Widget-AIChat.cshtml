@@ -1,5 +1,6 @@
 @using CrestApps.Core
 @using CrestApps.Core.AI
+@using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.Core.AI.Models
@@ -399,6 +400,7 @@
 }
 
 <script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatAppPatch" at="Foot"></script>
 
 @{
 
@@ -466,7 +468,72 @@
 
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
-<script at="Foot" depends-on="AIChatApp">
+<script at="Foot" depends-on="AIChatAppPatch">
+
+    (function () {
+
+    var shell = document.getElementById('@($"{baseId}_Shell")');
+    var widgetContainer = document.getElementById('@widgetContainerId');
+    var toggleButton = document.getElementById('@toggleBtnId');
+    var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
+    var widgetOpenStateKey = '@(storagePrefix + "-ai-admin-widget-state")';
+    var widgetLayoutKey = widgetStateName + 'Layout';
+
+    try {
+    var storedLayout = localStorage.getItem(widgetLayoutKey);
+    var layout = storedLayout ? JSON.parse(storedLayout) || {} : {};
+    var position = layout.position || {};
+    var panelLayout = layout.panel || {};
+    var toggleLeft = Number(position.left);
+    var toggleTop = Number(position.top);
+    var isOpen = localStorage.getItem(widgetOpenStateKey) === 'open';
+
+    if (shell) {
+    shell.dataset.deferReveal = isOpen ? 'true' : 'false';
+    shell.dataset.initialOpen = isOpen ? 'true' : 'false';
+    }
+
+    if (Number.isFinite(toggleLeft) && Number.isFinite(toggleTop)) {
+    toggleButton.style.left = toggleLeft + 'px';
+    toggleButton.style.top = toggleTop + 'px';
+    toggleButton.style.right = 'auto';
+    toggleButton.style.bottom = 'auto';
+
+    var toggleSize = 52;
+    var toggleGap = 8;
+    var panelWidth = Number.isFinite(Number(panelLayout.width))
+        ? Number(panelLayout.width)
+        : Math.round(parseFloat(window.getComputedStyle(widgetContainer).width) || 380);
+    var panelHeight = Number.isFinite(Number(panelLayout.height))
+        ? Number(panelLayout.height)
+        : Math.round(parseFloat(window.getComputedStyle(widgetContainer).height) || 520);
+
+    widgetContainer.style.left = (toggleLeft + toggleSize - panelWidth) + 'px';
+    widgetContainer.style.top = (toggleTop - panelHeight - toggleGap) + 'px';
+    widgetContainer.style.right = 'auto';
+    widgetContainer.style.bottom = 'auto';
+    }
+
+    widgetContainer.classList.remove('open');
+    widgetContainer.style.display = 'none';
+    widgetContainer.setAttribute('aria-hidden', 'true');
+    toggleButton.innerHTML = isOpen
+        ? '<i class="fas fa-times"></i>'
+        : '<i class="fas fa-comments"></i>';
+    }
+    catch (error) {
+    console.warn('Failed to restore widget layout before initialization.', error);
+    }
+    finally {
+    if (shell && shell.dataset.deferReveal !== 'true') {
+    shell.style.visibility = '';
+    }
+    }
+    })();
+
+</script>
+
+<script at="Foot" depends-on="AIChatAppPatch">
 
     (function () {
 
@@ -500,6 +567,9 @@
     };
 
     var widgetApp = window.openAIChatManager.initialize(chatConfig);
+    if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
+    window.crestAppsAIChat.patchSessionProfileSync(widgetApp);
+    }
 
     function revealShell() {
     if (!shell) {
@@ -507,6 +577,7 @@
     }
 
     shell.style.visibility = '';
+    shell.dataset.deferReveal = 'false';
     }
 
     function syncOpenPanelPosition() {
@@ -538,7 +609,7 @@
     }
 
     function revealShellWhenStable(initialOpen) {
-    if (!initialOpen) {
+    if (!shell || shell.dataset.deferReveal !== 'true' || !initialOpen) {
     revealShell();
     return;
     }
@@ -630,7 +701,7 @@
     }
     }
 
-    var initialOpen = localStorage.getItem(widgetOpenStateKey) === 'open';
+    var initialOpen = shell && shell.dataset.initialOpen === 'true';
     setWidgetOpen(initialOpen);
     revealShellWhenStable(initialOpen);
 

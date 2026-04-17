@@ -17,6 +17,11 @@ public class EditCopilotProfileViewModel
     public bool IsAllowAll { get; set; }
 
     /// <summary>
+    /// The reasoning effort level for the Copilot session.
+    /// </summary>
+    public CopilotReasoningEffort CopilotReasoningEffort { get; set; }
+
+    /// <summary>
     /// Indicates whether the user has authenticated with GitHub.
     /// </summary>
     [BindNever]
