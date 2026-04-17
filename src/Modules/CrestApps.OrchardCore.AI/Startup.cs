@@ -201,8 +201,6 @@ public sealed class ChatCoreStartup : StartupBase
             .AddDataMigration<AIChatSessionPromptDataMigrations>();
 
         services.AddCoreAIChatSessionProcessing();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
 
         // Register orchestration services for AI Profile chat
         services.AddDisplayDriver<AIProfileTemplate, ProfileTemplateDisplayDriver>();
@@ -210,6 +208,16 @@ public sealed class ChatCoreStartup : StartupBase
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
+    }
+}
+
+[RequireFeatures(AIConstants.Feature.ChatCore, "OrchardCore.Workflows")]
+public sealed class ChatWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, DataExtractionChatSessionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, PostSessionProcessingChatSessionHandler>());
     }
 }
 

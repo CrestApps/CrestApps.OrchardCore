@@ -119,9 +119,77 @@
 <script asp-name="ChatInteractionApp" at="Foot"></script>
 <script depends-on="ChatInteractionApp" at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
+        function setupTtsPlaybackSync(app, chatAppElement) {
+            if (!app || !chatAppElement || typeof app.$watch !== 'function') {
+                return;
+            }
+
+            var refreshQueued = false;
+
+            function updateTtsPlaybackButtons() {
+                var messageItems = chatAppElement.querySelectorAll('.ai-chat-message-item');
+                var messageCount = Math.min(messageItems.length, app.messages.length);
+
+                for (var index = 0; index < messageCount; index++) {
+                    var message = app.messages[index];
+                    if (!message || message.role !== 'assistant' || message.isStreaming || !app.textToSpeechEnabled || app.isConversationMode) {
+                        continue;
+                    }
+
+                    var container = messageItems[index].querySelector('.message-buttons-container');
+                    if (!container) {
+                        continue;
+                    }
+
+                    var button = container.querySelector('[data-tts-message-index]') || container.querySelector('.button-message-toolbox');
+                    if (!button) {
+                        continue;
+                    }
+
+                    var isPlaying = index === app.ttsPlayingMessageIndex;
+                    button.setAttribute('data-tts-message-index', index);
+                    button.classList.toggle('tts-playing', isPlaying);
+                    button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+                    button.innerHTML = isPlaying
+                        ? '<span class="fa-solid fa-circle-pause"></span>'
+                        : '<span class="fa-solid fa-circle-play"></span>';
+                }
+            }
+
+            function queueTtsPlaybackRefresh() {
+                if (refreshQueued) {
+                    return;
+                }
+
+                refreshQueued = true;
+                requestAnimationFrame(function () {
+                    refreshQueued = false;
+                    updateTtsPlaybackButtons();
+                });
+            }
+
+            app.$watch('ttsPlayingMessageIndex', queueTtsPlaybackRefresh);
+            app.$watch(
+                function () {
+                    return (app.messages || [])
+                        .map(function (message) { return [message.role, !!message.isStreaming].join(':'); })
+                        .join('|');
+                },
+                queueTtsPlaybackRefresh);
+            app.$watch('isConversationMode', queueTtsPlaybackRefresh);
+
+            new MutationObserver(queueTtsPlaybackRefresh).observe(chatAppElement, {
+                childList: true,
+                subtree: true
+            });
+
+            queueTtsPlaybackRefresh();
+        }
+
         var configEl = document.getElementById('@($"{baseId}_Config")');
         if (configEl) {
-            chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+            var chatInteractionApp = chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+            setupTtsPlaybackSync(chatInteractionApp, document.getElementById('@chatAppHtmlId'));
         }
 
         // Provide a renderPendingCharts fallback for chart-interaction.js which

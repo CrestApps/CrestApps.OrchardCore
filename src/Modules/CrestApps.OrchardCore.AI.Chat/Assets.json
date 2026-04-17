@@ -14,22 +14,32 @@
     "output": "wwwroot/scripts/ai-chat.min.js"
   },
   {
+    "copy": true,
     "inputs": [
-      "Assets/js/ai-chat-widget.js"
-    ],
-    "output": "wwwroot/scripts/ai-chat-widget.js"
-  },
-  {
-    "inputs": [
-      "Assets/css/ai-chat.css"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css"
     ],
     "output": "wwwroot/css/ai-chat.css"
   },
   {
+    "copy": true,
     "inputs": [
-      "Assets/css/ai-chat-widget.css"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.min.css"
+    ],
+    "output": "wwwroot/css/ai-chat.min.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.css"
     ],
     "output": "wwwroot/css/ai-chat-widget.css"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.min.css"
+    ],
+    "output": "wwwroot/css/ai-chat-widget.min.css"
   },
   {
     "inputs": [

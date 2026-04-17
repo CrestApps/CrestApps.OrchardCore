@@ -111,6 +111,12 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static void ReplaceConfigurationServices(this IServiceCollection services)
     {
+        services.Configure<AIProviderConnectionCatalogOptions>(o =>
+        {
+            // This code will be removed in the v3. We'll keep it now for backward compatibility.
+            o.ProviderSections.Add("CrestApps_AI:Providers");
+        });
+
         ReplaceService<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>(
             services,
             ServiceLifetime.Transient,

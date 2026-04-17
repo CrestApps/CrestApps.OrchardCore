@@ -155,25 +155,23 @@
 
 
 
+<div id="@($"{baseId}_Shell")" class="ai-chat-admin-widget-shell" style="--ai-widget-primary: var(--bs-primary, #0d6efd); visibility:hidden;">
 <!-- Toggle Button -->
 
-<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Chat"]" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
+<button id="@toggleBtnId" class="ai-chat-widget-toggle" title="@T["Open AI Chat"]">
 
     <i class="fas fa-comments"></i>
 
 </button>
 
-
-
 <!-- Widget Container -->
-
-<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
+<div id="@widgetContainerId" class="ai-chat-widget-container">
 
     <!-- Header (drag handle) -->
 
-    <div class="ai-admin-widget-header">
+    <div class="ai-chat-widget-header">
 
-        <span class="ai-admin-widget-title">
+        <span class="title">
 
             @if (Model.Header != null)
 
@@ -193,9 +191,9 @@
 
         </span>
 
-        <div class="ai-admin-widget-header-actions">
+        <div class="ai-chat-widget-header-actions">
 
-            <button class="btn btn-link ai-admin-widget-restore-btn" id="@restoreSizeBtnId" title="@T["Restore size"]">
+            <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore size"]">
 
                 <i class="fas fa-compress"></i>
 
@@ -231,15 +229,9 @@
 
 
 
-    <!-- Resize Handle (top-left, below header) -->
-
-    <div class="ai-admin-widget-resize-handle"></div>
-
-
-
     <!-- Chat Body -->
 
-    <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
+    <div class="ai-chat-widget-messages" id="@chatContainerHtmlId">
 
         @if (!orchestratorAvailability.IsAvailable)
 
@@ -255,9 +247,10 @@
 
         }
 
-        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder @(addInitialPrompt ? "d-none" : string.Empty)">
+        <div id="@placeholderHtmlId" class="ai-chat-widget-welcome@(addInitialPrompt ? " d-none" : string.Empty)">
 
-            <h4>@(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
+            <i class="fa fa-robot" style="font-size: 2rem;"></i><br>
+            @(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
 
         </div>
 
@@ -269,7 +262,7 @@
 
     <!-- Input Area -->
 
-    <div class="ai-admin-widget-input">
+    <div class="ai-chat-widget-input">
 
         @if (sessionDocumentsEnabled)
 
@@ -279,88 +272,82 @@
 
         }
 
-        <div class="ai-admin-widget-input-wrapper">
+        @if (promptGeneratedProfiles.Any())
 
-            @if (promptGeneratedProfiles.Any())
+        {
 
-            {
+            <div class="dropdown">
 
-                <div class="dropdown me-1">
+                <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
 
-                    <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
-
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-
-                    </button>
-
-                    <ul class="dropdown-menu">
-
-                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-
-                        {
-
-                            <li>
-
-                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
-
-                            </li>
-
-                        }
-
-                    </ul>
-
-                </div>
-
-            }
-
-            <textarea class="ai-admin-widget-prompt"
-                      id="@userPromptHtmlId"
-                      data-session-id=""
-                      data-profile-id="@(profile.ItemId)"
-                      placeholder="@T["Message..."]"
-                      rows="1"
-                      aria-label="@T["Message"]"></textarea>
-
-            <button class="stt-mic-btn ai-admin-widget-mic-btn"
-                    type="button"
-                    id="@micBtnHtmlId"
-                    title="@T["Voice input"]"
-                    style="display: none;">
-
-                <i class="fa-solid fa-microphone"></i>
-
-            </button>
-
-            @if (conversationModeEnabled)
-
-            {
-
-                <button class="ai-admin-widget-send-btn"
-                        type="button"
-                        id="@conversationBtnHtmlId"
-                        title="@T["Start Conversation"]"
-                        data-start-title="@T["Start Conversation"]"
-                        data-end-title="@T["End Conversation"]"
-                        data-start-html="<i class='fa-solid fa-wave-square'></i>"
-                        data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
-
-                    <i class="fa-solid fa-wave-square"></i>
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
 
                 </button>
 
-            }
+                <ul class="dropdown-menu">
 
-            <button class="ai-admin-widget-send-btn"
-                    id="@buttonHtmlId"
-                    disabled
-                    data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
-                    data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
 
-                <i class="fa-solid fa-arrow-up"></i>
+                    {
+
+                        <li>
+
+                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
+
+                        </li>
+
+                    }
+
+                </ul>
+
+            </div>
+
+        }
+
+        <textarea id="@userPromptHtmlId"
+                  data-session-id=""
+                  data-profile-id="@(profile.ItemId)"
+                  placeholder="@T["Message..."]"
+                  rows="1"
+                  aria-label="@T["Message"]"></textarea>
+
+        <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
+                type="button"
+                id="@micBtnHtmlId"
+                title="@T["Voice input"]"
+                style="display: none;">
+
+            <i class="fa-solid fa-microphone"></i>
+
+        </button>
+
+        @if (conversationModeEnabled)
+
+        {
+
+            <button class="btn btn-outline-dark btn-sm"
+                    type="button"
+                    id="@conversationBtnHtmlId"
+                    title="@T["Start Conversation"]"
+                    data-start-title="@T["Start Conversation"]"
+                    data-end-title="@T["End Conversation"]"
+                    data-start-html="<i class='fa-solid fa-wave-square'></i>"
+                    data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+
+                <i class="fa-solid fa-wave-square"></i>
 
             </button>
 
-        </div>
+        }
+
+        <button id="@buttonHtmlId"
+                disabled
+                data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                data-stop-icon="<i class='fa-solid fa-stop'></i>">
+
+            <i class="fa-solid fa-arrow-up"></i>
+
+        </button>
 
     </div>
 
@@ -372,7 +359,7 @@
 
         <!-- History Panel -->
 
-        <div class="ai-admin-widget-history-panel" id="@historyPanelId">
+        <div class="ai-chat-widget-history-panel" id="@historyPanelId">
 
             <div class="history-header">
 
@@ -393,6 +380,7 @@
     }
 
 </div>
+</div>
 
 
 
@@ -409,8 +397,6 @@
     <style asp-name="SpeechToText" at="Head"></style>
 
 }
-
-<script asp-name="AIChatWidget" at="Foot"></script>
 
 <script asp-name="AIChatApp" at="Foot"></script>
 
@@ -480,46 +466,193 @@
 
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
-<script at="Foot" depends-on="AIChatWidget, AIChatApp">
+<script at="Foot" depends-on="AIChatApp">
 
     (function () {
 
     var configEl = document.getElementById('@($"{baseId}_Config")');
 
     var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
-
-
+    var widgetContainer = document.getElementById('@widgetContainerId');
+    var toggleButton = document.getElementById('@toggleBtnId');
+    var closeButton = document.getElementById('@closeBtnId');
+    var shell = document.getElementById('@($"{baseId}_Shell")');
+    var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
+    var widgetOpenStateKey = '@(storagePrefix + "-ai-admin-widget-state")';
 
     chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-
     chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
+    chatConfig.widget = {
+    chatWidgetContainer: '#@widgetContainerId',
+    chatWidgetStateName: widgetStateName,
+    chatHistorySection: '#@historyPanelId',
+    closeHistoryButton: '#@closeHistoryBtnId',
+    showHistoryButton: '#@historyBtnId',
+    newChatButton: '#@newChatBtnId',
+    toggleButtonSelector: '#@toggleBtnId',
+    resetSizeButtonSelector: '#@restoreSizeBtnId',
+    dragHandleSelector: '.ai-chat-widget-header',
+    enableDragging: true,
+    enableResizing: true,
+    persistLayout: true,
+    minWidth: 288,
+    minHeight: 320
+    };
 
+    var widgetApp = window.openAIChatManager.initialize(chatConfig);
 
+    function revealShell() {
+    if (!shell) {
+    return;
+    }
 
-    aiChatAdminWidget.initialize({
+    shell.style.visibility = '';
+    }
 
-    containerSelector: '#@widgetContainerId',
+    function syncOpenPanelPosition() {
+    if (!widgetApp || typeof widgetApp.syncPanelPositionToToggle !== 'function') {
+    return;
+    }
 
-    toggleSelector: '#@toggleBtnId',
+    widgetApp.syncPanelPositionToToggle(false);
+    }
 
-    closeButtonSelector: '#@closeBtnId',
+    function updateTtsPlaybackButtons() {
+    var buttons = widgetContainer.querySelectorAll('[data-tts-message-index]');
 
-    newChatButtonSelector: '#@newChatBtnId',
+    buttons.forEach(function (button) {
+    var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
+    var isPlaying = buttonIndex === widgetApp.ttsPlayingMessageIndex;
+    var iconHtml = isPlaying
+        ? '<span class="fa-solid fa-circle-pause" style="font-size: 0.9rem;"></span>'
+        : '<span class="fa-solid fa-circle-play" style="font-size: 0.9rem;"></span>';
 
-    showHistorySelector: '#@historyBtnId',
+    button.classList.toggle('tts-playing', isPlaying);
+    button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+    button.replaceChildren(DOMPurify.sanitize(iconHtml, { RETURN_DOM_FRAGMENT: true }));
+    });
+    }
 
-    historyPanelSelector: '#@historyPanelId',
+    function queueTtsPlaybackButtonUpdate() {
+    requestAnimationFrame(updateTtsPlaybackButtons);
+    }
 
-    closeHistorySelector: '#@closeHistoryBtnId',
+    function revealShellWhenStable(initialOpen) {
+    if (!initialOpen) {
+    revealShell();
+    return;
+    }
 
-    restoreSizeSelector: '#@restoreSizeBtnId',
+    var hasRevealed = false;
+    var resizeObserver = null;
 
-    promptSelector: '#@userPromptHtmlId',
+    function finalizeReveal() {
+    if (hasRevealed) {
+    return;
+    }
 
-    storagePrefix: '@storagePrefix',
+    hasRevealed = true;
 
-    chatConfig: chatConfig
+    if (resizeObserver) {
+    resizeObserver.disconnect();
+    }
 
+    requestAnimationFrame(function () {
+    syncOpenPanelPosition();
+    requestAnimationFrame(function () {
+    revealShell();
+    });
+    });
+    }
+
+    if (typeof ResizeObserver === 'undefined') {
+    window.setTimeout(finalizeReveal, 0);
+    return;
+    }
+
+    var lastWidth = 0;
+    var lastHeight = 0;
+    var stablePasses = 0;
+
+    resizeObserver = new ResizeObserver(function (entries) {
+    var entry = entries && entries[0];
+
+    if (!entry) {
+    return;
+    }
+
+    var width = Math.round(entry.contentRect.width);
+    var height = Math.round(entry.contentRect.height);
+
+    if (!width || !height) {
+    return;
+    }
+
+    syncOpenPanelPosition();
+
+    if (width === lastWidth && height === lastHeight) {
+    stablePasses++;
+    } else {
+    lastWidth = width;
+    lastHeight = height;
+    stablePasses = 0;
+    }
+
+    if (stablePasses >= 1) {
+    finalizeReveal();
+    }
+    });
+
+    resizeObserver.observe(widgetContainer);
+    window.setTimeout(finalizeReveal, 150);
+    }
+
+    function setWidgetOpen(isOpen) {
+    if (widgetApp) {
+    var isCurrentlyOpen = widgetContainer.classList.contains('open');
+    if (isOpen && !isCurrentlyOpen && typeof widgetApp.syncPanelPositionToToggle === 'function') {
+    widgetApp.syncPanelPositionToToggle();
+    } else if (!isOpen && isCurrentlyOpen && typeof widgetApp.syncTogglePositionToPanel === 'function') {
+    widgetApp.syncTogglePositionToPanel();
+    }
+    }
+
+    widgetContainer.classList.toggle('open', isOpen);
+    widgetContainer.style.display = isOpen ? 'flex' : 'none';
+    widgetContainer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+    toggleButton.innerHTML = isOpen
+        ? '<i class="fas fa-times"></i>'
+        : '<i class="fas fa-comments"></i>';
+    localStorage.setItem(widgetOpenStateKey, isOpen ? 'open' : 'closed');
+
+    if (isOpen && typeof window.renderPendingCharts === 'function') {
+    setTimeout(function () { window.renderPendingCharts(); }, 100);
+    }
+    }
+
+    var initialOpen = localStorage.getItem(widgetOpenStateKey) === 'open';
+    setWidgetOpen(initialOpen);
+    revealShellWhenStable(initialOpen);
+
+    if (widgetApp && typeof widgetApp.$watch === 'function') {
+    widgetApp.$watch('ttsPlayingMessageIndex', function () {
+    queueTtsPlaybackButtonUpdate();
+    });
+    }
+
+    queueTtsPlaybackButtonUpdate();
+
+    toggleButton.addEventListener('click', function () {
+    if (toggleButton.dataset.dragSuppressClick === 'true') {
+    toggleButton.dataset.dragSuppressClick = 'false';
+    return;
+    }
+
+    setWidgetOpen(!widgetContainer.classList.contains('open'));
+    });
+
+    closeButton.addEventListener('click', function () {
+    setWidgetOpen(false);
     });
 
     })();
@@ -534,9 +667,9 @@
 
             <div>
 
-                <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
+                <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">@T["You"]</div>
 
-                <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant" style="color: #41b670;">
+                <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
 
                     <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
 
@@ -544,7 +677,7 @@
 
                 </div>
 
-                <div class="min-w-0">
+                <div class="ai-chat-message-body min-w-0">
 
                     <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
 
@@ -556,13 +689,13 @@
 
                             <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
 
-                                <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
+                                <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
 
                                     <i class="fa-regular fa-thumbs-up" style="font-size: 0.9rem;"></i>
 
                                 </button>
 
-                                <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
+                                <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
 
                                     <i class="fa-regular fa-thumbs-down" style="font-size: 0.9rem;"></i>
 
@@ -572,7 +705,10 @@
 
                         </template>
 
-                        <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
+                        <button v-if="textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming" class="btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox" :class="{ 'tts-playing': ttsPlayingMessageIndex === index }" :data-tts-message-index="index" @@click="toggleMessageTts(message, index)" :title="ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'">
+                            <span :class="ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'" style="font-size: 0.9rem;"></span>
+                        </button>
+                        <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Copy"]">
 
                             <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
 
@@ -592,7 +728,7 @@
 
 <template id="@($"{baseId}_IndicatorTemplate")">
 
-    <div class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant" style="color: #41b670;">
+    <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
 
         <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
 
