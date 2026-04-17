@@ -1,4 +1,3 @@
-using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Documents.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

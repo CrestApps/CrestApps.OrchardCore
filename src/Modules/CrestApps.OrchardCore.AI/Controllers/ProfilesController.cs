@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
@@ -581,4 +580,5 @@ public sealed class ProfilesController : Controller
             }
         }
     }
+
 }

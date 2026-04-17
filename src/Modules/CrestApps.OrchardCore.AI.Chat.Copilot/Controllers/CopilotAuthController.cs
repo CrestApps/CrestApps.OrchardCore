@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
@@ -178,7 +179,7 @@ public sealed class CopilotAuthController : Controller
 
         var userId = await _userManager.GetUserIdAsync(user);
         var isAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
-        var settings = await _siteService.GetSettingsAsync<Settings.CopilotSettings>();
+        var settings = await _siteService.GetSettingsAsync<CopilotSettings>();
         string gitHubUsername = null;
 
         if (isAuthenticated)

@@ -1,3 +1,4 @@
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;

@@ -1,4 +1,3 @@
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
@@ -27,7 +26,6 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 

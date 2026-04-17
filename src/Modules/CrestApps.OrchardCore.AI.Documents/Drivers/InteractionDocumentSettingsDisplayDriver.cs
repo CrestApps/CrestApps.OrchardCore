@@ -1,4 +1,3 @@
-using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;

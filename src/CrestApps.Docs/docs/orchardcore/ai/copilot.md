@@ -23,9 +23,9 @@ Provides a GitHub Copilot SDK-based orchestrator for AI chat sessions in Orchard
 - **Native MCP Support**: MCP connections are described in the system message so Copilot is aware of available servers
 - **Data Source Support**: Data source context (documents) is handled by the orchestration context pipeline before reaching the orchestrator
 - **Streaming Responses**: Supports real-time streaming of AI responses via `AssistantMessageDeltaEvent`
-- **Per-Profile Model Selection**: The model is configured per AI Profile or Chat Interaction
+- **Per-Item Model Selection**: The model is configured per AI Profile, AI Profile template, or Chat Interaction
 - **Model Cost Visibility**: Copilot model pickers show the model cost multiplier next to each available model (for example, `GPT-5.4 (x1)` or `Claude Opus 4.6 (x3)`)
-- **Per-Session Effort Level**: AI Profiles and Chat Interactions can override the Copilot reasoning effort level (`Default`, `Low`, `Medium`, `High`)
+- **Per-Session Effort Level**: AI Profiles, AI Profile templates, and Chat Interactions can override the Copilot reasoning effort level (`Default`, `Low`, `Medium`, `High`)
 - **Allow All Tool Executions**: Configurable checkbox that passes the `--allow-all` flag via `CliArgs`
 - **GitHub OAuth Authentication**: User-scoped or profile-scoped authentication with GitHub for Copilot access
 - **Profile-Level Credential Storage**: AI Profiles can store GitHub credentials so all chat sessions using the profile share the same token
@@ -129,6 +129,13 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 2. The Connection and Deployment fields are hidden (not used by Copilot).
 3. The **Copilot Configuration** section includes GitHub sign-in, a model picker, an **Effort level** selector, and the **Allow all tool executions** option.
 
+#### AI Profile Templates
+
+1. Edit a template with **Source = Profile**.
+2. Select **GitHub Copilot Orchestrator** from the Orchestrator dropdown.
+3. The template editor shows the same Copilot model, **Effort level**, and **Allow all tool executions** fields as the AI Profile editor.
+4. When you apply the template to create a profile, the saved Copilot model, reasoning effort, and allow-all flag are copied to the generated profile.
+
 #### Credential scope
 
 - **Chat Interactions** are typically **user-scoped**: the access token is stored on the user account (encrypted), and each user signs in individually.
@@ -140,12 +147,13 @@ In all modes, **Allow All** is checked by default (passes `--allow-all` to the C
 
 - No GitHub sign-in is required.
 - The session uses the **Default Model** configured in **Settings → Copilot**.
-- AI Profiles and Chat Interactions can still override the model name and **Effort level** for that specific Copilot-backed session.
+- AI Profiles, AI Profile templates, and Chat Interactions can still override the model name and **Effort level** for that specific Copilot-backed session.
 
 #### AI Profiles
 
 - GitHub authentication and model listing are not used.
 - The profile relies on the site-level API key settings (provider type, base URL, and default model).
+- AI Profile templates expose the same override fields and copy those values to generated profiles.
 
 ## Architecture
 

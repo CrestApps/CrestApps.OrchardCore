@@ -47,6 +47,8 @@ When creating a new AI Profile, a **Template** dropdown appears at the top of th
 
 The Apply action redirects to the create page with the selected template's values pre-populated. All display drivers (including those from tool, data source, chat, MCP, analytics, and documents modules) automatically render the pre-filled values.
 
+Orchestrator-specific modules can also contribute Profile-source template sections. For example, the Copilot and Claude orchestrator modules can save model and reasoning-effort metadata on the template, and those values are copied to the generated profile when you apply the template.
+
 When a template includes attached documents (uploaded via the Profile Documents feature), applying the template **clones** all documents — including their extracted text chunks and pre-computed embeddings — to the new profile. This means the new profile immediately has the same RAG (Retrieval Augmented Generation) knowledge base as the template, without needing to re-upload or re-process the files.
 
 :::tip

@@ -36,6 +36,7 @@
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.A2A/CrestApps.OrchardCore.AI.A2A.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/CrestApps.OrchardCore.AI.Chat.Claude.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.AI.Chat/CrestApps.OrchardCore.AI.Chat.csproj" />

@@ -38,6 +38,7 @@ public sealed class Startup : StartupBase
 
         // OrchardCore-specific display drivers.
         services.AddDisplayDriver<AIProfile, AIProfileCopilotDisplayDriver>();
+        services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateCopilotDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionCopilotDisplayDriver>();
 
         services

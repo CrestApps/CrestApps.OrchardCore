@@ -1,10 +1,12 @@
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
+using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -16,7 +18,7 @@ using USR = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 
-internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
+internal sealed class AIProfileTemplateCopilotDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly GitHubOAuthService _oauthService;
     private readonly UserManager<USR.IUser> _userManager;
@@ -25,12 +27,12 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
 
     internal readonly IStringLocalizer S;
 
-    public AIProfileCopilotDisplayDriver(
+    public AIProfileTemplateCopilotDisplayDriver(
         GitHubOAuthService oauthService,
         UserManager<USR.IUser> userManager,
         IHttpContextAccessor httpContextAccessor,
         ISiteService siteService,
-        IStringLocalizer<AIProfileCopilotDisplayDriver> stringLocalizer)
+        IStringLocalizer<AIProfileTemplateCopilotDisplayDriver> stringLocalizer)
     {
         _oauthService = oauthService;
         _userManager = userManager;
@@ -39,17 +41,16 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
+    public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
-        return Initialize<EditCopilotProfileViewModel>("AIProfileCopilotConfig_Edit", async model =>
+        return Initialize<EditCopilotProfileViewModel>("AIProfileTemplateCopilotConfig_Edit", async model =>
         {
-            var copilotSettings = profile.GetOrCreate<CopilotSessionMetadata>();
+            var copilotSettings = template.GetOrCreate<CopilotSessionMetadata>();
 
             model.CopilotModel = copilotSettings.CopilotModel;
             model.IsAllowAll = copilotSettings.IsAllowAll;
             model.CopilotReasoningEffort = copilotSettings.ReasoningEffort;
 
-            // Load site-level settings to determine auth mode.
             var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
             model.AuthenticationType = siteSettings.AuthenticationType;
             model.IsCopilotConfigured = siteSettings.IsConfigured();
@@ -63,15 +64,13 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
 
             if (siteSettings.AuthenticationType == CopilotAuthenticationType.ApiKey)
             {
-                // BYOK mode — no GitHub auth needed; model is a text input.
                 model.AvailableModels = [];
             }
             else if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
             {
-                // GitHub OAuth mode — check auth and load models from GitHub API.
                 var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
 
-                if (user != null)
+                if (user is not null)
                 {
                     var userId = await _userManager.GetUserIdAsync(user);
                     model.IsAuthenticated = await _oauthService.IsAuthenticatedAsync(userId);
@@ -98,52 +97,37 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.AvailableModels = [];
             }
-        }).Location("Content:3.5%General;1");
+        }).Location("Content:2%Parameters;5")
+        .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
     {
+        if (template.Source != AITemplateSources.Profile)
+        {
+            return null;
+        }
+
         var model = new EditCopilotProfileViewModel();
+        var connectionModel = new AIProfileTemplateConnectionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+        await context.Updater.TryUpdateModelAsync(connectionModel, Prefix);
 
-        // Only save Copilot settings if Copilot orchestrator is selected
-
-        if (string.Equals(profile.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(connectionModel.OrchestratorName, CopilotOrchestrator.OrchestratorName, StringComparison.OrdinalIgnoreCase))
         {
-            var copilotSettings = new CopilotSessionMetadata
+            template.Put(new CopilotSessionMetadata
             {
                 CopilotModel = model.CopilotModel,
                 IsAllowAll = model.IsAllowAll,
                 ReasoningEffort = model.CopilotReasoningEffort,
-            };
-
-            var siteSettings = await _siteService.GetSettingsAsync<CopilotSettings>();
-
-            if (siteSettings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
-            {
-                // Copy the current user's GitHub credential to the profile so
-                // any chat session using this profile can reuse the token.
-                var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
-
-                if (user is not null)
-                {
-                    var userId = await _userManager.GetUserIdAsync(user);
-                    var credentials = await _oauthService.GetProtectedCredentialsAsync(userId);
-
-                    if (credentials is not null)
-                    {
-                        copilotSettings.GitHubUsername = credentials.GitHubUsername;
-                        copilotSettings.ProtectedAccessToken = credentials.ProtectedAccessToken;
-                        copilotSettings.ProtectedRefreshToken = credentials.ProtectedRefreshToken;
-                        copilotSettings.ExpiresAt = credentials.ExpiresAt;
-                    }
-                }
-            }
-
-            profile.Put(copilotSettings);
+            });
+        }
+        else
+        {
+            template.Remove<CopilotSessionMetadata>();
         }
 
-        return Edit(profile, context);
+        return Edit(template, context);
     }
 }

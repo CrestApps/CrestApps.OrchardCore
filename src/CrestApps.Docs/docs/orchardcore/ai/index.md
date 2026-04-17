@@ -48,6 +48,7 @@ The suite also includes rich management capabilities in Orchard Core, such as AI
 | [AI](overview) | Foundation for the AI ecosystem with profiles, orchestration, connections, deployments, settings, and management |
 | [AI Chat](chat) | Admin and frontend chat interfaces |
 | [AI Chat Interactions](chat-interactions) | Ad-hoc chat with configurable parameters and document upload |
+| [Claude Integration](claude) | Direct Claude orchestration with tenant settings, model discovery, and per-item effort controls |
 | [AI Prompt Templates](prompt-templates) | Centralized prompt management with Liquid templates and file-based discovery |
 | [Consuming AI Services](consuming-ai-services) | Using AI services programmatically via code |
 | [Copilot Integration](copilot) | GitHub Copilot SDK-based orchestration |
