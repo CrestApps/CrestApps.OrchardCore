@@ -45,328 +45,111 @@
     }
 
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
-
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-
     var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
-
     var baseId = $"Widget_{contentItem.ContentItemId}";
-
     var chatAppHtmlId = $"{baseId}_ChatApp";
-
     var buttonHtmlId = $"{baseId}_SendButton";
-
     var userPromptHtmlId = $"{baseId}_UserPrompt";
-
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
-
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
-
     var widgetContainerId = $"{baseId}_Container";
-
     var toggleBtnId = $"{baseId}_Toggle";
-
     var closeBtnId = $"{baseId}_Close";
-
     var newChatBtnId = $"{baseId}_NewChat";
-
     var historyBtnId = $"{baseId}_ShowHistory";
-
     var historyPanelId = $"{baseId}_HistoryPanel";
-
     var closeHistoryBtnId = $"{baseId}_CloseHistory";
-
     var restoreSizeBtnId = $"{baseId}_RestoreSize";
-
     var documentBarHtmlId = $"{baseId}_DocumentBar";
-
-    var storagePrefix = $"{ShellSettings.Name}-{baseId}";
-
-    var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
-
+    var storagePrefix = $"{ShellSettings.Name}-{baseId}"; var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
-
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
-
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
-
     var allowedExtensions = string.Empty;
+    var supportedExtensionsText = string.Empty;
 
     if (sessionDocumentsEnabled)
-
     {
-
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
 
-        allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
-
+        allowedExtensions = chatDocOptions.Value.GetAllowedFileExtensionsAcceptValue();
+        supportedExtensionsText = chatDocOptions.Value.GetAllowedFileExtensionsDisplayValue();
     }
 
-
-
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-
         && profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
-
     var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
-
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
 
     ChatModeProfileSettings chatModeSettings = null;
-
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
 
     var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
-
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
-
     var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
-
     var ttsVoiceName = chatModeSettings?.VoiceName;
-
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
-
     var micBtnHtmlId = $"{baseId}_MicBtn";
-
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
-
     var orchestratorAvailability = new OrchestratorAvailability();
 
     if (!string.IsNullOrWhiteSpace(profile.OrchestratorName))
-
     {
-
         var availabilityProvider = ViewContext.HttpContext.RequestServices.GetServices<IOrchestratorAvailabilityProvider>()
-
             .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
 
-
-
         if (availabilityProvider is not null)
-
         {
-
             orchestratorAvailability = await availabilityProvider.GetAvailabilityAsync();
-
         }
-
     }
-
 }
 
-
-
 <div id="@($"{baseId}_Shell")" class="ai-chat-admin-widget-shell" style="--ai-widget-primary: var(--bs-primary, #0d6efd); visibility:hidden;">
-<!-- Toggle Button -->
 
-<button id="@toggleBtnId" class="ai-chat-widget-toggle" title="@T["Open AI Chat"]">
+    <!-- Toggle Button -->
+    <button id="@toggleBtnId" class="ai-chat-widget-toggle" title="@T["Open AI Chat"]">
+        <i class="fas fa-comments"></i>
+    </button>
 
-    <i class="fas fa-comments"></i>
+    <!-- Widget Container -->
+    <div id="@widgetContainerId" class="ai-chat-widget-container">
 
-</button>
+        <!-- Header (drag handle) -->
+        <div class="ai-chat-widget-header">
 
-<!-- Widget Container -->
-<div id="@widgetContainerId" class="ai-chat-widget-container">
+            <span class="title">
 
-    <!-- Header (drag handle) -->
+                @if (Model.Header != null)
+                {
+                    @await DisplayAsync(Model.Header)
+                }
+                else
+                {
+                    @T["AI Chat"]
+                }
 
-    <div class="ai-chat-widget-header">
+            </span>
 
-        <span class="title">
+            <div class="ai-chat-widget-header-actions">
 
-            @if (Model.Header != null)
-
-            {
-
-                @await DisplayAsync(Model.Header)
-
-            }
-
-            else
-
-            {
-
-                @T["AI Chat"]
-
-            }
-
-        </span>
-
-        <div class="ai-chat-widget-header-actions">
-
-            <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore size"]">
-
-                <i class="fas fa-compress"></i>
-
-            </button>
-
-            <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
-
-                <i class="fas fa-plus"></i>
-
-            </button>
-
-            @if (showHistory)
-
-            {
-
-                <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
-
-                    <i class="fas fa-clock-rotate-left"></i>
-
+                <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore size"]">
+                    <i class="fas fa-compress"></i>
                 </button>
 
-            }
-
-            <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
-
-                <i class="fas fa-times"></i>
-
-            </button>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- Chat Body -->
-
-    <div class="ai-chat-widget-messages" id="@chatContainerHtmlId">
-
-        @if (!orchestratorAvailability.IsAvailable)
-
-        {
-
-            <div class="alert alert-warning m-3 mb-0">
-
-                <i class="fas fa-exclamation-triangle"></i>
-
-                @orchestratorAvailability.Message
-
-            </div>
-
-        }
-
-        <div id="@placeholderHtmlId" class="ai-chat-widget-welcome@(addInitialPrompt ? " d-none" : string.Empty)">
-
-            <i class="fa fa-robot" style="font-size: 2rem;"></i><br>
-            @(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
-
-        </div>
-
-        <div id="@chatAppHtmlId"></div>
-
-    </div>
-
-
-
-    <!-- Input Area -->
-
-    <div class="ai-chat-widget-input">
-
-        @if (sessionDocumentsEnabled)
-
-        {
-
-            <div id="@documentBarHtmlId" class="d-none"></div>
-
-        }
-
-        @if (promptGeneratedProfiles.Any())
-
-        {
-
-            <div class="dropdown">
-
-                <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
-
-                    <i class="fa-solid fa-screwdriver-wrench"></i>
-
+                <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
+                    <i class="fas fa-plus"></i>
                 </button>
 
-                <ul class="dropdown-menu">
+                @if (showHistory)
+                {
+                    <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </button>
+                }
 
-                    @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
-
-                    {
-
-                        <li>
-
-                            <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
-
-                        </li>
-
-                    }
-
-                </ul>
-
-            </div>
-
-        }
-
-        <textarea id="@userPromptHtmlId"
-                  data-session-id=""
-                  data-profile-id="@(profile.ItemId)"
-                  placeholder="@T["Message..."]"
-                  rows="1"
-                  aria-label="@T["Message"]"></textarea>
-
-        <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
-                type="button"
-                id="@micBtnHtmlId"
-                title="@T["Voice input"]"
-                style="display: none;">
-
-            <i class="fa-solid fa-microphone"></i>
-
-        </button>
-
-        @if (conversationModeEnabled)
-
-        {
-
-            <button class="btn btn-outline-dark btn-sm"
-                    type="button"
-                    id="@conversationBtnHtmlId"
-                    title="@T["Start Conversation"]"
-                    data-start-title="@T["Start Conversation"]"
-                    data-end-title="@T["End Conversation"]"
-                    data-start-html="<i class='fa-solid fa-wave-square'></i>"
-                    data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
-
-                <i class="fa-solid fa-wave-square"></i>
-
-            </button>
-
-        }
-
-        <button id="@buttonHtmlId"
-                disabled
-                data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
-                data-stop-icon="<i class='fa-solid fa-stop'></i>">
-
-            <i class="fa-solid fa-arrow-up"></i>
-
-        </button>
-
-    </div>
-
-
-
-    @if (showHistory)
-
-    {
-
-        <!-- History Panel -->
-
-        <div class="ai-chat-widget-history-panel" id="@historyPanelId">
-
-            <div class="history-header">
-
-                <h5>@T["Chat History"]</h5>
-
-                <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
 
                     <i class="fas fa-times"></i>
 
@@ -374,182 +157,218 @@
 
             </div>
 
-            @await DisplayAsync(Model.History)
+        </div>
+
+        <!-- Chat Body -->
+        <div class="ai-chat-widget-messages" id="@chatContainerHtmlId">
+
+            @if (!orchestratorAvailability.IsAvailable)
+            {
+                <div class="alert alert-warning m-3 mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @orchestratorAvailability.Message
+                </div>
+            }
+
+            <div id="@placeholderHtmlId" class="ai-chat-widget-welcome@(addInitialPrompt ? " d-none" : string.Empty)">
+
+                <i class="fa fa-robot" style="font-size: 2rem;"></i><br>
+                @(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
+
+            </div>
+
+            <div id="@chatAppHtmlId"></div>
 
         </div>
 
-    }
+        @if (sessionDocumentsEnabled)
+        {
+            <div id="@documentBarHtmlId" class="border-top bg-light d-none"></div>
+        }
 
+        <!-- Input Area -->
+        <div class="ai-chat-widget-input">
+
+            @if (promptGeneratedProfiles.Any())
+            {
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                    </button>
+
+                    <ul class="dropdown-menu">
+                        @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
+                        {
+                            <li>
+                                <button type="button" class="dropdown-item profile-generated-prompt" data-profile-id="@promptGeneratedProfile.ItemId">@promptGeneratedProfile.Name</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <textarea id="@userPromptHtmlId"
+                      data-session-id=""
+                      data-profile-id="@(profile.ItemId)"
+                      placeholder="@T["Message..."]"
+                      rows="1"
+                      aria-label="@T["Message"]"></textarea>
+
+            <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
+                    type="button"
+                    id="@micBtnHtmlId"
+                    title="@T["Voice input"]"
+                    style="display: none;">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+
+            @if (conversationModeEnabled)
+            {
+                <button class="btn btn-outline-dark btn-sm"
+                        type="button"
+                        id="@conversationBtnHtmlId"
+                        title="@T["Start Conversation"]"
+                        data-start-title="@T["Start Conversation"]"
+                        data-end-title="@T["End Conversation"]"
+                        data-start-html="<i class='fa-solid fa-wave-square'></i>"
+                        data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+
+                    <i class="fa-solid fa-wave-square"></i>
+
+                </button>
+
+            }
+
+            <button id="@buttonHtmlId"
+                    disabled
+                    data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
+                    data-stop-icon="<i class='fa-solid fa-stop'></i>">
+
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+
+        @if (showHistory)
+        {
+            <!-- History Panel -->
+            <div class="ai-chat-widget-history-panel" id="@historyPanelId">
+                <div class="history-header">
+                    <h5>@T["Chat History"]</h5>
+                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                @await DisplayAsync(Model.History)
+            </div>
+        }
+
+    </div>
 </div>
-</div>
-
-
 
 <style asp-name="AIChatWidget" at="Head"></style>
-
 <style asp-name="highlightjs" at="Head"></style>
-
 <style asp-name="AIChatApp" at="Head"></style>
 
 @if (speechToTextEnabled)
-
 {
-
     <style asp-name="SpeechToText" at="Head"></style>
-
 }
 
 <script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatWidgetApp" at="Foot"></script>
 <script asp-name="AIChatAppPatch" at="Foot"></script>
 
 @{
 
     var chatConfig = new Dictionary<string, object>
-
     {
-
         ["signalRHubUrl"] = hubLink,
-
         ["appElementSelector"] = $"#{chatAppHtmlId}",
-
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-
         ["inputElementSelector"] = $"#{userPromptHtmlId}",
-
         ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-
         ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-
         ["autoCreateSession"] = addInitialPrompt,
-
         ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
-
         ["messages"] = Array.Empty<object>(),
-
         ["metricsEnabled"] = metricsEnabled,
-
         ["chatMode"] = chatMode.ToString(),
-
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
-
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
-
         ["textToSpeechEnabled"] = textToSpeechEnabled,
-
-        ["isOrchestratorAvailable"]= orchestratorAvailability.IsAvailable,
-
+        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
-
     };
 
-
-
     if (sessionDocumentsEnabled)
-
     {
-
         chatConfig["sessionDocumentsEnabled"] = true;
-
         chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
-
         chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
-
         chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
-
         chatConfig["allowedExtensions"] = allowedExtensions;
-
+        chatConfig["supportedExtensionsText"] = supportedExtensionsText;
         chatConfig["existingDocuments"] = Array.Empty<object>();
-
     }
-
 }
 
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
 <script at="Foot" depends-on="AIChatAppPatch">
-
     (function () {
-
     var shell = document.getElementById('@($"{baseId}_Shell")');
-    var widgetContainer = document.getElementById('@widgetContainerId');
-    var toggleButton = document.getElementById('@toggleBtnId');
-    var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
-    var widgetOpenStateKey = '@(storagePrefix + "-ai-admin-widget-state")';
-    var widgetLayoutKey = widgetStateName + 'Layout';
+    var initializationAttempts = 0;
+    var maxInitializationAttempts = 40;
+    var isInitialized = false;
 
-    try {
-    var storedLayout = localStorage.getItem(widgetLayoutKey);
-    var layout = storedLayout ? JSON.parse(storedLayout) || {} : {};
-    var position = layout.position || {};
-    var panelLayout = layout.panel || {};
-    var toggleLeft = Number(position.left);
-    var toggleTop = Number(position.top);
-    var isOpen = localStorage.getItem(widgetOpenStateKey) === 'open';
-
+    function revealShell() {
     if (shell) {
-    shell.dataset.deferReveal = isOpen ? 'true' : 'false';
-    shell.dataset.initialOpen = isOpen ? 'true' : 'false';
-    }
-
-    if (Number.isFinite(toggleLeft) && Number.isFinite(toggleTop)) {
-    toggleButton.style.left = toggleLeft + 'px';
-    toggleButton.style.top = toggleTop + 'px';
-    toggleButton.style.right = 'auto';
-    toggleButton.style.bottom = 'auto';
-
-    var toggleSize = 52;
-    var toggleGap = 8;
-    var panelWidth = Number.isFinite(Number(panelLayout.width))
-        ? Number(panelLayout.width)
-        : Math.round(parseFloat(window.getComputedStyle(widgetContainer).width) || 380);
-    var panelHeight = Number.isFinite(Number(panelLayout.height))
-        ? Number(panelLayout.height)
-        : Math.round(parseFloat(window.getComputedStyle(widgetContainer).height) || 520);
-
-    widgetContainer.style.left = (toggleLeft + toggleSize - panelWidth) + 'px';
-    widgetContainer.style.top = (toggleTop - panelHeight - toggleGap) + 'px';
-    widgetContainer.style.right = 'auto';
-    widgetContainer.style.bottom = 'auto';
-    }
-
-    widgetContainer.classList.remove('open');
-    widgetContainer.style.display = 'none';
-    widgetContainer.setAttribute('aria-hidden', 'true');
-    toggleButton.innerHTML = isOpen
-        ? '<i class="fas fa-times"></i>'
-        : '<i class="fas fa-comments"></i>';
-    }
-    catch (error) {
-    console.warn('Failed to restore widget layout before initialization.', error);
-    }
-    finally {
-    if (shell && shell.dataset.deferReveal !== 'true') {
     shell.style.visibility = '';
     }
     }
-    })();
 
-</script>
+    function initializeWidget() {
+    if (isInitialized) {
+    return;
+    }
 
-<script at="Foot" depends-on="AIChatAppPatch">
+    if (!window.openAIChatWidgetManager || !window.openAIChatManager) {
+    initializationAttempts++;
 
-    (function () {
+    if (initializationAttempts < maxInitializationAttempts) {
+    window.requestAnimationFrame(initializeWidget);
+    return;
+    }
 
-    var configEl = document.getElementById('@($"{baseId}_Config")');
+    console.warn('AI chat widget runtime is not available.');
+    revealShell();
+    return;
+    }
 
-    var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
-    var widgetContainer = document.getElementById('@widgetContainerId');
-    var toggleButton = document.getElementById('@toggleBtnId');
-    var closeButton = document.getElementById('@closeBtnId');
-    var shell = document.getElementById('@($"{baseId}_Shell")');
+    isInitialized = true;
+
     var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
-    var widgetOpenStateKey = '@(storagePrefix + "-ai-admin-widget-state")';
-
-    chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-    chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
-    chatConfig.widget = {
+    window.openAIChatWidgetManager.initialize({
+    configElementSelector: '#@($"{baseId}_Config")',
+    messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
+    indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
+    shellSelector: '#@($"{baseId}_Shell")',
+    widgetContainerSelector: '#@widgetContainerId',
+    toggleButtonSelector: '#@toggleBtnId',
+    closeButtonSelector: '#@closeBtnId',
+    inputSelector: '#@userPromptHtmlId',
+    widgetStateName: widgetStateName,
+    widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
+    openStateValue: 'open',
+    closedStateValue: 'closed',
+    openIconHtml: '<i class="fas fa-times"></i>',
+    closedIconHtml: '<i class="fas fa-comments"></i>',
+    chatConfig: Object.assign(
+    {},
+    JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
+    {
+    widget: {
     chatWidgetContainer: '#@widgetContainerId',
     chatWidgetStateName: widgetStateName,
     chatHistorySection: '#@historyPanelId',
@@ -564,170 +383,13 @@
     persistLayout: true,
     minWidth: 288,
     minHeight: 320
-    };
-
-    var widgetApp = window.openAIChatManager.initialize(chatConfig);
-    if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
-    window.crestAppsAIChat.patchSessionProfileSync(widgetApp);
     }
-
-    function revealShell() {
-    if (!shell) {
-    return;
-    }
-
-    shell.style.visibility = '';
-    shell.dataset.deferReveal = 'false';
-    }
-
-    function syncOpenPanelPosition() {
-    if (!widgetApp || typeof widgetApp.syncPanelPositionToToggle !== 'function') {
-    return;
-    }
-
-    widgetApp.syncPanelPositionToToggle(false);
-    }
-
-    function updateTtsPlaybackButtons() {
-    var buttons = widgetContainer.querySelectorAll('[data-tts-message-index]');
-
-    buttons.forEach(function (button) {
-    var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
-    var isPlaying = buttonIndex === widgetApp.ttsPlayingMessageIndex;
-    var iconHtml = isPlaying
-        ? '<span class="fa-solid fa-circle-pause" style="font-size: 0.9rem;"></span>'
-        : '<span class="fa-solid fa-circle-play" style="font-size: 0.9rem;"></span>';
-
-    button.classList.toggle('tts-playing', isPlaying);
-    button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
-    button.replaceChildren(DOMPurify.sanitize(iconHtml, { RETURN_DOM_FRAGMENT: true }));
+    })
     });
     }
 
-    function queueTtsPlaybackButtonUpdate() {
-    requestAnimationFrame(updateTtsPlaybackButtons);
-    }
-
-    function revealShellWhenStable(initialOpen) {
-    if (!shell || shell.dataset.deferReveal !== 'true' || !initialOpen) {
-    revealShell();
-    return;
-    }
-
-    var hasRevealed = false;
-    var resizeObserver = null;
-
-    function finalizeReveal() {
-    if (hasRevealed) {
-    return;
-    }
-
-    hasRevealed = true;
-
-    if (resizeObserver) {
-    resizeObserver.disconnect();
-    }
-
-    requestAnimationFrame(function () {
-    syncOpenPanelPosition();
-    requestAnimationFrame(function () {
-    revealShell();
-    });
-    });
-    }
-
-    if (typeof ResizeObserver === 'undefined') {
-    window.setTimeout(finalizeReveal, 0);
-    return;
-    }
-
-    var lastWidth = 0;
-    var lastHeight = 0;
-    var stablePasses = 0;
-
-    resizeObserver = new ResizeObserver(function (entries) {
-    var entry = entries && entries[0];
-
-    if (!entry) {
-    return;
-    }
-
-    var width = Math.round(entry.contentRect.width);
-    var height = Math.round(entry.contentRect.height);
-
-    if (!width || !height) {
-    return;
-    }
-
-    syncOpenPanelPosition();
-
-    if (width === lastWidth && height === lastHeight) {
-    stablePasses++;
-    } else {
-    lastWidth = width;
-    lastHeight = height;
-    stablePasses = 0;
-    }
-
-    if (stablePasses >= 1) {
-    finalizeReveal();
-    }
-    });
-
-    resizeObserver.observe(widgetContainer);
-    window.setTimeout(finalizeReveal, 150);
-    }
-
-    function setWidgetOpen(isOpen) {
-    if (widgetApp) {
-    var isCurrentlyOpen = widgetContainer.classList.contains('open');
-    if (isOpen && !isCurrentlyOpen && typeof widgetApp.syncPanelPositionToToggle === 'function') {
-    widgetApp.syncPanelPositionToToggle();
-    } else if (!isOpen && isCurrentlyOpen && typeof widgetApp.syncTogglePositionToPanel === 'function') {
-    widgetApp.syncTogglePositionToPanel();
-    }
-    }
-
-    widgetContainer.classList.toggle('open', isOpen);
-    widgetContainer.style.display = isOpen ? 'flex' : 'none';
-    widgetContainer.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-    toggleButton.innerHTML = isOpen
-        ? '<i class="fas fa-times"></i>'
-        : '<i class="fas fa-comments"></i>';
-    localStorage.setItem(widgetOpenStateKey, isOpen ? 'open' : 'closed');
-
-    if (isOpen && typeof window.renderPendingCharts === 'function') {
-    setTimeout(function () { window.renderPendingCharts(); }, 100);
-    }
-    }
-
-    var initialOpen = shell && shell.dataset.initialOpen === 'true';
-    setWidgetOpen(initialOpen);
-    revealShellWhenStable(initialOpen);
-
-    if (widgetApp && typeof widgetApp.$watch === 'function') {
-    widgetApp.$watch('ttsPlayingMessageIndex', function () {
-    queueTtsPlaybackButtonUpdate();
-    });
-    }
-
-    queueTtsPlaybackButtonUpdate();
-
-    toggleButton.addEventListener('click', function () {
-    if (toggleButton.dataset.dragSuppressClick === 'true') {
-    toggleButton.dataset.dragSuppressClick = 'false';
-    return;
-    }
-
-    setWidgetOpen(!widgetContainer.classList.contains('open'));
-    });
-
-    closeButton.addEventListener('click', function () {
-    setWidgetOpen(false);
-    });
-
+    initializeWidget();
     })();
-
 </script>
 
 <template id="@($"{baseId}_MessageTemplate")">

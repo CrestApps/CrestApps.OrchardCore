@@ -387,6 +387,8 @@
     flex: 0 0 100%;
     margin: -0.5rem -0.75rem 0.5rem;
     padding: 0.5rem 0.75rem;
+    max-height: 4.5rem;
+    overflow-y: auto;
 }
 
 .ai-chat-widget-input textarea {

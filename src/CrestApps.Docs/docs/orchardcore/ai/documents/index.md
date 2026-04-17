@@ -215,6 +215,14 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
 
+### File Storage Location
+
+Uploaded AI documents are stored in a tenant-scoped folder under the web root:
+
+`wwwroot\<tenant-name>\AIDocuments`
+
+This path is post-configured by the AI Documents module so the tenant-specific location always overrides the core package default.
+
 ## Document Lifecycle & Cleanup
 
 When a chat interaction, chat session, or AI profile is deleted, all associated documents are automatically cleaned up:

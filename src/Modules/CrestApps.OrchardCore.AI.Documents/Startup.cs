@@ -27,6 +27,7 @@ using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.AI.Documents;
 
@@ -40,6 +41,7 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIDocumentChunkIndexMigrations>();
 
         services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
+        services.AddSingleton<IPostConfigureOptions<DocumentFileSystemFileStoreOptions>, DocumentFileSystemFileStoreOptionsPostConfiguration>();
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();

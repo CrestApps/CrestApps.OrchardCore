@@ -167,6 +167,8 @@ Provides a floating AI chat widget on every admin page, allowing users to intera
 
 The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core admin dashboard. This allows administrators to interact with AI directly from any admin page without navigating away.
 
+When session documents are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved and each attachment keeps a visible remove button.
+
 #### Enabling the Admin Widget
 
 1. Go to **Tools** > **Features** in the admin menu.
@@ -190,6 +192,8 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 ### Frontend Chat Widget
 
 A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. This allows site visitors to interact with AI chat directly on the frontend.
+
+When the widget's profile allows session documents, file attachments are rendered above the input row instead of beside it, matching the admin widget layout and keeping the remove button visible for each attached file.
 
 #### Adding the Frontend Widget
 
