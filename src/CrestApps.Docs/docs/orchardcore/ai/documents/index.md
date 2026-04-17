@@ -14,7 +14,7 @@ Provides the foundation for document processing, text extraction, and Retrieval-
 
 ## Overview
 
-This module is the foundation for all document-related functionality in the CrestApps AI suite. It provides document upload, text extraction, embedding, and RAG (Retrieval-Augmented Generation) capabilities shared by both **AI Chat Interactions** and **AI Profiles**.
+This module is the foundation for all document-related functionality in the CrestApps AI suite. It provides document upload, text extraction, embedding, and RAG (Retrieval-Augmented Generation) capabilities shared by **AI Chat Interactions**, **AI Profiles**, and **AI Chat Sessions / Widgets**.
 
 The base feature is **enabled by dependency only** — it activates automatically when either `AI Documents for Chat Interactions` or `AI Documents for Profiles` is enabled.
 
@@ -35,6 +35,19 @@ The base feature (`CrestApps.OrchardCore.AI.Documents`) provides the shared infr
 | **AI Documents for Chat Interactions** | `CrestApps.OrchardCore.AI.Documents.ChatInteractions` | Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Chat Interactions. |
 | **AI Documents for Profiles** | `CrestApps.OrchardCore.AI.Documents.Profiles` | Provides document upload and Retrieval-Augmented Generation (RAG) support for AI Profiles. |
 | **AI Documents for Chat Sessions** | `CrestApps.OrchardCore.AI.Documents.ChatSessions` | Provides document upload and RAG support for AI Chat Sessions and AI Chat Widgets. |
+| **AI Documents - Azure Blob Storage** | `CrestApps.OrchardCore.AI.Documents.Azure` | Stores uploaded AI documents in Azure Blob Storage instead of the tenant web root. See [AI Documents - Azure Blob Storage](./azure-blob-storage.md). |
+
+## Document uploads and storage
+
+All AI document uploads use the same shared document-storage pipeline. That means uploads from chat interactions, profile documents, chat sessions, and chat widgets are all stored through the same `IDocumentFileStore`.
+
+By default, uploaded documents are stored on the local file system in a tenant-scoped folder under the web root:
+
+`wwwroot\<tenant-name>\AIDocuments`
+
+This tenant-specific path is enforced by the AI Documents module so local uploads stay isolated per tenant.
+
+If you want uploaded files stored in Azure Blob Storage instead of the local file system, enable the optional [`AI Documents - Azure Blob Storage`](./azure-blob-storage.md) feature and configure `OrchardCore:CrestApps:AI:AzureDocuments`.
 
 ## AI Documents for Chat Interactions
 
@@ -215,13 +228,14 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 |---------|-------------|---------|
 | Top N Results | Number of top matching document chunks to include as context | 3 |
 
-### File Storage Location
+### File storage providers
 
-Uploaded AI documents are stored in a tenant-scoped folder under the web root:
+| Provider | Default | Notes |
+| --- | --- | --- |
+| Local file system | Yes | Stores uploads under `wwwroot\<tenant-name>\AIDocuments`. |
+| Azure Blob Storage | Optional | Enable `CrestApps.OrchardCore.AI.Documents.Azure` to replace the default store. |
 
-`wwwroot\<tenant-name>\AIDocuments`
-
-This path is post-configured by the AI Documents module so the tenant-specific location always overrides the core package default.
+For Azure Blob Storage setup and configuration details, see [AI Documents - Azure Blob Storage](./azure-blob-storage.md).
 
 ## Document Lifecycle & Cleanup
 

@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.Abstractions" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />

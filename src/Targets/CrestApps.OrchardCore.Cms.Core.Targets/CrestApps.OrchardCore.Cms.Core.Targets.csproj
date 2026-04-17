@@ -42,6 +42,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Documents.Azure/CrestApps.OrchardCore.AI.Documents.Azure.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Documents.AzureAI/CrestApps.OrchardCore.AI.Documents.AzureAI.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Documents.Elasticsearch/CrestApps.OrchardCore.AI.Documents.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Documents.OpenXml/CrestApps.OrchardCore.AI.Documents.OpenXml.csproj" PrivateAssets="none" />

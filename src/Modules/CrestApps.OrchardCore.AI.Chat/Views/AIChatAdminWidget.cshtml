@@ -130,7 +130,7 @@
 
         @if (sessionDocumentsEnabled)
         {
-            <div id="@documentBarHtmlId" class="border-top bg-light d-none"></div>
+            <div id="@documentBarHtmlId" class="ai-chat-widget-document-bar border-top bg-light d-none"></div>
         }
 
         <!-- Input Area -->
@@ -195,6 +195,13 @@
         }
     </div>
 </div>
+
+<style at="Head">
+    .ai-chat-widget-document-bar .small.text-muted {
+        font-size: 0.68rem !important;
+        line-height: 1.25;
+    }
+</style>
 
 @{
     var chatConfig = new Dictionary<string, object>

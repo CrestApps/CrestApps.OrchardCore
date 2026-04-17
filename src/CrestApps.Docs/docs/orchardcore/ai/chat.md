@@ -140,6 +140,8 @@ If a profile allows session documents, the chat UI now keeps restored widget ses
 
 The admin and frontend chat widgets now also restore their saved toggle and panel positions before the chat app finishes initializing. This removes the brief flash where an open widget could render in its default corner and then jump to the persisted position.
 
+By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
+
 ### Admin Chat User Interface
 
 ![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
@@ -167,7 +169,7 @@ Provides a floating AI chat widget on every admin page, allowing users to intera
 
 The **AI Chat Admin Widget** adds a floating chat widget to the Orchard Core admin dashboard. This allows administrators to interact with AI directly from any admin page without navigating away.
 
-When session documents are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved and each attachment keeps a visible remove button.
+When session documents are enabled for the selected profile, attached files are shown in a dedicated bar above the message input so the input width is preserved, each attachment keeps a visible remove button, and the supported-formats note stays compact instead of dominating the widget.
 
 #### Enabling the Admin Widget
 
@@ -193,7 +195,7 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 
 A **frontend chat widget** is available to add to your site's public-facing pages using the Orchard Core Widgets system. This allows site visitors to interact with AI chat directly on the frontend.
 
-When the widget's profile allows session documents, file attachments are rendered above the input row instead of beside it, matching the admin widget layout and keeping the remove button visible for each attached file.
+When the widget's profile allows session documents, file attachments are rendered above the input row instead of beside it, matching the admin widget layout, keeping the remove button visible for each attached file, and reducing the visual weight of the supported-formats note.
 
 #### Adding the Frontend Widget
 

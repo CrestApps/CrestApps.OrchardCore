@@ -183,7 +183,7 @@
 
         @if (sessionDocumentsEnabled)
         {
-            <div id="@documentBarHtmlId" class="border-top bg-light d-none"></div>
+            <div id="@documentBarHtmlId" class="ai-chat-widget-document-bar border-top bg-light d-none"></div>
         }
 
         <!-- Input Area -->
@@ -268,6 +268,12 @@
 <style asp-name="AIChatWidget" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 <style asp-name="AIChatApp" at="Head"></style>
+<style at="Head">
+    .ai-chat-widget-document-bar .small.text-muted {
+        font-size: 0.68rem !important;
+        line-height: 1.25;
+    }
+</style>
 
 @if (speechToTextEnabled)
 {
