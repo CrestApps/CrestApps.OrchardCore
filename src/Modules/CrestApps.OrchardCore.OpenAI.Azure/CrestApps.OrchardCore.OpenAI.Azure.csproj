@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -23,12 +23,12 @@
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="CrestApps.Core.AI.OpenAI.Azure" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

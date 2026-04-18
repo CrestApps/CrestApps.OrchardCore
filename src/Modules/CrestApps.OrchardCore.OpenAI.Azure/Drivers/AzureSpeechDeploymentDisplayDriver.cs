@@ -1,7 +1,7 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;

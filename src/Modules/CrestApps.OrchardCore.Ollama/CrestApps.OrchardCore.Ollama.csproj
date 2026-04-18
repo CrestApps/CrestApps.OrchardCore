@@ -33,7 +33,6 @@
     <PackageReference Include="CrestApps.Core.AI.Ollama" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.OpenAI.Core/CrestApps.OrchardCore.OpenAI.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

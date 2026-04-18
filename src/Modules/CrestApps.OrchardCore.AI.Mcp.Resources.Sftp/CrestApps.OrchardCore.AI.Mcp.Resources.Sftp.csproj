@@ -22,7 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Mcp.Core/CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
     <PackageReference Include="CrestApps.Core.AI.Mcp.Sftp" />
   </ItemGroup>
 

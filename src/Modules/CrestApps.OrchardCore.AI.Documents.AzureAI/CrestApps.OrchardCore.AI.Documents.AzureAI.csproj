@@ -18,13 +18,11 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.AzureAI.Core" />
-    <PackageReference Include="Azure.Search.Documents" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.OpenAI.Azure.Core/CrestApps.OrchardCore.OpenAI.Azure.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
