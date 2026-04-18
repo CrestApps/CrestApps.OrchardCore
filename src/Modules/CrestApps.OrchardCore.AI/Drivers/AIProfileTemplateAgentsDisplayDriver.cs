@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
@@ -22,15 +22,15 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
         var allAgents = await _profileManager.GetAsync(AIProfileType.Agent) ?? [];
 
         var alwaysAvailableCount = allAgents
-            .Count(a => a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+            .Count(a => a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
 
         var onDemandAgents = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
         {
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var selectedNames = metadata?.AgentNames ?? [];
 
             model.AlwaysAvailableAgentCount = alwaysAvailableCount;
@@ -63,11 +63,11 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
 
         var validAgentNames = allAgents
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (selectedAgentNames is null || !selectedAgentNames.Any())
         {

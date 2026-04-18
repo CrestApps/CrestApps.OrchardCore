@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.A2A.Handlers;
 
@@ -32,7 +32,7 @@ internal sealed class A2AConnectionSettingsHandler : CatalogEntryHandlerBase<A2A
         }
 
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
-        var metadata = connection.As<A2AConnectionMetadata>();
+        var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
 
         ProtectField(protector, metadataNode, nameof(A2AConnectionMetadata.ApiKey), val =>
         {

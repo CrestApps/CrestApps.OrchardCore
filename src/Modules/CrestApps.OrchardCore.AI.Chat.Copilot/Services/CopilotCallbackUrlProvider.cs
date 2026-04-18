@@ -10,7 +10,7 @@ public sealed class CopilotCallbackUrlProvider
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
-    private readonly ILogger<CopilotCallbackUrlProvider> _logger;
+    private readonly ILogger _logger;
 
     public CopilotCallbackUrlProvider(
         ISiteService siteService,
@@ -27,7 +27,7 @@ public sealed class CopilotCallbackUrlProvider
     public async Task<string> GetCallbackUrlAsync(CancellationToken cancellationToken = default)
     {
         var httpContext = _httpContextAccessor.HttpContext
-            ?? throw new InvalidOperationException("An active HttpContext is required to build the Copilot OAuth callback URL.");
+        ?? throw new InvalidOperationException("An active HttpContext is required to build the Copilot OAuth callback URL.");
 
         var requestCallbackUrl = _linkGenerator.GetUriByAction(httpContext, "OAuthCallback", "CopilotAuth", new
         {
@@ -40,6 +40,7 @@ public sealed class CopilotCallbackUrlProvider
         }
 
         var site = await _siteService.GetSiteSettingsAsync();
+
         if (string.IsNullOrWhiteSpace(site.BaseUrl))
         {
             return requestCallbackUrl;
@@ -80,7 +81,7 @@ public sealed class CopilotCallbackUrlProvider
 
         if (!string.IsNullOrEmpty(siteBasePath) &&
             siteBasePath != "/" &&
-            relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
+                relativePath.StartsWith(siteBasePath, StringComparison.OrdinalIgnoreCase))
         {
             relativePath = relativePath[siteBasePath.Length..];
         }

@@ -14,6 +14,7 @@ internal static class RecipeStepSchemaBuilders
         {
             ("name", String().Const(stepName)),
         };
+
         allProperties.AddRange(properties);
 
         var builder = new JsonSchemaBuilder()

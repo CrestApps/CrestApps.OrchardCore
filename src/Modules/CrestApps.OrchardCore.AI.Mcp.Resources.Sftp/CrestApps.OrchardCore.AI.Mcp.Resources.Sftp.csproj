@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -19,11 +19,10 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
-    <PackageReference Include="SSH.NET" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.AI.Mcp.Core\CrestApps.OrchardCore.AI.Mcp.Core.csproj" />
+    <PackageReference Include="CrestApps.Core.AI.Mcp.Sftp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,7 +31,7 @@
       they won't need to manually include the MCP module. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.AI.Mcp\CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Mcp/CrestApps.OrchardCore.AI.Mcp.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

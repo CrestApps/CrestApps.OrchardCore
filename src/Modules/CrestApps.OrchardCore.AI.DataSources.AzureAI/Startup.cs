@@ -1,14 +1,17 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Core;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI;
 
@@ -23,14 +26,11 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceContentManager, OrchardCoreAzureAISearchDataSourceContentManager>(AzureAISearchConstants.ProviderName);
+        services.TryAddKeyedScoped<IDataSourceDocumentReader, OrchardCoreAzureAISearchDataSourceDocumentReader>(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<DataSourceAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
-        services.AddKeyedScoped<IDataSourceContentManager, AzureAISearchDataSourceContentManager>(
-            AzureAISearchConstants.ProviderName);
-        services.AddKeyedScoped<IDataSourceDocumentReader, DataSourceAzureAISearchDocumentReader>(
-            AzureAISearchConstants.ProviderName);
-        services.AddKeyedSingleton<IODataFilterTranslator, AzureAIODataFilterTranslator>(
-            AzureAISearchConstants.ProviderName);
 
         services.AddAzureAISearchIndexingSource(DataSourceConstants.IndexingTaskType, o =>
         {

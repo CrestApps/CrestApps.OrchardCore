@@ -14,7 +14,11 @@ public sealed class OmnichannelActivityContainer
 
     public User User { get; }
 
-    public OmnichannelActivityContainer(OmnichannelActivity activity, ContentTypeDefinition subjectContentTypeDefinition, ContentItem contact, User user)
+    public OmnichannelActivityContainer(
+        OmnichannelActivity activity,
+        ContentTypeDefinition subjectContentTypeDefinition,
+        ContentItem contact,
+        User user)
     {
         ArgumentNullException.ThrowIfNull(activity);
         ArgumentNullException.ThrowIfNull(subjectContentTypeDefinition);

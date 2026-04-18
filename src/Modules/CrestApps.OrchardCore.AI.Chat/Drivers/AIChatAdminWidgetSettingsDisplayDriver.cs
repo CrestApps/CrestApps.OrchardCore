@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Settings;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -44,7 +45,9 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
             model.PrimaryColor = settings.PrimaryColor;
 
             var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
-            model.Profiles = profiles.Select(p => new SelectListItem(p.DisplayText, p.ItemId));
+            model.Profiles = profiles
+                .OrderBy(p => p.DisplayText ?? p.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(p => new SelectListItem(p.DisplayText ?? p.Name, p.ItemId));
         })
         .Location("Content:9%Admin Widget;1")
         .OnGroup(SettingsGroupId)
@@ -62,12 +65,14 @@ public sealed class AIChatAdminWidgetSettingsDisplayDriver : SiteDisplayDriver<A
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        settings.ProfileId = model.ProfileId;
+        settings.ProfileId = string.IsNullOrWhiteSpace(model.ProfileId) ? null : model.ProfileId;
         settings.MaxSessions = Math.Clamp(
             model.MaxSessions,
             AIChatAdminWidgetSettings.MinMaxSessions,
             AIChatAdminWidgetSettings.MaxMaxSessions);
-        settings.PrimaryColor = model.PrimaryColor?.Trim();
+        settings.PrimaryColor = string.IsNullOrWhiteSpace(model.PrimaryColor)
+            ? AIChatAdminWidgetSettings.DefaultPrimaryColor
+            : model.PrimaryColor.Trim();
 
         return Edit(site, settings, context);
     }

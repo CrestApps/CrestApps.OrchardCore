@@ -14,7 +14,6 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
         { "groupId", DisplayNameSettingsDisplayDriver.GroupId },
     };
 
-
     internal readonly IStringLocalizer S;
 
     public UserDisplayNameAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)
@@ -28,30 +27,30 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
         {
             builder
                 .Add(S["Configuration"], configuration => configuration
-                    .Add(S["Settings"], settings => settings
-                        .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
-                            .AddClass("user-display-name")
-                            .Id("userDisplayName")
-                            .Action("Index", "Admin", _routeValues)
-                            .Permission(UserPermissions.ManageDisplaySettings)
-                            .LocalNav()
-                        )
-                    )
-                );
+                .Add(S["Settings"], settings => settings
+                .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
+                .AddClass("user-display-name")
+                .Id("userDisplayName")
+                .Action("Index", "Admin", _routeValues)
+                .Permission(UserPermissions.ManageDisplaySettings)
+                .LocalNav()
+            )
+            )
+            );
 
             return ValueTask.CompletedTask;
         }
 
         builder
             .Add(S["Settings"], settings => settings
-                .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
-                    .AddClass("user-display-name")
-                    .Id("userDisplayName")
-                    .Action("Index", "Admin", _routeValues)
-                    .Permission(UserPermissions.ManageDisplaySettings)
-                    .LocalNav()
-                )
-            );
+            .Add(S["User Display Name"], S["User Display Name"].PrefixPosition(), userDisplayName => userDisplayName
+            .AddClass("user-display-name")
+            .Id("userDisplayName")
+            .Action("Index", "Admin", _routeValues)
+            .Permission(UserPermissions.ManageDisplaySettings)
+            .LocalNav()
+        )
+        );
 
         return ValueTask.CompletedTask;
     }

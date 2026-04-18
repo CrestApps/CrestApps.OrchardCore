@@ -1,16 +1,16 @@
 using System.Security.Claims;
+using CrestApps.Core;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Workflows;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
@@ -124,7 +124,7 @@ public sealed class ActivitiesController : Controller
         var contacts = await _contentManager.GetAsync(contactsIds, VersionOptions.Latest);
 
         var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
-           .ListAsync();
+            .ListAsync();
 
         var containerSummaries = new List<IShape>();
 
@@ -284,7 +284,7 @@ public sealed class ActivitiesController : Controller
 
         var activity = new OmnichannelActivity()
         {
-            ItemId = IdGenerator.GenerateId(),
+            ItemId = UniqueId.GenerateId(),
             ContactContentItemId = contact.ContentItemId,
             ContactContentType = contact.ContentType,
             Status = ActivityStatus.NotStated,

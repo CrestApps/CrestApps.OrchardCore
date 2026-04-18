@@ -1,7 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
-using CrestApps.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -42,8 +42,8 @@ internal static class TwilioWebhookEndpoint
         var protector = dataProtectionProvider.CreateProtector(TwilioSmsProvider.ProtectorName);
 
         var authToken = string.IsNullOrEmpty(settings.AuthToken)
-            ? null
-            : protector.Unprotect(settings.AuthToken);
+        ? null
+        : protector.Unprotect(settings.AuthToken);
 
         if (string.IsNullOrEmpty(authToken))
         {
@@ -86,7 +86,7 @@ internal static class TwilioWebhookEndpoint
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Twilio message received from {From} to {To}, SID: {Sid}",
-                from.SanitizeLogValue(), to.SanitizeLogValue(), messageSid.SanitizeLogValue());
+            from.SanitizeLogValue(), to.SanitizeLogValue(), messageSid.SanitizeLogValue());
         }
 
         var omnichannelMessage = new OmnichannelMessage
@@ -113,6 +113,7 @@ internal static class TwilioWebhookEndpoint
         await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
 
         // Return empty 200 OK to Twilio
+
         return TypedResults.Ok();
     }
 }

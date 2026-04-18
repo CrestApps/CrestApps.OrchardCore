@@ -10,6 +10,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Roles Core Services",
     Dependencies =
     [
-        "OrchardCore.Roles",
+    "OrchardCore.Roles",
     ]
-)]
+    )]

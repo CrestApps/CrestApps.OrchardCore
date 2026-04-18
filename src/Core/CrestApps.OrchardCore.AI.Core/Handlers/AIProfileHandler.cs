@@ -1,11 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Settings;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Liquid;
@@ -157,7 +160,7 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             var chatDeploymentId = data[nameof(AIProfile.ChatDeploymentId)]?.GetValue<string>()?.Trim()
-                ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
+            ?? data["DeploymentId"]?.GetValue<string>()?.Trim();
 #pragma warning restore CS0618 // Type or member is obsolete
 
             profile.ChatDeploymentName = await ResolveLegacyDeploymentIdAsync(chatDeploymentId, profile.ChatDeploymentName);
@@ -196,16 +199,25 @@ public sealed class AIProfileHandler : CatalogEntryHandlerBase<AIProfile>
 
         if (properties != null)
         {
-            profile.Properties ??= [];
+            profile.Properties ??= new Dictionary<string, object>();
 
-            var existingPropertiesSnapshot = profile.Properties.Clone();
+            // Convert current properties to JsonObject for merge.
+            var currentJson = JsonSerializer.SerializeToNode(profile.Properties)?.AsObject() ?? [];
 
-            profile.Properties.Merge(properties, new JsonMergeSettings
+            // Snapshot existing properties before merge so named entries can be
+            // merged by name (upsert) instead of being fully replaced.
+            var existingPropertiesSnapshot = currentJson.Clone();
+
+            // Merge incoming properties.
+            currentJson.Merge(properties, new JsonMergeSettings
             {
                 MergeArrayHandling = MergeArrayHandling.Replace,
             });
 
-            AIPropertiesMergeHelper.MergeNamedEntries(profile.Properties, existingPropertiesSnapshot);
+            AIPropertiesMergeHelper.MergeNamedEntries(currentJson, existingPropertiesSnapshot);
+
+            // Convert back to dictionary.
+            profile.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
 
         var settings = data[nameof(AIProfile.Settings)]?.AsObject();

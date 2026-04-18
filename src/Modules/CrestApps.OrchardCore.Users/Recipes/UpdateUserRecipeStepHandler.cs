@@ -16,7 +16,7 @@ public sealed class UpdateUserRecipeStepHandler : NamedRecipeStepHandler
     private readonly ISession _session;
 
     public UpdateUserRecipeStepHandler(ISession session)
-        : base("IndexUsers")
+    : base("IndexUsers")
     {
         _session = session;
     }

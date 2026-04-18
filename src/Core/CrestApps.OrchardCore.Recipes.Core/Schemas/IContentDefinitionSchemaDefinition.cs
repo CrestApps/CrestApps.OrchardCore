@@ -21,6 +21,9 @@ public interface IContentDefinitionSchemaDefinition
 
     string Name { get; }
 
+    /// <summary>
+    /// Builds the schema describing the settings payload for this content definition.
+    /// </summary>
     ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync();
 }
 
@@ -40,6 +43,7 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     public ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync()
     {
         _cache ??= BuildSettingsCore();
+
         return ValueTask.FromResult(_cache);
     }
 
@@ -51,17 +55,17 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     /// </summary>
     protected static JsonSchemaBuilder Envelope(string settingsKey, JsonSchemaBuilder innerSettings)
         => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties((settingsKey, innerSettings))
-            .AdditionalProperties(true);
+        .Type(SchemaValueType.Object)
+        .Properties((settingsKey, innerSettings))
+        .AdditionalProperties(true);
 
     protected static JsonSchemaBuilder BoolProp()
         => new JsonSchemaBuilder().Type(SchemaValueType.Boolean);
 
     protected static JsonSchemaBuilder StringArray()
         => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Array)
-            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
+        .Type(SchemaValueType.Array)
+        .Items(new JsonSchemaBuilder().Type(SchemaValueType.String));
 
     protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
         => (name, schema);
@@ -71,7 +75,7 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     /// </summary>
     protected static JsonSchemaBuilder Obj(params (string, JsonSchemaBuilder)[] props)
         => new JsonSchemaBuilder()
-            .Type(SchemaValueType.Object)
-            .Properties(props)
-            .AdditionalProperties(false);
+        .Type(SchemaValueType.Object)
+        .Properties(props)
+        .AdditionalProperties(false);
 }

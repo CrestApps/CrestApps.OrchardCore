@@ -1,5 +1,5 @@
-﻿using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,6 +20,7 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ApplySystemSettingsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Mcp.ViewModels;

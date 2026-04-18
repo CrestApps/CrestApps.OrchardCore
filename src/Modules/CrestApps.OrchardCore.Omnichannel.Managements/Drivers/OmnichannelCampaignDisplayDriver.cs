@@ -1,10 +1,9 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -50,10 +49,10 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
         return CombineAsync(
             View("OmnichannelCampaign_Fields_SummaryAdmin", campaign)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelCampaign_Buttons_SummaryAdmin", campaign)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelCampaign_DefaultMeta_SummaryAdmin", campaign)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelCampaign_Buttons_SummaryAdmin", campaign)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelCampaign_DefaultMeta_SummaryAdmin", campaign)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 
@@ -90,7 +89,7 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
                 Value = d.ItemId,
                 Selected = campaign.DispositionIds is not null && campaign.DispositionIds.Contains(d.ItemId)
             }).OrderBy(x => x.Text)
-            .ToArray();
+        .ToArray();
 
             model.Providers = _aiProviderOptions.Providers.Select(provider => new SelectListItem(provider.Key, provider.Key));
 
@@ -111,16 +110,16 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             if (_toolDefinitions.Tools.Count > 0)
             {
                 model.Tools = _toolDefinitions.Tools
-                .Where(tool => !tool.Value.IsSystemTool)
-                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
-                .OrderBy(group => group.Key)
-                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-                {
-                    ItemId = entry.Key,
-                    DisplayText = entry.Value.Title,
-                    Description = entry.Value.Description,
-                    IsSelected = campaign.ToolNames?.Contains(entry.Key) ?? false,
-                }).OrderBy(entry => entry.DisplayText).ToArray());
+                    .Where(tool => !tool.Value.IsSystemTool)
+                    .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+                    .OrderBy(group => group.Key)
+                    .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+                    {
+                        ItemId = entry.Key,
+                        DisplayText = entry.Value.Title,
+                        Description = entry.Value.Description,
+                        IsSelected = campaign.ToolNames?.Contains(entry.Key) ?? false,
+                    }).OrderBy(entry => entry.DisplayText).ToArray());
             }
         }).Location("Content:1");
     }
@@ -165,12 +164,14 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             }
 
             // Campaign goal is required for automated type
+
             if (string.IsNullOrWhiteSpace(model.CampaignGoal))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignGoal), S["Campaign goal is required for automated activities."]);
             }
 
             // Provider validation
+
             if (string.IsNullOrEmpty(model.ProviderName))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProviderName), S["The Provider is required."]);
@@ -221,10 +222,10 @@ internal sealed class OmnichannelCampaignDisplayDriver : DisplayDriver<Omnichann
             var selectedToolKeys = toolsModel.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
 
             campaign.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
-                ? []
-                : _toolDefinitions.Tools.Keys
-                    .Intersect(selectedToolKeys)
-                    .ToArray();
+            ? []
+            : _toolDefinitions.Tools.Keys
+                .Intersect(selectedToolKeys)
+                .ToArray();
         }
 
         return Edit(campaign, context);

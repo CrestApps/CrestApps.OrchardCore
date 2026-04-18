@@ -93,7 +93,7 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 - Validate builds locally before committing
 - Ensure tests pass and assets are rebuilt
 - Follow branch naming conventions and PR description template
-- Document all changes in Docusaurus docs under `src/CrestApps.OrchardCore.Documentations`
+- Document all changes in Docusaurus docs under `src/CrestApps.Docs`
 
 ---
 

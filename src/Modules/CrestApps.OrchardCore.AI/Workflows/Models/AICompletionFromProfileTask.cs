@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Liquid;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
+
 using OrchardCore.Workflows.Models;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
@@ -20,6 +22,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
+
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -40,6 +43,7 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         _completionContextBuilder = completionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
+
     }
 
     public override LocalizedString DisplayText => S["AI Completion using Profile"];
@@ -50,23 +54,27 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     {
         get => GetProperty<string>();
         set => SetProperty(value);
+
     }
 
     public string PromptTemplate
     {
         get => GetProperty<string>();
         set => SetProperty(value);
+
     }
 
     public string ResultPropertyName
     {
         get => GetProperty<string>();
         set => SetProperty(value);
+
     }
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         return Outcomes(S["Done"], S["Drew Blank"], S["Failed"]);
+
     }
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
@@ -76,26 +84,30 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         if (profile is null)
         {
             return Outcomes("Failed");
+
         }
 
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default,
-            new Dictionary<string, FluidValue>()
-            {
-                ["Profile"] = new ObjectValue(profile),
-            });
+        new Dictionary<string, FluidValue>()
+        {
+            ["Profile"] = new ObjectValue(profile),
+
+        });
 
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
             _logger.LogWarning("The generated prompt from the template is empty.");
 
             return Outcomes("Failed");
+
         }
 
         try
         {
             var context = await _completionContextBuilder.BuildAsync(profile);
             var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-                ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
             var completion = await _completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, userPrompt.Trim())], context);
 
@@ -104,11 +116,13 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
             if (string.IsNullOrEmpty(bestChoice?.Text))
             {
                 return Outcomes("Drew Blank");
+
             }
 
             var value = new AIResponseMessage
             {
                 Content = bestChoice.Text,
+
             };
 
             workflowContext.Output[ResultPropertyName ?? "ChatResponse"] = value;

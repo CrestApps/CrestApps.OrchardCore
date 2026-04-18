@@ -19,8 +19,8 @@ public sealed class CopilotPermissionProvider : IPermissionProvider
     [
         new PermissionStereotype
         {
-            Name = OrchardCoreConstants.Roles.Administrator,
-            Permissions = _allPermissions,
+        Name = OrchardCoreConstants.Roles.Administrator,
+        Permissions = _allPermissions,
         },
     ];
 }

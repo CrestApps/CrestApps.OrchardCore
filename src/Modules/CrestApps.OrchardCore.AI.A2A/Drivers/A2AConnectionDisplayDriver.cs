@@ -1,12 +1,11 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.A2A.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
-using CrestApps.OrchardCore.Core;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.A2A.Drivers;
@@ -29,8 +28,8 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
     {
         return CombineAsync(
             View("A2AConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-            View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-            View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+        View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+        View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
         );
     }
 
@@ -41,7 +40,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             model.DisplayText = connection.DisplayText;
             model.Endpoint = connection.Endpoint;
 
-            var metadata = connection.As<A2AConnectionMetadata>();
+            var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
             model.AuthenticationType = metadata.AuthenticationType;
 
             if (metadata.AuthenticationType == A2AClientAuthenticationType.Anonymous &&
@@ -75,14 +74,14 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
             model.Schema =
             """
-            {
-              "$schema": "https://json-schema.org/draft-04/schema#",
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-            """;
+{
+  "$schema": "https://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+""";
         }).Location("Content:1");
     }
 
@@ -102,7 +101,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint is required."]);
         }
         else if (!Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri) ||
-                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint must be a valid HTTP or HTTPS URL."]);
         }
@@ -110,7 +109,7 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
         connection.DisplayText = model.DisplayText;
         connection.Endpoint = model.Endpoint;
 
-        var metadata = connection.As<A2AConnectionMetadata>();
+        var metadata = connection.GetOrCreate<A2AConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(A2AConstants.DataProtectionPurpose);
 
         var existingApiKey = metadata.ApiKey;

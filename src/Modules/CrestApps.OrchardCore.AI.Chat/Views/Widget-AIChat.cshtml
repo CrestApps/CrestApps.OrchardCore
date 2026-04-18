@@ -1,8 +1,10 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI
+@using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI
 @using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Models
-@using CrestApps.OrchardCore.AI.Models
-@using CrestApps.OrchardCore.SignalR.Core.Services
+@using CrestApps.Core.AI.Models
+@using CrestApps.Core.SignalR.Services
 @using Microsoft.AspNetCore.Authorization
 @using OrchardCore.ContentManagement
 @using OrchardCore.Entities
@@ -10,19 +12,21 @@
 @using OrchardCore.Environment.Shell.Scope
 @using Microsoft.Extensions.DependencyInjection
 @using CrestApps.OrchardCore.AI.Chat.Hubs
+@using CrestApps.Core.Services
 @using Microsoft.Extensions.Options
 @using System.Text.Json
+@using CrestApps.Core.AI.Profiles
 
 @inject IAIProfileStore ProfileCatalog
 @inject IAuthorizationService AuthorizationService
 @inject ShellSettings ShellSettings
 @inject HubRouteManager HubRouteManager
+
 @{
     ContentItem contentItem = Model.ContentItem;
 
-    var part = contentItem.As<AIProfilePart>();
-
-    if (string.IsNullOrEmpty(part?.ProfileId))
+    if (!contentItem.TryGet<AIProfilePart>(out var part) ||
+        string.IsNullOrEmpty(part.ProfileId))
     {
         return;
     }
@@ -42,7 +46,6 @@
     var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
     var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
-
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
     var buttonHtmlId = $"{baseId}_SendButton";
@@ -58,38 +61,42 @@
     var closeHistoryBtnId = $"{baseId}_CloseHistory";
     var restoreSizeBtnId = $"{baseId}_RestoreSize";
     var documentBarHtmlId = $"{baseId}_DocumentBar";
-
     var storagePrefix = $"{ShellSettings.Name}-{baseId}";
-
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
-    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled
-        && profile.As<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
+    var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
     var allowedExtensions = string.Empty;
+    var supportedExtensionsText = string.Empty;
+
     if (sessionDocumentsEnabled)
     {
         var chatDocOptions = ShellScope.Services.GetRequiredService<IOptions<ChatDocumentsOptions>>();
-        allowedExtensions = string.Join(", ", chatDocOptions.Value.AllowedFileExtensions);
+
+        allowedExtensions = chatDocOptions.Value.GetAllowedFileExtensionsAcceptValue();
+        supportedExtensionsText = chatDocOptions.Value.GetAllowedFileExtensionsDisplayValue();
     }
 
     var metricsEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatAnalytics)
-        && profile.As<AnalyticsMetadata>().EnableSessionMetrics;
-    var profileMetadata = profile.As<AIProfileMetadata>();
+        && profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
+    var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
+
     ChatModeProfileSettings chatModeSettings = null;
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
+
     var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
     var speechToTextEnabled = chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation;
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation;
+    var textToSpeechEnabled = chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true;
     var ttsVoiceName = chatModeSettings?.VoiceName;
     var conversationModeEnabled = chatMode == ChatMode.Conversation;
     var micBtnHtmlId = $"{baseId}_MicBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
     var orchestratorAvailability = new OrchestratorAvailability();
+
     if (!string.IsNullOrWhiteSpace(profile.OrchestratorName))
     {
-        var availabilityProvider = ShellScope.Services.GetServices<IOrchestratorAvailabilityProvider>()
+        var availabilityProvider = ViewContext.HttpContext.RequestServices.GetServices<IOrchestratorAvailabilityProvider>()
             .FirstOrDefault(provider => string.Equals(provider.OrchestratorName, profile.OrchestratorName, StringComparison.OrdinalIgnoreCase));
 
         if (availabilityProvider is not null)
@@ -99,75 +106,96 @@
     }
 }
 
-<!-- Toggle Button -->
-<button id="@toggleBtnId" class="ai-admin-widget-toggle-btn" title="@T["Open AI Chat"]" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
-    <i class="fas fa-comments"></i>
-</button>
+<div id="@($"{baseId}_Shell")" class="ai-chat-admin-widget-shell" style="--ai-widget-primary: var(--bs-primary, #0d6efd); visibility:hidden;">
 
-<!-- Widget Container -->
-<div id="@widgetContainerId" class="ai-admin-widget" style="--ai-widget-primary: var(--bs-primary, #0d6efd);">
-    <!-- Header (drag handle) -->
-    <div class="ai-admin-widget-header">
-        <span class="ai-admin-widget-title">
-            @if (Model.Header != null)
-            {
-                @await DisplayAsync(Model.Header)
-            }
-            else
-            {
-                @T["AI Chat"]
-            }
-        </span>
-        <div class="ai-admin-widget-header-actions">
-            <button class="btn btn-link ai-admin-widget-restore-btn" id="@restoreSizeBtnId" title="@T["Restore size"]">
-                <i class="fas fa-compress"></i>
-            </button>
-            <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
-                <i class="fas fa-plus"></i>
-            </button>
-            @if (showHistory)
-            {
-                <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
-                    <i class="fas fa-clock-rotate-left"></i>
+    <!-- Toggle Button -->
+    <button id="@toggleBtnId" class="ai-chat-widget-toggle" title="@T["Open AI Chat"]">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <!-- Widget Container -->
+    <div id="@widgetContainerId" class="ai-chat-widget-container">
+
+        <!-- Header (drag handle) -->
+        <div class="ai-chat-widget-header">
+
+            <span class="title">
+
+                @if (Model.Header != null)
+                {
+                    @await DisplayAsync(Model.Header)
+                }
+                else
+                {
+                    @T["AI Chat"]
+                }
+
+            </span>
+
+            <div class="ai-chat-widget-header-actions">
+
+                <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore size"]">
+                    <i class="fas fa-compress"></i>
                 </button>
-            }
-            <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
 
-    <!-- Resize Handle (top-left, below header) -->
-    <div class="ai-admin-widget-resize-handle"></div>
+                <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
+                    <i class="fas fa-plus"></i>
+                </button>
 
-    <!-- Chat Body -->
-    <div class="ai-admin-widget-body" id="@chatContainerHtmlId">
-        @if (!orchestratorAvailability.IsAvailable)
-        {
-            <div class="alert alert-warning m-3 mb-0">
-                <i class="fas fa-exclamation-triangle"></i>
-                @orchestratorAvailability.Message
+                @if (showHistory)
+                {
+                    <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </button>
+                }
+
+                <button class="btn btn-link" id="@closeBtnId" title="@T["Close"]">
+
+                    <i class="fas fa-times"></i>
+
+                </button>
+
             </div>
-        }
-        <div id="@placeholderHtmlId" class="ai-admin-widget-placeholder @(addInitialPrompt ? "d-none" : string.Empty)">
-            <h4>@(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)</h4>
-        </div>
-        <div id="@chatAppHtmlId"></div>
-    </div>
 
-    <!-- Input Area -->
-    <div class="ai-admin-widget-input">
+        </div>
+
+        <!-- Chat Body -->
+        <div class="ai-chat-widget-messages" id="@chatContainerHtmlId">
+
+            @if (!orchestratorAvailability.IsAvailable)
+            {
+                <div class="alert alert-warning m-3 mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @orchestratorAvailability.Message
+                </div>
+            }
+
+            <div id="@placeholderHtmlId" class="ai-chat-widget-welcome@(addInitialPrompt ? " d-none" : string.Empty)">
+
+                <i class="fa fa-robot" style="font-size: 2rem;"></i><br>
+                @(addInitialPrompt || string.IsNullOrEmpty(profile.WelcomeMessage) ? T["What do you want to know?"] : profile.WelcomeMessage)
+
+            </div>
+
+            <div id="@chatAppHtmlId"></div>
+
+        </div>
+
         @if (sessionDocumentsEnabled)
         {
-            <div id="@documentBarHtmlId" class="d-none"></div>
+            <div id="@documentBarHtmlId" class="ai-chat-widget-document-bar border-top bg-light d-none"></div>
         }
-        <div class="ai-admin-widget-input-wrapper">
+
+        <!-- Input Area -->
+        <div class="ai-chat-widget-input">
+
             @if (promptGeneratedProfiles.Any())
             {
-                <div class="dropdown me-1">
+                <div class="dropdown">
                     <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Prompt templates"]">
                         <i class="fa-solid fa-screwdriver-wrench"></i>
                     </button>
+
                     <ul class="dropdown-menu">
                         @foreach (var promptGeneratedProfile in promptGeneratedProfiles)
                         {
@@ -178,23 +206,25 @@
                     </ul>
                 </div>
             }
-            <textarea class="ai-admin-widget-prompt"
-                      id="@userPromptHtmlId"
+
+            <textarea id="@userPromptHtmlId"
                       data-session-id=""
                       data-profile-id="@(profile.ItemId)"
                       placeholder="@T["Message..."]"
                       rows="1"
                       aria-label="@T["Message"]"></textarea>
-            <button class="stt-mic-btn ai-admin-widget-mic-btn"
+
+            <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
                     type="button"
                     id="@micBtnHtmlId"
                     title="@T["Voice input"]"
                     style="display: none;">
                 <i class="fa-solid fa-microphone"></i>
             </button>
+
             @if (conversationModeEnabled)
             {
-                <button class="ai-admin-widget-send-btn"
+                <button class="btn btn-outline-dark btn-sm"
                         type="button"
                         id="@conversationBtnHtmlId"
                         title="@T["Start Conversation"]"
@@ -202,44 +232,60 @@
                         data-end-title="@T["End Conversation"]"
                         data-start-html="<i class='fa-solid fa-wave-square'></i>"
                         data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+
                     <i class="fa-solid fa-wave-square"></i>
+
                 </button>
+
             }
-            <button class="ai-admin-widget-send-btn"
-                    id="@buttonHtmlId"
+
+            <button id="@buttonHtmlId"
                     disabled
                     data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
                     data-stop-icon="<i class='fa-solid fa-stop'></i>">
+
                 <i class="fa-solid fa-arrow-up"></i>
             </button>
         </div>
-    </div>
 
-    @if (showHistory)
-    {
-        <!-- History Panel -->
-        <div class="ai-admin-widget-history-panel" id="@historyPanelId">
-            <div class="history-header">
-                <h5>@T["Chat History"]</h5>
-                <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
-                    <i class="fas fa-times"></i>
-                </button>
+        @if (showHistory)
+        {
+            <!-- History Panel -->
+            <div class="ai-chat-widget-history-panel" id="@historyPanelId">
+                <div class="history-header">
+                    <h5>@T["Chat History"]</h5>
+                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                @await DisplayAsync(Model.History)
             </div>
-            @await DisplayAsync(Model.History)
-        </div>
-    }
+        }
+
+    </div>
 </div>
 
 <style asp-name="AIChatWidget" at="Head"></style>
 <style asp-name="highlightjs" at="Head"></style>
 <style asp-name="AIChatApp" at="Head"></style>
+<style at="Head">
+    .ai-chat-widget-document-bar .small.text-muted {
+    font-size: 0.68rem !important;
+    line-height: 1.25;
+    }
+</style>
+
 @if (speechToTextEnabled)
 {
     <style asp-name="SpeechToText" at="Head"></style>
 }
-<script asp-name="AIChatWidget" at="Foot"></script>
+
 <script asp-name="AIChatApp" at="Foot"></script>
+<script asp-name="AIChatWidgetApp" at="Foot"></script>
+<script asp-name="AIChatAppPatch" at="Foot"></script>
+
 @{
+
     var chatConfig = new Dictionary<string, object>
     {
         ["signalRHubUrl"] = hubLink,
@@ -256,6 +302,7 @@
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["textToSpeechEnabled"] = textToSpeechEnabled,
         ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
     };
@@ -267,68 +314,165 @@
         chatConfig["uploadDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionUploadDocument);
         chatConfig["removeDocumentUrl"] = Url.RouteUrl(AIConstants.RouteNames.ChatSessionRemoveDocument);
         chatConfig["allowedExtensions"] = allowedExtensions;
+        chatConfig["supportedExtensionsText"] = supportedExtensionsText;
         chatConfig["existingDocuments"] = Array.Empty<object>();
     }
 }
+
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
-<script at="Foot" depends-on="AIChatWidget, AIChatApp">
+
+<script at="Foot" depends-on="AIChatAppPatch">
     (function () {
-        var configEl = document.getElementById('@($"{baseId}_Config")');
-        var chatConfig = configEl ? JSON.parse(configEl.getAttribute('data-config')) : {};
+    var shell = document.getElementById('@($"{baseId}_Shell")');
+    var initializationAttempts = 0;
+    var maxInitializationAttempts = 40;
+    var isInitialized = false;
 
-        chatConfig.messageTemplate = document.getElementById('@($"{baseId}_MessageTemplate")').innerHTML;
-        chatConfig.indicatorTemplate = document.getElementById('@($"{baseId}_IndicatorTemplate")').innerHTML;
+    function revealShell() {
+    if (shell) {
+    shell.style.visibility = '';
+    }
+    }
 
-        aiChatAdminWidget.initialize({
-            containerSelector: '#@widgetContainerId',
-            toggleSelector: '#@toggleBtnId',
-            closeButtonSelector: '#@closeBtnId',
-            newChatButtonSelector: '#@newChatBtnId',
-            showHistorySelector: '#@historyBtnId',
-            historyPanelSelector: '#@historyPanelId',
-            closeHistorySelector: '#@closeHistoryBtnId',
-            restoreSizeSelector: '#@restoreSizeBtnId',
-            promptSelector: '#@userPromptHtmlId',
-            storagePrefix: '@storagePrefix',
-            chatConfig: chatConfig
-        });
+    function initializeWidget() {
+    if (isInitialized) {
+    return;
+    }
+
+    if (!window.openAIChatWidgetManager || !window.openAIChatManager) {
+    initializationAttempts++;
+
+    if (initializationAttempts < maxInitializationAttempts) {
+    window.requestAnimationFrame(initializeWidget);
+    return;
+    }
+
+    console.warn('AI chat widget runtime is not available.');
+    revealShell();
+    return;
+    }
+
+    isInitialized = true;
+
+    var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
+    window.openAIChatWidgetManager.initialize({
+    configElementSelector: '#@($"{baseId}_Config")',
+    messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
+    indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
+    shellSelector: '#@($"{baseId}_Shell")',
+    widgetContainerSelector: '#@widgetContainerId',
+    toggleButtonSelector: '#@toggleBtnId',
+    closeButtonSelector: '#@closeBtnId',
+    inputSelector: '#@userPromptHtmlId',
+    widgetStateName: widgetStateName,
+    widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
+    openStateValue: 'open',
+    closedStateValue: 'closed',
+    openIconHtml: '<i class="fas fa-times"></i>',
+    closedIconHtml: '<i class="fas fa-comments"></i>',
+    chatConfig: Object.assign(
+    {},
+    JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
+    {
+    widget: {
+    chatWidgetContainer: '#@widgetContainerId',
+    chatWidgetStateName: widgetStateName,
+    chatHistorySection: '#@historyPanelId',
+    closeHistoryButton: '#@closeHistoryBtnId',
+    showHistoryButton: '#@historyBtnId',
+    newChatButton: '#@newChatBtnId',
+    toggleButtonSelector: '#@toggleBtnId',
+    resetSizeButtonSelector: '#@restoreSizeBtnId',
+    dragHandleSelector: '.ai-chat-widget-header',
+    enableDragging: true,
+    enableResizing: true,
+    persistLayout: true,
+    minWidth: 288,
+    minHeight: 320
+    }
+    })
+    });
+    }
+
+    initializeWidget();
     })();
 </script>
+
 <template id="@($"{baseId}_MessageTemplate")">
+
     <div class="ai-chat-messages">
+
         <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item">
+
             <div>
-                <div v-if="message.role === 'user'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-user">@T["You"]</div>
-                <div v-else-if="message.role !== 'indicator'" class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant" style="color: #41b670;">
+
+                <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">@T["You"]</div>
+
+                <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
+
                     <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
+
                     @T["Assistant"]
+
                 </div>
-                <div class="min-w-0">
+
+                <div class="ai-chat-message-body min-w-0">
+
                     <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
+
                     <div v-html="message.htmlContent || message.content" style="font-size: 0.85rem; line-height: 1.5;"></div>
+
                     <span class="message-buttons-container" v-if="!isIndicator(message)">
+
                         <template v-if="metricsEnabled && message.role === 'assistant'">
+
                             <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
-                                <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
+
+                                <button class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
+
                                     <i class="fa-regular fa-thumbs-up" style="font-size: 0.9rem;"></i>
+
                                 </button>
-                                <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
+
+                                <button class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
+
                                     <i class="fa-regular fa-thumbs-down" style="font-size: 0.9rem;"></i>
+
                                 </button>
+
                             </span>
+
                         </template>
-                        <button class="btn btn-sm btn-link text-secondary p-0" @@click="copyResponse(message.content)" title="@T["Copy"]">
-                            <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
+
+                        <button v-if="textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming" class="btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox" :class="{ 'tts-playing': ttsPlayingMessageIndex === index }" :data-tts-message-index="index" @@click="toggleMessageTts(message, index)" :title="ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'">
+                            <span :class="ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'" style="font-size: 0.9rem;"></span>
                         </button>
+                        <button class="btn btn-sm btn-link text-secondary p-0 button-message-toolbox" @@click="copyResponse(message.content)" title="@T["Copy"]">
+
+                            <i class="fa-solid fa-copy" style="font-size: 0.9rem;"></i>
+
+                        </button>
+
                     </span>
+
                 </div>
+
             </div>
+
         </div>
+
     </div>
+
 </template>
+
 <template id="@($"{baseId}_IndicatorTemplate")">
-    <div class="ai-admin-widget-msg-role ai-admin-widget-msg-role-assistant" style="color: #41b670;">
+
+    <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
+
         <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
+
         @T["Assistant"]
+
     </div>
+
 </template>

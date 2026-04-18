@@ -1,7 +1,8 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
-using CrestApps.OrchardCore.YesSql.Core.Indexes;
-using OrchardCore;
+using CrestApps.Core;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using YesSql;
 using YesSql.Services;
 
@@ -20,7 +21,9 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
         Session = session;
     }
 
-    internal DocumentCatalog(ISession session, string collectionName)
+    internal DocumentCatalog(
+        ISession session,
+        string collectionName)
         : this(session)
     {
         CollectionName = collectionName;
@@ -56,7 +59,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
     }
 
     public async ValueTask<PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context)
-            where TQuery : QueryContext
+        where TQuery : QueryContext
     {
         IQuery<T> query = Session.Query<T, TIndex>(collection: CollectionName);
 
@@ -126,7 +129,7 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         await SavingAsync(record);
@@ -140,17 +143,12 @@ public class DocumentCatalog<T, TIndex> : ICatalog<T>
 
         if (string.IsNullOrEmpty(record.ItemId))
         {
-            record.ItemId = IdGenerator.GenerateId();
+            record.ItemId = UniqueId.GenerateId();
         }
 
         await SavingAsync(record);
 
         await Session.SaveAsync(record, CollectionName);
-    }
-
-    public async ValueTask SaveChangesAsync()
-    {
-        await Session.FlushAsync();
     }
 
     protected virtual ValueTask DeletingAsync(T model)

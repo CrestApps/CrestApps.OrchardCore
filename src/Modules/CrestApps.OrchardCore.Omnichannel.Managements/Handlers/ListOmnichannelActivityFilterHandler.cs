@@ -28,6 +28,7 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             if (filter.AttemptFilter.EndsWith('+'))
             {
                 // Handle "1+", "2+", etc. - minimum attempts
+
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('+'), out var minAttempts))
                 {
                     context.Query = context.Query.Where(index => index.Attempts >= minAttempts);
@@ -36,6 +37,7 @@ public sealed class ListOmnichannelActivityFilterHandler : IListOmnichannelActiv
             else if (filter.AttemptFilter.EndsWith('-'))
             {
                 // Handle "2-", "3-", etc. - maximum attempts
+
                 if (int.TryParse(filter.AttemptFilter.TrimEnd('-'), out var maxAttempts))
                 {
                     context.Query = context.Query.Where(index => index.Attempts <= maxAttempts);

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +34,6 @@
       they won't need to manually include the Roles package. 
       This guarantees the module functions correctly and resolves the feature dependency.
     -->
-    <ProjectReference Include="..\CrestApps.OrchardCore.Roles\CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" PrivateAssets="none" />
   </ItemGroup>
 </Project>

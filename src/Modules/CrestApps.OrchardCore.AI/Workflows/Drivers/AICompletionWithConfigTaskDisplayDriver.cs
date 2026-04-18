@@ -1,5 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
@@ -10,6 +12,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
+
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
@@ -19,6 +22,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly DefaultAIOptions _defaultAIOptions;
+
     private readonly ILiquidTemplateManager _liquidTemplateManager;
 
     internal readonly IStringLocalizer S;
@@ -35,6 +39,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
+
     }
 
     public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
@@ -43,6 +48,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         {
             model.PromptTemplate = activity.PromptTemplate;
             model.ResultPropertyName = activity.ResultPropertyName;
+
             model.DeploymentName = await NormalizeDeploymentSelectorAsync(activity.DeploymentName);
 
             model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : activity.MaxTokens;
@@ -52,6 +58,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : activity.PresencePenalty;
             model.SystemMessage = activity.SystemMessage;
             model.DeploymentNames = BuildGroupedDeploymentItems(
+
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
 
         }).Location("Content");
@@ -59,24 +66,27 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         if (_toolDefinitions.Tools.Count == 0)
         {
             return contents;
+
         }
 
         var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
         {
             model.Tools = _toolDefinitions.Tools
-                .Where(tool => !tool.Value.IsSystemTool)
-                .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
-                .OrderBy(group => group.Key)
-                .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
-                {
-                    ItemId = entry.Key,
-                    DisplayText = entry.Value.Title,
-                    Description = entry.Value.Description,
-                    IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
-                }).OrderBy(entry => entry.DisplayText).ToArray());
+            .Where(tool => !tool.Value.IsSystemTool)
+            .GroupBy(tool => tool.Value.Category ?? S["Miscellaneous"])
+            .OrderBy(group => group.Key)
+            .ToDictionary(group => group.Key, group => group.Select(entry => new ToolEntry
+            {
+                ItemId = entry.Key,
+                DisplayText = entry.Value.Title,
+                Description = entry.Value.Description,
+                IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
+            }).OrderBy(entry => entry.DisplayText).ToArray());
+
         }).Location("Content:7#Capabilities;8");
 
         return Combine(contents, tools);
+
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
@@ -92,6 +102,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         else if (await FindDeploymentAsync(model.DeploymentName) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentName), S["The Deployment is invalid."]);
+
         }
 
         if (string.IsNullOrEmpty(model.PromptTemplate))
@@ -101,15 +112,18 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["The Prompt template is invalid."]);
+
         }
 
         if (string.IsNullOrWhiteSpace(model.ResultPropertyName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ResultPropertyName), S["The Property name is required."]);
+
         }
 
         activity.PromptTemplate = model.PromptTemplate;
         activity.ResultPropertyName = model.ResultPropertyName?.Trim();
+
         activity.DeploymentName = model.DeploymentName?.Trim();
 
         activity.MaxTokens = model.MaxTokens;
@@ -117,6 +131,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         activity.TopP = model.TopP;
         activity.FrequencyPenalty = model.FrequencyPenalty;
         activity.PresencePenalty = model.PresencePenalty;
+
         activity.SystemMessage = model.SystemMessage;
 
         if (_toolDefinitions.Tools.Count > 0)
@@ -137,9 +152,11 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                     .Intersect(selectedToolKeys)
                     .ToArray();
             }
+
         }
 
         return Edit(activity, context);
+
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
@@ -147,25 +164,29 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
                 SelectListGroup group = null;
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+
+                var groupKey = d.GetConnectionDisplayName();
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;
+
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
             });
+
     }
 
     private async Task<AIDeployment> FindDeploymentAsync(string selector)
@@ -175,9 +196,11 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         if (deployment != null)
         {
             return deployment;
+
         }
 
         return await _deploymentManager.FindByIdAsync(selector);
+
     }
 
     private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
@@ -185,6 +208,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         if (string.IsNullOrWhiteSpace(selector))
         {
             return selector;
+
         }
 
         var deployment = await FindDeploymentAsync(selector);

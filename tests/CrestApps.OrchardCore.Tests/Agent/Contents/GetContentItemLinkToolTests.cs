@@ -15,7 +15,7 @@ public sealed class GetContentItemLinkToolTests
     [Fact]
     public async Task InvokeAsync_WithNullHttpContext_ShouldReturnFallbackMessage()
     {
-        // Arrange: simulate a background task where HttpContext is null.
+        // Arrange
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext)null);
 
@@ -33,9 +33,11 @@ public sealed class GetContentItemLinkToolTests
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        // Assert: should return a descriptive fallback message, not throw NullReferenceException.
+        // Assert
         Assert.NotNull(result);
+
         var text = result.ToString();
+
         Assert.Contains("test-content-id", text);
         Assert.Contains("background", text, StringComparison.OrdinalIgnoreCase);
     }
@@ -66,7 +68,7 @@ public sealed class GetContentItemLinkToolTests
     [Fact]
     public async Task InvokeAsync_WithHttpContext_ShouldAttemptLinkGeneration()
     {
-        // Arrange: simulate an HTTP request context.
+        // Arrange
         var httpContext = new DefaultHttpContext();
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
@@ -92,7 +94,7 @@ public sealed class GetContentItemLinkToolTests
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        // Assert: no NullReferenceException was thrown.
+        // Assert
         Assert.NotNull(result);
     }
 

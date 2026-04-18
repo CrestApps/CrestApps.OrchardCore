@@ -1,7 +1,8 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using OrchardCore.Deployment;
 
 namespace CrestApps.OrchardCore.AI.Deployments.Sources;
@@ -22,8 +23,8 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
         var templatesData = new JsonArray();
 
         var templateNames = step.IncludeAll
-            ? []
-            : step.TemplateNames ?? [];
+        ? []
+        : step.TemplateNames ?? [];
 
         foreach (var template in templates)
         {
@@ -44,7 +45,7 @@ internal sealed class AIProfileTemplateDeploymentSource : DeploymentSourceBase<A
                 { "CreatedUtc", template.CreatedUtc },
                 { "OwnerId", template.OwnerId },
                 { "Author", template.Author },
-                { "Properties", template.Properties?.DeepClone() },
+                { "Properties", template.Properties != null ? JsonSerializer.SerializeToNode(template.Properties) : null },
             };
 
             templatesData.Add(templateInfo);

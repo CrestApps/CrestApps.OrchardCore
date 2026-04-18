@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
-@using CrestApps.OrchardCore.AI.Core.Orchestration
+@using CrestApps.Core.AI.Orchestration
 
 @model OrchestratorViewModel
 
@@ -12,7 +12,7 @@
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
             </span>
         </label>
-        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select">
+        <select asp-for="OrchestratorName" asp-items="Model.Orchestrators" class="form-select setting-input" data-setting="orchestratorName">
         </select>
         <span asp-validation-for="OrchestratorName" class="text-danger"></span>
     </div>

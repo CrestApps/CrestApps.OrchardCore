@@ -1,17 +1,25 @@
 @using System.Globalization
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
 @model ShapeViewModel<AIProviderConnection>
 
-@{
-    var createdAt = Model.Value.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
-}
 
-<span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.CreatedUtc, Format: "g"))">
-    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
-    <time datetime="@createdAt">@await DisplayAsync(await New.Timespan(Utc: Model.Value.CreatedUtc))</time>
-</span>
+@if (Model.Value.IsReadOnly)
+{
+    <span class="badge ta-badge bg-secondary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["This connection is defined in configuration and cannot be modified."]">
+        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Read-only"]
+    </span>
+}
+else
+{
+    var createdAt = Model.Value.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
+    
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.Value.CreatedUtc, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@createdAt">@await DisplayAsync(await New.Timespan(Utc: Model.Value.CreatedUtc))</time>
+    </span>
+}
 
 @if (!string.IsNullOrEmpty(Model.Value.Author))
 {

@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.ContentManagement;
@@ -11,7 +12,7 @@ internal static class OmnichannelHelper
     {
         if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
             bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
+                bagPart.ContentItems.Count == 0)
         {
             return null;
         }
@@ -20,9 +21,7 @@ internal static class OmnichannelHelper
         {
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var emailPart = contentMethod.As<EmailInfoPart>();
-
-                if (!string.IsNullOrEmpty(emailPart.Email?.Text))
+                if (contentMethod.TryGet<EmailInfoPart>(out var emailPart) && !string.IsNullOrEmpty(emailPart.Email?.Text))
                 {
                     return emailPart.Email.Text;
                 }
@@ -34,11 +33,12 @@ internal static class OmnichannelHelper
         if (channel == OmnichannelConstants.Channels.Phone)
         {
             var phoneNumbers = new PriorityQueue<string, int>();
+
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || string.IsNullOrEmpty(phonePart.Number?.Text))
+                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
+                    phonePart.Type is null ||
+                    string.IsNullOrEmpty(phonePart.Number?.Text))
                 {
                     continue;
                 }
@@ -71,9 +71,10 @@ internal static class OmnichannelHelper
         {
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || phonePart.Type.Text != "Cell" || string.IsNullOrEmpty(phonePart.Number?.Text))
+                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
+                    phonePart.Type is null ||
+                    phonePart.Type.Text != "Cell" ||
+                    string.IsNullOrEmpty(phonePart.Number?.Text))
                 {
                     continue;
                 }

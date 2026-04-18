@@ -1,9 +1,10 @@
-@using CrestApps.OrchardCore.Core.Models
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.Models
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
 
-@model ListSourceCatalogEntryViewModel<AIDeployment>
+@model ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
 
 <zone Name="Title">
     <h1>@RenderTitleSegments(T["AI Deployments"])</h1>
@@ -25,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddDeployment">@T["Deploy model"]</button>
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddDeployment">@T["Add model"]</button>
                 </div>
             </div>
         </div>
@@ -98,6 +99,25 @@
     </div>
 </form>
 
+@await DisplayAsync(Model.Pager)
+
+@if (Model.ReadOnlyModels.Count > 0)
+{
+    <div class="mt-4">
+        <h5 class="text-muted mb-3"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i> @T["Configuration-based deployments"]</h5>
+        <ul class="list-group">
+            @foreach (var entry in Model.ReadOnlyModels)
+            {
+                <li class="list-group-item item d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
 <!-- Modal -->
 <div class="modal fade" id="modalAddDeployment" tabindex="-1" role="dialog" aria-labelledby="available-rule-types-title" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -135,6 +155,6 @@
 
 <script at="Foot" depends-on="list-management-ui">
     document.addEventListener('DOMContentLoaded', () => {
-        listManagementUI.initialize('@T["selected"]', { clientSideSearch: true });
+    listManagementUI.initialize('@T["selected"]', { clientSideSearch: true });
     });
 </script>

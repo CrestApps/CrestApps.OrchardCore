@@ -21,6 +21,7 @@ public sealed class AIChatAnalyticsConversionDisplayDriver : DisplayDriver<AICha
 
             // AI Resolution Detection metrics.
             var closedSessions = events.Where(e => e.SessionEndedUtc.HasValue).ToList();
+
             if (closedSessions.Count > 0)
             {
                 model.HasResolutionData = true;

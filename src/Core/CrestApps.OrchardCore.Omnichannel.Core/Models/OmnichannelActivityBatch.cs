@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -45,9 +46,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
 
     public bool OnlyPublishedLeads { get; set; } = true;
 
+    /// <summary>
+    /// Creates a copy of the current activity batch.
+    /// </summary>
     public OmnichannelActivityBatch Clone()
     {
-        return new OmnichannelActivityBatch()
+        return new OmnichannelActivityBatch
         {
             ItemId = ItemId,
             DisplayText = DisplayText,

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
@@ -16,6 +16,6 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
 
     public void Configure(McpServerOptions options)
     {
-        _shellConfiguration.GetSection("CrestApps_AI:McpServer").Bind(options);
+        _shellConfiguration.GetSection("CrestApps:McpServer").Bind(options);
     }
 }

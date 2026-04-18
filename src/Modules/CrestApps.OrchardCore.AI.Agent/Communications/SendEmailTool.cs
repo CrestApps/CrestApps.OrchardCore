@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.AI;
@@ -15,36 +15,43 @@ public sealed class SendEmailTool : AIFunction
     public const string TheName = "sendEmail";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-          "type": "object",
-          "properties": {
-            "to": {
-              "type": "string",
-              "description": "A valid email address to send to."
-            },
-            "subject": {
-              "type": "string",
-              "description": "The email subject to send."
-            },
-            "body": {
-              "type": "string",
-              "description": "The email body to send."
-            },
-            "cc": {
-              "type": "string",
-              "description": "A comma-delimited emails to carbon-copy."
-            },
-            "bcc": {
-              "type": "string",
-              "description": "A comma-delimited emails to blind carbon-copy."
-            }
-          },
-          "additionalProperties": false,
-          "required": ["to", "subject", "body"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "A valid email address to send to."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The email subject to send."
+        },
+        "body": {
+          "type": "string",
+          "description": "The email body to send."
+        },
+        "cc": {
+          "type": "string",
+          "description": "A comma-delimited emails to carbon-copy."
+        },
+        "bcc": {
+          "type": "string",
+          "description": "A comma-delimited emails to blind carbon-copy."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "to",
+        "subject",
 
+        "body"
+
+      ]
+
+    }
+
+    """);
     public override string Name => TheName;
 
     public override string Description => "Sends an email";
@@ -77,7 +84,6 @@ public sealed class SendEmailTool : AIFunction
             return "No EmailService is registered. Can't send emails using this tool.";
         }
 
-
         if (!arguments.TryGetFirstString("to", out var to))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "to");
@@ -101,6 +107,7 @@ public sealed class SendEmailTool : AIFunction
 
         // HttpContext may be null when invoked from a background task (e.g., post-session processing).
         var httpContextAccessor = arguments.Services.GetService<IHttpContextAccessor>();
+
         var principal = httpContextAccessor?.HttpContext?.User;
 
         if (principal is not null)

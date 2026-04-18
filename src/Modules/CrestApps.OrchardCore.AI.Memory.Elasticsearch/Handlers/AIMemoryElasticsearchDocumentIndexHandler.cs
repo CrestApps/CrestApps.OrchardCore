@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
@@ -16,7 +17,7 @@ public sealed class AIMemoryElasticsearchDocumentIndexHandler : IDocumentIndexHa
 
         if (!context.AdditionalProperties.TryGetValue(nameof(IndexProfile), out var profile) ||
             profile is not IndexProfile indexProfile ||
-            !string.Equals(indexProfile.ProviderName, ElasticsearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(indexProfile.ProviderName, ElasticsearchConstants.ProviderName, StringComparison.OrdinalIgnoreCase))
         {
             return Task.CompletedTask;
         }

@@ -1,8 +1,9 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.AzureAIInference;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Handlers;
 
@@ -42,7 +43,7 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
             return;
         }
 
-        var metadata = context.Connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = context.Connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();

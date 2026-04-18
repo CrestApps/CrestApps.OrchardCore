@@ -1,37 +1,22 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIChatSessionPromptIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIChatSessionPromptIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AIChatSessionPromptIndex>(table => table
-                .Column<string>("ItemId", column => column.WithLength(64))
-                .Column<string>("SessionId", column => column.WithLength(26))
-                .Column<string>("Role", column => column.WithLength(20))
-                .Column<DateTime>("CreatedUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionPromptIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionPromptIndex_DocumentId",
-                "DocumentId",
-                "ItemId",
-                "SessionId"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionPromptIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionPromptIndex_SessionId",
-                "DocumentId",
-                "SessionId",
-                "CreatedUtc"),
-            collection: AIConstants.AICollectionName
-        );
+        await SchemaBuilder.CreateAIChatSessionPromptIndexSchemaAsync(_option);
 
         return 1;
     }

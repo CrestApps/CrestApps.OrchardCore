@@ -1,7 +1,7 @@
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -34,16 +34,17 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
         return Initialize<AzureSpeechDeploymentViewModel>("AzureSpeechDeployment_Edit", model =>
         {
-            model.Endpoint = deployment.Properties?["Endpoint"]?.GetValue<string>();
+            model.Endpoint = GetPropertyString(deployment, "Endpoint");
 
-            var authTypeStr = deployment.Properties?["AuthenticationType"]?.GetValue<string>();
+            var authTypeStr = GetPropertyString(deployment, "AuthenticationType");
+
             if (!string.IsNullOrEmpty(authTypeStr) && Enum.TryParse<AzureAuthenticationType>(authTypeStr, true, out var authType))
             {
                 model.AuthenticationType = authType;
             }
 
-            model.IdentityId = deployment.Properties?["IdentityId"]?.GetValue<string>();
-            model.HasApiKey = !string.IsNullOrEmpty(deployment.Properties?["ApiKey"]?.GetValue<string>());
+            model.IdentityId = GetPropertyString(deployment, "IdentityId");
+            model.HasApiKey = !string.IsNullOrEmpty(GetPropertyString(deployment, "ApiKey"));
 
             model.AuthenticationTypes =
             [
@@ -65,7 +66,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        deployment.Properties ??= [];
+        deployment.Properties ??= new Dictionary<string, object>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out _))
         {
@@ -82,7 +83,7 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         deployment.Properties["IdentityId"] = string.IsNullOrEmpty(trimmedIdentityId) ? null : trimmedIdentityId;
 
         var hasNewKey = !string.IsNullOrWhiteSpace(model.ApiKey);
-        var existingKey = deployment.Properties?["ApiKey"]?.GetValue<string>();
+        var existingKey = GetPropertyString(deployment, "ApiKey");
 
         if (model.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(existingKey) && !hasNewKey)
         {
@@ -98,4 +99,15 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
         return Edit(deployment, context);
     }
+
+    private static string GetPropertyString(AIDeployment deployment, string key)
+    {
+        if (deployment.Properties != null && deployment.Properties.TryGetValue(key, out var value))
+        {
+            return value?.ToString();
+        }
+
+        return null;
+    }
 }
+

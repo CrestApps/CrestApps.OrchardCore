@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.AI;
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
@@ -63,20 +63,20 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         }
 
         var campaign = await _campaignCatalog.FindByIdAsync(activity.CampaignId)
-            ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
+        ?? throw new InvalidOperationException($"Unable to find the campaign '{activity.CampaignId}' that is associated with the activity '{activity.ItemId}'.");
 
         if (chatSession is null)
         {
             chatSession = new AIChatSession
             {
-                SessionId = IdGenerator.GenerateId(),
+                SessionId = UniqueId.GenerateId(),
                 CreatedUtc = _clock.UtcNow,
                 Title = S["Automated SMS Activity"],
             };
 
             await _promptStore.CreateAsync(new AIChatSessionPrompt
             {
-                ItemId = IdGenerator.GenerateId(),
+                ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.System,
                 Content = campaign.SystemMessage,
@@ -86,12 +86,12 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
         var initialPrompt = await _liquidTemplateManager.RenderStringAsync(campaign.InitialOutboundPromptPattern, NullEncoder.Default,
-                new Dictionary<string, FluidValue>()
-                {
-                    ["Contact"] = new ObjectValue(contact),
-                    ["Campaign"] = new ObjectValue(campaign),
-                    ["Session"] = new ObjectValue(chatSession),
-                });
+        new Dictionary<string, FluidValue>()
+        {
+            ["Contact"] = new ObjectValue(contact),
+            ["Campaign"] = new ObjectValue(campaign),
+            ["Session"] = new ObjectValue(chatSession),
+        });
 
         initialPrompt = initialPrompt?.Trim();
 
@@ -122,7 +122,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         {
             await _promptStore.CreateAsync(new AIChatSessionPrompt
             {
-                ItemId = IdGenerator.GenerateId(),
+                ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Content = initialPrompt,

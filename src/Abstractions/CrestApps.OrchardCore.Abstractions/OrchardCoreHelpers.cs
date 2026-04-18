@@ -43,7 +43,7 @@ public static class OrchardCoreHelpers
             var assembly = typeof(OrchardCoreConstants).GetTypeInfo().Assembly;
 
             _currentVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                ?.InformationalVersion;
+            ?.InformationalVersion;
 
             if (string.IsNullOrWhiteSpace(_currentVersion))
             {

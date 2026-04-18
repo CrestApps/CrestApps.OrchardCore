@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using Fluid;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -138,7 +139,7 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
                 return Outcomes("Failed");
             }
 
-            var client = await _aIClientFactory.CreateChatClientAsync(deployment.ClientName, deployment.ConnectionName, deployment.ModelName);
+            var client = await _aIClientFactory.CreateChatClientAsync(deployment);
 
             var chatOptions = new ChatOptions
             {

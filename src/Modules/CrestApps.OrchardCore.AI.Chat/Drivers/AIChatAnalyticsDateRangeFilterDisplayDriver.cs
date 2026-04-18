@@ -1,6 +1,6 @@
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core.Indexes;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -30,6 +30,7 @@ public sealed class AIChatAnalyticsDateRangeFilterDisplayDriver : DisplayDriver<
         filter.EndDateUtc = model.EndDate;
 
         // Add date range conditions to the query.
+
         if (filter.StartDateUtc.HasValue)
         {
             var start = filter.StartDateUtc.Value;

@@ -1,0 +1,15 @@
+@using CrestApps.Core.AI
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfile>
+
+<li>
+    <a asp-action="Test"
+       asp-controller="Admin"
+       asp-area="@AIConstants.Feature.Chat"
+       asp-route-profileId="@Model.Value.ItemId"
+       class="dropdown-item">@T["Invoke Profile"]</a>
+</li>

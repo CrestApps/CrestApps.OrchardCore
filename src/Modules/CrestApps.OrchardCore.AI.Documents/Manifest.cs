@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-)]
+    )]
 
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatDocuments,
@@ -18,10 +18,10 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatInteractions,
-        "OrchardCore.Indexing",
+    ChatInteractionsConstants.Feature.ChatInteractions,
+    "OrchardCore.Indexing",
     ]
-)]
+    )]
 
 [assembly: Feature(
     Id = ChatInteractionsConstants.Feature.ChatInteractionDocuments,
@@ -30,9 +30,9 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
+    ChatInteractionsConstants.Feature.ChatDocuments,
     ]
-)]
+    )]
 
 [assembly: Feature(
     Id = AIConstants.Feature.ProfileDocuments,
@@ -41,10 +41,10 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        AIConstants.Feature.ChatCore,
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    AIConstants.Feature.ChatCore,
     ]
-)]
+    )]
 
 [assembly: Feature(
     Id = AIConstants.Feature.ChatSessionDocuments,
@@ -53,7 +53,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        AIConstants.Feature.Chat,
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    AIConstants.Feature.Chat,
     ]
-)]
+    )]

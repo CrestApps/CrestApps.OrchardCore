@@ -1,21 +1,24 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Endpoints;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
-using CrestApps.OrchardCore.AI.Documents.Endpoints;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
-using CrestApps.OrchardCore.AI.Documents.Indexes;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
-using CrestApps.OrchardCore.AI.Documents.Tools;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.Services;
-using CrestApps.OrchardCore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -30,10 +33,13 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddIngestionDocumentReader<PlainTextIngestionDocumentReader>(".txt", new ExtractorExtension(".csv", false),
-                ".md", ".json", ".xml", ".html", ".htm", ".log", ".yaml", ".yml");
+        services.AddCoreAIDocumentProcessing()
+            .AddCoreAIDocumentProcessingStoresYesSql()
+            .AddDataMigration<AIDocumentIndexMigrations>()
+            .AddDataMigration<AIDocumentChunkIndexMigrations>();
 
+        services.AddTransient<IConfigureOptions<InteractionDocumentOptions>, InteractionDocumentOptionsConfiguration>();
+        services.AddSingleton<IPostConfigureOptions<DocumentFileSystemFileStoreOptions>, DocumentFileSystemFileStoreOptionsPostConfiguration>();
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
@@ -44,27 +50,12 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDocumentChunkStore, DefaultAIDocumentChunkStore>()
             .AddScoped<IAIDocumentStore, DefaultAIDocumentStore>();
 
-        services.AddScoped<IAIDocumentProcessingService, DefaultAIDocumentProcessingService>();
-
-        services.AddIndexProvider<AIDocumentIndexProvider>();
-        services.AddIndexProvider<AIDocumentChunkIndexProvider>();
-        services.AddDataMigration<AIDocumentIndexMigrations>();
-        services.AddDataMigration<AIDocumentChunkIndexMigrations>();
-
-        // Add document processing system tools and supporting services.
-        services.AddDefaultDocumentProcessingServices();
-
-        // Register the document Preemptive RAG handler.
-        services.AddScoped<IPreemptiveRagHandler, DocumentPreemptiveRagHandler>();
+        services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();
+        services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AIChatSessionDocumentCleanupHandler>());
-
-        // Register the RAG search system tool.
-        services.AddAITool<SearchDocumentsTool>(SearchDocumentsTool.TheName)
-            .WithTitle("Search Documents")
-            .WithDescription("Searches uploaded or attached documents using semantic vector search.")
-            .WithPurpose(AIToolPurposes.DocumentProcessing);
     }
 }
 
@@ -87,8 +78,8 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadDocumentEndpoint()
-            .AddRemoveDocumentEndpoint();
+            .AddUploadChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionUploadDocument)
+            .AddRemoveChatInteractionDocumentEndpoint(AIConstants.RouteNames.ChatInteractionRemoveDocument);
     }
 }
 
@@ -114,7 +105,7 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddUploadSessionDocumentEndpoint()
-            .AddRemoveSessionDocumentEndpoint();
+            .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
+            .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
     }
 }

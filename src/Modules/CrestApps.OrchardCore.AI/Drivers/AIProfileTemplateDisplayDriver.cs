@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -10,7 +10,7 @@ using OrchardCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
-/// Display driver for the generic fields shared by all AI template sources:
+/// Display driver for the generic fields shared by all template sources:
 /// Title, Technical Name, Description, Category, and IsListable.
 /// </summary>
 internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -31,9 +31,9 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
     {
         return CombineAsync(
             View("AIProfileTemplate_Fields_SummaryAdmin", template).Location("Content:1"),
-            View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
-            View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
-            View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
+        View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
+        View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
+        View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
         );
     }
 

@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.Core.Services;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.Services;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -135,6 +134,23 @@ public sealed class CatalogManagerTests
     }
 
     [Fact]
+    public async Task DeleteAsync_DeletesWithoutCallingCommit()
+    {
+        var entry = new TestCatalogEntry { ItemId = "1" };
+        var catalogMock = new Mock<ICatalog<TestCatalogEntry>>();
+        catalogMock
+            .Setup(catalog => catalog.DeleteAsync(entry))
+            .ReturnsAsync(true);
+
+        var logger = Mock.Of<ILogger<CatalogManager<TestCatalogEntry>>>();
+        var manager = new CatalogManager<TestCatalogEntry>(catalogMock.Object, [], logger);
+
+        await manager.DeleteAsync(entry);
+
+        catalogMock.Verify(catalog => catalog.DeleteAsync(entry), Times.Once);
+    }
+
+    [Fact]
     public async Task CreateAsync_InvokesHandlersInOrder()
     {
         var entry = new TestCatalogEntry { ItemId = "new" };
@@ -206,7 +222,6 @@ public sealed class CatalogManagerTests
         {
             OnDeletingAsync = async ctx =>
             {
-                // Check via catalog, not records list
                 existsInCatalogDuringDeleting = await catalog.FindByIdAsync(entry.ItemId) != null;
                 callOrder.Enqueue("DeletingAsync");
             },
@@ -223,8 +238,8 @@ public sealed class CatalogManagerTests
         Assert.Equal("DeletingAsync", callOrder.Dequeue());
         Assert.Equal("DeletedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
-        Assert.True(existsInCatalogDuringDeleting); // Should exist before deletion
-        Assert.False(existsInCatalogDuringDeleted); // Should not exist after deletion
+        Assert.True(existsInCatalogDuringDeleting);
+        Assert.False(existsInCatalogDuringDeleted);
     }
 
     [Fact]
@@ -258,8 +273,8 @@ public sealed class CatalogManagerTests
         Assert.Equal("CreatingAsync", callOrder.Dequeue());
         Assert.Equal("CreatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
-        Assert.True(existsInCatalogDuringCreating); // Should not exist before creation
-        Assert.True(existsInCatalogDuringCreated); // Should exist after creation
+        Assert.True(existsInCatalogDuringCreating);
+        Assert.True(existsInCatalogDuringCreated);
     }
 
     [Fact]
@@ -293,8 +308,8 @@ public sealed class CatalogManagerTests
         Assert.Equal("UpdatingAsync", callOrder.Dequeue());
         Assert.Equal("UpdatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
-        Assert.True(existsInCatalogDuringUpdating); // Should exist before update
-        Assert.True(existsInCatalogDuringUpdated); // Should exist after update
+        Assert.True(existsInCatalogDuringUpdating);
+        Assert.True(existsInCatalogDuringUpdated);
     }
 
     [Fact]
@@ -328,8 +343,8 @@ public sealed class CatalogManagerTests
         Assert.Equal("ValidatingAsync", callOrder.Dequeue());
         Assert.Equal("ValidatedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
-        Assert.True(existsInCatalogDuringValidating); // Should exist before validating
-        Assert.True(existsInCatalogDuringValidated); // Should exist after validated
+        Assert.True(existsInCatalogDuringValidating);
+        Assert.True(existsInCatalogDuringValidated);
     }
 
     [Fact]
@@ -395,7 +410,7 @@ public sealed class CatalogManagerTests
 
         Assert.Equal("LoadedAsync", callOrder.Dequeue());
         Assert.Empty(callOrder);
-        Assert.True(existsInCatalogDuringLoaded); // Should exist when loaded
+        Assert.True(existsInCatalogDuringLoaded);
     }
 
     [Fact]

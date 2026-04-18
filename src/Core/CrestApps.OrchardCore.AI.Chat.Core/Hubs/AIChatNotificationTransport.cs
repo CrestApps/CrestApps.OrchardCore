@@ -1,5 +1,6 @@
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.SignalR;
 
 namespace CrestApps.OrchardCore.AI.Chat.Core.Hubs;

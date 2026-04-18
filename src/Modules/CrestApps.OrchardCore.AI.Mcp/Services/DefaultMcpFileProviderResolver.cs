@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.Core.AI.Mcp;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.FileProviders;
 

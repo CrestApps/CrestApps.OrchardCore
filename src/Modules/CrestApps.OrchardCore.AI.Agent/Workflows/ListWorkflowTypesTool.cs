@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,24 +15,28 @@ public sealed class ListWorkflowTypesTool : AIFunction
     public const string TheName = "listWorkflowTypes";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "term": {
-              "type": "string",
-              "description": "The query string to search for."
-            },
-            "pageNumber": {
-              "type": "integer",
-              "description": "The page number of results to return.",
-              "default": 1
-            }
-          },
-          "required": ["term"],
-          "additionalProperties": false
-        }     
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -51,13 +55,16 @@ public sealed class ListWorkflowTypesTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ListWorkflowTypesTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         var workflowTypeStore = arguments.Services.GetRequiredService<IWorkflowTypeStore>();
+
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
+
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
@@ -65,6 +72,7 @@ public sealed class ListWorkflowTypesTool : AIFunction
         if (page < 1)
         {
             page = 1;
+
         }
 
         var startingIndex = (page - 1) * pagerOptions.PageSize;
@@ -80,6 +88,7 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         var items = workflowTypes
             .Skip(startingIndex)
+
             .Take(pagerOptions.PageSize)
             .ToList();
 
@@ -90,12 +99,12 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         return
         $$"""
-            {
-                "workflows": {{JsonSerializer.Serialize(items, options.SerializerOptions)}},
-                "workflowsCount": {{count}},
-                "totalPages": {{Math.Ceiling((double)count / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}}
-            }
-            """;
+{
+"workflows": {{JsonSerializer.Serialize(items, options.SerializerOptions)}},
+"workflowsCount": {{count}},
+"totalPages": {{Math.Ceiling((double)count / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

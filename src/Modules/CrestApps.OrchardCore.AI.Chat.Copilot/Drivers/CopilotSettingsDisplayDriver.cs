@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
@@ -66,7 +66,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
             // Select list options
             model.AuthenticationTypes =
             [
-                new SelectListItem(S["Not configured"], nameof(CopilotAuthenticationType.NotConfigured)),
                 new SelectListItem(S["GitHub signed-in user"], nameof(CopilotAuthenticationType.GitHubOAuth)),
                 new SelectListItem(S["API key (BYOK)"], nameof(CopilotAuthenticationType.ApiKey)),
             ];
@@ -96,11 +95,6 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.AuthenticationType = model.AuthenticationType;
-
-        if (settings.AuthenticationType == CopilotAuthenticationType.NotConfigured)
-        {
-            return await EditAsync(site, settings, context);
-        }
 
         if (settings.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
         {
@@ -160,7 +154,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
 
             if (string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase)
                 && string.IsNullOrWhiteSpace(model.ApiKey)
-                && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
+                    && string.IsNullOrWhiteSpace(settings.ProtectedApiKey))
             {
                 context.Updater.ModelState.AddModelError(nameof(model.ApiKey), S["API key is required for Azure provider."]);
             }

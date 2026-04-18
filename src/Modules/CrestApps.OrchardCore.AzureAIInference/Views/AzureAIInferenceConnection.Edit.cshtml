@@ -1,4 +1,4 @@
-@using CrestApps.Azure.Core.Models
+@using CrestApps.Core.Azure.Models
 @using CrestApps.OrchardCore.AzureAIInference.ViewModels
 @using OrchardCore
 
@@ -29,7 +29,7 @@
 <div class="@Orchard.GetWrapperClasses(Model.AuthenticationType == AzureAuthenticationType.ApiKey ? string.Empty : "d-none")" id="@apiKeyWrapperId">
     <label asp-for="ApiKey" class="@Orchard.GetLabelClasses()">@T["API key"]</label>
     <div class="@Orchard.GetEndClasses()">
-        <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey ? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
+        <input asp-for="ApiKey" class="form-control" autocomplete="new-password" placeholder="@(Model.HasApiKey? T["A key is securely stored. Provider a new one to replace it or leave it blank."] : T["The API key"])" />
         <span asp-validation-for="ApiKey" class="text-danger"></span>
         <span class="hint">@T["The provider's API key."]</span>
     </div>
@@ -47,23 +47,23 @@
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
 
-        const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
-        const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
-        const identityIdWrapper = document.getElementById('@identityIdWrapperId');
+    const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
+    const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
+    const identityIdWrapper = document.getElementById('@identityIdWrapperId');
 
-        menuElement.addEventListener('change', (e) => {
+    menuElement.addEventListener('change', (e) => {
 
-            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
-                apiKeyWrapper.classList.remove('d-none');
-            } else {
-                apiKeyWrapper.classList.add('d-none');
-            }
+    if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
+    apiKeyWrapper.classList.remove('d-none');
+    } else {
+    apiKeyWrapper.classList.add('d-none');
+    }
 
-            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
-                identityIdWrapper.classList.remove('d-none');
-            } else {
-                identityIdWrapper.classList.add('d-none');
-            }
-        });
+    if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
+    identityIdWrapper.classList.remove('d-none');
+    } else {
+    identityIdWrapper.classList.add('d-none');
+    }
+    });
     });
 </script>

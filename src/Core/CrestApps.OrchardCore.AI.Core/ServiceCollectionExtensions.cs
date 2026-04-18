@@ -1,19 +1,24 @@
-using CrestApps.AI.Prompting.Extensions;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.DataSources;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Markdown;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.Infrastructure.Indexing;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Orchestration;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Core.Services.NotificationBuilders;
-using CrestApps.OrchardCore.AI.Core.Tools;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Services;
+using Fluid;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DataIngestion;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
+using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -21,21 +26,28 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddAICoreServices(this IServiceCollection services)
     {
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddMarkdown()
+            )
+        );
+
+        // In Orchard Core's multi-tenant architecture, IConfiguration resolves to the
+        // host configuration (project-root appsettings.json), not the tenant's ShellConfiguration
+        // (which includes App_Data/appsettings.json and per-tenant overrides). The core
+        // CrestApps.Core.AI library registers services that read AI settings from IConfiguration,
+        // so they never see the tenant's config. Replace them with factory-based registrations
+        // that provide IShellConfiguration (the tenant configuration) instead.
+        services.ReplaceConfigurationServices();
+
         services
-            .AddAIPrompting()
-            .AddCatalogs()
             .AddCatalogManagers()
-            .AddScoped<IAIClientFactory, DefaultAIClientFactory>()
-            .AddScoped<ISpeechVoiceResolver, DefaultSpeechVoiceResolver>()
-            .AddScoped<DefaultSpeechVoicePresenter>()
+            .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
             .AddScoped<IAIProfileStore, DefaultAIProfileStore>()
             .AddScoped<ICatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
             .AddScoped<INamedCatalog<AIProfile>>(sp => sp.GetRequiredService<IAIProfileStore>())
+            .AddScoped<DefaultSpeechVoicePresenter>()
             .AddScoped<AIProviderConnectionStore>()
-            .AddScoped<ICatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
-            .AddScoped<INamedCatalog<AIProviderConnection>>(sp => sp.GetRequiredService<AIProviderConnectionStore>())
-            .AddScoped<IAICompletionService, DefaultAICompletionService>()
-            .AddScoped<IAICompletionContextBuilder, DefaultAICompletionContextBuilder>()
             .AddScoped<IAIProfileManager, DefaultAIProfileManager>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileHandler>();
 
@@ -44,20 +56,27 @@ public static class ServiceCollectionExtensions
             .AddScoped<IAuthorizationHandler, AIToolAuthorizationHandler>()
             .Configure<StoreCollectionOptions>(o => o.Collections.Add(AIConstants.AICollectionName));
 
+        services.Configure<TemplateOptions>(o =>
+        {
+            o.MemberAccessStrategy.Register<AIProfile>();
+            o.MemberAccessStrategy.Register<AIChatSession>();
+            o.MemberAccessStrategy.Register<AIChatSessionPrompt>();
+            o.MemberAccessStrategy.Register<ExtractedFieldState>();
+            o.MemberAccessStrategy.Register<PostSessionResult>();
+            o.MemberAccessStrategy.Register<AICompletionReference>();
+            o.MemberAccessStrategy.Register<AIToolDefinitionEntry>();
+            o.MemberAccessStrategy.Register<ChatDocumentInfo>();
+            o.MemberAccessStrategy.Register<ConversionGoalResult>();
+            o.MemberAccessStrategy.Register<AIResponseMessage>();
+        });
+
         return services;
     }
 
     public static IServiceCollection AddAIDeploymentServices(this IServiceCollection services)
     {
         services
-            .AddScoped<DefaultAIDeploymentStore>()
-            .AddScoped<ConfigurationAIDeploymentStore>()
-            .AddScoped<ICatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentStore>())
-            .AddScoped<INamedCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentStore>())
-            .AddScoped<INamedSourceCatalog<AIDeployment>>(sp => sp.GetRequiredService<ConfigurationAIDeploymentStore>())
-            .AddScoped<DefaultAIDeploymentManager>()
-            .AddScoped<IAIDeploymentManager>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
-            .AddScoped<INamedSourceCatalogManager<AIDeployment>>(sp => sp.GetRequiredService<DefaultAIDeploymentManager>())
+            .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
             .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
 
         return services;
@@ -66,236 +85,82 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAIDataSourceServices(this IServiceCollection services)
     {
         services
-            .AddScoped<ICatalog<AIDataSource>, DefaultAIDataSourceStore>()
+            .AddScoped<DefaultAIDataSourceStore>()
+            .AddScoped<IAIDataSourceStore>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
+            .AddScoped<ICatalog<AIDataSource>>(sp => sp.GetRequiredService<DefaultAIDataSourceStore>())
             .AddScoped<ICatalogManager<AIDataSource>, DefaultAIDataSourceManager>()
             .AddScoped<ICatalogEntryHandler<AIDataSource>, AIDataSourceHandler>();
 
         return services;
     }
 
-    public static IServiceCollection AddAIProfileTemplateServices(this IServiceCollection services)
+    public static IServiceCollection AddOrchardCoreIndexingAdapters(this IServiceCollection services, string providerName)
     {
-        services
-            .AddScoped<DefaultAIProfileTemplateStore>()
-            .AddScoped<ICatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<INamedCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<INamedSourceCatalog<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateStore>())
-            .AddScoped<DefaultAIProfileTemplateManager>()
-            .AddScoped<IAIProfileTemplateManager>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedSourceCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
-            .AddScoped<INamedCatalogManager<AIProfileTemplate>>(sp => sp.GetRequiredService<DefaultAIProfileTemplateManager>())
-            .AddScoped<ICatalogEntryHandler<AIProfileTemplate>, AIProfileTemplateHandler>();
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerName);
+
+        services.TryAddKeyedScoped<ISearchIndexManager, OrchardCoreSearchIndexManager>(providerName);
+        services.TryAddKeyedScoped<ISearchDocumentManager, OrchardCoreSearchDocumentManager>(providerName);
 
         return services;
     }
-
-    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string implementationName, string providerName, Action<AIProfileProviderEntry> configure = null)
-        where TClient : class, IAICompletionClient
-    {
-        return services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddProfileSource(implementationName, providerName, configure);
-            })
-            .AddAICompletionClient<TClient>(implementationName);
-    }
-
-    [Obsolete("Use AddAICompletionClient instead. Profile sources are no longer required.")]
-    public static IServiceCollection AddAIProfile<TClient>(this IServiceCollection services, string clientName)
-        where TClient : class, IAICompletionClient
-    {
-        return services.AddAICompletionClient<TClient>(clientName);
-    }
-
-    public static IServiceCollection AddAIDeploymentProvider(this IServiceCollection services, string providerName, Action<AIDeploymentProviderEntry> configure = null)
-    {
-        services
-            .Configure<AIOptions>(o =>
-            {
-                o.AddDeploymentProvider(providerName, configure);
-            });
-
-        return services;
-    }
-
-    public static IServiceCollection AddAICompletionClient<TClient>(this IServiceCollection services, string clientName)
-        where TClient : class, IAICompletionClient
-    {
-        services.Configure<AIOptions>(o =>
-        {
-            o.AddClient<TClient>(clientName);
-        });
-
-        services.TryAddScoped<TClient>();
-        services.AddScoped<IAICompletionClient>(sp => sp.GetService<TClient>());
-
-        return services;
-    }
-
-    public static IServiceCollection AddAIConnectionSource(this IServiceCollection services, string providerName, Action<AIProviderConnectionOptionsEntry> configure = null)
-    {
-        services.Configure<AIOptions>(o =>
-        {
-            o.AddConnectionSource(providerName, configure);
-        });
-
-        return services;
-    }
-
-    public static IServiceCollection AddAITemplateSource(this IServiceCollection services, string sourceName, Action<AITemplateSourceEntry> configure = null)
-    {
-        services.Configure<AIOptions>(o =>
-        {
-            o.AddTemplateSource(sourceName, configure);
-        });
-
-        return services;
-    }
-
     /// <summary>
-    /// Registers an <see cref="IngestionDocumentReader"/> implementation as a keyed singleton
-    /// for each supported file extension, and configures <see cref="ChatDocumentsOptions"/>
-    /// with the allowed and embeddable extensions.
+    /// Replaces core CrestApps.Core.AI configuration-backed services that inject
+    /// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> (host-level) with
+    /// factory-based registrations that provide <see cref="IShellConfiguration"/>
+    /// (tenant-level) instead, so they can read from App_Data/appsettings.json.
     /// </summary>
-    /// <typeparam name="T">
-    /// The <see cref="IngestionDocumentReader"/> implementation type. A single singleton instance
-    /// is shared across all registered extension keys.
-    /// </typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <param name="supportedExtensions">
-    /// The file extensions this reader handles, with optional embeddable flag.
-    /// </param>
-    public static IServiceCollection AddIngestionDocumentReader<T>(this IServiceCollection services, params ExtractorExtension[] supportedExtensions)
-        where T : IngestionDocumentReader
+    private static void ReplaceConfigurationServices(this IServiceCollection services)
     {
-        services.Configure<ChatDocumentsOptions>(options =>
+        services.Configure<AIProviderConnectionCatalogOptions>(o =>
         {
-            foreach (var extension in supportedExtensions)
-            {
-                options.Add(extension);
-            }
+            // This code will be removed in the v3. We'll keep it now for backward compatibility.
+            o.ProviderSections.Add("CrestApps_AI:Providers");
         });
 
-        // Register the concrete type once as a singleton.
-        services.TryAddSingleton<T>();
+        ReplaceService<IPostConfigureOptions<AIProviderOptions>, ConfigurationAIProviderConnectionsOptionsConfiguration>(
+            services,
+            ServiceLifetime.Transient,
+            static sp => new ConfigurationAIProviderConnectionsOptionsConfiguration(
+                sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
+                sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionsOptionsConfiguration>>()));
 
-        // Register a keyed IngestionDocumentReader for each extension, resolving
-        // back to the shared singleton so only one instance is created per reader type.
-        foreach (var extension in supportedExtensions)
+        ReplaceService<INamedSourceCatalogSource<AIDeployment>, ConfigurationAIDeploymentSource>(
+            services,
+            ServiceLifetime.Scoped,
+            static sp => new ConfigurationAIDeploymentSource(
+                sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<IOptions<AIOptions>>(),
+                sp.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>(),
+                sp.GetRequiredService<ILogger<ConfigurationAIDeploymentSource>>()));
+
+        ReplaceService<INamedSourceCatalogSource<AIProviderConnection>, ConfigurationAIProviderConnectionSource>(
+            services,
+            ServiceLifetime.Scoped,
+            static sp => new ConfigurationAIProviderConnectionSource(
+                sp.GetRequiredService<IShellConfiguration>(),
+                sp.GetRequiredService<TimeProvider>(),
+                sp.GetRequiredService<IOptions<AIProviderConnectionCatalogOptions>>(),
+                sp.GetRequiredService<ILogger<ConfigurationAIProviderConnectionSource>>()));
+    }
+
+    private static void ReplaceService<TService, TImplementation>(
+        IServiceCollection services,
+        ServiceLifetime lifetime,
+        Func<IServiceProvider, TService> factory)
+        where TService : class
+        where TImplementation : class, TService
+    {
+        var descriptor = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(TService) &&
+            d.ImplementationType == typeof(TImplementation));
+
+        if (descriptor != null)
         {
-            services.AddKeyedSingleton<IngestionDocumentReader>(
-                extension.Extension,
-                (sp, _) => sp.GetRequiredService<T>());
+            services.Remove(descriptor);
         }
 
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the orchestration services including the default progressive tool orchestrator,
-    /// tool registry, orchestration context builder, and orchestrator resolver.
-    /// </summary>
-    public static IServiceCollection AddOrchestrationServices(this IServiceCollection services)
-    {
-        services.AddOptions<OrchestratorOptions>();
-        services.AddOptions<DefaultOrchestratorOptions>();
-
-        // Register the shared tokenizer used by the tool registry and orchestrator.
-        services.TryAddSingleton<ITextTokenizer, LuceneTextTokenizer>();
-
-        // Register the orchestration context builder and core handlers.
-        services.AddScoped<IOrchestrationContextBuilder, DefaultOrchestrationContextBuilder>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, CompletionContextOrchestrationHandler>());
-
-        // Register the agent context handler that enriches the system message with available agent descriptions.
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, AgentOrchestrationContextBuilderHandler>());
-
-        // Register the preemptive search query provider (shared by DataSource and Document RAG handlers).
-        services.AddScoped<PreemptiveSearchQueryProvider>();
-
-        // Register the preemptive RAG coordinator that dispatches to all IPreemptiveRagHandler implementations.
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IOrchestrationContextBuilderHandler, PreemptiveRagOrchestrationHandler>());
-
-        // Register the tool registry and default providers.
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, LocalToolRegistryProvider>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, SystemToolRegistryProvider>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, AgentToolRegistryProvider>());
-        services.AddScoped<IToolRegistry, DefaultToolRegistry>();
-
-        // Register the default orchestrator.
-        services.AddOrchestrator<DefaultOrchestrator>(DefaultOrchestrator.OrchestratorName)
-            .WithTitle("Default Orchestrator");
-
-        // Register the resolver.
-        services.AddScoped<IOrchestratorResolver, DefaultOrchestratorResolver>();
-
-        // Register the default AI chat response handler and resolver.
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatResponseHandler, AIChatResponseHandler>());
-        services.AddScoped<IChatResponseHandlerResolver, DefaultChatResponseHandlerResolver>();
-
-        // Register the external chat relay infrastructure for protocol-agnostic 3rd-party integration.
-        services.AddSingleton<IExternalChatRelayManager, ExternalChatRelayConnectionManager>();
-        services.AddScoped<IExternalChatRelayEventHandler, DefaultExternalChatRelayEventHandler>();
-        services.AddScoped<IExternalChatRelayNotificationHandler, DefaultExternalChatRelayNotificationHandler>();
-
-        // Register keyed notification builders for built-in relay event types.
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentTyping);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentStoppedTypingNotificationBuilder>(ExternalChatRelayEventTypes.AgentStoppedTyping);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentConnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentConnected);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentDisconnectedNotificationBuilder>(ExternalChatRelayEventTypes.AgentDisconnected);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, AgentReconnectingNotificationBuilder>(ExternalChatRelayEventTypes.AgentReconnecting);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, ConnectionLostNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionLost);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, ConnectionRestoredNotificationBuilder>(ExternalChatRelayEventTypes.ConnectionRestored);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, WaitTimeUpdatedNotificationBuilder>(ExternalChatRelayEventTypes.WaitTimeUpdated);
-        services.AddKeyedScoped<IExternalChatRelayNotificationBuilder, SessionEndedNotificationBuilder>(ExternalChatRelayEventTypes.SessionEnded);
-
-        // Register content generation system tools.
-        services.AddAITool<GenerateImageTool>(GenerateImageTool.TheName)
-            .WithTitle("Generate Image")
-            .WithDescription("Generates an image from a text description using an AI image generation model.")
-            .WithPurpose(AIToolPurposes.ContentGeneration);
-
-        services.AddAITool<GenerateChartTool>(GenerateChartTool.TheName)
-            .WithTitle("Generate Chart")
-            .WithDescription("Generates a Chart.js configuration from a data description.")
-            .WithPurpose(AIToolPurposes.ContentGeneration);
-
-        return services;
-    }
-
-    /// <summary>
-    /// Registers an orchestrator implementation with the given name.
-    /// Returns a builder for fluent configuration (e.g., setting a display title).
-    /// </summary>
-    /// <typeparam name="TOrchestrator">The orchestrator type implementing <see cref="IOrchestrator"/>.</typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <param name="name">The unique name for this orchestrator.</param>
-    /// <returns>A builder for further configuration of this orchestrator.</returns>
-    /// <example>
-    /// <code>
-    /// services.AddOrchestrator&lt;ProgressiveToolOrchestrator&gt;("default")
-    ///     .WithTitle("Progressive Tool Orchestrator");
-    /// services.AddOrchestrator&lt;CopilotOrchestrator&gt;("copilot")
-    ///     .WithTitle("GitHub Copilot Orchestrator");
-    /// </code>
-    /// </example>
-    public static OrchestratorBuilder<TOrchestrator> AddOrchestrator<TOrchestrator>(this IServiceCollection services, string name)
-        where TOrchestrator : class, IOrchestrator
-    {
-        ArgumentException.ThrowIfNullOrEmpty(name);
-
-        services.TryAddScoped<TOrchestrator>();
-
-        var entry = new OrchestratorEntry
-        {
-            Type = typeof(TOrchestrator),
-        };
-
-        services.Configure<OrchestratorOptions>(options =>
-        {
-            options.Orchestrators[name] = entry;
-        });
-
-        return new OrchestratorBuilder<TOrchestrator>(entry);
+        services.Add(new ServiceDescriptor(typeof(TService), (sp) => factory(sp), lifetime));
     }
 }

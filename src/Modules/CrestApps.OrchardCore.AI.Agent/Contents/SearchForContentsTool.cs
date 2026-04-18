@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using System.Text.Json;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,24 +20,28 @@ public sealed class SearchForContentsTool : AIFunction
     public const string TheName = "searchForContentItems";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "term": {
-              "type": "string",
-              "description": "The query string to search for."
-            },
-            "pageNumber": {
-              "type": "integer",
-              "description": "The page number of results to return.",
-              "default": 1
-            }
-          },
-          "required": ["term"],
-          "additionalProperties": false
-        }     
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "The query string to search for."
+        },
+        "pageNumber": {
+          "type": "integer",
+          "description": "The page number of results to return.",
+          "default": 1
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -53,6 +57,7 @@ public sealed class SearchForContentsTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<SearchForContentsTool>>();
@@ -65,6 +70,7 @@ public sealed class SearchForContentsTool : AIFunction
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
         var contentsAdminListQueryService = arguments.Services.GetRequiredService<IContentsAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
+
         var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
@@ -73,6 +79,7 @@ public sealed class SearchForContentsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a term argument in the function arguments.", TheName);
 
             return "Unable to find a term argument in the function arguments.";
+
         }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
@@ -84,12 +91,15 @@ public sealed class SearchForContentsTool : AIFunction
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
+
             FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
+
         }, updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
+
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
 
@@ -100,12 +110,12 @@ public sealed class SearchForContentsTool : AIFunction
 
         return
         $$"""
-            {
-                "contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
-                "contentItemsCount": {{contentItemsCount}},
-                "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
-                "pageSize": {{pagerOptions.PageSize}}
-            }
-            """;
+{
+"contentItems": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"contentItemsCount": {{contentItemsCount}},
+"totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
+"pageSize": {{pagerOptions.PageSize}}
+}
+""";
     }
 }

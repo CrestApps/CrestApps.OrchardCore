@@ -1,4 +1,4 @@
-using CrestApps.AI.Prompting.Models;
+using CrestApps.Core.Templates.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Prompting.ViewModels;
@@ -14,5 +14,5 @@ public class PromptTemplateOptionViewModel
     public string Category { get; set; }
 
     [BindNever]
-    public IList<AITemplateParameterDescriptor> Parameters { get; set; } = [];
+    public IList<TemplateParameterDescriptor> Parameters { get; set; } = [];
 }

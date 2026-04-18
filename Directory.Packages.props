@@ -2,35 +2,26 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>[3.0.0-preview-18962, )</OrchardCoreVersion>
-    <ModelContextProtocolVersion>1.1.0</ModelContextProtocolVersion>
+    <CrestAppsCoreVersion>1.0.0-preview-38</CrestAppsCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-18980, )</OrchardCoreVersion>
+    <ModelContextProtocolVersion>1.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
     <PackageVersion Include="CrestApps.AgentSkills.Mcp.OrchardCore" Version="1.0.0-preview-0004" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="8.19.18" />
     <PackageVersion Include="Fluid.Core" Version="2.31.0" />
-    <PackageVersion Include="FluentFTP" Version="54.0.2" />
-    <PackageVersion Include="JsonSchema.Net" Version="9.1.3" />
+    <PackageVersion Include="JsonSchema.Net" Version="9.1.5" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00017" />
     <PackageVersion Include="Markdig" Version="1.1.2" />
-    <PackageVersion Include="Microsoft.Extensions.DataIngestion" Version="10.4.0-preview.1.26160.2" />
-    <PackageVersion Include="Microsoft.Extensions.DataIngestion.Markdig" Version="10.4.0-preview.1.26160.2" />
-    <PackageVersion Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
-    <PackageVersion Include="MongoDB.Driver" Version="3.4.0" />
-    <PackageVersion Include="NuGet.Versioning" Version="7.3.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.4.25" />
-    <PackageVersion Include="SSH.NET" Version="2025.1.0" />
+    <PackageVersion Include="NLog" Version="6.1.1" />
+    <PackageVersion Include="NLog.Web.AspNetCore" Version="6.1.2" />
+    <PackageVersion Include="NuGet.Versioning" Version="7.3.1" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="5.4.7" />
     <PackageVersion Include="YesSql.Core" Version="5.4.7" />
-    <PackageVersion Include="A2A" Version="0.3.4-preview" />
-    <PackageVersion Include="A2A.AspNetCore" Version="0.3.4-preview" />
-    <PackageVersion Include="ModelContextProtocol" Version="$(ModelContextProtocolVersion)" />
-    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="$(ModelContextProtocolVersion)" />
-    <PackageVersion Include="ModelContextProtocol.Core" Version="$(ModelContextProtocolVersion)" />
-    <PackageVersion Include="PdfPig" Version="0.1.14" />
-    <PackageVersion Include="GitHub.Copilot.SDK" Version="0.2.0" />
+    <PackageVersion Include="YesSql.Provider.Sqlite" Version="5.4.7" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
@@ -52,6 +43,9 @@
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Features" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.FileStorage.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.FileStorage.AzureBlob" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.FileStorage.FileSystem" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Flows.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Infrastructure.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
@@ -61,11 +55,14 @@
     <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Module.Targets" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Media.Azure" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Navigation.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Roles.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.AzureAI.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
@@ -91,32 +88,53 @@
     <PackageVersion Include="TheTheme" Version="$(OrchardCoreVersion)" />
   </ItemGroup>
   <ItemGroup>
+    <!-- CrestApps Packages -->
+    <PackageVersion Include="CrestApps.Core.Abstractions" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Data.YesSql" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Abstractions" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.A2A" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Claude" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Ftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Markdown" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Ollama" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.OpenAI" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.OpenAI.Azure" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Documents.OpenXml" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Documents.Pdf" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Mcp.Sftp" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Azure" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Azure" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Azure.AISearch" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Elasticsearch" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Infrastructure" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.SignalR" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Support" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.Templates" Version="$(CrestAppsCoreVersion)" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Microsoft Packages -->
-    <PackageVersion Include="Azure.AI.OpenAI" Version="2.8.0-beta.1" />
-    <PackageVersion Include="Azure.Identity" Version="1.19.0" />
-    <PackageVersion Include="Microsoft.CognitiveServices.Speech" Version="1.48.2" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Messaging.EventGrid" Version="5.0.0" />
-    <PackageVersion Include="Azure.Search.Documents" Version="11.7.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.4.1" />
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.4.1" />
-    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.1" />
-    <PackageVersion Include="Microsoft.Extensions.AI.AzureAIInference" Version="10.0.0-preview.1.25559.3" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Physical" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Localization.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.4.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Testing Packages -->
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.analyzers" Version="1.27.0" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="xunit.runner.inproc" Version="3.2.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Benchmark Packages -->
@@ -124,13 +142,21 @@
   </ItemGroup>
   <ItemGroup>
     <!-- Aspire Packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.2" />
     <PackageVersion Include="Aspire.Hosting.Elasticsearch" Version="13.2.0" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.2.0" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.2.2" />
     <PackageVersion Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.1.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- Transitive Packages -->
-    <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.4" />
+    <PackageVersion Include="MailKit" Version="4.16.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Sample Packages -->
+    <PackageVersion Include="A2A" Version="0.3.4-preview" />
+    <PackageVersion Include="A2A.AspNetCore" Version="0.3.4-preview" />
+    <PackageVersion Include="ModelContextProtocol" Version="$(ModelContextProtocolVersion)" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="$(ModelContextProtocolVersion)" />
+    <PackageVersion Include="ModelContextProtocol.Core" Version="$(ModelContextProtocolVersion)" />
   </ItemGroup>
 </Project>

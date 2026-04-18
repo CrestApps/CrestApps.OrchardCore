@@ -1,7 +1,8 @@
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;

@@ -1,99 +1,33 @@
-using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Indexes;
+using CrestApps.Core.Data.YesSql;
+using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal sealed class AIChatSessionIndexMigrations : DataMigration
 {
+    private readonly YesSqlStoreOptions _option;
+
+    public AIChatSessionIndexMigrations(IOptions<YesSqlStoreOptions> option)
+    {
+        _option = option.Value;
+    }
+
     public async Task<int> CreateAsync()
     {
-        await SchemaBuilder.CreateMapIndexTableAsync<AIChatSessionIndex>(table => table
-                .Column<string>("ProfileId", column => column.WithLength(26))
-                .Column<string>("SessionId", column => column.WithLength(26))
-                .Column<string>("UserId", column => column.WithLength(26))
-                .Column<string>("ClientId", column => column.WithLength(64))
-                .Column<string>("Status", column => column.WithDefault("Active"))
-                .Column<string>("PostSessionProcessingStatus", column => column.WithDefault("None"))
-                .Column<DateTime>("LastActivityUtc")
-                .Column<DateTime>("CreatedUtc")
-                .Column<string>("Title", column => column.WithLength(255)),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_DocumentId",
-                "DocumentId",
-                "SessionId",
-                "ProfileId",
-                "UserId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_UserId",
-                "DocumentId",
-                "SessionId",
-                "UserId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ClientId",
-                "DocumentId",
-                "SessionId",
-                "ClientId",
-                "CreatedUtc",
-                "Title"),
-            collection: AIConstants.AICollectionName
-        );
-
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
-        );
+        await SchemaBuilder.CreateAIChatSessionIndexSchemaAsync(_option);
 
         return 3;
     }
 
-    public async Task<int> UpdateFrom1Async()
+    public static Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
-        {
-            table.AddColumn<string>("Status", column => column.WithDefault("Active"));
-            table.AddColumn<DateTime>("LastActivityUtc");
-        }, collection: AIConstants.AICollectionName);
-
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table => table
-            .CreateIndex("IDX_AIChatSessionIndex_ProfileStatusLastActivityUtc",
-                "DocumentId",
-                "ProfileId",
-                "Status",
-                "LastActivityUtc"),
-            collection: AIConstants.AICollectionName
-        );
-
-        return 3;
+        return Task.FromResult(3);
     }
 
-    public async Task<int> UpdateFrom2Async()
+    public static Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
-        {
-            table.AddColumn<string>("PostSessionProcessingStatus", column => column.WithDefault("None"));
-        }, collection: AIConstants.AICollectionName);
-
-        return 3;
+        return Task.FromResult(3);
     }
 }

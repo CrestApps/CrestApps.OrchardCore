@@ -1,21 +1,24 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Clients;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Handlers;
-using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
 using Elastic.Clients.Elasticsearch.Mapping;
+using OrchardCore.Elasticsearch;
+using OrchardCore.Elasticsearch.Core.Models;
+using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.Elasticsearch;
-using OrchardCore.Search.Elasticsearch.Core.Models;
-using OrchardCore.Search.Elasticsearch.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch.Handlers;
 
-
 public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndexProfileHandlerBase
 {
-    public AIDocumentElasticsearchIndexProfileHandler(IAIClientFactory aiClientFactory)
-        : base(ElasticsearchConstants.ProviderName, aiClientFactory)
+    public AIDocumentElasticsearchIndexProfileHandler(
+        IAIDeploymentManager deploymentManager,
+        IAIClientFactory aiClientFactory)
+    : base(ElasticsearchConstants.ProviderName, deploymentManager, aiClientFactory)
     {
     }
 
@@ -38,14 +41,13 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchIndexMetadata>();
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= [];
+        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
 
-        var interactionMetadata = indexProfile.As<ChatInteractionIndexProfileMetadata>();
-        var embeddingDimensions = await GetEmbeddingDimensionsAsync(interactionMetadata);
+        var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.KeyFieldName = AIConstants.ColumnNames.ChunkId;
         metadata.IndexMappings.Mapping.Properties[AIConstants.ColumnNames.ChunkId] = new KeywordProperty();
@@ -72,7 +74,7 @@ public sealed class AIDocumentElasticsearchIndexProfileHandler : AIDocumentIndex
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchDefaultQueryMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchDefaultQueryMetadata>();
 
         if (metadata.DefaultSearchFields is null || metadata.DefaultSearchFields.Length == 0)
         {

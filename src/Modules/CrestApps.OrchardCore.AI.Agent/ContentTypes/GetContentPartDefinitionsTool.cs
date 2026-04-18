@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,19 +12,23 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
     public const string TheName = "getContentPartDefinition";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the content part for which to retrieve the definitions."
-            }
-          },
-          "required": ["name"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the content part for which to retrieve the definitions."
         }
-        """);
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -43,9 +47,11 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<GetContentPartDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
+
         }
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
@@ -55,6 +61,7 @@ public sealed class GetContentPartDefinitionsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
             return "Unable to find a name argument in the function arguments.";
+
         }
 
         var definition = await contentDefinitionManager.GetPartDefinitionAsync(name);

@@ -1,6 +1,6 @@
 using System.Security.Claims;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Security;
@@ -23,6 +23,7 @@ internal sealed class ChatInteractionAuthorizationHandler : AuthorizationHandler
         if (context.HasSucceeded)
         {
             // This handler is not revoking any pre-existing grants.
+
             return;
         }
 

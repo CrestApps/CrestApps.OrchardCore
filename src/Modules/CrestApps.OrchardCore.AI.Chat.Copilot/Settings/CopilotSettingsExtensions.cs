@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 
 namespace CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 
@@ -17,15 +17,15 @@ public static class CopilotSettingsExtensions
         return settings.AuthenticationType switch
         {
             CopilotAuthenticationType.GitHubOAuth =>
-                !string.IsNullOrWhiteSpace(settings.ClientId) &&
+            !string.IsNullOrWhiteSpace(settings.ClientId) &&
                 !string.IsNullOrWhiteSpace(settings.ProtectedClientSecret),
             CopilotAuthenticationType.ApiKey =>
-                !string.IsNullOrWhiteSpace(settings.ProviderType) &&
+            !string.IsNullOrWhiteSpace(settings.ProviderType) &&
                 !string.IsNullOrWhiteSpace(settings.BaseUrl) &&
-                !string.IsNullOrWhiteSpace(settings.DefaultModel) &&
-                (!string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase) ||
-                    (!string.IsNullOrWhiteSpace(settings.AzureApiVersion) &&
-                     !string.IsNullOrWhiteSpace(settings.ProtectedApiKey))),
+                    !string.IsNullOrWhiteSpace(settings.DefaultModel) &&
+                        (!string.Equals(settings.ProviderType, "azure", StringComparison.OrdinalIgnoreCase) ||
+                            (!string.IsNullOrWhiteSpace(settings.AzureApiVersion) &&
+                                !string.IsNullOrWhiteSpace(settings.ProtectedApiKey))),
             _ => false,
         };
     }

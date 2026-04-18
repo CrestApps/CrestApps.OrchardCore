@@ -1,12 +1,13 @@
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -37,7 +38,7 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
                 return;
             }
 
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             model.ChatDeploymentName = metadata.ChatDeploymentName;
             model.UtilityDeploymentName = metadata.UtilityDeploymentName;
@@ -63,7 +64,7 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         var model = new EditProfileDeploymentViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
         metadata.ChatDeploymentName = model.ChatDeploymentName;
         metadata.UtilityDeploymentName = model.UtilityDeploymentName;
         template.Put(metadata);
@@ -76,24 +77,26 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
-            .OrderBy(d => d.ConnectionNameAlias ?? d.ConnectionName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .Select(d =>
             {
-                var groupKey = d.ConnectionNameAlias ?? d.ConnectionName;
+                var groupKey = d.GetConnectionDisplayName();
                 SelectListGroup group = null;
 
                 if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
                 {
                     group = new SelectListGroup { Name = groupKey };
+
                     groups[groupKey] = group;
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
+                ? d.Name
+                : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
+
             });
     }
 }

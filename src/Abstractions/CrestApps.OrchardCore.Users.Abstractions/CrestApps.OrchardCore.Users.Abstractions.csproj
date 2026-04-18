@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Common\CrestApps.Support\CrestApps.Support.csproj" />
+    <PackageReference Include="CrestApps.Core.Support" />
   </ItemGroup>
 
 </Project>

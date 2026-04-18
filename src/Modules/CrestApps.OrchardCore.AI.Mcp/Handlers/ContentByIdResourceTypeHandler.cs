@@ -1,6 +1,6 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Mcp.Core;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp;
+using CrestApps.Core.AI.Mcp.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
@@ -27,7 +27,7 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
         IContentManager contentManager,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
         ILogger<ContentByIdResourceTypeHandler> logger)
-        : base(TypeName)
+    : base(TypeName)
     {
         _contentManager = contentManager;
         _jsonOptions = jsonOptions.Value;
@@ -63,8 +63,8 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
         if (contentItem is null)
         {
             var identifier = !string.IsNullOrEmpty(contentItemVersionId)
-                ? $"version '{contentItemVersionId}'"
-                : $"'{contentItemId}'";
+            ? $"version '{contentItemVersionId}'"
+            : $"'{contentItemId}'";
 
             return CreateErrorResult(resource.Resource.Uri, $"Content item not found: {identifier}");
         }
@@ -77,10 +77,11 @@ public sealed class ContentByIdResourceTypeHandler : McpResourceTypeHandlerBase
             [
                 new TextResourceContents
                 {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
                 }
+
             ]
         };
     }

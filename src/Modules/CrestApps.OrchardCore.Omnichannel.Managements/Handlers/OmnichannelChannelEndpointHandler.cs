@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.Email;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -130,8 +130,11 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
         if (properties != null)
         {
-            enabpoint.Properties ??= [];
-            enabpoint.Properties.Merge(properties);
+            enabpoint.Properties ??= new Dictionary<string, object>();
+            foreach (var (key, value) in properties)
+            {
+                enabpoint.Properties[key] = value;
+            }
         }
 
         return Task.CompletedTask;

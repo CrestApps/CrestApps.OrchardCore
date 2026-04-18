@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using ModelContextProtocol.Protocol;
@@ -126,7 +126,6 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 
         return Task.CompletedTask;
     }
-
     /// <summary>
     /// Builds the full resource URI from source type, item ID, and user-provided path.
     /// Format: {source}://{itemId}/{path} or {source}://{itemId} when path is empty.
@@ -143,7 +142,6 @@ internal sealed class McpResourceHandler : CatalogEntryHandlerBase<McpResource>
 
         return $"{source}://{itemId}/{path}";
     }
-
     /// <summary>
     /// Extracts the user-provided path portion from a full resource URI.
     /// Given "file://abc123/docs/{fileName}", returns "docs/{fileName}".

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Claude Orchestrator</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provides a Claude-based orchestrator for AI chat sessions.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI Claude Anthropic</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="CrestApps.Core.AI.Claude" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.AI/CrestApps.OrchardCore.AI.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

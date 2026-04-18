@@ -1,8 +1,9 @@
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -19,29 +20,33 @@ internal static class ApiAIUtilityCompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/utility", HandleAsync<T>)
             .DisableAntiforgery()
+
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
+
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       [FromServices] IAuthorizationService authorizationService,
-       [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
-       [FromServices] IHttpContextAccessor httpContextAccessor,
-       [FromServices] IAICompletionService completionService,
-       [FromServices] IAICompletionContextBuilder completionContextBuilder,
-       [FromServices] IAIDeploymentManager deploymentManager,
-       [FromServices] ILogger<T> logger,
-       [FromBody] AIUtilityCompletionRequest requestData)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAICompletionService completionService,
+        [FromServices] IAICompletionContextBuilder completionContextBuilder,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ILogger<T> logger,
+        [FromBody] AIUtilityCompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
             return TypedResults.BadRequest("ProfileId is required.");
+
         }
 
         if (string.IsNullOrWhiteSpace(requestData.Prompt))
         {
             return TypedResults.BadRequest("Prompt is required.");
+
         }
 
         var profile = await chatProfileManager.FindByIdAsync(requestData.ProfileId);
@@ -49,11 +54,13 @@ internal static class ApiAIUtilityCompletionEndpoint
         if (profile is null)
         {
             return TypedResults.NotFound();
+
         }
 
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
+
         }
 
         if (profile.Type != AIProfileType.Utility)
@@ -61,11 +68,13 @@ internal static class ApiAIUtilityCompletionEndpoint
             logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the utility-completion endpoint.", profile.ItemId, profile.Type.ToString());
 
             return TypedResults.NotFound();
+
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, requestData.Prompt.Trim())], context);
 
@@ -74,12 +83,14 @@ internal static class ApiAIUtilityCompletionEndpoint
             Success = completion.Messages.Count > 0,
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
+
         };
 
         if (completion.AdditionalProperties is not null &&
             completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
         {
             result.Message.References = referenceItems;
+
         }
 
         result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;

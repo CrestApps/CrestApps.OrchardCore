@@ -17,16 +17,16 @@ public sealed class AIProfileAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], "90", ai => ai
-                .AddClass("artificial-intelligence")
-                .Id("artificialIntelligence")
-                .Add(S["Profiles"], S["Profiles"].PrefixPosition(), profiles => profiles
-                    .AddClass("ai-profiles")
-                    .Id("aiProfiles")
-                    .Action("Index", "Profiles", AIConstants.Feature.Area)
-                    .Permission(AIPermissions.ManageAIProfiles)
-                    .LocalNav()
-                )
-            , priority: 1);
+            .AddClass("artificial-intelligence")
+            .Id("artificialIntelligence")
+            .Add(S["Profiles"], S["Profiles"].PrefixPosition(), profiles => profiles
+            .AddClass("ai-profiles")
+            .Id("aiProfiles")
+            .Action("Index", "Profiles", AIConstants.Feature.Area)
+            .Permission(AIPermissions.ManageAIProfiles)
+            .LocalNav()
+        )
+        , priority: 1);
 
         return ValueTask.CompletedTask;
     }

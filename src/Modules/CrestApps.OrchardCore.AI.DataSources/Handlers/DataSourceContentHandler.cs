@@ -91,6 +91,7 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
             var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
 
             // Re-index updated content items.
+
             if (updatedItems.Count > 0)
             {
                 var contentItemIds = updatedItems.Keys.ToList();
@@ -99,6 +100,7 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
             }
 
             // Remove deleted content items from the KB index.
+
             if (removedIds.Count > 0)
             {
                 await indexingService.RemoveDocumentsAsync(removedIds);

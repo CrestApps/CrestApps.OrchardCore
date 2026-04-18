@@ -12,12 +12,12 @@ function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present,
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 window.chatInteractionManager = function () {
   // Defaults (can be overridden by instanceConfig)
@@ -25,14 +25,13 @@ window.chatInteractionManager = function () {
     // UI defaults for generated media
     generatedImageAltText: 'Generated Image',
     generatedImageMaxWidth: 400,
-    generatedChartMaxWidth: 900,
     downloadImageTitle: 'Download image',
     downloadChartTitle: 'Download chart as image',
     downloadChartButtonText: 'Download',
     codeCopiedText: 'Copied!',
     assistantLabel: 'Assistant',
-    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><i :class=\"getAssistantIcon(message)\"></i></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <i class=\"fa-solid fa-copy\"></i>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <i v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></i>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <i class=\"fa-solid fa-xmark\"></i>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <i v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></i>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
-    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><i class=\"fa fa-robot\" style=\"display: inline-block;\"></i></span>\n                Assistant\n            </div>\n        ",
+    messageTemplate: "\n            <div class=\"ai-chat-messages\">\n                <div v-for=\"(message, index) in messages\" :key=\"index\" class=\"ai-chat-message-item\">\n                    <div>\n                        <div v-if=\"message.role === 'user'\" class=\"ai-chat-msg-role ai-chat-msg-role-user\">You</div>\n                        <div v-else-if=\"message.role !== 'indicator'\" :class=\"getAssistantRoleClasses(message)\">\n                            <span :class=\"getAssistantIconClasses(message, index)\"><span :class=\"getAssistantIcon(message)\"></span></span>\n                            {{ getAssistantLabel(message) }}\n                        </div>\n                        <div class=\"ai-chat-message-body lh-base\">\n                            <h4 v-if=\"message.title\">{{ message.title }}</h4>\n                            <div v-html=\"message.htmlContent\"></div>\n                            <span class=\"message-buttons-container\" v-if=\"!isIndicator(message)\">\n                                <button v-if=\"textToSpeechEnabled && !isConversationMode && message.role === 'assistant' && !message.isStreaming\" class=\"btn btn-sm btn-link text-secondary p-0 me-1 button-message-toolbox\" :class=\"{ 'tts-playing': ttsPlayingMessageIndex === index }\" :data-tts-message-index=\"index\" @click=\"toggleMessageTts(message, index)\" :title=\"ttsPlayingMessageIndex === index ? 'Pause audio' : 'Read aloud'\">\n                                    <span :class=\"ttsPlayingMessageIndex === index ? 'fa-solid fa-circle-pause' : 'fa-solid fa-circle-play'\"></span>\n                                </button>\n                                <button class=\"btn btn-sm btn-link text-secondary p-0 button-message-toolbox\" @click=\"copyResponse(message.content)\" title=\"Click here to copy response to clipboard.\">\n                                    <span class=\"fa-solid fa-copy\"></span>\n                                </button>\n                            </span>\n                        </div>\n                    </div>\n                </div>\n                <div v-for=\"notification in notifications\" :key=\"'notif-' + notification.type\" class=\"ai-chat-notification\" :class=\"'ai-chat-notification-' + (notification.type || 'info') + ' ' + (notification.cssClass || '')\">\n                    <div class=\"ai-chat-notification-content\">\n                        <span v-if=\"notification.icon\" :class=\"notification.icon\" class=\"ai-chat-notification-icon\"></span>\n                        <span class=\"ai-chat-notification-text\">{{ notification.content }}</span>\n                        <button v-if=\"notification.dismissible\" class=\"btn btn-sm btn-link p-0 ms-2 ai-chat-notification-dismiss\" @click=\"dismissNotification(notification.type)\" title=\"Dismiss\">\n                            <span class=\"fa-solid fa-xmark\"></span>\n                        </button>\n                    </div>\n                    <div v-if=\"notification.actions && notification.actions.length\" class=\"ai-chat-notification-actions\">\n                        <button v-for=\"action in notification.actions\" :key=\"action.name\" class=\"btn btn-sm\" :class=\"action.cssClass || 'btn-outline-secondary'\" @click=\"handleNotificationAction(notification.type, action.name)\">\n                            <span v-if=\"action.icon\" :class=\"action.icon\" class=\"me-1\"></span>\n                            {{ action.label }}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        ",
+    indicatorTemplate: "\n            <div class=\"ai-chat-msg-role ai-chat-msg-role-assistant\">\n                <span class=\"ai-streaming-icon\"><span class=\"fa fa-robot\" style=\"display: inline-block;\"></span></span>\n                Assistant\n            </div>\n        ",
     // Localizable strings
     untitledText: 'Untitled',
     clearHistoryTitle: 'Clear History',
@@ -87,7 +86,7 @@ window.chatInteractionManager = function () {
       highlighted = escapeHtmlEntities(code);
     }
     var langDisplay = lang ? escapeHtmlEntities(lang) : 'code';
-    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><i class=\"fa-solid fa-code\"></i> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><i class=\"fa-regular fa-copy\"></i></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
+    return "<div class=\"ai-code-block\"><div class=\"ai-code-header\"><span class=\"ai-code-lang\"><span class=\"fa-solid fa-code\"></span> ".concat(langDisplay, "</span><button type=\"button\" class=\"ai-code-copy-btn\" title=\"Copy code\"><span class=\"fa-regular fa-copy\"></span></button></div><pre><code class=\"hljs").concat(lang ? ' language-' + lang : '', "\">").concat(highlighted, "</code></pre></div>");
   };
 
   // Custom image renderer for generated images with thumbnail styling and download button.
@@ -97,7 +96,7 @@ window.chatInteractionManager = function () {
     if (!src) return '';
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
+    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <span class=\"fa-solid fa-download\"></span>\n                </a>\n            </div>\n        </div>");
   };
 
   // Chart counter for unique IDs
@@ -105,9 +104,11 @@ window.chatInteractionManager = function () {
 
   // Collector for charts discovered during marked parsing.
   var _pendingCharts = [];
+
+  // Global chart config map shared with ai-chat.js
+  window.__chartConfigs = window.__chartConfigs || {};
   function createChartHtml(chartId) {
-    var chartMaxWidth = defaultConfig.generatedChartMaxWidth;
-    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: ".concat(chartMaxWidth, "px; margin: 0 auto; height: 480px;\">") + "<canvas id=\"".concat(chartId, "\" class=\"img-thumbnail\" width=\"").concat(chartMaxWidth, "\" height=\"480\" style=\"width: 100%; height: 480px;\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" onclick=\"downloadChart('".concat(chartId, "')\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
+    return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<span class=\"fa-solid fa-download\"></span> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
   // Register [chart:{...json...}] as a native marked block extension so the
@@ -138,6 +139,7 @@ window.chatInteractionManager = function () {
           chartId: token.chartId,
           config: token.json
         });
+        window.__chartConfigs[token.chartId] = token.json;
         return createChartHtml(token.chartId);
       }
     }]
@@ -209,42 +211,56 @@ window.chatInteractionManager = function () {
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
-    var _iterator = _createForOfIteratorHelper(message._pendingCharts),
-      _step;
-    try {
-      for (_iterator.s(); !(_step = _iterator.n()).done;) {
-        var c = _step.value;
-        var canvas = document.getElementById(c.chartId);
-        if (!canvas) {
-          continue;
-        }
-        if (typeof Chart === 'undefined') {
-          console.error('Chart.js is not available on the page.');
-          continue;
-        }
-        try {
-          var _cfg$options;
-          // Destroy existing chart instance if re-rendering
-          if (canvas._chartInstance) {
-            canvas._chartInstance.destroy();
-          }
-          var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
-          (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
-          cfg.options.responsive = true;
-          cfg.options.maintainAspectRatio = false;
-          canvas._chartInstance = new Chart(canvas, cfg);
-        } catch (e) {
-          console.error('Error creating chart:', e);
-        }
-      }
 
-      // Prevent re-render work
-    } catch (err) {
-      _iterator.e(err);
-    } finally {
-      _iterator.f();
-    }
+    // Copy and clear pending charts immediately to prevent duplicate renders.
+    var charts = _toConsumableArray(message._pendingCharts);
     message._pendingCharts = [];
+
+    // Defer to requestAnimationFrame so the browser has fully laid out the
+    // canvas elements before Chart.js reads their dimensions.
+    requestAnimationFrame(function () {
+      var _iterator = _createForOfIteratorHelper(charts),
+        _step;
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          var c = _step.value;
+          var canvas = document.getElementById(c.chartId);
+          if (!canvas) {
+            continue;
+          }
+          if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not loaded. To render interactive charts, include the Chart.js library on the page (e.g., <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>).');
+            continue;
+          }
+
+          // When the canvas is inside a hidden container (e.g., display:none),
+          // it has zero dimensions. Keep the config for later rendering.
+          if (canvas.offsetParent === null) {
+            window.__chartConfigs[c.chartId] = c.config;
+            continue;
+          }
+          try {
+            var _cfg$options, _cfg$options2, _cfg$options2$aspectR;
+            // Destroy existing chart instance if re-rendering
+            if (canvas._chartInstance) {
+              canvas._chartInstance.destroy();
+            }
+            var cfg = typeof c.config === 'string' ? JSON.parse(c.config) : c.config;
+            (_cfg$options = cfg.options) !== null && _cfg$options !== void 0 ? _cfg$options : cfg.options = {};
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = true;
+            (_cfg$options2$aspectR = (_cfg$options2 = cfg.options).aspectRatio) !== null && _cfg$options2$aspectR !== void 0 ? _cfg$options2$aspectR : _cfg$options2.aspectRatio = 4 / 3;
+            canvas._chartInstance = new Chart(canvas, cfg);
+          } catch (e) {
+            console.error('Error creating chart:', e);
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+    });
   }
 
   // Parse markdown content via marked (which natively handles [chart:...] markers
@@ -257,6 +273,7 @@ window.chatInteractionManager = function () {
     });
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
+      ADD_TAGS: ['canvas'],
       ADD_ATTR: ['target']
     });
   }
@@ -302,21 +319,27 @@ window.chatInteractionManager = function () {
           initialFieldValues: new Map(),
           settingsDirty: false,
           saveSettingsTimeout: null,
+          saveIndicatorTimeout: null,
           isRecording: false,
           mediaRecorder: null,
           preRecordingPrompt: '',
           micButton: null,
           speechToTextEnabled: config.chatMode === 'AudioInput' || config.chatMode === 'Conversation',
-          textToSpeechEnabled: config.chatMode === 'Conversation',
+          textToSpeechEnabled: config.chatMode === 'Conversation' || !!config.textToSpeechEnabled,
           ttsVoiceName: config.ttsVoiceName || null,
           audioChunks: [],
           audioPlayQueue: [],
           isPlayingAudio: false,
           currentAudioElement: null,
+          currentAudioUrl: null,
+          ttsPlayingMessageIndex: -1,
+          ttsAudioCache: {},
+          ttsInstanceId: 'chat-interaction-' + Math.random().toString(36).slice(2),
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false,
-          notifications: []
+          notifications: [],
+          notificationDismissTimers: {}
         };
       },
       computed: {
@@ -350,7 +373,7 @@ window.chatInteractionManager = function () {
                     var _data$messages;
                     _this.initializeInteraction(data.itemId, true);
                     _this.messages = []; // Update the title field if it exists
-                    var titleInput = document.querySelector('input[name="ChatInteraction.Title"]');
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
                     if (titleInput && data.title) {
                       titleInput.value = data.title;
                     }
@@ -368,9 +391,15 @@ window.chatInteractionManager = function () {
                     if (historyItem) {
                       historyItem.textContent = title || config.untitledText;
                     }
+                    var titleInput = document.querySelector('[data-chat-interaction-title], .setting-input[data-setting="title"], input[name="ChatInteraction.Title"], input[name="Title"]');
+                    if (titleInput && title) {
+                      titleInput.value = title;
+                    }
+                    _this.showSaveIndicator('Saved', 'text-success');
                   });
                   _this.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
+                    _this.showSaveIndicator('Save failed', 'text-danger');
                     if (_this.isRecording) {
                       _this.stopRecording();
                     }
@@ -878,6 +907,7 @@ window.chatInteractionManager = function () {
           };
         },
         processReferences: function processReferences(references, messageIndex) {
+          var _this6 = this;
           if (Object.keys(references).length) {
             var message = this.messages[messageIndex];
             var content = message.content || '';
@@ -959,7 +989,10 @@ window.chatInteractionManager = function () {
             message.content = processed;
             message.htmlContent = parseMarkdownContent(processed, message);
             this.messages[messageIndex] = message;
-            this.scrollToBottom();
+            this.$nextTick(function () {
+              renderChartsInMessage(message);
+              _this6.scrollToBottom();
+            });
           }
         },
         streamingStarted: function streamingStarted() {
@@ -999,22 +1032,79 @@ window.chatInteractionManager = function () {
             this.debouncedSaveSettings();
           }
         },
-        synthesizeSpeech: function synthesizeSpeech(text) {
-          var _this6 = this;
+        handleExternalTtsStop: function handleExternalTtsStop(e) {
+          var _e$detail;
+          if ((e === null || e === void 0 || (_e$detail = e.detail) === null || _e$detail === void 0 ? void 0 : _e$detail.sourceId) === this.ttsInstanceId) {
+            return;
+          }
+          this.stopAudio(false);
+        },
+        updateTtsPlaybackButtons: function updateTtsPlaybackButtons() {
+          var _this7 = this;
+          if (!this.chatContainer) {
+            return;
+          }
+          var buttons = this.chatContainer.querySelectorAll('[data-tts-message-index]');
+          buttons.forEach(function (button) {
+            var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
+            var isPlaying = buttonIndex === _this7.ttsPlayingMessageIndex;
+            var iconHtml = isPlaying ? '<span class="fa-solid fa-circle-pause"></span>' : '<span class="fa-solid fa-circle-play"></span>';
+            button.classList.toggle('tts-playing', isPlaying);
+            button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+            button.replaceChildren(DOMPurify.sanitize(iconHtml, {
+              RETURN_DOM_FRAGMENT: true
+            }));
+          });
+        },
+        synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
+          var _this8 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
           this.audioChunks = [];
           this.isPlayingAudio = true;
+          this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
           this.connection.invoke("SynthesizeSpeech", this.getItemId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this6.isPlayingAudio = false;
+            _this8.isPlayingAudio = false;
+            _this8.ttsPlayingMessageIndex = -1;
+            _this8._ttsCacheIndex = -1;
+            _this8.$nextTick(function () {
+              return _this8.updateTtsPlaybackButtons();
+            });
           });
         },
+        toggleMessageTts: function toggleMessageTts(message, index) {
+          var _this9 = this;
+          if (this.ttsPlayingMessageIndex === index) {
+            this.stopAudio();
+            return;
+          }
+          this.stopAudio(false);
+          window.dispatchEvent(new CustomEvent('crestapps-ai-chat-stop-tts', {
+            detail: {
+              sourceId: this.ttsInstanceId
+            }
+          }));
+          this.ttsPlayingMessageIndex = index;
+          this.$nextTick(function () {
+            return _this9.updateTtsPlaybackButtons();
+          });
+          if (this.ttsAudioCache[index]) {
+            this.playAudioBlob(this.ttsAudioCache[index]);
+            return;
+          }
+          this.synthesizeSpeech(message.content, index);
+        },
         playCollectedAudio: function playCollectedAudio() {
+          var _this0 = this;
           if (this.audioChunks.length === 0) {
             if (!this.isPlayingAudio && this.audioPlayQueue.length === 0) {
               this.isPlayingAudio = false;
+              this.ttsPlayingMessageIndex = -1;
+              this.$nextTick(function () {
+                return _this0.updateTtsPlaybackButtons();
+              });
             }
             return;
           }
@@ -1040,6 +1130,10 @@ window.chatInteractionManager = function () {
           var blob = new Blob([combined], {
             type: 'audio/mp3'
           });
+          if (this._ttsCacheIndex >= 0) {
+            this.ttsAudioCache[this._ttsCacheIndex] = blob;
+            this._ttsCacheIndex = -1;
+          }
 
           // If audio is currently playing, queue this blob for later.
           if (this.isPlayingAudio && this.currentAudioElement) {
@@ -1049,46 +1143,69 @@ window.chatInteractionManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this7 = this;
+          var _this1 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
+          this.currentAudioUrl = url;
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this1.playNextInQueue();
           });
           audio.addEventListener('error', function () {
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.playNextInQueue();
+            _this1.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
+            _this1.currentAudioElement = null;
+            _this1.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this7.currentAudioElement = null;
-            _this7.isPlayingAudio = false;
+            _this1.audioPlayQueue = [];
+            _this1.isPlayingAudio = false;
+            _this1.ttsPlayingMessageIndex = -1;
+            _this1.$nextTick(function () {
+              return _this1.updateTtsPlaybackButtons();
+            });
           });
         },
         playNextInQueue: function playNextInQueue() {
+          var _this10 = this;
           if (this.audioPlayQueue.length > 0) {
             var nextBlob = this.audioPlayQueue.shift();
             this.playAudioBlob(nextBlob);
           } else {
             this.isPlayingAudio = false;
+            this.ttsPlayingMessageIndex = -1;
+            this.$nextTick(function () {
+              return _this10.updateTtsPlaybackButtons();
+            });
             this.conversationModeOnAudioEnded();
           }
         },
         stopAudio: function stopAudio() {
+          var _this11 = this;
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             this.currentAudioElement.currentTime = 0;
             this.currentAudioElement = null;
           }
+          if (this.currentAudioUrl) {
+            URL.revokeObjectURL(this.currentAudioUrl);
+            this.currentAudioUrl = null;
+          }
           this.audioChunks = [];
           this.audioPlayQueue = [];
           this.isPlayingAudio = false;
+          this.ttsPlayingMessageIndex = -1;
+          this.$nextTick(function () {
+            return _this11.updateTtsPlaybackButtons();
+          });
         },
         toggleConversationMode: function toggleConversationMode() {
           if (this.isConversationMode) {
@@ -1098,7 +1215,7 @@ window.chatInteractionManager = function () {
           }
         },
         startConversationMode: function startConversationMode() {
-          var _this8 = this;
+          var _this12 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -1118,30 +1235,30 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this8.mediaRecorder = new MediaRecorder(stream, {
+            _this12.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this8._conversationSubject = new signalR.Subject();
-            _this8._conversationStream = stream;
+            _this12._conversationSubject = new signalR.Subject();
+            _this12._conversationStream = stream;
 
             // Create an AnalyserNode for volume-based interrupt detection.
             var AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (AudioCtx) {
-              _this8._conversationAudioCtx = new AudioCtx();
-              _this8._conversationAnalyser = _this8._conversationAudioCtx.createAnalyser();
-              _this8._conversationAnalyser.fftSize = 256;
-              var micSource = _this8._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this8._conversationAnalyser);
+              _this12._conversationAudioCtx = new AudioCtx();
+              _this12._conversationAnalyser = _this12._conversationAudioCtx.createAnalyser();
+              _this12._conversationAnalyser.fftSize = 256;
+              var micSource = _this12._conversationAudioCtx.createMediaStreamSource(stream);
+              micSource.connect(_this12._conversationAnalyser);
             }
             var pendingChunk = Promise.resolve();
-            var analyser = _this8._conversationAnalyser;
+            var analyser = _this12._conversationAnalyser;
             var interruptVolumeThreshold = 30;
-            _this8.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this12.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 // During TTS playback, check mic volume to detect
                 // user interruption (speaking above threshold).
-                if (_this8.isPlayingAudio && analyser) {
+                if (_this12.isPlayingAudio && analyser) {
                   var freqData = new Uint8Array(analyser.frequencyBinCount);
                   analyser.getByteFrequencyData(freqData);
                   var sum = 0;
@@ -1151,7 +1268,7 @@ window.chatInteractionManager = function () {
                   var avg = sum / freqData.length;
                   if (avg >= interruptVolumeThreshold) {
                     // User is speaking — interrupt TTS playback.
-                    _this8.stopAudio();
+                    _this12.stopAudio();
                   }
                 }
 
@@ -1173,7 +1290,7 @@ window.chatInteractionManager = function () {
                         }, '');
                         base64 = btoa(binaryString);
                         try {
-                          _this8._conversationSubject.next(base64);
+                          _this12._conversationSubject.next(base64);
                         } catch (err) {
                           // Subject may have been completed already.
                         }
@@ -1184,27 +1301,27 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this8.mediaRecorder.addEventListener('stop', function () {
+            _this12.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
               pendingChunk.then(function () {
                 try {
-                  _this8._conversationSubject.complete();
+                  _this12._conversationSubject.complete();
                 } catch (err) {
                   // Already completed.
                 }
               });
             });
-            var itemId = _this8.getItemId();
-            var language = document.documentElement.lang || 'en-US';
-            _this8.connection.send("StartConversation", itemId, _this8._conversationSubject, mimeType, language);
-            _this8.mediaRecorder.start(1000);
-            _this8.isRecording = true;
+            var itemId = _this12.getItemId();
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this12.connection.send("StartConversation", itemId, _this12._conversationSubject, mimeType, language);
+            _this12.mediaRecorder.start(250);
+            _this12.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this8.isConversationMode = false;
-            _this8.updateConversationButton();
+            _this12.isConversationMode = false;
+            _this12.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -1254,7 +1371,8 @@ window.chatInteractionManager = function () {
             type: 'conversation-ended',
             content: 'Conversation ended.',
             icon: 'fa-solid fa-circle-check',
-            dismissible: true
+            dismissible: true,
+            autoDismissMs: 5000
           });
         },
         updateConversationButton: function updateConversationButton() {
@@ -1263,7 +1381,7 @@ window.chatInteractionManager = function () {
           }
           if (this.isConversationMode) {
             this.conversationButton.classList.add('active', 'btn-primary');
-            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-dark', 'btn-outline-secondary');
             this.conversationButton.title = this.conversationButton.getAttribute('data-end-title') || 'End Conversation';
             var endHtml = this.conversationButton.getAttribute('data-end-html');
             if (endHtml) {
@@ -1273,7 +1391,9 @@ window.chatInteractionManager = function () {
             }
           } else {
             this.conversationButton.classList.remove('active', 'btn-primary');
-            this.conversationButton.classList.add('btn-dark');
+            this.conversationButton.classList.remove('btn-dark', 'btn-outline-secondary');
+            this.conversationButton.classList.add('btn-outline-dark');
+            this.conversationButton.blur();
             this.conversationButton.title = this.conversationButton.getAttribute('data-start-title') || 'Start Conversation';
             var startHtml = this.conversationButton.getAttribute('data-start-html');
             if (startHtml) {
@@ -1305,21 +1425,189 @@ window.chatInteractionManager = function () {
           return removedCount;
         },
         scrollToBottom: function scrollToBottom() {
-          var _this9 = this;
+          var _this13 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this9.chatContainer.scrollTop = _this9.chatContainer.scrollHeight - _this9.chatContainer.clientHeight;
+            _this13.chatContainer.scrollTop = _this13.chatContainer.scrollHeight - _this13.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
           this.prompt = event.target.value;
         },
         getItemId: function getItemId() {
-          return this.inputElement.getAttribute('data-interaction-id');
+          return this.inputElement.getAttribute('data-interaction-id') || this.inputElement.getAttribute('data-item-id');
+        },
+        getSaveIndicatorElement: function getSaveIndicatorElement() {
+          if (config.saveIndicatorElementSelector) {
+            return document.querySelector(config.saveIndicatorElementSelector);
+          }
+          return document.querySelector('[data-chat-interaction-save-indicator]');
+        },
+        showSaveIndicator: function showSaveIndicator(text, className) {
+          var _this14 = this;
+          var indicator = this.getSaveIndicatorElement();
+          if (!indicator) {
+            return;
+          }
+          indicator.textContent = text || '';
+          indicator.className = 'settings-save-indicator ' + (className || 'text-muted');
+          if (this.saveIndicatorTimeout) {
+            clearTimeout(this.saveIndicatorTimeout);
+            this.saveIndicatorTimeout = null;
+          }
+          if (!text) {
+            return;
+          }
+          this.saveIndicatorTimeout = setTimeout(function () {
+            indicator.textContent = '';
+            _this14.saveIndicatorTimeout = null;
+          }, 3000);
+        },
+        clearPendingSettingsSave: function clearPendingSettingsSave() {
+          if (this.saveSettingsTimeout) {
+            clearTimeout(this.saveSettingsTimeout);
+            this.saveSettingsTimeout = null;
+          }
+        },
+        getFieldLabel: function getFieldLabel(input) {
+          var _input$closest;
+          var label = (_input$closest = input.closest('.mb-3, .col-6, .col, .form-group, .form-floating')) === null || _input$closest === void 0 ? void 0 : _input$closest.querySelector('label');
+          if (!label) {
+            return input.dataset.setting || 'This field';
+          }
+          return (label.textContent || '').replace(/\s+/g, ' ').trim() || input.dataset.setting || 'This field';
+        },
+        getValidationFeedbackElement: function getValidationFeedbackElement(input) {
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            return feedback;
+          }
+          feedback = document.createElement('div');
+          feedback.className = 'invalid-feedback';
+          input.insertAdjacentElement('afterend', feedback);
+          return feedback;
+        },
+        clearSettingValidationError: function clearSettingValidationError(input) {
+          input.classList.remove('is-invalid');
+          input.removeAttribute('aria-invalid');
+          var feedback = input.nextElementSibling;
+          if (feedback && feedback.classList.contains('invalid-feedback')) {
+            feedback.textContent = '';
+          }
+        },
+        setSettingValidationError: function setSettingValidationError(input, message) {
+          var feedback = this.getValidationFeedbackElement(input);
+          input.classList.add('is-invalid');
+          input.setAttribute('aria-invalid', 'true');
+          feedback.textContent = message;
+        },
+        getSettingValidationMessage: function getSettingValidationMessage(input) {
+          if (!input || input.disabled || input.type !== 'number') {
+            return null;
+          }
+          var value = (input.value || '').trim();
+          if (!value) {
+            return null;
+          }
+          var number = Number(value);
+          var fieldLabel = this.getFieldLabel(input);
+          if (Number.isNaN(number)) {
+            return "".concat(fieldLabel, " must be a valid number.");
+          }
+          var min = input.getAttribute('min');
+          if (min !== null && number < Number(min)) {
+            return "".concat(fieldLabel, " must be ").concat(min, " or greater.");
+          }
+          var max = input.getAttribute('max');
+          if (max !== null && number > Number(max)) {
+            return "".concat(fieldLabel, " must be ").concat(max, " or less.");
+          }
+          return null;
+        },
+        validateSettingInput: function validateSettingInput(input) {
+          var message = this.getSettingValidationMessage(input);
+          if (!message) {
+            this.clearSettingValidationError(input);
+            return true;
+          }
+          this.setSettingValidationError(input, message);
+          return false;
+        },
+        validateSettings: function validateSettings() {
+          var _this15 = this;
+          var isValid = true;
+          this.getSettingInputs().forEach(function (input) {
+            isValid = _this15.validateSettingInput(input) && isValid;
+          });
+          return isValid;
+        },
+        queueSettingsSave: function queueSettingsSave() {
+          if (!this.validateSettings()) {
+            this.clearPendingSettingsSave();
+            this.settingsDirty = false;
+            this.showSaveIndicator('Fix errors', 'text-danger');
+            return;
+          }
+          this.settingsDirty = true;
+          this.showSaveIndicator('Saving...', 'text-warning');
+          this.debouncedSaveSettings();
+        },
+        getSettingInputs: function getSettingInputs() {
+          var explicitInputs = document.querySelectorAll('.setting-input[data-setting]');
+          if (explicitInputs.length > 0) {
+            return explicitInputs;
+          }
+          return document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
+        },
+        getSelectedGroupValues: function getSelectedGroupValues(groupName, fallbackSelector) {
+          var explicitSelections = document.querySelectorAll(".capability-checkbox[data-save-group=\"".concat(groupName, "\"]:checked"));
+          if (explicitSelections.length > 0) {
+            var _values = [];
+            explicitSelections.forEach(function (checkbox) {
+              var value = checkbox.getAttribute('data-item-id') || checkbox.value;
+              if (value) {
+                _values.push(value);
+              }
+            });
+            return _values;
+          }
+          if (!fallbackSelector) {
+            return [];
+          }
+          var values = [];
+          var checkboxes = document.querySelectorAll(fallbackSelector);
+          checkboxes.forEach(function (checkbox) {
+            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
+            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
+            if (hiddenInput && hiddenInput.value) {
+              values.push(hiddenInput.value);
+            }
+          });
+          return values;
+        },
+        getPromptTemplateSelections: function getPromptTemplateSelections() {
+          var promptTemplates = [];
+          document.querySelectorAll('.prompt-template-card').forEach(function (card) {
+            var templateIdInput = card.querySelector('.prompt-template-id-input');
+            var promptParametersInput = card.querySelector('.prompt-template-parameters-input');
+            var templateId = templateIdInput ? templateIdInput.value : card.getAttribute('data-template-id');
+            if (!templateId) {
+              return;
+            }
+            promptTemplates.push({
+              templateId: templateId,
+              promptParameters: promptParametersInput ? (promptParametersInput.value || '').trim() : ''
+            });
+          });
+          return promptTemplates;
         },
         receiveNotification: function receiveNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           // Replace existing notification with same type, or add new one.
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
@@ -1329,18 +1617,42 @@ window.chatInteractionManager = function () {
           } else {
             this.notifications.push(notification);
           }
+          this.scheduleNotificationDismiss(notification);
           this.scrollToBottom();
         },
         updateNotification: function updateNotification(notification) {
+          if (!notification || !notification.type) {
+            return;
+          }
+          this.clearNotificationDismiss(notification.type);
           var idx = this.notifications.findIndex(function (n) {
             return n.type === notification.type;
           });
           if (idx >= 0) {
             this.notifications.splice(idx, 1, notification);
+            this.scheduleNotificationDismiss(notification);
             this.scrollToBottom();
           }
         },
+        scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
+          var _this16 = this;
+          if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
+            return;
+          }
+          this.notificationDismissTimers[notification.type] = setTimeout(function () {
+            _this16.removeNotification(notification.type);
+          }, notification.autoDismissMs);
+        },
+        clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
+          var timerId = this.notificationDismissTimers[notificationType];
+          if (!timerId) {
+            return;
+          }
+          clearTimeout(timerId);
+          delete this.notificationDismissTimers[notificationType];
+        },
         removeNotification: function removeNotification(notificationType) {
+          this.clearNotificationDismiss(notificationType);
           this.notifications = this.notifications.filter(function (n) {
             return n.type !== notificationType;
           });
@@ -1359,6 +1671,7 @@ window.chatInteractionManager = function () {
         },
         setItemId: function setItemId(itemId) {
           this.inputElement.setAttribute('data-interaction-id', itemId || '');
+          this.inputElement.setAttribute('data-item-id', itemId || '');
         },
         resetInteraction: function resetInteraction() {
           this.setItemId('');
@@ -1367,7 +1680,7 @@ window.chatInteractionManager = function () {
           this.showPlaceholder();
         },
         initializeApp: function initializeApp() {
-          var _this0 = this;
+          var _this17 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -1379,59 +1692,59 @@ window.chatInteractionManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this0.stream) {
+            if (!_this17.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this0.chatContainer.scrollHeight - _this0.chatContainer.clientHeight - _this0.chatContainer.scrollTop <= threshold;
-            _this0.autoScroll = atBottom;
+            var atBottom = _this17.chatContainer.scrollHeight - _this17.chatContainer.clientHeight - _this17.chatContainer.scrollTop <= threshold;
+            _this17.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keyup', function (event) {
-            if (_this0.stream != null) {
+            if (_this17.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
-              _this0.buttonElement.click();
+              _this17.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this0.handleUserInput(e);
+            _this17.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this0.buttonElement.removeAttribute('disabled');
+              _this17.buttonElement.removeAttribute('disabled');
             } else {
-              _this0.buttonElement.setAttribute('disabled', true);
+              _this17.buttonElement.setAttribute('disabled', true);
             }
           });
           this.inputElement.addEventListener('paste', function (e) {
             // Use setTimeout to allow the paste to complete before checking the value
             setTimeout(function () {
-              _this0.prompt = _this0.inputElement.value;
-              if (_this0.inputElement.value.trim()) {
-                _this0.buttonElement.removeAttribute('disabled');
+              _this17.prompt = _this17.inputElement.value;
+              if (_this17.inputElement.value.trim()) {
+                _this17.buttonElement.removeAttribute('disabled');
               } else {
-                _this0.buttonElement.setAttribute('disabled', true);
+                _this17.buttonElement.setAttribute('disabled', true);
               }
             }, 0);
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this0.stream != null) {
-              _this0.stream.dispose();
-              _this0.stream = null;
-              _this0.streamingFinished();
-              _this0.hideTypingIndicator();
+            if (_this17.stream != null) {
+              _this17.stream.dispose();
+              _this17.stream = null;
+              _this17.streamingFinished();
+              _this17.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this0.messages.length > 0) {
-                var lastMsg = _this0.messages[_this0.messages.length - 1];
+              if (_this17.messages.length > 0) {
+                var lastMsg = _this17.messages[_this17.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this0.messages.pop();
+                  _this17.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this0.sendMessage();
+            _this17.sendMessage();
           });
           var chatInteractionItems = document.getElementsByClassName('chat-interaction-history-item');
           for (var i = 0; i < chatInteractionItems.length; i++) {
@@ -1442,7 +1755,7 @@ window.chatInteractionManager = function () {
                 console.error('An element with the class chat-interaction-history-item with no data-interaction-id set.');
                 return;
               }
-              _this0.loadInteraction(itemId);
+              _this17.loadInteraction(itemId);
             });
           }
           for (var _i3 = 0; _i3 < config.messages.length; _i3++) {
@@ -1464,89 +1777,39 @@ window.chatInteractionManager = function () {
               if (codeEl) {
                 navigator.clipboard.writeText(codeEl.textContent);
                 var copiedText = config.codeCopiedText || 'Copied!';
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> ' + copiedText;
+                btn.innerHTML = '<span class="fa-solid fa-check"></span> ' + copiedText;
                 setTimeout(function () {
-                  btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                  btn.innerHTML = '<span class="fa-regular fa-copy"></span>';
                 }, 2000);
               }
             });
           }
-
-          // Add event listeners for all settings fields with "ChatInteraction." prefix
-          // Exclude tool and MCP connection inputs (they have special handling with debouncing)
-          var settingsInputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["])');
-          settingsInputs.forEach(function (input) {
-            var isCheckbox = input.type === 'checkbox';
-            var isSelect = input.tagName === 'SELECT';
-
-            // Checkboxes & selects save immediately
-            if (isCheckbox || isSelect) {
-              input.addEventListener('change', function () {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
-              });
+          document.addEventListener('input', function (event) {
+            if (event.target.matches('.setting-input[data-setting]')) {
+              _this17.validateSettingInput(event.target);
+              _this17.queueSettingsSave();
+            }
+          });
+          document.addEventListener('change', function (event) {
+            if (event.target.matches('.setting-input[data-setting], .capability-checkbox[data-save-group], .group-toggle, .ci-agent-global-toggle')) {
+              if (event.target.matches('.setting-input[data-setting]')) {
+                _this17.validateSettingInput(event.target);
+              }
+              _this17.queueSettingsSave();
               return;
             }
-
-            // Text / textarea / number inputs → save on blur if changed
-            input.addEventListener('focus', function () {
-              _this0.initialFieldValues.set(input, input.value);
-            });
-            input.addEventListener('blur', function () {
-              var initialValue = _this0.initialFieldValues.get(input);
-              var hasChanged = initialValue !== undefined && input.value !== initialValue;
-              if (hasChanged) {
-                _this0.settingsDirty = true;
-                _this0.debouncedSaveSettings();
-              }
-              _this0.initialFieldValues["delete"](input);
-            });
+            if (event.target.closest('.prompt-template-parameters-input, .prompt-template-id-input')) {
+              _this17.queueSettingsSave();
+            }
           });
-
-          // Add event listeners for tool checkboxes with debouncing (850ms)
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]');
-          toolCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
+          document.addEventListener('click', function (event) {
+            if (!event.target.closest('.prompt-template-add-btn, .remove-prompt-template-btn')) {
+              return;
+            }
+            setTimeout(function () {
+              _this17.queueSettingsSave();
+            }, 0);
           });
-
-          // Add event listeners for "Select All" group toggle checkboxes with debouncing (850ms)
-          var groupToggleCheckboxes = document.querySelectorAll('input[type="checkbox"].group-toggle');
-          groupToggleCheckboxes.forEach(function (toggle) {
-            toggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for MCP connection checkboxes with debouncing (850ms)
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]');
-          mcpCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listeners for agent checkboxes with debouncing (850ms)
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]');
-          agentCheckboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          });
-
-          // Add event listener for "Select All Agents" toggle checkbox with debouncing (850ms)
-          var agentGlobalToggle = document.querySelector('.ci-agent-global-toggle');
-          if (agentGlobalToggle) {
-            agentGlobalToggle.addEventListener('change', function () {
-              _this0.settingsDirty = true;
-              _this0.debouncedSaveSettings();
-            });
-          }
 
           // Add event listener for clear history button
           var clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -1554,7 +1817,7 @@ window.chatInteractionManager = function () {
             clearHistoryBtn.addEventListener('click', function () {
               var itemId = clearHistoryBtn.getAttribute('data-interaction-id');
               if (itemId) {
-                _this0.clearHistory(itemId);
+                _this17.clearHistory(itemId);
               }
             });
           }
@@ -1565,7 +1828,7 @@ window.chatInteractionManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this0.toggleRecording();
+                _this17.toggleRecording();
               });
             }
           }
@@ -1575,7 +1838,7 @@ window.chatInteractionManager = function () {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
               this.conversationButton.addEventListener('click', function () {
-                _this0.toggleConversationMode();
+                _this17.toggleConversationMode();
               });
             }
           }
@@ -1615,11 +1878,9 @@ window.chatInteractionManager = function () {
           });
         },
         debouncedSaveSettings: function debouncedSaveSettings() {
-          var _this1 = this;
+          var _this18 = this;
           // Clear any existing timeout to reset the debounce timer
-          if (this.saveSettingsTimeout) {
-            clearTimeout(this.saveSettingsTimeout);
-          }
+          this.clearPendingSettingsSave();
 
           // Don't save while streaming — it will be saved when streaming completes.
           if (this.stream) {
@@ -1628,56 +1889,33 @@ window.chatInteractionManager = function () {
 
           // Set a new timeout to save after 850ms of no changes
           this.saveSettingsTimeout = setTimeout(function () {
-            if (_this1.settingsDirty) {
-              _this1.saveSettings();
-              _this1.settingsDirty = false;
+            if (_this18.settingsDirty) {
+              _this18.saveSettings();
+              _this18.settingsDirty = false;
             }
-            _this1.saveSettingsTimeout = null;
+            _this18.saveSettingsTimeout = null;
           }, 850);
         },
         getSelectedToolNames: function getSelectedToolNames() {
-          // Find all checked tool checkboxes and get the corresponding ItemId values
-          var toolNames = [];
-          var toolCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
-          toolCheckboxes.forEach(function (checkbox) {
-            // Extract the base name pattern to find the corresponding hidden ItemId input
-            // Checkbox name: ChatInteraction.Tools[Content Definitions][0].IsSelected
-            // Hidden name:   ChatInteraction.Tools[Content Definitions][0].ItemId
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              toolNames.push(hiddenInput.value);
-            }
-          });
-          return toolNames;
+          return this.getSelectedGroupValues('toolNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Tools["]:checked');
         },
         getSelectedMcpConnectionIds: function getSelectedMcpConnectionIds() {
-          var connectionIds = [];
-          var mcpCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
-          mcpCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              connectionIds.push(hiddenInput.value);
-            }
-          });
-          return connectionIds;
+          return this.getSelectedGroupValues('mcpConnectionIds', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Connections["]:checked');
+        },
+        getSelectedA2AConnectionIds: function getSelectedA2AConnectionIds() {
+          return this.getSelectedGroupValues('a2aConnectionIds');
         },
         getSelectedAgentNames: function getSelectedAgentNames() {
-          var agentNames = [];
-          var agentCheckboxes = document.querySelectorAll('input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
-          agentCheckboxes.forEach(function (checkbox) {
-            var baseName = checkbox.name.replace('.IsSelected', '.ItemId');
-            var hiddenInput = document.querySelector("input[type=\"hidden\"][name=\"".concat(baseName, "\"]"));
-            if (hiddenInput && hiddenInput.value) {
-              agentNames.push(hiddenInput.value);
-            }
-          });
-          return agentNames;
+          return this.getSelectedGroupValues('agentNames', 'input[type="checkbox"][name$="].IsSelected"][name^="ChatInteraction.Agents["]:checked');
         },
         saveSettings: function saveSettings() {
+          var _this19 = this;
           var itemId = this.getItemId();
           if (!itemId) {
+            return Promise.resolve();
+          }
+          if (!this.validateSettings()) {
+            this.showSaveIndicator('Fix errors', 'text-danger');
             return Promise.resolve();
           }
           var settings = {};
@@ -1685,11 +1923,14 @@ window.chatInteractionManager = function () {
           // Collect all form inputs with the "ChatInteraction." prefix generically.
           // This avoids coupling the JS to specific field names — new fields added by
           // any module are automatically included.
-          var inputs = document.querySelectorAll('input[name^="ChatInteraction."]:not([type="hidden"]):not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'select[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["]), ' + 'textarea[name^="ChatInteraction."]:not([name*=".Tools["]):not([name*=".Connections["]):not([name*=".Agents["])');
+          var inputs = this.getSettingInputs();
           inputs.forEach(function (input) {
-            // Extract field name: "ChatInteraction.Title" → "title"
-            var fieldName = input.name.replace('ChatInteraction.', '');
-            var key = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+            var key = input.dataset.setting || (input.name || '').replace('ChatInteraction.', '').replace(/^[A-Z]/, function (match) {
+              return match.toLowerCase();
+            });
+            if (!key) {
+              return;
+            }
             if (input.type === 'checkbox') {
               settings[key] = input.checked;
             } else if (input.type === 'number') {
@@ -1702,9 +1943,18 @@ window.chatInteractionManager = function () {
           // Add tool, MCP connection, and agent collections (special handling).
           settings.toolNames = this.getSelectedToolNames();
           settings.mcpConnectionIds = this.getSelectedMcpConnectionIds();
+          settings.a2aConnectionIds = this.getSelectedA2AConnectionIds();
           settings.agentNames = this.getSelectedAgentNames();
+          var promptTemplates = this.getPromptTemplateSelections();
+          if (promptTemplates.length > 0) {
+            settings.promptTemplates = promptTemplates;
+            settings.promptTemplateIds = promptTemplates.map(function (template) {
+              return template.templateId;
+            });
+          }
           return this.connection.invoke("SaveSettings", itemId, settings)["catch"](function (err) {
-            return console.error('Error saving settings:', err);
+            console.error('Error saving settings:', err);
+            _this19.showSaveIndicator('Save failed', 'text-danger');
           });
         },
         flushPendingSave: function flushPendingSave() {
@@ -1734,7 +1984,7 @@ window.chatInteractionManager = function () {
           navigator.clipboard.writeText(message);
         },
         startRecording: function startRecording() {
-          var _this10 = this;
+          var _this20 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1746,16 +1996,16 @@ window.chatInteractionManager = function () {
             }
           }).then(function (stream) {
             var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this10.mediaRecorder = new MediaRecorder(stream, {
+            _this20.mediaRecorder = new MediaRecorder(stream, {
               mimeType: mimeType,
               audioBitsPerSecond: 128000
             });
-            _this10.preRecordingPrompt = _this10.prompt;
-            _this10._audioInputSent = false;
+            _this20.preRecordingPrompt = _this20.prompt;
+            _this20._audioInputSent = false;
             var subject = new signalR.Subject();
-            var itemId = _this10.getItemId();
+            var itemId = _this20.getItemId();
             var pendingChunk = Promise.resolve();
-            _this10.mediaRecorder.addEventListener('dataavailable', function (e) {
+            _this20.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
                 pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
                   var data, uint8Array, binaryString, base64;
@@ -1779,7 +2029,7 @@ window.chatInteractionManager = function () {
                 })));
               }
             });
-            _this10.mediaRecorder.addEventListener('stop', function () {
+            _this20.mediaRecorder.addEventListener('stop', function () {
               stream.getTracks().forEach(function (track) {
                 return track.stop();
               });
@@ -1787,11 +2037,11 @@ window.chatInteractionManager = function () {
                 return subject.complete();
               });
             });
-            var language = document.documentElement.lang || 'en-US';
-            _this10.connection.send("SendAudioStream", itemId, subject, mimeType, language);
-            _this10.mediaRecorder.start(1000);
-            _this10.isRecording = true;
-            _this10.updateMicButton();
+            var language = navigator.language || document.documentElement.lang || 'en-US';
+            _this20.connection.send("SendAudioStream", itemId, subject, mimeType, language);
+            _this20.mediaRecorder.start(250);
+            _this20.isRecording = true;
+            _this20.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
@@ -1817,10 +2067,10 @@ window.chatInteractionManager = function () {
           }
           if (this.isRecording) {
             this.micButton.classList.add('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-stop"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-stop"></span>';
           } else {
             this.micButton.classList.remove('stt-recording');
-            this.micButton.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            this.micButton.innerHTML = '<span class="fa-solid fa-microphone"></span>';
           }
         }
       },
@@ -1845,24 +2095,27 @@ window.chatInteractionManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this11 = this;
+        var _this21 = this;
         _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
           return _regenerator().w(function (_context5) {
             while (1) switch (_context5.n) {
               case 0:
                 _context5.n = 1;
-                return _this11.startConnection();
+                return _this21.startConnection();
               case 1:
-                _this11.initializeApp();
+                _this21.initializeApp();
               case 2:
                 return _context5.a(2);
             }
           }, _callee5);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
+        window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
       },
       beforeUnmount: function beforeUnmount() {
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
+        window.removeEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
+        this.stopAudio(false);
         if (this.stream) {
           this.stream.dispose();
           this.stream = null;
@@ -1880,20 +2133,23 @@ window.chatInteractionManager = function () {
   };
 }();
 
-// Global function for downloading charts as images
-window.downloadChart = function (chartId) {
-  var canvas = document.getElementById(chartId);
+// Download chart as image via event delegation (DOMPurify strips inline onclick).
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.download-chart-btn');
+  if (!btn) {
+    return;
+  }
+  var chartId = btn.getAttribute('data-chart-id');
+  var canvas = chartId ? document.getElementById(chartId) : null;
   if (!canvas) {
     console.error('Chart canvas not found:', chartId);
     return;
   }
-
-  // Create a temporary link element
   var link = document.createElement('a');
   link.download = 'chart-' + chartId + '.png';
   link.href = canvas.toDataURL('image/png');
   link.click();
-};
+});
 
 // Intercept download clicks for data-URI images and convert to blob downloads.
 document.addEventListener('click', function (e) {
@@ -1928,3 +2184,4 @@ document.addEventListener('click', function (e) {
     console.error('Failed to download image:', err);
   });
 });
+//# sourceMappingURL=chat-interaction.js.map

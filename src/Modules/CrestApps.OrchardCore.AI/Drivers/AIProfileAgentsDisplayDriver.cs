@@ -1,9 +1,9 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
 
@@ -22,12 +22,12 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 
         var alwaysAvailableCount = allAgents
             .Count(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase)
-                && a.As<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
+                && a.GetOrCreate<AgentMetadata>()?.Availability == AgentAvailability.AlwaysAvailable);
 
         var onDemandAgents = allAgents
             .Where(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase))
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable);
 
         return Initialize<EditProfileAgentsViewModel>("EditProfileAgents_Edit", model =>
         {
@@ -58,7 +58,7 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
         var validAgentNames = allAgents
             .Where(a => !string.Equals(a.Name, profile.Name, StringComparison.OrdinalIgnoreCase))
             .Where(a => !string.IsNullOrEmpty(a.Description))
-            .Where(a => a.As<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
+            .Where(a => a.GetOrCreate<AgentMetadata>()?.Availability != AgentAvailability.AlwaysAvailable)
             .Select(a => a.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -82,7 +82,7 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
 
     private static string[] GetSelectedAgentNames(AIProfile profile)
     {
-        var metadata = profile.As<AgentInvocationMetadata>();
+        var metadata = profile.GetOrCreate<AgentInvocationMetadata>();
 
         return metadata?.Names;
     }

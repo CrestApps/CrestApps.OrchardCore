@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.Core;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.AI.Handlers;
 
@@ -15,22 +16,19 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly AIChatSessionEventService _eventService;
-    private readonly PostSessionProcessingService _postSessionProcessingService;
     private readonly ILogger _logger;
 
     public AnalyticsChatSessionHandler(
         AIChatSessionEventService eventService,
-        PostSessionProcessingService postSessionProcessingService,
         ILogger<AnalyticsChatSessionHandler> logger)
     {
         _eventService = eventService;
-        _postSessionProcessingService = postSessionProcessingService;
         _logger = logger;
     }
 
     public override async Task MessageCompletedAsync(ChatMessageCompletedContext context)
     {
-        var analyticsMetadata = context.Profile.As<AnalyticsMetadata>();
+        var analyticsMetadata = context.Profile.GetOrCreate<AnalyticsMetadata>();
 
         if (!analyticsMetadata.EnableSessionMetrics)
         {
@@ -47,44 +45,9 @@ public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
                 await _eventService.RecordSessionStartedAsync(context.ChatSession);
             }
 
-            // Accumulate token usage and latency metrics for this completion.
-            if (context.InputTokenCount > 0 || context.OutputTokenCount > 0 || context.ResponseLatencyMs > 0)
+            if (context.ResponseLatencyMs > 0)
             {
-                await _eventService.RecordCompletionMetricsAsync(
-                    context.ChatSession.SessionId,
-                    context.InputTokenCount,
-                    context.OutputTokenCount,
-                    context.ResponseLatencyMs);
-            }
-
-            // Record session end when session transitions to Closed.
-            if (context.ChatSession.Status == ChatSessionStatus.Closed)
-            {
-                var isResolved = true;
-
-                // Use AI to determine resolution when enabled.
-                if (analyticsMetadata.EnableAIResolutionDetection)
-                {
-                    isResolved = await _postSessionProcessingService.EvaluateResolutionAsync(
-                        context.Profile,
-                        context.Prompts);
-                }
-
-                await _eventService.RecordSessionEndedAsync(context.ChatSession, context.Prompts.Count, isResolved);
-
-                // Evaluate conversion goals when enabled.
-                if (analyticsMetadata.EnableConversionMetrics && analyticsMetadata.ConversionGoals.Count > 0)
-                {
-                    var goalResults = await _postSessionProcessingService.EvaluateConversionGoalsAsync(
-                        context.Profile,
-                        context.Prompts,
-                        analyticsMetadata.ConversionGoals);
-
-                    if (goalResults is not null && goalResults.Count > 0)
-                    {
-                        await _eventService.RecordConversionMetricsAsync(context.ChatSession.SessionId, goalResults);
-                    }
-                }
+                await _eventService.RecordResponseLatencyAsync(context.ChatSession.SessionId, context.ResponseLatencyMs);
             }
         }
         catch (Exception ex)

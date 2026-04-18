@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-Name = "AI Documents indexing using Elasticsearch",
+    Name = "AI Documents indexing using Elasticsearch",
     Description = "Provides services to index AI Documents in Elasticsearch indexes.",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
@@ -11,7 +11,7 @@ Name = "AI Documents indexing using Elasticsearch",
     Category = "Artificial Intelligence",
     Dependencies =
     [
-        ChatInteractionsConstants.Feature.ChatDocuments,
-        "OrchardCore.Search.Elasticsearch",
+    ChatInteractionsConstants.Feature.ChatDocuments,
+    "OrchardCore.Elasticsearch",
     ]
-)]
+    )]

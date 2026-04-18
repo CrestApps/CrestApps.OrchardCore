@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 
 namespace CrestApps.OrchardCore.Tests.Core.Services.Catalogs;
@@ -143,11 +143,4 @@ public sealed partial class CatalogTests
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await catalog.UpdateAsync(null));
     }
 
-    [Fact]
-    public async Task SaveChangesAsync_Completes()
-    {
-        var catalog = FakeDocumentManager.CreateCatalog(new List<TestCatalogEntry>(), out _);
-        await catalog.SaveChangesAsync();
-        // No exception means pass
-    }
 }

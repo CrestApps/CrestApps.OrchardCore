@@ -34,24 +34,24 @@ public sealed class RolesRecipeStep : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const("Roles")),
-                ("Roles", new JsonSchemaBuilder()
-                    .Type(SchemaValueType.Array)
-                    .Items(new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
-                            ("Permissions", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.Array)
-                                .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
-                                .Enum(permission.Select(x => x.Name))),
-                            ("PermissionBehavior", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.String)
-                                .Enum("Add", "Replace", "Remove")
-                                .Description("How permissions are merged: Add (default), Replace, or Remove.")))
-                        .Required("Name")
-                        .AdditionalProperties(true))
-                    .MinItems(1)))
+        ("Roles", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String)),
+        ("Permissions", new JsonSchemaBuilder()
+            .Type(SchemaValueType.Array)
+            .Items(new JsonSchemaBuilder().Type(SchemaValueType.String))
+            .Enum(permission.Select(x => x.Name))),
+        ("PermissionBehavior", new JsonSchemaBuilder()
+            .Type(SchemaValueType.String)
+            .Enum("Add", "Replace", "Remove")
+            .Description("How permissions are merged: Add (default), Replace, or Remove.")))
+            .Required("Name")
+            .AdditionalProperties(true))
+            .MinItems(1)))
             .Required("name", "Roles")
             .AdditionalProperties(true);
 

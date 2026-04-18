@@ -1,13 +1,14 @@
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.AzureAIInference;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using CrestApps.OrchardCore.AzureAIInference.Models;
 using CrestApps.OrchardCore.AzureAIInference.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Entities;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AzureAIInference.Drivers;
@@ -35,7 +36,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
         return Initialize<AzureAIInferenceConnectionViewModel>("AzureAIInferenceConnection_Edit", model =>
         {
-            var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+            var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
@@ -62,7 +63,7 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.As<AzureAIInferenceConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
@@ -97,3 +98,4 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         return Edit(connection, context);
     }
 }
+

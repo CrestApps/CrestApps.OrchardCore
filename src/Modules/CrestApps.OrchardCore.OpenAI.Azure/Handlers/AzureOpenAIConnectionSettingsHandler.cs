@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
-using CrestApps.Azure.Core.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.AI.OpenAI.Azure.Models;
+using CrestApps.Core.Azure.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
@@ -40,7 +40,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.As<AzureOpenAIConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
@@ -64,7 +64,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 
@@ -74,7 +74,7 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         }
 
         metadata.AuthenticationType = metadataNode[nameof(metadata.AuthenticationType)]?.GetEnumValue<AzureAuthenticationType>()
-            ?? AzureAuthenticationType.Default;
+        ?? AzureAuthenticationType.Default;
 
         var identityId = metadataNode[nameof(metadata.IdentityId)]?.GetValue<string>()?.Trim();
         metadata.IdentityId = string.IsNullOrEmpty(identityId) ? null : identityId;
@@ -93,3 +93,4 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         return Task.CompletedTask;
     }
 }
+

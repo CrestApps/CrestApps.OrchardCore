@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using OrchardCore.Entities;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Indexes;

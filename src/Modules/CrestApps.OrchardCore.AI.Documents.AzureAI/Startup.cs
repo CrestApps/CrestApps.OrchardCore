@@ -1,3 +1,4 @@
+using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
@@ -6,8 +7,8 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Core;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI;
 
@@ -22,6 +23,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(AzureAISearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIDocumentAzureAISearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIDocumentAzureAISearchDocumentIndexHandler>();
         services.AddKeyedScoped<IVectorSearchService, AzureAISearchVectorSearchService>(AzureAISearchConstants.ProviderName);

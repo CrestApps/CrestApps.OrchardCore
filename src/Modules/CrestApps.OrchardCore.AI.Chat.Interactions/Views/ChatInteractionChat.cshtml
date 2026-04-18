@@ -1,11 +1,12 @@
+@using CrestApps.Core
 @using CrestApps.OrchardCore.AI
-@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.Core.AI
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using CrestApps.Core.SignalR.Services
 @using CrestApps.OrchardCore.AI.Core.Models
-@using CrestApps.OrchardCore.AI.Models
-@using CrestApps.OrchardCore.SignalR.Core.Services
+@using CrestApps.Core.AI.Models
 @using OrchardCore.DisplayManagement
 @using OrchardCore.DisplayManagement.ModelBinding
 @using OrchardCore.Entities
@@ -28,13 +29,13 @@
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
     var site = await SiteService.GetSiteSettingsAsync();
-    var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+    var chatModeSettings = site.GetOrCreate<ChatInteractionChatModeSettings>();
     var chatMode = chatModeSettings.ChatMode;
     var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
     var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
-    var textToSpeechEnabled = chatMode == ChatMode.Conversation
+    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings.EnableTextToSpeechPlayback)
         && textToSpeechDeployment != null;
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
@@ -118,9 +119,116 @@
 <script asp-name="ChatInteractionApp" at="Foot"></script>
 <script depends-on="ChatInteractionApp" at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
+        function setupTtsPlaybackSync(app, chatAppElement) {
+            if (!app || !chatAppElement || typeof app.$watch !== 'function') {
+                return;
+            }
+
+            var refreshQueued = false;
+
+            function updateTtsPlaybackButtons() {
+                var messageItems = chatAppElement.querySelectorAll('.ai-chat-message-item');
+                var messageCount = Math.min(messageItems.length, app.messages.length);
+
+                for (var index = 0; index < messageCount; index++) {
+                    var message = app.messages[index];
+                    if (!message || message.role !== 'assistant' || message.isStreaming || !app.textToSpeechEnabled || app.isConversationMode) {
+                        continue;
+                    }
+
+                    var container = messageItems[index].querySelector('.message-buttons-container');
+                    if (!container) {
+                        continue;
+                    }
+
+                    var button = container.querySelector('[data-tts-message-index]') || container.querySelector('.button-message-toolbox');
+                    if (!button) {
+                        continue;
+                    }
+
+                    var isPlaying = index === app.ttsPlayingMessageIndex;
+                    button.setAttribute('data-tts-message-index', index);
+                    button.classList.toggle('tts-playing', isPlaying);
+                    button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
+                    button.innerHTML = isPlaying
+                        ? '<span class="fa-solid fa-circle-pause"></span>'
+                        : '<span class="fa-solid fa-circle-play"></span>';
+                }
+            }
+
+            function queueTtsPlaybackRefresh() {
+                if (refreshQueued) {
+                    return;
+                }
+
+                refreshQueued = true;
+                requestAnimationFrame(function () {
+                    refreshQueued = false;
+                    updateTtsPlaybackButtons();
+                });
+            }
+
+            app.$watch('ttsPlayingMessageIndex', queueTtsPlaybackRefresh);
+            app.$watch(
+                function () {
+                    return (app.messages || [])
+                        .map(function (message) { return [message.role, !!message.isStreaming].join(':'); })
+                        .join('|');
+                },
+                queueTtsPlaybackRefresh);
+            app.$watch('isConversationMode', queueTtsPlaybackRefresh);
+
+            new MutationObserver(queueTtsPlaybackRefresh).observe(chatAppElement, {
+                childList: true,
+                subtree: true
+            });
+
+            queueTtsPlaybackRefresh();
+        }
+
         var configEl = document.getElementById('@($"{baseId}_Config")');
         if (configEl) {
-            chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+            var chatInteractionApp = chatInteractionManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
+            setupTtsPlaybackSync(chatInteractionApp, document.getElementById('@chatAppHtmlId'));
+        }
+
+        // Provide a renderPendingCharts fallback for chart-interaction.js which
+        // stores unrendered chart configs in window.__chartConfigs but does not
+        // include a retry mechanism (unlike ai-chat.js).
+        if (typeof window.renderPendingCharts !== 'function') {
+            window.renderPendingCharts = function () {
+                if (typeof Chart === 'undefined') return;
+                var configs = window.__chartConfigs;
+                if (!configs) return;
+                requestAnimationFrame(function () {
+                    Object.keys(configs).forEach(function (chartId) {
+                        var canvas = document.getElementById(chartId);
+                        if (!canvas || canvas.offsetParent === null) return;
+                        try {
+                            if (canvas._chartInstance) canvas._chartInstance.destroy();
+                            var cfg = typeof configs[chartId] === 'string' ? JSON.parse(configs[chartId]) : configs[chartId];
+                            cfg.options = cfg.options || {};
+                            cfg.options.responsive = true;
+                            cfg.options.maintainAspectRatio = true;
+                            cfg.options.aspectRatio = cfg.options.aspectRatio || 4 / 3;
+                            canvas._chartInstance = new Chart(canvas, cfg);
+                            delete configs[chartId];
+                        } catch (e) {
+                            console.error('Error creating chart:', e);
+                        }
+                    });
+                });
+            };
+        }
+
+        // Observe the chat container for newly added canvas elements that may
+        // need chart rendering. This catches charts that were deferred because
+        // the canvas was not yet visible or was replaced during streaming.
+        var chatContainer = document.getElementById('@chatContainerHtmlId');
+        if (chatContainer) {
+            new MutationObserver(function () {
+                window.renderPendingCharts();
+            }).observe(chatContainer, { childList: true, subtree: true });
         }
     });
 </script>
@@ -142,6 +250,8 @@
         ["chatMode"] = chatMode.ToString(),
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
+        ["saveIndicatorElementSelector"] = "#settings-save-indicator",
+        ["textToSpeechEnabled"] = textToSpeechEnabled,
     };
 }
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatInteractionConfig, JOptions.CamelCase)"></div>

@@ -5,8 +5,8 @@ namespace CrestApps.OrchardCore.AI.Memory.ViewModels;
 
 public class AIMemoryIndexProfileViewModel
 {
-    public string EmbeddingConnection { get; set; }
+    public string EmbeddingDeploymentId { get; set; }
 
     [BindNever]
-    public IEnumerable<SelectListItem> EmbeddingConnections { get; set; } = [];
+    public IEnumerable<SelectListItem> EmbeddingDeployments { get; set; } = [];
 }

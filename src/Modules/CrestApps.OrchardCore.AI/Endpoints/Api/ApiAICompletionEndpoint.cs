@@ -1,11 +1,16 @@
-using CrestApps.AI.Prompting.Services;
+using CrestApps.Core;
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
-using CrestApps.Support;
 using Cysharp.Text;
 using Fluid;
 using Fluid.Values;
@@ -16,8 +21,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
-using OrchardCore.Entities;
 using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
@@ -28,27 +31,28 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .DisableAntiforgery()
+
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
     }
 
     private static async Task<IResult> HandleAsync<T>(
-       [FromServices] IAuthorizationService authorizationService,
-       [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
-       [FromServices] IAIChatSessionManager sessionManager,
-       [FromServices] IAIChatSessionPromptStore promptStore,
-       [FromServices] ILiquidTemplateManager liquidTemplateManager,
-       [FromServices] IHttpContextAccessor httpContextAccessor,
-       [FromServices] IAICompletionService completionService,
-       [FromServices] IAICompletionContextBuilder completionContextBuilder,
-       [FromServices] IOrchestrationContextBuilder orchestrationContextBuilder,
-       [FromServices] IOrchestratorResolver orchestratorResolver,
-       [FromServices] CitationReferenceCollector citationCollector,
-       [FromServices] IAITemplateService aiTemplateService,
-       [FromServices] IAIDeploymentManager deploymentManager,
-       [FromServices] ILogger<T> logger,
-       [FromBody] AICompletionRequest requestData)
+        [FromServices] IAuthorizationService authorizationService,
+        [FromServices] INamedCatalogManager<AIProfile> chatProfileManager,
+        [FromServices] IAIChatSessionManager sessionManager,
+        [FromServices] IAIChatSessionPromptStore promptStore,
+        [FromServices] ILiquidTemplateManager liquidTemplateManager,
+        [FromServices] IHttpContextAccessor httpContextAccessor,
+        [FromServices] IAICompletionService completionService,
+        [FromServices] IAICompletionContextBuilder completionContextBuilder,
+        [FromServices] IOrchestrationContextBuilder orchestrationContextBuilder,
+        [FromServices] IOrchestratorResolver orchestratorResolver,
+        [FromServices] CitationReferenceCollector citationCollector,
+        [FromServices] ITemplateService aiTemplateService,
+        [FromServices] IAIDeploymentManager deploymentManager,
+        [FromServices] ILogger<T> logger,
+        [FromBody] AICompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
@@ -78,6 +82,7 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
                     { nameof(requestData.SessionProfileId), ["SessionProfileId is required"] },
+
                 });
             }
 
@@ -91,11 +96,11 @@ internal static class ApiAICompletionEndpoint
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder, aiTemplateService, deploymentManager);
 
             userPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
-                new Dictionary<string, FluidValue>()
-                {
-                    ["Profile"] = new ObjectValue(profile),
-                    ["Session"] = new ObjectValue(chatSession),
-                });
+            new Dictionary<string, FluidValue>()
+            {
+                ["Profile"] = new ObjectValue(profile),
+                ["Session"] = new ObjectValue(chatSession),
+            });
         }
         else
         {
@@ -104,6 +109,7 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
                     { nameof(requestData.Prompt), ["Prompt is required"] },
+
                 });
             }
 
@@ -112,6 +118,7 @@ internal static class ApiAICompletionEndpoint
             if (profile.Type == AIProfileType.Utility)
             {
                 return await GetUtilityMessageAsync(completionService, profile, userPrompt, completionContextBuilder, deploymentManager);
+
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder, aiTemplateService, deploymentManager);
@@ -119,9 +126,10 @@ internal static class ApiAICompletionEndpoint
 
         if (!isNew &&
             !string.IsNullOrWhiteSpace(userPrompt) &&
-            (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle))
+                (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle))
         {
             var titleUserPrompt = BuildTitleUserPrompt(profile, userPrompt);
+
             if (profile.TitleType == AISessionTitleType.Generated)
             {
                 chatSession.Title = await GetGeneratedTitleAsync(profile, titleUserPrompt, completionService, completionContextBuilder, aiTemplateService, deploymentManager);
@@ -140,8 +148,10 @@ internal static class ApiAICompletionEndpoint
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
+
             var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName)
-                ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+
+            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
             var completion = await completionService.CompleteAsync(templateDeployment, [new ChatMessage(ChatRole.User, userPrompt)], contextForTemplate);
 
@@ -149,7 +159,7 @@ internal static class ApiAICompletionEndpoint
 
             message = new AIChatSessionPrompt
             {
-                ItemId = IdGenerator.GenerateId(),
+                ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 IsGeneratedPrompt = true,
@@ -164,7 +174,7 @@ internal static class ApiAICompletionEndpoint
             // At this point, we complete as standard chat.
             var userPromptRecord = new AIChatSessionPrompt
             {
-                ItemId = IdGenerator.GenerateId(),
+                ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.User,
                 Content = userPrompt,
@@ -182,11 +192,14 @@ internal static class ApiAICompletionEndpoint
             {
                 ctx.UserMessage = userPrompt;
                 ctx.ConversationHistory = transcript.ToList();
-                ctx.CompletionContext.AdditionalProperties["Session"] = chatSession;
+                ctx.CompletionContext.AdditionalProperties[AICompletionContextKeys.Session] = chatSession;
             });
 
             // Store the session in the invocation context so document tools can resolve session documents.
+            AIInvocationScope.Current.CompletionContext = orchestratorContext.CompletionContext;
+            AIInvocationScope.Current.ChatSession = chatSession;
             AIInvocationScope.Current.Items[nameof(AIChatSession)] = chatSession;
+
             AIInvocationScope.Current.DataSourceId = orchestratorContext.CompletionContext.DataSourceId;
 
             // Resolve the orchestrator for this profile and execute the completion.
@@ -194,7 +207,8 @@ internal static class ApiAICompletionEndpoint
 
             var contentItemIds = new HashSet<string>();
             var references = new Dictionary<string, AICompletionReference>();
-            var builder = ZString.CreateStringBuilder();
+
+            using var builder = ZString.CreateStringBuilder();
 
             // Collect preemptive RAG references.
             citationCollector.CollectPreemptiveReferences(orchestratorContext, references, contentItemIds);
@@ -215,7 +229,7 @@ internal static class ApiAICompletionEndpoint
 
             message = new AIChatSessionPrompt
             {
-                ItemId = IdGenerator.GenerateId(),
+                ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
@@ -225,6 +239,7 @@ internal static class ApiAICompletionEndpoint
                 ContentItemIds = contentItemIds.ToList(),
                 References = references,
             };
+
         }
 
         await promptStore.CreateAsync(message);
@@ -245,12 +260,12 @@ internal static class ApiAICompletionEndpoint
                 Title = message.Title,
                 Content = message.Content,
                 References = message.References,
-                Appearance = message.As<AssistantMessageAppearance>(),
+                Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
             },
         });
     }
 
-    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder, IAITemplateService aiTemplateService, IAIDeploymentManager deploymentManager)
+    private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder, ITemplateService aiTemplateService, IAIDeploymentManager deploymentManager)
     {
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
@@ -275,6 +290,7 @@ internal static class ApiAICompletionEndpoint
         if (string.IsNullOrEmpty(chatSession.Title))
         {
             chatSession.Title = Str.Truncate(titleUserPrompt, 255);
+
         }
 
         return (chatSession, true);
@@ -285,7 +301,8 @@ internal static class ApiAICompletionEndpoint
         string userPrompt,
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
-        IAITemplateService aiTemplateService,
+        ITemplateService aiTemplateService,
+
         IAIDeploymentManager deploymentManager)
     {
         var titleSystemMessage = await aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
@@ -295,16 +312,19 @@ internal static class ApiAICompletionEndpoint
             c.SystemMessage = titleSystemMessage;
             c.FrequencyPenalty = 0;
             c.PresencePenalty = 0;
+
             c.TopP = 1;
             c.Temperature = 0;
             c.MaxTokens = 64; // 64 token to generate about 255 characters.
 
             // Avoid using tools or any data sources when generating title to reduce the used tokens.
+
             c.DataSourceId = null;
             c.DisableTools = true;
         });
 
         // Prefer utility deployment for title generation, fall back to chat.
+
         var deployment = await deploymentManager.ResolveUtilityOrDefaultAsync(
             utilityDeploymentName: context.UtilityDeploymentName,
             chatDeploymentName: context.ChatDeploymentName);
@@ -315,28 +335,33 @@ internal static class ApiAICompletionEndpoint
         }
 
         var titleResponse = await completionService.CompleteAsync(
-        deployment,
-        [
+            deployment,
+
+            [
             new (ChatRole.User, userPrompt),
         ], context);
 
         // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
+
         return titleResponse.Messages.Count > 0
-            ? Str.Truncate(titleResponse.Messages.First().Text, 255)
-            : Str.Truncate(userPrompt, 255);
+
+        ? Str.Truncate(titleResponse.Messages.First().Text, 255)
+        : Str.Truncate(userPrompt, 255);
     }
 
     private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt, IAICompletionContextBuilder completionContextBuilder, IAIDeploymentManager deploymentManager)
     {
         var context = await completionContextBuilder.BuildAsync(profile);
+
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
-            ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
+        ?? throw new InvalidOperationException("Unable to resolve a chat deployment for the profile.");
 
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, prompt)], context);
 
         var result = new AIChatResponse
         {
             Success = completion.Messages.Count > 0,
+
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
         };
@@ -346,6 +371,7 @@ internal static class ApiAICompletionEndpoint
             if (completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
             {
                 result.Message.References = referenceItems;
+
             }
         }
 
@@ -357,7 +383,7 @@ internal static class ApiAICompletionEndpoint
     private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)
     {
         var trimmedUserPrompt = userPrompt?.Trim();
-        var profileMetadata = profile.As<AIProfileMetadata>();
+        var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
         var initialPrompt = profileMetadata.InitialPrompt?.Trim();
 
         if (string.IsNullOrWhiteSpace(initialPrompt))
@@ -366,7 +392,7 @@ internal static class ApiAICompletionEndpoint
         }
 
         return string.IsNullOrWhiteSpace(trimmedUserPrompt)
-            ? initialPrompt
-            : $"{initialPrompt}\n\n{trimmedUserPrompt}";
+        ? initialPrompt
+        : $"{initialPrompt}\n\n{trimmedUserPrompt}";
     }
 }

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
+using CrestApps.Core.AI.Copilot.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
@@ -7,8 +7,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels;
 public class CopilotSettingsViewModel
 {
     public CopilotAuthenticationType AuthenticationType { get; set; }
-
-    // ── GitHub OAuth fields ──
 
     public string ClientId { get; set; }
 
@@ -21,8 +19,6 @@ public class CopilotSettingsViewModel
     /// </summary>
     [BindNever]
     public string ComputedCallbackUrl { get; set; }
-
-    // ── BYOK (API Key) fields ──
 
     public string ProviderType { get; set; }
 

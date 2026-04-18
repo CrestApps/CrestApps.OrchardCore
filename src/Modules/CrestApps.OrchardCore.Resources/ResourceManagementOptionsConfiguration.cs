@@ -16,7 +16,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.min.js",
                 "~/CrestApps.OrchardCore.Resources/scripts/list-management-ui.js"
-            )
+                )
             .SetVersion("1.0.0");
 
         _manifest
@@ -24,7 +24,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/js/easymde.js"
-            )
+                )
             .SetVersion("2.18.0");
 
         _manifest
@@ -32,21 +32,21 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/easymde/css/easymde.css"
-            )
+                )
             .SetVersion("2.18.0");
 
         _manifest
-        .DefineScript("chart.js")
-        .SetUrl(
-            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
-            "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
-        .SetCdn(
-            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
-            "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
-        .SetCdnIntegrity(
-            "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
-            "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
-        .SetVersion("4.5.1");
+            .DefineScript("chart.js")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+                "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js")
+            .SetCdnIntegrity(
+                "sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ",
+                "sha384-hfkuqrKeWFmnTMWN31VWyoe8xgdTADD11kgxmdpx2uyE6j5Az5uZq6u6AKYYmAOw")
+            .SetVersion("4.5.1");
 
         _manifest
             .DefineScript("marked")
@@ -72,7 +72,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetCdnIntegrity(
                 "sha384-6MRMrUEhJMa1+Lu30o5HJn4S0FFOEKnFZFWDfQ5RGRs7aiW7M1I/OpF4G7jxWLsw",
                 "sha384-IYsDIK5FMbPNV17G3cUJm5KJ3w2tMrXt2z50E0x5YYGBVi8s2x/MLNW9pvVcITLF")
-            .SetVersion("4.6.13");
+             .SetVersion("4.6.13");
 
         _manifest
             .DefineStyle("flatpickr")
@@ -85,7 +85,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetCdnIntegrity(
                 "sha384-RvLlU3fMPPFGDiYrj9DXiCNv6wPcoG++9Ae/3doVdoh/y8GC6Ya+E4F1oOH+m6w+",
                 "sha384-pBNX8OFzxVjH58gMO1pgMOJFt3NsWZTJhTLlyet+psDjRpz6jJhIVoKgvyf7KVJM")
-            .SetVersion("4.6.13");
+             .SetVersion("4.6.13");
 
         _manifest
             .DefineScript("flatpickr-culture")
@@ -126,6 +126,45 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-eFTL69TLRZTkNfYZOLM+G04821K1qZao/4QLJbet1pP4tcF+fdXq/9CdqAbWRl/L",
                 "sha384-Uhn9VRzdRxBVYRT2aPFl8ECva7znqyZwWiqpE3v4GTBe8y2XrpwTWZtU1U5vujcN")
             .SetVersion("11.11.1");
+
+        _manifest
+            .DefineScript("technical-name-generator")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/technical-name-generator.js")
+            .SetCdnIntegrity(
+                "sha384-YHKJmamXRxgV9J2W8b/mQ4yepyK8eX6XsAlwq0Yj1PDrGzHh+xdq3LcR4dxpszIq",
+                "sha384-d5UXDN0rRqVvHS5hQ2GGCjoHorUFlsaZ66ITQr4F5oKANLGTJxpTUVxTI45yM5j3")
+             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("document-drop-zone")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/document-drop-zone.js")
+            .SetCdnIntegrity(
+                "sha384-KFkL+SiquJoYpKSCo7vyhEATgbpE+FKizywY9qfjbI5QLNFnZxIz9sFQjqh3yMfa",
+                "sha384-h8+pletFGnYtxUtoPyQVEfBY0O3gz/DwxtjsDGQq7xX93GOpcx0LZlDwdguQkV1B")
+             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("document-drop-zone")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@1.0.0-preview.12/dist/document-drop-zone.css")
+            .SetCdnIntegrity(
+                "sha384-rQeaRUVX3mFuO9odBEzwKV4akVEHz3MLSl5+e0h43rKLtxKQnRwh0ARsiJMXBlnZ",
+                "sha384-Nej+SC8Gi+UVsc5GZ9b4NlJ7tGxoqyyAuoB3lMOur7MN0vjxNxpEa3N4qNh7peOO")
+            .SetVersion("1.0.0");
     }
 
     public void Configure(ResourceManagementOptions options)

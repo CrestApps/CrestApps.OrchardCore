@@ -70,9 +70,9 @@ public sealed class SetContactCommunicationPreferenceActivityTask : TaskActivity
         }
 
         if (!SetDoNotCall.HasValue &&
-           !SetDoNotEmail.HasValue &&
-           !SetDoNotSms.HasValue &&
-           !SetDoNotChat.HasValue)
+            !SetDoNotEmail.HasValue &&
+                !SetDoNotSms.HasValue &&
+                    !SetDoNotChat.HasValue)
         {
             return Outcomes("Done");
         }

@@ -1,5 +1,7 @@
+using CrestApps.Core.AI;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -58,4 +60,3 @@ public sealed class ChatAdminMenu : AdminNavigationProvider
            });
     }
 }
-

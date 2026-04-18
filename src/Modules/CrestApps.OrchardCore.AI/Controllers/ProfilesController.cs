@@ -1,9 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Documents;
+using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -17,7 +20,6 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Entities;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 
@@ -352,7 +354,7 @@ public sealed class ProfilesController : Controller
         // Copy all extensibility properties from the template to the profile.
         // This transfers settings stored by external module drivers (e.g., analytics,
         // data extraction, post-session, MCP connections, data sources, etc.).
-        // Template drivers store settings in template.Properties (via Entity.As<T>/Put<T>).
+        // Template drivers store settings in template.Properties (via Entity.GetOrCreate<T>/Put<T>).
         // Profile drivers may read from either profile.Properties or profile.Settings,
         // so we copy to both to ensure all drivers can read the applied values.
         if (template.Properties != null)
@@ -366,8 +368,8 @@ public sealed class ProfilesController : Controller
                     continue;
                 }
 
-                profile.Properties[property.Key] = property.Value?.DeepClone();
-                profile.Settings[property.Key] = property.Value?.DeepClone();
+                profile.Properties[property.Key] = property.Value;
+                profile.Settings[property.Key] = JsonSerializer.SerializeToNode(property.Value);
             }
         }
 
@@ -381,7 +383,7 @@ public sealed class ProfilesController : Controller
             profile.Name = template.Name;
         }
 
-        var templateMetadata = template.As<ProfileTemplateMetadata>();
+        var templateMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
         if (templateMetadata.ProfileType.HasValue)
         {
@@ -423,7 +425,7 @@ public sealed class ProfilesController : Controller
             profile.PromptTemplate = templateMetadata.PromptTemplate;
         }
 
-        var metadata = profile.As<AIProfileMetadata>();
+        var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
         if (!string.IsNullOrEmpty(templateMetadata.SystemMessage))
         {
@@ -464,14 +466,14 @@ public sealed class ProfilesController : Controller
 
         if (templateMetadata.ToolNames != null && templateMetadata.ToolNames.Length > 0)
         {
-            var toolMetadata = profile.As<FunctionInvocationMetadata>();
+            var toolMetadata = profile.GetOrCreate<FunctionInvocationMetadata>();
             toolMetadata.Names = [.. templateMetadata.ToolNames];
             profile.Put(toolMetadata);
         }
 
         if (templateMetadata.AgentNames != null && templateMetadata.AgentNames.Length > 0)
         {
-            var agentMetadata = profile.As<AgentInvocationMetadata>();
+            var agentMetadata = profile.GetOrCreate<AgentInvocationMetadata>();
             agentMetadata.Names = [.. templateMetadata.AgentNames];
             profile.Put(agentMetadata);
         }
@@ -483,7 +485,7 @@ public sealed class ProfilesController : Controller
 
         if (templateMetadata.AgentAvailability.HasValue)
         {
-            var agentMeta = profile.As<AgentMetadata>() ?? new AgentMetadata();
+            var agentMeta = profile.GetOrCreate<AgentMetadata>();
             agentMeta.Availability = templateMetadata.AgentAvailability.Value;
             profile.Put(agentMeta);
         }
@@ -494,7 +496,7 @@ public sealed class ProfilesController : Controller
 
     private async Task CloneTemplateDocumentsAsync(AIProfile profile, AIProfileTemplate template)
     {
-        var documentsMetadata = template.As<DocumentsMetadata>();
+        var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
 
         if (documentsMetadata?.Documents == null || documentsMetadata.Documents.Count == 0)
         {
@@ -578,4 +580,5 @@ public sealed class ProfilesController : Controller
             }
         }
     }
+
 }

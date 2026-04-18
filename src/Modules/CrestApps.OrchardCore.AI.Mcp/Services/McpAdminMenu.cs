@@ -17,19 +17,19 @@ internal sealed class McpAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-                .Add(S["Model Context Protocol"], S["Model Context Protocol"].PrefixPosition(), mcp => mcp
-                    .AddClass("ai-mcp")
-                    .Id("aiMcp")
-                    .Add(S["Client Connections"], S["Client Connections"].PrefixPosition(), connections => connections
-                        .AddClass("ai-mcp-connections")
-                        .Id("aiMcpConnections")
-                        .Action("Index", "Connections", "CrestApps.OrchardCore.AI.Mcp")
-                        .Permission(McpPermissions.ManageMcpConnections)
-                        .LocalNav()
-                    )
-                )
+            .Add(S["Model Context Protocol"], S["Model Context Protocol"].PrefixPosition(), mcp => mcp
+            .AddClass("ai-mcp")
+            .Id("aiMcp")
+            .Add(S["Client Connections"], S["Client Connections"].PrefixPosition(), connections => connections
+            .AddClass("ai-mcp-connections")
+            .Id("aiMcpConnections")
+            .Action("Index", "Connections", "CrestApps.OrchardCore.AI.Mcp")
+            .Permission(McpPermissions.ManageMcpConnections)
+            .LocalNav()
+        )
+        )
 
-            );
+        );
 
         return ValueTask.CompletedTask;
     }

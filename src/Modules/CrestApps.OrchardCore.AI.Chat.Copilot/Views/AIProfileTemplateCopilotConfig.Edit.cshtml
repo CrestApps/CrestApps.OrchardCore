@@ -1,0 +1,226 @@
+@using CrestApps.Core.AI.Copilot.Models
+@using CrestApps.Core.AI.Copilot.Services
+@using CrestApps.OrchardCore.AI.Chat.Copilot
+@using CrestApps.OrchardCore.AI.Chat.Copilot.ViewModels
+@using OrchardCore
+
+@model EditCopilotProfileViewModel
+
+<div class="d-none orchestrator-dependent orchestrator-dependent-@(CopilotOrchestrator.OrchestratorName)">
+    <fieldset class="@Orchard.GetWrapperClasses()">
+        <legend class="@Orchard.GetLabelClasses()">@T["Copilot configuration"]</legend>
+        <div class="@Orchard.GetEndClasses()">
+            @if (!Model.IsCopilotConfigured)
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @T["Copilot is not configured and cannot be used until it has been configured in Settings → Artificial Intelligence → Copilot."]
+                </div>
+            }
+
+            @if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+            {
+                @if (Model.IsCopilotConfigured)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">@T["GitHub authentication"]</label>
+
+                        <div id="at-github-connected" class="@(Model.IsAuthenticated ? "" : "d-none")">
+                            <div class="alert alert-success d-flex align-items-center justify-content-between py-2">
+                                <span>
+                                    <i class="fas fa-check-circle"></i>
+                                    @T["Connected as"] <strong id="at-github-username">@Model.GitHubUsername</strong>
+                                </span>
+                                <a href="#" class="btn btn-sm btn-outline-danger ms-2" id="at-disconnect-github" data-confirm-message="@T["Are you sure you want to disconnect your GitHub account?"]">
+                                    <i class="fa-solid fa-power-off"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div id="at-github-disconnected" class="@(Model.IsAuthenticated ? "d-none" : "")">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                @T["Copilot requires GitHub authentication. Sign in with your GitHub account to browse and save a model for this template."]
+                            </div>
+                            <a href="#" class="btn btn-primary" id="at-connect-github">
+                                <i class="fab fa-github"></i> @T["Sign in with GitHub"]
+                            </a>
+                        </div>
+
+                        <div id="at-github-loading" class="d-none">
+                            <div class="d-flex align-items-center text-muted py-2">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                @T["Checking GitHub connection..."]
+                            </div>
+                        </div>
+
+                        <span class="hint">@T["The selected model is saved on the template. GitHub credentials are not stored on the template."]</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CopilotModel" class="form-label">@T["Copilot model"]</label>
+                        <select asp-for="CopilotModel" asp-items="Model.AvailableModels" class="form-select">
+                        </select>
+                        <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                        <span class="hint">@T["Select the Copilot model to use for profiles created from this template."]</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
+                        <select asp-for="CopilotReasoningEffort" class="form-select">
+                            <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
+                            <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
+                            <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
+                            <option value="@CopilotReasoningEffort.High">@T["High"]</option>
+                        </select>
+                        <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
+                    </div>
+                }
+            }
+            else if (Model.AuthenticationType == CopilotAuthenticationType.ApiKey)
+            {
+                <div class="mb-3">
+                    <label asp-for="CopilotModel" class="form-label">@T["Model override"]</label>
+                    <input asp-for="CopilotModel" class="form-control" placeholder="@T["Leave empty to use the default model from settings"]" />
+                    <span asp-validation-for="CopilotModel" class="text-danger"></span>
+                    <span class="hint">@T["Optionally override the model name for profiles created from this template. Leave empty to use the default model configured in Copilot settings."]</span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CopilotReasoningEffort" class="form-label">@T["Effort level"]</label>
+                    <select asp-for="CopilotReasoningEffort" class="form-select">
+                        <option value="@CopilotReasoningEffort.None">@T["Default"]</option>
+                        <option value="@CopilotReasoningEffort.Low">@T["Low"]</option>
+                        <option value="@CopilotReasoningEffort.Medium">@T["Medium"]</option>
+                        <option value="@CopilotReasoningEffort.High">@T["High"]</option>
+                    </select>
+                    <span class="hint">@T["Select the reasoning effort level for the Copilot model."]</span>
+                </div>
+            }
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input asp-for="IsAllowAll" class="form-check-input" type="checkbox" />
+                    <label asp-for="IsAllowAll" class="form-check-label">@T["Allow all tool executions"]</label>
+                </div>
+                <span class="hint">@T["When checked, the Copilot CLI runs with the --allow-all flag for profiles created from this template."]</span>
+            </div>
+        </div>
+    </fieldset>
+</div>
+
+@if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)
+{
+    <script at="Foot">
+        document.addEventListener('DOMContentLoaded', function () {
+        const connectButton = document.getElementById('at-connect-github');
+        const disconnectButton = document.getElementById('at-disconnect-github');
+        const connectedEl = document.getElementById('at-github-connected');
+        const disconnectedEl = document.getElementById('at-github-disconnected');
+        const loadingEl = document.getElementById('at-github-loading');
+        const usernameEl = document.getElementById('at-github-username');
+        const modelSelect = document.getElementById('@Html.IdFor(m => m.CopilotModel)');
+
+        const modelsUrl = '@Url.Action("GetModels", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+        const disconnectUrl = '@Url.Action("DisconnectGitHubAjax", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })';
+        const authUrl = '@Url.Action("AuthorizeGitHub", "CopilotAuth", new { area = "CrestApps.OrchardCore.AI.Chat.Copilot" })' + '?returnUrl=__popup__';
+        const isConfigured = @(Model.IsCopilotConfigured ? "true;" : "false;")
+
+        function getAntiForgeryToken() {
+        const tokenEl = document.querySelector('input[name="__RequestVerificationToken"]');
+        return tokenEl ? tokenEl.value : '';
+        }
+
+        function showState(state) {
+        connectedEl.classList.toggle('d-none', state !== 'connected');
+        disconnectedEl.classList.toggle('d-none', state !== 'disconnected');
+        loadingEl.classList.toggle('d-none', state !== 'loading');
+        }
+
+        async function loadModels() {
+        try {
+        const currentValue = modelSelect.value;
+        const resp = await fetch(modelsUrl);
+        const models = await resp.json();
+
+        modelSelect.innerHTML = '';
+        models.forEach(function (m) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        const costMultiplier = typeof m.costMultiplier === 'number'
+        ? m.costMultiplier.toFixed(2).replace(/\.?0+$/, '')
+        : '';
+        opt.textContent = m.costMultiplier > 0 ? m.name + ' (x' + costMultiplier + ')' : m.name;
+        modelSelect.appendChild(opt);
+        });
+
+        if (currentValue && modelSelect.querySelector('option[value="' + CSS.escape(currentValue) + '"]')) {
+        modelSelect.value = currentValue;
+        } else if (modelSelect.options.length > 0) {
+        modelSelect.selectedIndex = 0;
+        }
+        } catch (e) {
+        console.error('Failed to load Copilot models', e);
+        }
+        }
+
+        if (modelSelect && !modelSelect.value) {
+        const firstOption = modelSelect.querySelector('option[value]:not([value=""])');
+        if (firstOption) {
+        modelSelect.value = firstOption.value;
+        }
+        }
+
+        if (connectButton) {
+        connectButton.addEventListener('click', function (e) {
+        if (!isConfigured) {
+        e.preventDefault();
+        return;
+        }
+
+        e.preventDefault();
+
+        var popup = window.open(authUrl, 'github-oauth', 'width=600,height=700,scrollbars=yes,resizable=yes');
+
+        window.addEventListener('message', function handler(event) {
+        if (event.origin !== window.location.origin) return;
+        if (event.data && event.data.type === 'github-auth-complete') {
+        window.removeEventListener('message', handler);
+
+        if (event.data.success) {
+        usernameEl.textContent = event.data.username;
+        showState('connected');
+        loadModels();
+        }
+        }
+        });
+        });
+        }
+
+        if (disconnectButton) {
+        const confirmMessage = disconnectButton.getAttribute('data-confirm-message');
+        disconnectButton.addEventListener('click', async function (e) {
+        e.preventDefault();
+        if (!confirm(confirmMessage)) return;
+
+        showState('loading');
+        try {
+        const resp = await fetch(disconnectUrl, {
+        method: 'POST',
+        headers: {
+        'RequestVerificationToken': getAntiForgeryToken(),
+        },
+        });
+        if (resp.ok) {
+        showState('disconnected');
+        } else {
+        showState('connected');
+        }
+        } catch {
+        showState('connected');
+        }
+        });
+        }
+        });
+    </script>
+}

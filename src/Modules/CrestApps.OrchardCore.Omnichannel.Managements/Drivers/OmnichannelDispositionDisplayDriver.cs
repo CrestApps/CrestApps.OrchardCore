@@ -23,10 +23,10 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
         return CombineAsync(
             View("OmnichannelDisposition_Fields_SummaryAdmin", disposition)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-            View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+        View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+        View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
         );
     }
 

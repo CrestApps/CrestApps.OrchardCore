@@ -1,3 +1,5 @@
+using CrestApps.Core.AI.Memory;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,7 +7,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.Elasticsearch;
+using OrchardCore.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch;
 
@@ -20,6 +22,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddOrchardCoreIndexingAdapters(ElasticsearchConstants.ProviderName);
         services.AddIndexProfileHandler<AIMemoryElasticsearchIndexProfileHandler>();
         services.AddScoped<IDocumentIndexHandler, AIMemoryElasticsearchDocumentIndexHandler>();
         services.AddKeyedScoped<IMemoryVectorSearchService, ElasticsearchMemoryVectorSearchService>(ElasticsearchConstants.ProviderName);

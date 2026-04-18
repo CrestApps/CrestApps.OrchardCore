@@ -1,5 +1,6 @@
-@using CrestApps.OrchardCore.AI.Core
-@using CrestApps.OrchardCore.AI.Core.Models
+@using CrestApps.Core.AI
+@using CrestApps.Core.AI.Documents.Models
+@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 @using Microsoft.Extensions.Options
 @using OrchardCore
@@ -13,9 +14,6 @@
 }
 
 <div class="mb-3">
-    <h5>@T["Documents"]</h5>
-    <p class="text-muted small">@T["Upload text-based documents for RAG (Retrieval Augmented Generation). These documents will be available across all chat sessions using this profile."]</p>
-
     @if (!Model.HasIndexProfile)
     {
         <div class="alert alert-warning" role="alert">
@@ -101,36 +99,7 @@
     </div>
 </div>
 
-<div class="mb-3">
-    <label class="form-label">
-        @T["Top N Results"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Top N Results explanation"]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
-    <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
-</div>
-
-<style at="Head">
-    .drop-zone {
-        border: 2px dashed #dee2e6 !important;
-        transition: all 0.3s ease;
-    }
-
-        .drop-zone.drag-over {
-            border-color: #0d6efd !important;
-            background-color: #f0f7ff !important;
-        }
-
-            .drop-zone.drag-over .drop-zone-content {
-                display: none;
-            }
-
-            .drop-zone.drag-over .drop-zone-active {
-                display: block !important;
-            }
-</style>
+<style asp-name="document-drop-zone" at="Head"></style>
 
 <script at="Foot">
     (function() {

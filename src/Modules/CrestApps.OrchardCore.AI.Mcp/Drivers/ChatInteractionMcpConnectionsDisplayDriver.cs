@@ -1,8 +1,7 @@
-using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Mcp.Core.Models;
+using CrestApps.Core.AI.Mcp.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -41,7 +40,7 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
                 DisplayText = entry.DisplayText,
                 IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
-            .ToArray();
+        .ToArray();
 
         }).Location("Parameters:3#Capabilities;5");
     }

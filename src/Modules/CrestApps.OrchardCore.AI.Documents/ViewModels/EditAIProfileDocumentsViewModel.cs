@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace CrestApps.OrchardCore.AI.Documents.ViewModels;
@@ -8,7 +8,6 @@ public class EditAIProfileDocumentsViewModel
     public string ProfileId { get; set; }
 
     public IList<ChatDocumentInfo> Documents { get; set; } = [];
-
     /// <summary>
     /// Gets or sets the files uploaded for the profile.
     /// </summary>
@@ -23,7 +22,6 @@ public class EditAIProfileDocumentsViewModel
     /// Gets or sets the number of top matching document chunks to include in AI context.
     /// </summary>
     public int TopN { get; set; } = 3;
-
     /// <summary>
     /// Gets or sets whether an index profile is configured for document embedding.
     /// </summary>

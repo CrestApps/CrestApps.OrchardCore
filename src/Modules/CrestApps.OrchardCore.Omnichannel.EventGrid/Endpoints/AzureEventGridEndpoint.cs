@@ -121,7 +121,6 @@ internal static class AzureEventGridEndpoint
                 logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
             }
 
-
             var omnichannelMessage = new OmnichannelMessage
             {
                 Channel = "Unknown",
@@ -137,7 +136,7 @@ internal static class AzureEventGridEndpoint
                 var root = doc.RootElement;
 
                 var properties = root.EnumerateObject()
-                     .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
+                    .ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase);
 
                 // Attempt to extract common fields
                 omnichannelMessage.CustomerAddress = GetStringProperty(properties, "from", "sender", "customer");

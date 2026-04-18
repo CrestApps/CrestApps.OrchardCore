@@ -8,10 +8,10 @@ public sealed class OpenIdScopeRecipeStep : RecipeStepSchemaBase
 
     protected override JsonSchema CreateSchema()
         => RecipeStepSchemaBuilders.BuildNamedStep(Name,
-        [
-            ("Description", RecipeStepSchemaBuilders.String()),
-            ("DisplayName", RecipeStepSchemaBuilders.String()),
-            ("ScopeName", RecipeStepSchemaBuilders.String()),
-            ("Resources", RecipeStepSchemaBuilders.String()),
+    [
+        ("Description", RecipeStepSchemaBuilders.String()),
+        ("DisplayName", RecipeStepSchemaBuilders.String()),
+        ("ScopeName", RecipeStepSchemaBuilders.String()),
+        ("Resources", RecipeStepSchemaBuilders.String()),
         ]);
 }

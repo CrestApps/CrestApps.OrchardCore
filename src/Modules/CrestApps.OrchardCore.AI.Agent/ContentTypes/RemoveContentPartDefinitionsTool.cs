@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,19 +14,23 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
     public const string TheName = "removeContentPartDefinition";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "The name of the content part for which to remove the definitions."
-            }
-          },
-          "required": ["name"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the content part for which to remove the definitions."
         }
-        """);
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -45,6 +49,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<RemoveContentPartDefinitionsTool>>();
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
@@ -58,6 +63,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
             return "Unable to find a name argument in the function arguments.";
+
         }
 
         var partDefinition = await contentDefinitionManager.GetPartDefinitionAsync(name);
@@ -71,6 +77,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
                 Unable to find a part definition that match the name: {name}.
                 Here are the available part that can be removed:
                 {JsonSerializer.Serialize((await contentDefinitionManager.ListPartDefinitionsAsync()).Select(x => x.Name), JsonHelpers.ContentDefinitionSerializerOptions)}
+
                 """;
         }
 
@@ -85,6 +92,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
                   ]
                 }
               ]
+
             }
             """);
 
@@ -96,6 +104,7 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             }
 
             return $"The content part {name} was removed successfully";
+
         }
 
         logger.LogWarning("AI tool '{ToolName}' failed to remove content part definition '{ContentPart}'.", TheName, name);

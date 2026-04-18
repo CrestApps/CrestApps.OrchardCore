@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,19 +12,23 @@ public sealed class DisableTenantTool : AIFunction
     public const string TheName = "disableTenant";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-       """
-        {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "A unique name for the tenant to be used as identifier."
-                }
-            },
-            "additionalProperties": false,
-            "required": ["name"]
+    """
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "A unique name for the tenant to be used as identifier."
         }
-        """);
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+
+    }
+
+    """);
 
     public override string Name => TheName;
 
@@ -40,6 +44,7 @@ public sealed class DisableTenantTool : AIFunction
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<DisableTenantTool>>();
@@ -85,6 +90,7 @@ public sealed class DisableTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not running.", Name, name);
 
             return "You can only disable a Running tenant.";
+
         }
 
         await shellHost.UpdateShellSettingsAsync(tenantSettings.AsDisabled());

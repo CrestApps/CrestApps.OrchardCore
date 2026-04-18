@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 public sealed class CompleteOmnichannelActivityContainer : ShapeViewModel
 {
     public CompleteOmnichannelActivityContainer()
-        : base("CompleteOmnichannelActivityContainer")
+    : base("CompleteOmnichannelActivityContainer")
     {
     }
 

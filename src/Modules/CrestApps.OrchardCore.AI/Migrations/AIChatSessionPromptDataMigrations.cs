@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
 using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
@@ -22,7 +24,7 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIChatSessionPromptDataMigrations : DataMigration
 {
     private const int _batchSize = 50;
-    private const string _sessionDocumentType = "CrestApps.OrchardCore.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
+    private const string _sessionDocumentType = "CrestApps.Core.AI.Models.AIChatSession, CrestApps.OrchardCore.AI.Abstractions";
 
     public static int Create()
     {
@@ -31,6 +33,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionPromptDataMigrations>>();
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
             var dialect = store.Configuration.SqlDialect;
 
@@ -67,6 +70,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                 }
 
                 // Process in batches to avoid holding too many changes in memory.
+
                 for (var batchStart = 0; batchStart < documents.Count; batchStart += _batchSize)
                 {
                     var batch = documents.Skip(batchStart).Take(_batchSize).ToList();
@@ -96,7 +100,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                 continue;
                             }
 
-                            var createdUtc = DateTime.UtcNow;
+                            var createdUtc = clock.UtcNow;
+
                             if (sessionObject["CreatedUtc"] is JsonValue createdValue)
                             {
                                 try
@@ -119,8 +124,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                 var prompt = new AIChatSessionPrompt
                                 {
                                     ItemId = promptObject["Id"]?.GetValue<string>()
-                                        ?? promptObject["ItemId"]?.GetValue<string>()
-                                        ?? IdGenerator.GenerateId(),
+                                    ?? promptObject["ItemId"]?.GetValue<string>()
+                                    ?? UniqueId.GenerateId(),
                                     SessionId = sessionId,
                                     Role = new ChatRole(promptObject["Role"]?.GetValue<string>() ?? "user"),
                                     Content = promptObject["Content"]?.GetValue<string>(),
@@ -143,7 +148,8 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     content = updatedContent,
                                     id = document.Id,
                                 }
-                            );
+
+                                );
                         }
                         catch (Exception ex)
                         {
@@ -156,9 +162,9 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                     if (logger.IsEnabled(LogLevel.Information))
                     {
                         logger.LogInformation("Migrated prompt batch {BatchStart}-{BatchEnd} of {Total} session documents.",
-                            batchStart + 1,
-                            Math.Min(batchStart + _batchSize, documents.Count),
-                            documents.Count);
+                        batchStart + 1,
+                        Math.Min(batchStart + _batchSize, documents.Count),
+                        documents.Count);
                     }
                 }
 

@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.A2A.Models;
-using CrestApps.OrchardCore.AI.A2A.Services;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.A2A.Models;
+using CrestApps.Core.AI.A2A.Services;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -63,7 +63,7 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
             context.Result.Fail(new ValidationResult(S["The Endpoint is required."], [nameof(A2AConnection.Endpoint)]));
         }
         else if (!Uri.TryCreate(context.Model.Endpoint, UriKind.Absolute, out var uri) ||
-                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             context.Result.Fail(new ValidationResult(S["The Endpoint must be a valid HTTP or HTTPS URL."], [nameof(A2AConnection.Endpoint)]));
         }
@@ -104,8 +104,12 @@ internal sealed class A2AConnectionHandler : CatalogEntryHandlerBase<A2AConnecti
 
         if (properties is not null)
         {
-            connection.Properties ??= [];
-            connection.Properties.Merge(properties);
+            connection.Properties ??= new Dictionary<string, object>();
+
+            foreach (var prop in properties)
+            {
+                connection.Properties[prop.Key] = prop.Value?.DeepClone();
+            }
         }
 
         return Task.CompletedTask;

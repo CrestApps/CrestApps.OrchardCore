@@ -3,7 +3,6 @@ using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-
 public sealed class PhoneNumberInfoPart : ContentPart
 {
     public TextField Number { get; set; }

@@ -1,9 +1,9 @@
+using CrestApps.Core;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.OpenAI.Azure;
+using CrestApps.Core.AI.OpenAI.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.OpenAI.Azure.Core;
-using CrestApps.OrchardCore.OpenAI.Azure.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
@@ -43,7 +43,7 @@ public sealed class AzureOpenAIConnectionHandler : IAIProviderConnectionHandler
             return;
         }
 
-        var metadata = context.Connection.As<AzureOpenAIConnectionMetadata>();
+        var metadata = context.Connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();
         context.Values["AuthenticationType"] = metadata.AuthenticationType.ToString();

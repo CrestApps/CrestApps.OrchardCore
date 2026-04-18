@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Models;
-using CrestApps.OrchardCore.Core.Handlers;
-using CrestApps.OrchardCore.Models;
+using CrestApps.Core.AI.Models;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -71,8 +71,13 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
 
         if (properties != null)
         {
-            dataSource.Properties ??= [];
-            dataSource.Properties.Merge(properties);
+            dataSource.Properties ??= new Dictionary<string, object>();
+
+            foreach (var (key, value) in properties)
+            {
+                dataSource.Properties[key] = value;
+
+            }
         }
 
         return Task.CompletedTask;

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
@@ -18,19 +18,23 @@ public abstract class ImportRecipeBaseTool : AIFunction
     };
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {
-            "recipe": {
-              "type": "string",
-              "description": "A JSON string representing an Orchard Core recipe to import."
-            }
-          },
-          "required": ["recipe"],
-          "additionalProperties": false
+    """
+    {
+      "type": "object",
+      "properties": {
+        "recipe": {
+          "type": "string",
+          "description": "A JSON string representing an Orchard Core recipe to import."
         }
-        """);
+      },
+      "required": [
+        "recipe"
+      ],
+      "additionalProperties": false
+
+    }
+
+    """);
 
     public override JsonElement JsonSchema => _jsonSchema;
 
@@ -42,6 +46,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<ImportRecipeBaseTool>>();
@@ -54,6 +59,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
         if (!arguments.TryGetFirstString("recipe", out var recipe))
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'recipe'.", Name);
+
             return ValueTask.FromResult<object>(MissingArgument());
         }
 
@@ -72,7 +78,9 @@ public abstract class ImportRecipeBaseTool : AIFunction
         ArgumentNullException.ThrowIfNull(services, nameof(services));
 
         var recipeExecutionService = services.GetRequiredService<RecipeExecutionService>();
+
         var recipeSchemaService = services.GetRequiredService<RecipeSchemaService>();
+
         var recipeSteps = services.GetRequiredService<IEnumerable<IRecipeStep>>();
 
         var data = JsonSerializer.Deserialize<JsonObject>(json, RecipeSerializerOptions);
@@ -84,6 +92,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
             if (stepSchemas.ContainsKey(stepName))
             {
                 continue;
+
             }
 
             var added = false;
@@ -93,6 +102,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
                 if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
+
                 }
 
                 var stepSchema = await recipeStep.GetSchemaAsync();
@@ -102,6 +112,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     stepSchemas[stepName] = stepSchema;
                     added = true;
                     break;
+
                 }
             }
 
@@ -111,13 +122,14 @@ public abstract class ImportRecipeBaseTool : AIFunction
             }
 
             var simpleStepBuilder = new JsonSchemaBuilder()
-                        .Type(SchemaValueType.Object)
-                        .Properties(
-                            ("name", new JsonSchemaBuilder()
-                                .Type(SchemaValueType.String)
-                                .Enum(stepName))
-                        )
-                        .Required("name");
+                .Type(SchemaValueType.Object)
+                .Properties(
+                    ("name", new JsonSchemaBuilder()
+                        .Type(SchemaValueType.String)
+                        .Enum(stepName))
+
+            )
+                .Required("name");
 
             stepSchemas[stepName] = simpleStepBuilder.Build();
         }
@@ -128,8 +140,9 @@ public abstract class ImportRecipeBaseTool : AIFunction
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(stepSchemas.Keys)))
-            .Required("name")
-            .AdditionalProperties(true);
+
+                    .Required("name")
+                    .AdditionalProperties(true);
 
         var schemaBuilder = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
@@ -138,8 +151,10 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     .Type(SchemaValueType.Array)
                     .Items(stepsBuilder)
                     .MinItems(1)
-                )
-            ).Required("steps");
+
+        )
+
+        ).Required("steps");
 
         var rootSchema = schemaBuilder.Build();
 
@@ -156,10 +171,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
             return
             $"""
-                Invalid recipe format. The recipe must match the expected schema shown below. 
-                Please generate a valid recipe and try again:
-                {schemaStructure}
-            """;
+Invalid recipe format. The recipe must match the expected schema shown below.
+Please generate a valid recipe and try again:
+{schemaStructure}
+
+""";
         }
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))
@@ -167,6 +183,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
             logger.LogInformation("AI tool recipe import completed successfully.");
 
             return "Recipe was successfully imported";
+
         }
 
         logger.LogWarning("AI tool recipe import failed: error occurred during execution.");

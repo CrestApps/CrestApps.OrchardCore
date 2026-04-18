@@ -9,9 +9,11 @@ namespace CrestApps.OrchardCore.Samples.A2AClient.Pages;
 public sealed class AgentsModel : PageModel
 {
     private readonly A2AClientFactory _clientFactory;
-    private readonly ILogger<AgentsModel> _logger;
+    private readonly ILogger _logger;
 
-    public AgentsModel(A2AClientFactory clientFactory, ILogger<AgentsModel> logger)
+    public AgentsModel(
+        A2AClientFactory clientFactory,
+        ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
         _logger = logger;
@@ -83,7 +85,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Authentication failed (401 Unauthorized). " +
-                        "The A2A host requires authentication. Check the agent card's security schemes for details."
+                "The A2A host requires authentication. Check the agent card's security schemes for details."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
@@ -93,7 +95,7 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "Access denied (403 Forbidden). " +
-                        "You do not have permission to access this agent."
+                "You do not have permission to access this agent."
             });
         }
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -101,8 +103,8 @@ public sealed class AgentsModel : PageModel
             return new JsonResult(new
             {
                 error = "The A2A host returned a 404 Not Found response. " +
-                        "Please ensure the A2A Host feature is enabled on the default tenant " +
-                        "(Configuration > Features > search for 'A2A Host')."
+                "Please ensure the A2A Host feature is enabled on the default tenant " +
+                "(Configuration > Features > search for 'A2A Host')."
             });
         }
         catch (Exception ex)
@@ -165,8 +167,8 @@ public sealed class AgentsModel : PageModel
         catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             ErrorMessage = "The A2A host returned a 404 Not Found response. " +
-                           "Please ensure the A2A Host feature is enabled on the default tenant " +
-                           "(Configuration > Features > search for 'A2A Host').";
+            "Please ensure the A2A Host feature is enabled on the default tenant " +
+            "(Configuration > Features > search for 'A2A Host').";
         }
         catch (Exception ex)
         {
@@ -185,7 +187,10 @@ public sealed class AgentsModel : PageModel
         private readonly MessageSendParams _sendParams;
         private readonly ILogger _logger;
 
-        public StreamingA2AResult(A2A.A2AClient client, MessageSendParams sendParams, ILogger logger)
+        public StreamingA2AResult(
+            A2A.A2AClient client,
+            MessageSendParams sendParams,
+            ILogger logger)
         {
             _client = client;
             _sendParams = sendParams;
@@ -211,17 +216,18 @@ public sealed class AgentsModel : PageModel
                     if (a2aEvent is TaskArtifactUpdateEvent artifactUpdate)
                     {
                         chunk = string.Join(string.Empty,
-                            artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
+                        artifactUpdate.Artifact?.Parts?.OfType<TextPart>().Select(p => p.Text) ?? []);
                     }
                     else if (a2aEvent is TaskStatusUpdateEvent statusUpdate)
                     {
                         if (statusUpdate.Final)
                         {
                             // If the task failed, send the error message.
+
                             if (statusUpdate.Status.State == TaskState.Failed)
                             {
                                 var errorText = statusUpdate.Status.Message?.Parts
-                                    ?.OfType<TextPart>()
+                                ?.OfType<TextPart>()
                                     .Select(p => p.Text)
                                     .FirstOrDefault() ?? "Agent task failed.";
 

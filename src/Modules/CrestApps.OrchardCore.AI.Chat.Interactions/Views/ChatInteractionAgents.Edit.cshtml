@@ -1,5 +1,5 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
-@using CrestApps.OrchardCore.AI.Models
+@using CrestApps.Core.AI.Models
 
 @model EditChatInteractionAgentsViewModel
 
@@ -48,7 +48,9 @@
                 <input type="hidden" asp-for="Agents[i].ItemId" />
                 <input asp-for="Agents[i].IsSelected"
                        type="checkbox"
-                       class="form-check-input ci-agent-checkbox"
+                       class="form-check-input ci-agent-checkbox capability-checkbox"
+                       data-save-group="agentNames"
+                       data-item-id="@Model.Agents[i].ItemId"
                        id="ci_agent_@i" />
                 <label class="form-check-label" asp-for="Agents[i].IsSelected">
                     @Model.Agents[i].DisplayText

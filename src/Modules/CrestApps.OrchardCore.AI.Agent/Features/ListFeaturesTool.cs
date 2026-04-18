@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,13 +12,13 @@ public sealed class ListFeaturesTool : AIFunction
     public const string TheName = "listSiteFeature";
 
     private static readonly JsonElement _jsonSchema = JsonSerializer.Deserialize<JsonElement>(
-        """
-        {
-          "type": "object",
-          "properties": {},
-          "additionalProperties": false
-        }
-        """);
+    """
+    {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+    """);
 
     public override string Name => TheName;
 

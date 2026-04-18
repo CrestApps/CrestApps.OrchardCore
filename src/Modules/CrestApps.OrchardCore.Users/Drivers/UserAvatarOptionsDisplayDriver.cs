@@ -33,6 +33,8 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
 
     public override IDisplayResult Edit(ISite site, UserAvatarOptions settings, BuildEditorContext context)
     {
+        context.AddTenantReloadWarningWrapper();
+
         return Initialize<UserAvatarOptions>("UserAvatarOptions_Edit", model =>
         {
             model.Required = settings.Required;

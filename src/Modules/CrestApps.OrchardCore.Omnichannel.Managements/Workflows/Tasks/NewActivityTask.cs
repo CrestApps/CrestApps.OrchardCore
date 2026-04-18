@@ -1,11 +1,10 @@
+using CrestApps.Core;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
-using CrestApps.OrchardCore.Services;
 using Microsoft.Extensions.Localization;
-using OrchardCore;
 using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -89,7 +88,7 @@ public sealed class NewActivityTask : TaskActivity<NewActivityTask>
         var now = _clock.UtcNow;
         var newAttempt = new OmnichannelActivity()
         {
-            ItemId = IdGenerator.GenerateId(),
+            ItemId = UniqueId.GenerateId(),
             Channel = activity.Channel,
             ChannelEndpointId = activity.ChannelEndpointId,
             InteractionType = activity.InteractionType,

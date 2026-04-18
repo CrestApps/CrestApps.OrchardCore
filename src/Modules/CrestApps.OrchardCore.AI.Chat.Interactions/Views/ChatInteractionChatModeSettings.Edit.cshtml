@@ -11,3 +11,13 @@
         <span class="hint">@T["Controls how users interact with chat interactions. Audio input adds a microphone for dictation. Conversation enables continuous two-way voice interaction."]</span>
     </div>
 </div>
+
+<div class="@Orchard.GetWrapperClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableTextToSpeechPlayback" />
+            <label class="form-check-label" asp-for="EnableTextToSpeechPlayback">@T["Enable text-to-speech playback"]</label>
+        </div>
+        <span class="hint">@T["When enabled, a play button is shown on each assistant message, allowing users to listen to AI responses via the configured text-to-speech deployment."]</span>
+    </div>
+</div>
