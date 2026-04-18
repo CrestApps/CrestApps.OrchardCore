@@ -17,7 +17,7 @@ public sealed class DataExtractionChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly TimeProvider _timeProvider;
     private readonly IWorkflowManager _workflowManager;
-    private readonly ILogger<DataExtractionChatSessionHandler> _logger;
+    private readonly ILogger _logger;
 
     public DataExtractionChatSessionHandler(
         IWorkflowManager workflowManager,

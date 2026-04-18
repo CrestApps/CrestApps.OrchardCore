@@ -7,8 +7,8 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Core;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI;
 

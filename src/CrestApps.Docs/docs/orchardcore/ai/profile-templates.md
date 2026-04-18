@@ -280,7 +280,7 @@ public sealed class MyService
         template.Category = "Customer Service";
 
         // Source-specific fields are stored as metadata in Properties.
-        var metadata = template.As<ProfileTemplateMetadata>();
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
         metadata.ProfileType = AIProfileType.Chat;
         metadata.Temperature = 0.7f;
         metadata.SystemMessage = "You are a helpful assistant.";
@@ -301,7 +301,7 @@ public sealed class MyService
 
         if (template is not null)
         {
-            var metadata = template.As<ProfileTemplateMetadata>();
+            var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
             metadata.Temperature = 0.9f;
             template.Put(metadata);
             await _templateManager.UpdateAsync(template);
@@ -526,7 +526,7 @@ Template application pre-fills the form — users can modify any value before sa
 If you have a custom module that adds a `DisplayDriver<AIProfile>`, you can add a corresponding `DisplayDriver<AIProfileTemplate>` to support templates for your module's settings. The template driver should:
 
 1. Extend `DisplayDriver<AIProfileTemplate>` instead of `DisplayDriver<AIProfile>`.
-2. Use `template.As<T>()` and `template.Put<T>()` (from `OrchardCore.Entities`) to read/write settings in `template.Properties`.
+2. Use `template.GetOrCreate<T>()`, `template.TryGet<T>(out ...)`, and `template.Put<T>()` (from `OrchardCore.Entities`) to read/write settings in `template.Properties`.
 3. Reuse the same ViewModel and shape name as the profile driver, so the same Razor view is rendered.
 4. Use the same `.Location()` positioning as the profile driver.
 5. If your driver is source-specific, use `.RenderWhen()` to only show fields for the appropriate source.
@@ -544,7 +544,7 @@ public sealed class AIProfileTemplateMySettingsDisplayDriver : DisplayDriver<AIP
     {
         return Initialize<MySettingsViewModel>("MySettings_Edit", model =>
         {
-            var settings = template.As<MySettings>();
+            var settings = template.GetOrCreate<MySettings>();
             model.MySetting = settings.MySetting;
         }).Location("Content:10#Capabilities;5")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -560,7 +560,7 @@ public sealed class AIProfileTemplateMySettingsDisplayDriver : DisplayDriver<AIP
         var model = new MySettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = template.As<MySettings>();
+        var settings = template.GetOrCreate<MySettings>();
         settings.MySetting = model.MySetting;
         template.Put(settings);
 
@@ -575,7 +575,7 @@ Register the driver in your module's `Startup.cs`:
 services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMySettingsDisplayDriver>();
 ```
 
-When a template is applied to a new profile, all `template.Properties` entries (except `ProfileTemplateMetadata` and `SystemPromptTemplateMetadata`, which are template-specific) are automatically copied to both `profile.Properties` and `profile.Settings`, so your custom settings will be available to both `profile.As<T>()` and `profile.GetSettings<T>()` on the profile side.
+When a template is applied to a new profile, all `template.Properties` entries (except `ProfileTemplateMetadata` and `SystemPromptTemplateMetadata`, which are template-specific) are automatically copied to both `profile.Properties` and `profile.Settings`, so your custom settings will be available through `profile.GetOrCreate<T>()`, `profile.TryGet<T>(out ...)`, and `profile.GetSettings<T>()` on the profile side.
 
 ---
 

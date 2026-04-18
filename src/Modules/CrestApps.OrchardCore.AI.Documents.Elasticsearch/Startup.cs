@@ -7,7 +7,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.Elasticsearch;
+using OrchardCore.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Documents.Elasticsearch;
 

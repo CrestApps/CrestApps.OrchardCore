@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="OrchardCore.Search.Elasticsearch.Core" />
+    <PackageReference Include="OrchardCore.Elasticsearch.Core" />
   </ItemGroup>
 
   <ItemGroup>

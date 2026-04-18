@@ -5,7 +5,7 @@ using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure.Indexing.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Search.AzureAI.Services;
+using OrchardCore.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Services;
 

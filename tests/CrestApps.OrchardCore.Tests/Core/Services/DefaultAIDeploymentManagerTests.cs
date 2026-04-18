@@ -25,7 +25,7 @@ public sealed class DefaultAIDeploymentManagerTests
         _siteMock = new Mock<ISite>();
         _settings = new DefaultAIDeploymentSettings();
 
-        _siteMock.Setup(s => s.As<DefaultAIDeploymentSettings>())
+        _siteMock.Setup(s => s.GetOrCreate<DefaultAIDeploymentSettings>())
             .Returns(_settings);
 
         _siteServiceMock.Setup(s => s.GetSiteSettingsAsync())

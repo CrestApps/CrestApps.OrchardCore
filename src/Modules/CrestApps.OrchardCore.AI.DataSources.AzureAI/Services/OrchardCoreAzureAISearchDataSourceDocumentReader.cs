@@ -4,7 +4,7 @@ using Azure.Search.Documents.Models;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.Core.Infrastructure.Indexing.Models;
-using OrchardCore.Search.AzureAI.Services;
+using OrchardCore.AzureAI.Services;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 

@@ -64,7 +64,7 @@ public class ChatInteractionHub : ChatInteractionHubBase
         var siteService = services.GetRequiredService<ISiteService>();
         var site = await siteService.GetSiteSettingsAsync();
 
-        return site.As<DefaultAIDeploymentSettings>();
+        return site.GetOrCreate<DefaultAIDeploymentSettings>();
     }
 
     protected override async Task<ChatMode> GetChatModeAsync(IServiceProvider services)
@@ -72,7 +72,7 @@ public class ChatInteractionHub : ChatInteractionHubBase
         var siteService = services.GetRequiredService<ISiteService>();
         var site = await siteService.GetSiteSettingsAsync();
 
-        return site.As<ChatInteractionChatModeSettings>().ChatMode;
+        return site.GetOrCreate<ChatInteractionChatModeSettings>().ChatMode;
     }
 
     protected override async Task<bool> IsTextToSpeechPlaybackEnabledAsync(IServiceProvider services)
@@ -80,7 +80,7 @@ public class ChatInteractionHub : ChatInteractionHubBase
         var siteService = services.GetRequiredService<ISiteService>();
         var site = await siteService.GetSiteSettingsAsync();
 
-        return site.As<ChatInteractionChatModeSettings>().EnableTextToSpeechPlayback;
+        return site.GetOrCreate<ChatInteractionChatModeSettings>().EnableTextToSpeechPlayback;
     }
 
     protected override string GetRequiredFieldMessage(string fieldName)

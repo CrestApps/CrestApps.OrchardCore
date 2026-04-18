@@ -1,5 +1,4 @@
 using CrestApps.Core.AI.Copilot.Models;
-using CrestApps.OrchardCore.AI.Chat.Copilot.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -21,7 +20,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
     private readonly IShellConfiguration _shellConfiguration;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly ILogger<CopilotOptionsConfiguration> _logger;
+    private readonly ILogger _logger;
 
     public CopilotOptionsConfiguration(
         IShellConfiguration shellConfiguration,
@@ -43,8 +42,7 @@ internal sealed class CopilotOptionsConfiguration : IConfigureOptions<CopilotOpt
         // 2. Overlay with OrchardCore site settings (DB-stored values take precedence).
         // ISiteService.GetSettingsAsync is async but IConfigureOptions.Configure is sync.
         // Use GetAwaiter().GetResult() as this runs once during options resolution.
-        var settings = _siteService.GetSettingsAsync<CopilotSettings>()
-            .GetAwaiter().GetResult();
+        var settings = _siteService.GetSettings<CopilotSettings>();
 
         if (settings.AuthenticationType != default)
         {

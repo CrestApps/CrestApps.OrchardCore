@@ -1,8 +1,8 @@
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 

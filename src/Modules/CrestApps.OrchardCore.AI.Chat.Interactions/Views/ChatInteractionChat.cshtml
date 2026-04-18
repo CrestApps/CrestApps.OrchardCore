@@ -29,7 +29,7 @@
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
     var site = await SiteService.GetSiteSettingsAsync();
-    var chatModeSettings = site.As<ChatInteractionChatModeSettings>();
+    var chatModeSettings = site.GetOrCreate<ChatInteractionChatModeSettings>();
     var chatMode = chatModeSettings.ChatMode;
     var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.SpeechToText);
     var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentType.TextToSpeech);

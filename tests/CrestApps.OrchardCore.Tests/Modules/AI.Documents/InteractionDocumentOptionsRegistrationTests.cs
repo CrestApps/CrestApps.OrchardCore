@@ -32,7 +32,7 @@ public sealed class InteractionDocumentOptionsRegistrationTests
     private static ISiteService CreateSiteService(InteractionDocumentSettings settings)
     {
         var site = new Mock<ISite>();
-        site.Setup(x => x.As<InteractionDocumentSettings>())
+        site.Setup(x => x.GetOrCreate<InteractionDocumentSettings>())
             .Returns(settings);
 
         var siteService = new Mock<ISiteService>();

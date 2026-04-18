@@ -22,7 +22,7 @@ public sealed class ModuleTemplateProvider : ITemplateProvider
     private readonly IExtensionManager _extensionManager;
     private readonly IApplicationContext _applicationContext;
     private readonly IEnumerable<ITemplateParser> _parsers;
-    private readonly ILogger<ModuleTemplateProvider> _logger;
+    private readonly ILogger _logger;
 
     public ModuleTemplateProvider(
         IExtensionManager extensionManager,

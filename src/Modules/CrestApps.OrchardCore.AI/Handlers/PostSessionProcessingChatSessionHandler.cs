@@ -16,7 +16,7 @@ public sealed class PostSessionProcessingChatSessionHandler : AIChatSessionHandl
 {
     private readonly IWorkflowManager _workflowManager;
     private readonly TimeProvider _timeProvider;
-    private readonly ILogger<PostSessionProcessingChatSessionHandler> _logger;
+    private readonly ILogger _logger;
 
     public PostSessionProcessingChatSessionHandler(
         IWorkflowManager workflowManager,

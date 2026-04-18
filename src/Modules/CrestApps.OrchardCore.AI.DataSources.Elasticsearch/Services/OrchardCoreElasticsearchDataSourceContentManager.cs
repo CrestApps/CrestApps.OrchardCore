@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 internal sealed class OrchardCoreElasticsearchDataSourceContentManager : IDataSourceContentManager
 {
     private readonly ElasticsearchClient _elasticClient;
-    private readonly ILogger<OrchardCoreElasticsearchDataSourceContentManager> _logger;
+    private readonly ILogger _logger;
 
     internal static List<(string Kind, string Value)> BuildMustQueryDebug(string dataSourceId, string filter)
     {

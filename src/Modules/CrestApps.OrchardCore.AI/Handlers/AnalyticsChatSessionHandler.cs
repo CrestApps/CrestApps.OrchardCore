@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AI.Handlers;
 public sealed class AnalyticsChatSessionHandler : AIChatSessionHandlerBase
 {
     private readonly AIChatSessionEventService _eventService;
-    private readonly ILogger<AnalyticsChatSessionHandler> _logger;
+    private readonly ILogger _logger;
 
     public AnalyticsChatSessionHandler(
         AIChatSessionEventService eventService,

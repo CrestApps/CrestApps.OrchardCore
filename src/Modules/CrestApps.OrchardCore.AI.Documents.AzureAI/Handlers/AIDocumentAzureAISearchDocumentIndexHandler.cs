@@ -2,7 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Search.AzureAI;
+using OrchardCore.AzureAI;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 

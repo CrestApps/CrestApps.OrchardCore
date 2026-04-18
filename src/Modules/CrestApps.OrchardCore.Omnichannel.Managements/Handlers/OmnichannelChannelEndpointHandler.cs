@@ -7,9 +7,9 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.Email;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 

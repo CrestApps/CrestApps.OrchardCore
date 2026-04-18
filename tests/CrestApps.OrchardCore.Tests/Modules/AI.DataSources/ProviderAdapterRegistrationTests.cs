@@ -3,8 +3,8 @@ using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.Elasticsearch;
+using OrchardCore.AzureAI;
+using OrchardCore.Elasticsearch;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
 

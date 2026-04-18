@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 
 /// <summary>
 /// Bridges the framework-level <see cref="ICopilotCredentialStore"/> to OrchardCore's
-/// user model, storing credentials on the User entity via <c>.As&lt;T&gt;</c>/<c>.Put&lt;T&gt;</c>.
+/// user model, storing credentials on the User entity via OrchardCore entity metadata.
 /// </summary>
 internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStore
 {
@@ -36,9 +36,7 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
             return null;
         }
 
-        var creds = usr.As<GitHubOAuthCredentials>();
-
-        if (creds is null || string.IsNullOrEmpty(creds.ProtectedAccessToken))
+        if (!usr.TryGet<GitHubOAuthCredentials>(out var creds) || string.IsNullOrEmpty(creds.ProtectedAccessToken))
         {
             return null;
         }

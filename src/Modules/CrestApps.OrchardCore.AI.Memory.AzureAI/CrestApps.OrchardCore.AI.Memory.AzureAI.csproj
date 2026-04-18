@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
@@ -18,7 +18,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Search.Documents" />
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="OrchardCore.AzureAI.Core" />
   </ItemGroup>
 
   <ItemGroup>

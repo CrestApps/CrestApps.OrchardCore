@@ -218,7 +218,7 @@ internal static class GenesysWebhookEndpoint
                     prompt.ItemId,
                     payload.AgentMessage,
                     prompt.ItemId,
-                    prompt.As<AssistantMessageAppearance>());
+                    prompt.GetOrCreate<AssistantMessageAppearance>());
             await chatHubContext.Clients.Group(groupName)
                 .ReceiveConversationAssistantComplete(session.SessionId, prompt.ItemId);
         }
@@ -261,7 +261,7 @@ internal static class GenesysWebhookEndpoint
                     prompt.ItemId,
                     payload.AgentMessage,
                     prompt.ItemId,
-                    prompt.As<AssistantMessageAppearance>());
+                    prompt.GetOrCreate<AssistantMessageAppearance>());
 
             await interactionHubContext.Clients.Group(groupName)
                 .ReceiveConversationAssistantComplete(interaction.ItemId, prompt.ItemId);

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Indexing.Core;
-using OrchardCore.Search.AzureAI;
+using OrchardCore.AzureAI;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
@@ -40,7 +40,7 @@ public sealed class AIDataSourceOptionsRegistrationTests
     private static ISiteService CreateSiteService(AIDataSourceSettings settings)
     {
         var site = new Mock<ISite>();
-        site.Setup(x => x.As<AIDataSourceSettings>())
+        site.Setup(x => x.GetOrCreate<AIDataSourceSettings>())
             .Returns(settings);
 
         var siteService = new Mock<ISiteService>();

@@ -13,14 +13,12 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
             .For<OmnichannelContactCommunicationPreferenceIndex>()
             .Map(contentItem =>
             {
-                var preference = contentItem.As<CommunicationPreferencePart>();
-
-                if (preference == null)
+                if (!contentItem.TryGet<CommunicationPreferencePart>(out var preference))
                 {
                     return null;
                 }
 
-                return new OmnichannelContactCommunicationPreferenceIndex()
+                return new OmnichannelContactCommunicationPreferenceIndex
                 {
                     ContentItemId = contentItem.ContentItemId,
 
@@ -36,7 +34,6 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexProvider : I
                     DoNotChat = preference.DoNotChat,
                     DoNotChatUtc = preference.DoNotChatUtc,
                 };
-
             });
     }
 }

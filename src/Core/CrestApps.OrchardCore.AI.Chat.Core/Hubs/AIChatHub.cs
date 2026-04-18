@@ -79,7 +79,7 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var siteService = services.GetRequiredService<ISiteService>();
         var site = await siteService.GetSiteSettingsAsync();
 
-        return site.As<DefaultAIDeploymentSettings>();
+        return site.GetOrCreate<DefaultAIDeploymentSettings>();
     }
 
     protected override string GetRequiredFieldMessage(string fieldName)

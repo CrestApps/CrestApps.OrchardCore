@@ -25,9 +25,8 @@
 @{
     ContentItem contentItem = Model.ContentItem;
 
-    var part = contentItem.As<AIProfilePart>();
-
-    if (string.IsNullOrEmpty(part?.ProfileId))
+    if (!contentItem.TryGet<AIProfilePart>(out var part) ||
+        string.IsNullOrEmpty(part.ProfileId))
     {
         return;
     }
@@ -62,7 +61,8 @@
     var closeHistoryBtnId = $"{baseId}_CloseHistory";
     var restoreSizeBtnId = $"{baseId}_RestoreSize";
     var documentBarHtmlId = $"{baseId}_DocumentBar";
-    var storagePrefix = $"{ShellSettings.Name}-{baseId}"; var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
+    var storagePrefix = $"{ShellSettings.Name}-{baseId}";
+    var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && profile.GetOrCreate<AIProfileSessionDocumentsMetadata>().AllowSessionDocuments;
@@ -270,8 +270,8 @@
 <style asp-name="AIChatApp" at="Head"></style>
 <style at="Head">
     .ai-chat-widget-document-bar .small.text-muted {
-        font-size: 0.68rem !important;
-        line-height: 1.25;
+    font-size: 0.68rem !important;
+    line-height: 1.25;
     }
 </style>
 

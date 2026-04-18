@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Extensions;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.AI.Agent.Communications;
@@ -29,11 +30,8 @@ public sealed class SendSmsTool : AIFunction
       "required": [
         "phone",
         "body"
-
       ]
-
     }
-
     """);
 
     public override string Name => TheName;
@@ -57,7 +55,6 @@ public sealed class SendSmsTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var smsService = arguments.Services.GetRequiredService<ISmsService>();
@@ -87,7 +84,6 @@ public sealed class SendSmsTool : AIFunction
         var message = new SmsMessage()
         {
             To = phone,
-
             Body = body,
         };
 
@@ -98,7 +94,6 @@ public sealed class SendSmsTool : AIFunction
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
-
             }
 
             return "The SMS message was sent successfully.";

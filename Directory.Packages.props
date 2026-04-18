@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <CrestAppsCoreVersion>1.0.0-preview-36</CrestAppsCoreVersion>
-    <OrchardCoreVersion>[3.0.0-preview-18962, )</OrchardCoreVersion>
+    <OrchardCoreVersion>[3.0.0-preview-18980, )</OrchardCoreVersion>
     <ModelContextProtocolVersion>1.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -61,6 +61,8 @@
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Roles.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.AzureAI.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />

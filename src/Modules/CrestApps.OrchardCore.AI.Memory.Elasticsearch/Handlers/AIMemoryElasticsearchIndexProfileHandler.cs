@@ -4,12 +4,12 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using Elastic.Clients.Elasticsearch.Mapping;
+using OrchardCore.Elasticsearch;
+using OrchardCore.Elasticsearch.Core.Models;
+using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.Elasticsearch;
-using OrchardCore.Search.Elasticsearch.Core.Models;
-using OrchardCore.Search.Elasticsearch.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.Elasticsearch.Handlers;
 
@@ -41,11 +41,11 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchIndexMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchIndexMetadata>();
 
         metadata.IndexMappings ??= new ElasticsearchIndexMap();
         metadata.IndexMappings.Mapping ??= new TypeMapping();
-        metadata.IndexMappings.Mapping.Properties ??= new Elastic.Clients.Elasticsearch.Mapping.Properties();
+        metadata.IndexMappings.Mapping.Properties ??= [];
 
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
@@ -73,7 +73,7 @@ public sealed class AIMemoryElasticsearchIndexProfileHandler : AIMemoryIndexProf
             return;
         }
 
-        var metadata = indexProfile.As<ElasticsearchDefaultQueryMetadata>();
+        var metadata = indexProfile.GetOrCreate<ElasticsearchDefaultQueryMetadata>();
 
         if (metadata.DefaultSearchFields is null || metadata.DefaultSearchFields.Length == 0)
         {

@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
-    <PackageReference Include="OrchardCore.Search.AzureAI.Core" />
+    <PackageReference Include="OrchardCore.AzureAI.Core" />
     <PackageReference Include="Azure.Search.Documents" />
     <PackageReference Include="CrestApps.Core.Azure.AISearch" />
   </ItemGroup>

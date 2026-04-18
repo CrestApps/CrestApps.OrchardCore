@@ -1,5 +1,4 @@
 using CrestApps.Core.AI.Claude.Models;
-using CrestApps.OrchardCore.AI.Chat.Claude.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -16,7 +15,7 @@ internal sealed class ClaudeOptionsConfiguration : IConfigureOptions<ClaudeOptio
     private readonly IShellConfiguration _shellConfiguration;
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
-    private readonly ILogger<ClaudeOptionsConfiguration> _logger;
+    private readonly ILogger _logger;
 
     public ClaudeOptionsConfiguration(
         IShellConfiguration shellConfiguration,

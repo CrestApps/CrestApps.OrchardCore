@@ -13,6 +13,6 @@ using OrchardCore.Modules.Manifest;
     [
     ChatInteractionsConstants.Feature.ChatDocuments,
     "OrchardCore.Indexing",
-    "OrchardCore.Search.AzureAI",
+    "OrchardCore.AzureAI",
     ]
     )]

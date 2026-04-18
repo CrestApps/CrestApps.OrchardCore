@@ -7,10 +7,10 @@ using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Elasticsearch;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.Search.Elasticsearch;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch;
 

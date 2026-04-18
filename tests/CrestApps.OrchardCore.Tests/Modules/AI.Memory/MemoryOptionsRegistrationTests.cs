@@ -62,9 +62,9 @@ public sealed class MemoryOptionsRegistrationTests
         MemoryMetadata chatInteractionMemorySettings)
     {
         var site = new Mock<ISite>();
-        site.Setup(x => x.As<AIMemorySettings>())
+        site.Setup(x => x.GetOrCreate<AIMemorySettings>())
             .Returns(memorySettings);
-        site.Setup(x => x.As<MemoryMetadata>())
+        site.Setup(x => x.GetOrCreate<MemoryMetadata>())
             .Returns(chatInteractionMemorySettings);
 
         var siteService = new Mock<ISiteService>();

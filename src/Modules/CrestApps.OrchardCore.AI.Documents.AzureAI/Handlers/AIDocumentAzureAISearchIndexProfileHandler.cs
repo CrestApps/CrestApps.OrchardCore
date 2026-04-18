@@ -7,8 +7,8 @@ using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.Search.AzureAI;
-using OrchardCore.Search.AzureAI.Models;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Models;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 
@@ -37,7 +37,7 @@ public sealed class AIDocumentAzureAISearchIndexProfileHandler : AIDocumentIndex
             return;
         }
 
-        var metadata = indexProfile.As<AzureAISearchIndexMetadata>();
+        var metadata = indexProfile.GetOrCreate<AzureAISearchIndexMetadata>();
         var embeddingDimensions = await GetEmbeddingDimensionsAsync(indexProfile);
 
         metadata.IndexMappings.Add(new AzureAISearchIndexMap

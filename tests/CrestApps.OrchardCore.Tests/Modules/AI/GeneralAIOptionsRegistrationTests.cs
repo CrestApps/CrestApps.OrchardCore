@@ -42,7 +42,7 @@ public sealed class GeneralAIOptionsRegistrationTests
     private static ISiteService CreateSiteService(GeneralAISettings settings)
     {
         var site = new Mock<ISite>();
-        site.Setup(x => x.As<GeneralAISettings>())
+        site.Setup(x => x.GetOrCreate<GeneralAISettings>())
             .Returns(settings);
 
         var siteService = new Mock<ISiteService>();

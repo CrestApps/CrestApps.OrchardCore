@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Samples.A2AClient.Pages;
 public sealed class AgentsModel : PageModel
 {
     private readonly A2AClientFactory _clientFactory;
-    private readonly ILogger<AgentsModel> _logger;
+    private readonly ILogger _logger;
 
     public AgentsModel(
         A2AClientFactory clientFactory,

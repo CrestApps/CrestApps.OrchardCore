@@ -10,7 +10,7 @@ public sealed class CopilotCallbackUrlProvider
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
-    private readonly ILogger<CopilotCallbackUrlProvider> _logger;
+    private readonly ILogger _logger;
 
     public CopilotCallbackUrlProvider(
         ISiteService siteService,

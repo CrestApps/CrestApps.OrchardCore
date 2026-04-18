@@ -40,9 +40,7 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return user.UserName;
         }
 
-        var userPart = u.As<UserFullNamePart>();
-
-        if (userPart == null)
+        if (!u.TryGet<UserFullNamePart>(out var userPart))
         {
             if (_logger?.IsEnabled(LogLevel.Trace) == true)
             {
@@ -52,9 +50,9 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return user.UserName;
         }
 
-        var setting = (await _siteService.GetSiteSettingsAsync()).As<DisplayNameSettings>();
+        var settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
 
-        if (setting.Type == DisplayNameType.DisplayName)
+        if (settings.Type == DisplayNameType.DisplayName)
         {
             if (string.IsNullOrWhiteSpace(userPart.DisplayName))
             {
@@ -64,12 +62,12 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
             return userPart.DisplayName;
         }
 
-        if (setting.Type == DisplayNameType.Other)
+        if (settings.Type == DisplayNameType.Other)
         {
-            return await GetDisplayFromTemplate(user, userPart, setting);
+            return await GetDisplayFromTemplate(user, userPart, settings);
         }
 
-        var displayName = GetDisplayName(userPart, setting);
+        var displayName = GetDisplayName(userPart, settings);
 
         if (!string.IsNullOrWhiteSpace(displayName))
         {

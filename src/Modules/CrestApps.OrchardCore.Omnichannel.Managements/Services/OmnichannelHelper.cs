@@ -21,9 +21,7 @@ internal static class OmnichannelHelper
         {
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var emailPart = contentMethod.As<EmailInfoPart>();
-
-                if (!string.IsNullOrEmpty(emailPart.Email?.Text))
+                if (contentMethod.TryGet<EmailInfoPart>(out var emailPart) && !string.IsNullOrEmpty(emailPart.Email?.Text))
                 {
                     return emailPart.Email.Text;
                 }
@@ -38,9 +36,9 @@ internal static class OmnichannelHelper
 
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || string.IsNullOrEmpty(phonePart.Number?.Text))
+                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
+                    phonePart.Type is null ||
+                    string.IsNullOrEmpty(phonePart.Number?.Text))
                 {
                     continue;
                 }
@@ -73,9 +71,10 @@ internal static class OmnichannelHelper
         {
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                var phonePart = contentMethod.As<PhoneNumberInfoPart>();
-
-                if (phonePart?.Type is null || phonePart.Type.Text != "Cell" || string.IsNullOrEmpty(phonePart.Number?.Text))
+                if (!contentMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
+                    phonePart.Type is null ||
+                    phonePart.Type.Text != "Cell" ||
+                    string.IsNullOrEmpty(phonePart.Number?.Text))
                 {
                     continue;
                 }
