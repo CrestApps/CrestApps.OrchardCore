@@ -17,9 +17,8 @@ internal sealed class InteractionDocumentOptionsConfiguration : IConfigureOption
     public void Configure(InteractionDocumentOptions options)
     {
         var settings = _siteService.GetSettings<InteractionDocumentSettings>();
-        var overrides = InteractionDocumentOptions.FromSettings(settings);
 
-        options.IndexProfileName = overrides.IndexProfileName;
-        options.TopN = overrides.TopN;
+        options.IndexProfileName = settings.IndexProfileName;
+        options.TopN = settings.TopN;
     }
 }

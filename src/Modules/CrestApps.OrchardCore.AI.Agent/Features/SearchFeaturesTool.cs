@@ -39,13 +39,11 @@ public sealed class FeaturesSearchTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -54,7 +52,6 @@ public sealed class FeaturesSearchTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
         }
@@ -62,7 +59,6 @@ public sealed class FeaturesSearchTool : AIFunction
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("name", out var name))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
@@ -79,7 +75,6 @@ public sealed class FeaturesSearchTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

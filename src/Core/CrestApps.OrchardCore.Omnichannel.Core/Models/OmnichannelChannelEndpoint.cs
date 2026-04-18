@@ -20,9 +20,12 @@ public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareM
 
     public string OwnerId { get; set; }
 
+    /// <summary>
+    /// Creates a copy of the current channel endpoint.
+    /// </summary>
     public OmnichannelChannelEndpoint Clone()
     {
-        return new OmnichannelChannelEndpoint()
+        return new OmnichannelChannelEndpoint
         {
             ItemId = ItemId,
             DisplayText = DisplayText,

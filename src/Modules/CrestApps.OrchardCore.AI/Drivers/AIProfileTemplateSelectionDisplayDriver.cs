@@ -11,7 +11,6 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AIProfile>
 {
-
     private readonly IAIProfileTemplateManager _templateManager;
 
     public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
@@ -30,7 +29,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
 
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
         {
-
             var templates = await _templateManager.GetAsync(AITemplateSources.Profile);
 
             var groups = new Dictionary<string, SelectListGroup>();
@@ -41,7 +39,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
             .ThenBy(t => t.DisplayText ?? t.Name)
             .Select(t =>
             {
-
                 var item = new SelectListItem(t.DisplayText ?? t.Name, t.ItemId);
 
                 if (!string.IsNullOrEmpty(t.Category))

@@ -39,12 +39,8 @@ public class ChatInteractionHub : ChatInteractionHubBase
         S = stringLocalizer;
     }
 
-    // ───────────────────── Scope override ─────────────────────
-
     protected override Task ExecuteInScopeAsync(Func<IServiceProvider, Task> action)
         => ShellScope.UsingChildScopeAsync(scope => action(scope.ServiceProvider));
-
-    // ──────────────────── Authorization ────────────────────
 
     protected override async Task<bool> AuthorizeAsync(IServiceProvider services, ChatInteraction interaction)
     {
@@ -54,8 +50,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
         return await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.EditChatInteractions, interaction);
     }
 
-    // ──────────────── Time / ID generation ────────────────
-
     protected override DateTime GetUtcNow()
     {
         var clock = Context.GetHttpContext()?.RequestServices?.GetService<IClock>();
@@ -64,8 +58,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
 
     protected override string GenerateId()
         => IdGenerator.GenerateId();
-
-    // ─────────────── Deployment / chat mode settings ───────────────
 
     protected override async Task<DefaultAIDeploymentSettings> GetDeploymentSettingsAsync(IServiceProvider services)
     {
@@ -90,8 +82,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
 
         return site.As<ChatInteractionChatModeSettings>().EnableTextToSpeechPlayback;
     }
-
-    // ──────────────────── Error messages ────────────────────
 
     protected override string GetRequiredFieldMessage(string fieldName)
         => S["{0} is required.", fieldName].Value;
@@ -142,12 +132,8 @@ public class ChatInteractionHub : ChatInteractionHubBase
         _ => S["One or more settings are invalid."].Value,
     };
 
-    // ────────────── Settings validation ──────────────
-
     protected override string ValidateSettings(JsonElement settings)
         => ChatInteractionSettingsValidator.Validate(settings);
-
-    // ────────────── Citation collection ──────────────
 
     protected override void CollectStreamingReferences(
         IServiceProvider services,
@@ -166,8 +152,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
         citationCollector.CollectToolReferences(references, contentItemIds);
     }
 
-    // ────────────── Post-completion hooks ──────────────
-
     protected override Task OnAssistantPromptCreatedAsync(
         IServiceProvider services,
         ChatInteractionPrompt prompt,
@@ -183,8 +167,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
 
         return Task.CompletedTask;
     }
-
-    // ────────────── Payload customization ──────────────
 
     protected override object CreateInteractionPayload(
         ChatInteraction interaction,
@@ -208,8 +190,6 @@ public class ChatInteractionHub : ChatInteractionHubBase
             }),
         };
     }
-
-    // ────────────── Data source settings ──────────────
 
     protected override async Task ApplyCoreSettingsAsync(
         IServiceProvider services,

@@ -95,7 +95,6 @@ public sealed class CreateTenantTool : AIFunction
 
         if (!shellSettings.IsDefaultShell())
         {
-
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
@@ -104,7 +103,6 @@ public sealed class CreateTenantTool : AIFunction
 
         if (!arguments.TryGetFirstString("name", out var name))
         {
-
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
             return "Unable to find a name argument in the function arguments.";
@@ -113,7 +111,6 @@ public sealed class CreateTenantTool : AIFunction
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
         {
-
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipeName' argument.", Name);
 
             return "Unable to find a recipeName argument in the function arguments.";
@@ -129,7 +126,6 @@ public sealed class CreateTenantTool : AIFunction
 
         if (shellHost.TryGetSettings(name, out var _))
         {
-
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' already exists.", Name, name);
 
             return "A tenant with the same name already exists.";
@@ -161,7 +157,6 @@ public sealed class CreateTenantTool : AIFunction
 
         if (string.IsNullOrEmpty(newShellSettings.RequestUrlPrefix) && string.IsNullOrEmpty(newShellSettings.RequestUrlHost))
         {
-
             logger.LogWarning("AI tool '{ToolName}' failed: neither 'requestUrlHost' nor 'requestUrlPrefix' was provided for tenant '{TenantName}'.", Name, name);
 
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";

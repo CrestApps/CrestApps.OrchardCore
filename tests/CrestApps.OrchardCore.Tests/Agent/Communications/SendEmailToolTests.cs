@@ -17,7 +17,7 @@ public sealed class SendEmailToolTests
     [Fact]
     public async Task InvokeAsync_WithNullHttpContext_ShouldSendEmailWithoutSender()
     {
-        // Arrange: simulate a background task where HttpContext is null.
+        // Arrange
         var emailService = new Mock<IEmailService>();
         emailService
             .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
@@ -42,21 +42,23 @@ public sealed class SendEmailToolTests
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        // Assert: email should be sent successfully without throwing NullReferenceException.
-        emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-        m.To == "test@example.com"
-            && m.Subject == "Test Subject"
-                && m.HtmlBody == "<p>Test body</p>"
+        // Assert
+        emailService.Verify(
+            x => x.SendAsync(
+                It.Is<MailMessage>(m =>
+                    m.To == "test@example.com"
+                    && m.Subject == "Test Subject"
+                    && m.HtmlBody == "<p>Test body</p>"
                     && m.Sender == null
-                        && m.From == null),
-        It.IsAny<string>()),
-        Times.Once);
+                    && m.From == null),
+                It.IsAny<string>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task InvokeAsync_WithHttpContext_ShouldSendEmailWithSenderFromUser()
     {
-        // Arrange: simulate an HTTP request context with an authenticated user.
+        // Arrange
         var emailService = new Mock<IEmailService>();
         emailService
             .Setup(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()))
@@ -64,9 +66,11 @@ public sealed class SendEmailToolTests
 
         var mockUser = new Mock<IUser>();
         var userManager = MockUserManager();
-        userManager.Setup(x => x.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
+        userManager
+            .Setup(x => x.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
             .ReturnsAsync(mockUser.Object);
-        userManager.Setup(x => x.GetEmailAsync(mockUser.Object))
+        userManager
+            .Setup(x => x.GetEmailAsync(mockUser.Object))
             .ReturnsAsync("sender@example.com");
 
         var httpContext = new DefaultHttpContext();
@@ -89,12 +93,14 @@ public sealed class SendEmailToolTests
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        // Assert: email should include sender from the authenticated user.
-        emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-        m.Sender == "sender@example.com"
-            && m.From == "sender@example.com"),
-        It.IsAny<string>()),
-        Times.Once);
+        // Assert
+        emailService.Verify(
+            x => x.SendAsync(
+                It.Is<MailMessage>(m =>
+                    m.Sender == "sender@example.com"
+                    && m.From == "sender@example.com"),
+                It.IsAny<string>()),
+            Times.Once);
     }
 
     [Fact]
@@ -120,7 +126,7 @@ public sealed class SendEmailToolTests
         // Act
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        // Assert: no email should be sent.
+        // Assert
         emailService.Verify(x => x.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>()), Times.Never);
     }
 
@@ -209,11 +215,13 @@ public sealed class SendEmailToolTests
         var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         // Assert
-        emailService.Verify(x => x.SendAsync(It.Is<MailMessage>(m =>
-        m.Cc == "cc@example.com"
-            && m.Bcc == "bcc@example.com"),
-        It.IsAny<string>()),
-        Times.Once);
+        emailService.Verify(
+            x => x.SendAsync(
+                It.Is<MailMessage>(m =>
+                    m.Cc == "cc@example.com"
+                    && m.Bcc == "bcc@example.com"),
+                It.IsAny<string>()),
+            Times.Once);
     }
 
     private static ServiceProvider CreateServiceProvider(
@@ -243,6 +251,14 @@ public sealed class SendEmailToolTests
         var store = new Mock<IUserStore<IUser>>();
 
         return new Mock<UserManager<IUser>>(
-            store.Object, null, null, null, null, null, null, null, null);
+            store.Object,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
     }
 }

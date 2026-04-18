@@ -29,7 +29,6 @@ internal static class ApiAICompletionEndpoint
 {
     public static IEndpointRouteBuilder AddApiAICompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
-
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .DisableAntiforgery()
 
@@ -56,22 +55,18 @@ internal static class ApiAICompletionEndpoint
         [FromBody] AICompletionRequest requestData)
     {
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
-
         {
-
             return TypedResults.BadRequest();
         }
 
         var profile = await chatProfileManager.FindByIdAsync(requestData.ProfileId);
 
         if (profile is null)
-
         {
             return TypedResults.NotFound();
         }
 
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
-
         {
             return TypedResults.Forbid();
         }
@@ -86,7 +81,6 @@ internal static class ApiAICompletionEndpoint
             {
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
-
                     { nameof(requestData.SessionProfileId), ["SessionProfileId is required"] },
 
                 });
@@ -95,9 +89,7 @@ internal static class ApiAICompletionEndpoint
             var parentProfile = await chatProfileManager.FindByIdAsync(requestData.SessionProfileId);
 
             if (parentProfile is null)
-
             {
-
                 return TypedResults.NotFound();
             }
 
@@ -116,7 +108,6 @@ internal static class ApiAICompletionEndpoint
             {
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
-
                     { nameof(requestData.Prompt), ["Prompt is required"] },
 
                 });
@@ -125,7 +116,6 @@ internal static class ApiAICompletionEndpoint
             userPrompt = requestData.Prompt.Trim();
 
             if (profile.Type == AIProfileType.Utility)
-
             {
                 return await GetUtilityMessageAsync(completionService, profile, userPrompt, completionContextBuilder, deploymentManager);
 
@@ -141,18 +131,14 @@ internal static class ApiAICompletionEndpoint
             var titleUserPrompt = BuildTitleUserPrompt(profile, userPrompt);
 
             if (profile.TitleType == AISessionTitleType.Generated)
-
             {
                 chatSession.Title = await GetGeneratedTitleAsync(profile, titleUserPrompt, completionService, completionContextBuilder, aiTemplateService, deploymentManager);
             }
 
             if (string.IsNullOrWhiteSpace(chatSession.Title) || chatSession.Title == AIConstants.DefaultBlankSessionTitle)
             {
-
                 chatSession.Title = Str.Truncate(titleUserPrompt, 255);
-
             }
-
         }
 
         AIChatSessionPrompt message;
@@ -161,7 +147,6 @@ internal static class ApiAICompletionEndpoint
 
         if (profile.Type == AIProfileType.TemplatePrompt)
         {
-
             var contextForTemplate = await completionContextBuilder.BuildAsync(profile);
 
             var templateDeployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: contextForTemplate.ChatDeploymentName)
@@ -191,11 +176,8 @@ internal static class ApiAICompletionEndpoint
             {
                 ItemId = UniqueId.GenerateId(),
                 SessionId = chatSession.SessionId,
-
                 Role = ChatRole.User,
-
                 Content = userPrompt,
-
             };
 
             await promptStore.CreateAsync(userPromptRecord);
@@ -209,7 +191,6 @@ internal static class ApiAICompletionEndpoint
             var orchestratorContext = await orchestrationContextBuilder.BuildAsync(profile, ctx =>
             {
                 ctx.UserMessage = userPrompt;
-
                 ctx.ConversationHistory = transcript.ToList();
                 ctx.CompletionContext.AdditionalProperties[AICompletionContextKeys.Session] = chatSession;
             });
@@ -235,14 +216,12 @@ internal static class ApiAICompletionEndpoint
             await foreach (var chunk in orchestrator.ExecuteStreamingAsync(orchestratorContext))
             {
                 if (!string.IsNullOrEmpty(chunk.Text))
-
                 {
                     builder.Append(chunk.Text);
                 }
 
                 // Incrementally collect any new tool references.
                 citationCollector.CollectToolReferences(references, contentItemIds);
-
             }
 
             // Final pass to collect any tool references added by the last tool call.
@@ -255,12 +234,10 @@ internal static class ApiAICompletionEndpoint
                 Role = ChatRole.Assistant,
                 Title = profile.PromptSubject,
                 Content = builder.Length > 0
-                ? builder.ToString()
-                : AIConstants.DefaultBlankMessage,
+                    ? builder.ToString()
+                    : AIConstants.DefaultBlankMessage,
                 ContentItemIds = contentItemIds.ToList(),
-
                 References = references,
-
             };
 
         }
@@ -284,21 +261,18 @@ internal static class ApiAICompletionEndpoint
                 Content = message.Content,
                 References = message.References,
                 Appearance = message.GetOrCreate<AssistantMessageAppearance>(),
-
             },
         });
     }
 
     private static async Task<(AIChatSession ChatSession, bool IsNewSession)> GetSessionsAsync(IAIChatSessionManager sessionManager, string sessionId, AIProfile profile, IAICompletionService completionService, string userPrompt, IAICompletionContextBuilder completionContextBuilder, ITemplateService aiTemplateService, IAIDeploymentManager deploymentManager)
     {
-
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
             var existingChatSession = await sessionManager.FindAsync(sessionId);
 
             if (existingChatSession != null && existingChatSession.ProfileId == profile.ItemId)
             {
-
                 return (existingChatSession, false);
             }
         }
@@ -309,13 +283,11 @@ internal static class ApiAICompletionEndpoint
 
         if (profile.TitleType == AISessionTitleType.Generated)
         {
-
             // If we fail to set an AI generated title to the session, we'll use the user's prompt at the title.
             chatSession.Title = await GetGeneratedTitleAsync(profile, titleUserPrompt, completionService, completionContextBuilder, aiTemplateService, deploymentManager);
         }
 
         if (string.IsNullOrEmpty(chatSession.Title))
-
         {
             chatSession.Title = Str.Truncate(titleUserPrompt, 255);
 
@@ -358,7 +330,6 @@ internal static class ApiAICompletionEndpoint
             chatDeploymentName: context.ChatDeploymentName);
 
         if (deployment == null)
-
         {
             return Str.Truncate(userPrompt, 255);
         }
@@ -380,7 +351,6 @@ internal static class ApiAICompletionEndpoint
 
     private static async Task<IResult> GetUtilityMessageAsync(IAICompletionService completionService, AIProfile profile, string prompt, IAICompletionContextBuilder completionContextBuilder, IAIDeploymentManager deploymentManager)
     {
-
         var context = await completionContextBuilder.BuildAsync(profile);
 
         var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentType.Chat, deploymentName: context.ChatDeploymentName)
@@ -400,7 +370,6 @@ internal static class ApiAICompletionEndpoint
         {
             if (completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
             {
-
                 result.Message.References = referenceItems;
 
             }
@@ -413,13 +382,11 @@ internal static class ApiAICompletionEndpoint
 
     private static string BuildTitleUserPrompt(AIProfile profile, string userPrompt)
     {
-
         var trimmedUserPrompt = userPrompt?.Trim();
         var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
         var initialPrompt = profileMetadata.InitialPrompt?.Trim();
 
         if (string.IsNullOrWhiteSpace(initialPrompt))
-
         {
             return trimmedUserPrompt;
         }

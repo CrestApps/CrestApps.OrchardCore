@@ -70,7 +70,6 @@ public sealed class AdminController : Controller
         string profileId,
         string sessionId,
         [FromServices] IOptions<PagerOptions> pagerOptions)
-
     {
         var profile = await _profileManager.FindByIdAsync(profileId);
 

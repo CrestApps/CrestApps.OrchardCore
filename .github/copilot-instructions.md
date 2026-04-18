@@ -95,7 +95,19 @@ dotnet run
 - Do not add a blank line between an `if`/`else`/`switch`/loop condition and its opening `{`
 - Use `var` consistently with repository style
 - Only use expression-bodied members when the entire member fits on a single short line; use a full block body for anything longer or split across lines
-- Avoid `DateTime.UtcNow`; prefer injected `TimeProvider`.
+- Avoid `DateTime.UtcNow`; prefer injected `IClock`.
+- Fix JavaScript indentations in all script blocks that are placed in `.cshtml` files.
+- Document every method in interfaces and domain models with an XML `<summary>` block.
+- Document every interface method parameter with XML `<param>` tags.
+- Prefer `using` statements over fully qualified namespace usages when there is no conflict.
+- When a constructor has more than one parameter, place each parameter on its own line.
+- Do not leave an extra blank line between consecutive closing braces; each closing brace on its own line is enough.
+- Add a blank line after `};` and after multi-line object initialization statements unless the initializer is returned on the same line.
+- When an object initializer spans multiple lines, place each property assignment on its own line.
+- Always leave a blank line between a property and a following XML documentation block.
+- In unit tests, separate setup, act, and assertion sections for readability and prefer `// Arrange`, `// Act`, and `// Assert` markers when they improve clarity.
+- In unit tests, wrap crowded fluent chains across multiple lines with consistent indentation and leave a blank line after multi-line setup statements.
+- Remove useless decorative or AI-style comments and prefer real XML docs where documentation is needed.
 - Keep public docs and comments honest to the current code
 
 ### Validation Scenarios
@@ -299,7 +311,15 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Code Analysis**: `AnalysisLevel` is set to `latest-Recommended`
 - **Implicit usings**: Enabled globally
 - **Database IDs**: Use `IdGenerator.GenerateId()` when creating database IDs manually. Generated IDs are always 26 characters long.
-- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods
+- **Date/time**: Never use `DateTime.UtcNow`. Always inject `IClock` in the constructor (e.g., `IClock clock`) and store it as `private readonly IClock _clock = clock;`, then call `_clock.UtcNow` in methods.
+- **Interface and domain-model docs**: Every method declared on an interface or domain model should have an honest XML `<summary>` comment.
+- **Parameter docs**: Interface methods with parameters should document each parameter with an XML `<param>` tag.
+- **Namespace usage**: Prefer file-level `using` directives over fully qualified namespace references when no ambiguity exists.
+- **Constructor layout**: Constructors with more than one parameter should place each parameter on its own line.
+- **Initializer layout**: Multi-line object initializers should put each property on its own line and should usually be followed by a blank line after the terminating `};`, unless the initializer is returned on the same line.
+- **Property/doc spacing**: Leave a blank line between a property and any following XML documentation block.
+- **Brace spacing**: Do not insert an extra blank line between consecutive closing braces.
+- **Unit test readability**: Keep setup, act, and assertion sections visually separated, use standard `// Arrange`, `// Act`, and `// Assert` comments where helpful, and wrap crowded fluent chains onto multiple lines with aligned indentation.
 - **Dependency injection**: Prefer constructor injection over lazy service resolution. Only fall back to lazy resolution when it is absolutely necessary to break a real framework or container circular dependency.
 - **Authorization handlers**: Do not constructor-inject `IAuthorizationService` into an `AuthorizationHandler`. Resolve and cache it lazily inside the handler because the authorization pipeline can otherwise create circular dependencies.
 - **Collection handling**: Do not call `.ToList()` or `.ToArray()` unless a concrete snapshot is truly required for correctness or lifetime safety. Prefer consuming `IEnumerable<T>` directly when you only need to iterate.
@@ -562,6 +582,13 @@ services.AddNavigationProvider<MyAdminMenu>();
 - Don't leave unused services injected through dependency injection
 - Don't leave unused `using` statements in source files
 - Don't use `DateTime.UtcNow` — inject `IClock` and use `_clock.UtcNow` instead
+- Don't leave interface or domain-model methods undocumented.
+- Don't omit `<param>` documentation on interface methods that take parameters.
+- Don't use fully qualified namespaces when a normal `using` directive would be clear and conflict-free.
+- Don't keep multi-parameter constructors on a single line.
+- Don't leave decorative region blocks or useless AI-style comments in source.
+- Don't place an XML documentation block immediately after a property without a blank line between them.
+- Don't crowd unit tests by running setup, act, and assertion code together without visual separation.
 - Don't seal ViewModel classes that are used by any Orchard Core display driver — the framework requires unsealed types to generate runtime proxies
 - Don't put multiple public types in a single file — each public type must be in its own file whose name matches the type name
 

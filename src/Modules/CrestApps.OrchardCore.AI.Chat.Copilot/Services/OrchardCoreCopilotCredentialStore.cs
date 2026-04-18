@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Copilot;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Models;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 
@@ -14,10 +15,14 @@ namespace CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 /// </summary>
 internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStore
 {
+    private readonly IClock _clock;
     private readonly UserManager<IUser> _userManager;
 
-    public OrchardCoreCopilotCredentialStore(UserManager<IUser> userManager)
+    public OrchardCoreCopilotCredentialStore(
+        IClock clock,
+        UserManager<IUser> userManager)
     {
+        _clock = clock;
         _userManager = userManager;
     }
 
@@ -64,7 +69,7 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
             ProtectedAccessToken = credential.ProtectedAccessToken,
             ProtectedRefreshToken = credential.ProtectedRefreshToken,
             ExpiresAt = credential.ExpiresAt,
-            UpdatedUtc = credential.UpdatedUtc ?? DateTime.UtcNow,
+            UpdatedUtc = credential.UpdatedUtc ?? _clock.UtcNow,
         });
 
         await _userManager.UpdateAsync(usr);
@@ -86,7 +91,7 @@ internal sealed class OrchardCoreCopilotCredentialStore : ICopilotCredentialStor
             ProtectedRefreshToken = null,
             GitHubUsername = null,
             ExpiresAt = null,
-            UpdatedUtc = DateTime.UtcNow,
+            UpdatedUtc = _clock.UtcNow,
         });
 
         await _userManager.UpdateAsync(usr);

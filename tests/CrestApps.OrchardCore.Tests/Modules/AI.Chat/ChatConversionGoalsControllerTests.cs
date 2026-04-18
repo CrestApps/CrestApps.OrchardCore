@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using OrchardCore.Modules;
+using YSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Chat;
 
@@ -16,6 +17,7 @@ public sealed class ChatConversionGoalsControllerTests
     [Fact]
     public async Task IndexPost_WithoutProfileSelection_ShouldReturnValidationError()
     {
+        // Arrange
         var profileManager = new Mock<IAIProfileManager>();
         profileManager
             .Setup(manager => manager.GetAsync(AIProfileType.Chat))
@@ -45,9 +47,10 @@ public sealed class ChatConversionGoalsControllerTests
 
         var controller = new ChatConversionGoalsController(
             profileManager.Object,
-            new Mock<global::YesSql.ISession>().Object,
+            new Mock<YSession>().Object,
             authorizationService.Object,
             new Mock<IClock>().Object);
+
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext
@@ -56,12 +59,17 @@ public sealed class ChatConversionGoalsControllerTests
             },
         };
 
+        // Act
         var result = await controller.IndexPost(new ChatConversionGoalsIndexViewModel());
 
+        // Assert
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ChatConversionGoalsIndexViewModel>(viewResult.Model);
+
         Assert.False(controller.ModelState.IsValid);
-        Assert.Contains(controller.ModelState[nameof(ChatConversionGoalsIndexViewModel.ProfileId)].Errors, error => error.ErrorMessage.Contains("required", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            controller.ModelState[nameof(ChatConversionGoalsIndexViewModel.ProfileId)].Errors,
+            error => error.ErrorMessage.Contains("required", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(2, model.Profiles.Count);
     }
 }

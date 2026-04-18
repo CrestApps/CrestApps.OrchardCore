@@ -10,7 +10,9 @@ internal sealed class DocumentFileSystemFileStoreOptionsPostConfiguration : IPos
     private readonly ShellSettings _shellSettings;
     private readonly IWebHostEnvironment _webHostEnvironment;
 
-    public DocumentFileSystemFileStoreOptionsPostConfiguration(ShellSettings shellSettings, IWebHostEnvironment webHostEnvironment)
+    public DocumentFileSystemFileStoreOptionsPostConfiguration(
+        ShellSettings shellSettings,
+        IWebHostEnvironment webHostEnvironment)
     {
         _shellSettings = shellSettings;
         _webHostEnvironment = webHostEnvironment;

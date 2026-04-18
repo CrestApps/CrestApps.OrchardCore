@@ -63,7 +63,6 @@ public sealed class GetContentItemLinkTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
@@ -79,10 +78,8 @@ public sealed class GetContentItemLinkTool : AIFunction
         var httpContext = httpContextAccessor.HttpContext;
 
         if (httpContext is null)
-
         {
             if (logger.IsEnabled(LogLevel.Debug))
-
             {
                 logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Returning content item ID only.", TheName);
 

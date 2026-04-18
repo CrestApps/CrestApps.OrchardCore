@@ -46,13 +46,11 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
@@ -60,7 +58,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -74,7 +71,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         if (page < 1)
         {
-
             page = 1;
 
         }
@@ -87,7 +83,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         if (arguments.TryGetFirstString("term", out var term))
         {
-
             workflowTypes = workflowTypes.Where(x => x.Name.Contains(term, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -99,7 +94,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

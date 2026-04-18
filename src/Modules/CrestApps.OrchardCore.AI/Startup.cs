@@ -233,7 +233,6 @@ public sealed class ApiChatStartup : StartupBase
     }
 }
 
-#region Connection Management Feature
 [Feature(AIConstants.Feature.ConnectionManagement)]
 public sealed class ConnectionManagementStartup : StartupBase
 {
@@ -264,13 +263,10 @@ public sealed class ConnectionManagementOCDeploymentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-
         services.AddDeployment<AIProviderConnectionDeploymentSource, AIProviderConnectionDeploymentStep, AIProviderConnectionDeploymentStepDisplayDriver>();
     }
 }
-#endregion
 
-#region Chat Analytics Feature
 [Feature(AIConstants.Feature.ChatAnalytics)]
 public sealed class ChatAnalyticsStartup : StartupBase
 {
@@ -291,4 +287,3 @@ public sealed class ChatAnalyticsStartup : StartupBase
     }
 }
 
-#endregion

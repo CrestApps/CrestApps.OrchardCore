@@ -121,7 +121,6 @@ internal static class AzureEventGridEndpoint
                 logger.LogInformation("Event received: {EventType}, Subject: {Subject}, Id: {Id}", e.EventType, e.Subject, e.Id);
             }
 
-
             var omnichannelMessage = new OmnichannelMessage
             {
                 Channel = "Unknown",

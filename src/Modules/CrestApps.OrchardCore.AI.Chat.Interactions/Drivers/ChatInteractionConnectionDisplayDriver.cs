@@ -55,7 +55,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)
     {
-
         var model = new EditChatInteractionConnectionViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);

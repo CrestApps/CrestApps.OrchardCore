@@ -14,7 +14,6 @@ public sealed class UserDisplayNameAdminMenu : AdminNavigationProvider
         { "groupId", DisplayNameSettingsDisplayDriver.GroupId },
     };
 
-
     internal readonly IStringLocalizer S;
 
     public UserDisplayNameAdminMenu(IStringLocalizer<UserDisplayNameAdminMenu> stringLocalizer)

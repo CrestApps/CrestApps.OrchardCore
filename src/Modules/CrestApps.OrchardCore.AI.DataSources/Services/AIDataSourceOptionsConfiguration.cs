@@ -16,9 +16,8 @@ internal sealed class AIDataSourceOptionsConfiguration : IConfigureOptions<AIDat
     public void Configure(AIDataSourceOptions options)
     {
         var settings = _siteService.GetSettings<AIDataSourceSettings>();
-        var overrides = AIDataSourceOptions.FromSettings(settings);
 
-        options.DefaultStrictness = overrides.DefaultStrictness;
-        options.DefaultTopNDocuments = overrides.DefaultTopNDocuments;
+        options.DefaultStrictness = settings.DefaultStrictness;
+        options.DefaultTopNDocuments = settings.DefaultTopNDocuments;
     }
 }

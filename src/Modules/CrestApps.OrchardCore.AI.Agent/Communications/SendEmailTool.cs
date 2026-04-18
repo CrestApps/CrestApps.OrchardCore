@@ -71,7 +71,6 @@ public sealed class SendEmailTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<SendEmailTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
-
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
@@ -79,18 +78,13 @@ public sealed class SendEmailTool : AIFunction
         var emailService = arguments.Services.GetService<IEmailService>();
 
         if (emailService is null)
-
-
         {
             logger.LogWarning("No EmailService is registered. Can't send emails using this tool.");
 
             return "No EmailService is registered. Can't send emails using this tool.";
-
         }
 
-
         if (!arguments.TryGetFirstString("to", out var to))
-
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "to");
 
@@ -98,16 +92,13 @@ public sealed class SendEmailTool : AIFunction
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
-
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "subject");
             return "Unable to find a subject argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("body", out var body))
-
         {
-
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
             return "Unable to find a body argument in the function arguments.";
         }
@@ -126,7 +117,6 @@ public sealed class SendEmailTool : AIFunction
             var user = await userManager?.GetUserAsync(principal);
 
             if (user is not null)
-
             {
                 senderEmail = await userManager.GetEmailAsync(user);
             }
@@ -137,7 +127,6 @@ public sealed class SendEmailTool : AIFunction
             To = to,
             Subject = subject,
             HtmlBody = body,
-
             Sender = senderEmail,
             From = senderEmail,
             ReplyTo = senderEmail,
@@ -149,7 +138,6 @@ public sealed class SendEmailTool : AIFunction
         }
 
         if (arguments.TryGetFirstString("bcc", out var bcc))
-
         {
             message.Bcc = bcc;
         }
@@ -160,7 +148,6 @@ public sealed class SendEmailTool : AIFunction
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
             return "The email was sent successfully.";

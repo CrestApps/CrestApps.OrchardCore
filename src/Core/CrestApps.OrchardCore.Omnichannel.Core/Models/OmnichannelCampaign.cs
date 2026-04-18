@@ -15,10 +15,12 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
     public string Channel { get; set; }
 
     public string ChannelEndpointId { get; set; }
+
     /// <summary>
     /// When the campaign in automated, this will be the initial message to start the converation with the customer.
     /// </summary>
     public string InitialOutboundPromptPattern { get; set; }
+
     /// <summary>
     /// A clear description of what success looks like for this automated campaign.
     /// Used by the AI to determine when the chat can be terminated.
@@ -57,9 +59,12 @@ public sealed class OmnichannelCampaign : CatalogItem, IDisplayTextAwareModel, I
 
     public bool AllowAIToUpdateSubject { get; set; } = true;
 
+    /// <summary>
+    /// Creates a copy of the current campaign.
+    /// </summary>
     public OmnichannelCampaign Clone()
     {
-        return new OmnichannelCampaign()
+        return new OmnichannelCampaign
         {
             ItemId = ItemId,
             DisplayText = DisplayText,

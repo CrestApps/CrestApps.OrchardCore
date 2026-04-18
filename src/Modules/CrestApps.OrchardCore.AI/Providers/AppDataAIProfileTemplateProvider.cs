@@ -40,7 +40,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
 
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync()
     {
-
         var templates = new List<AIProfileTemplate>();
 
         // Scan the global App_Data/Templates/Profiles/ directory.

@@ -11,7 +11,9 @@ public sealed class AgentsModel : PageModel
     private readonly A2AClientFactory _clientFactory;
     private readonly ILogger<AgentsModel> _logger;
 
-    public AgentsModel(A2AClientFactory clientFactory, ILogger<AgentsModel> logger)
+    public AgentsModel(
+        A2AClientFactory clientFactory,
+        ILogger<AgentsModel> logger)
     {
         _clientFactory = clientFactory;
         _logger = logger;
@@ -174,6 +176,7 @@ public sealed class AgentsModel : PageModel
             ErrorMessage = $"An error occurred while loading agent cards: {ex.Message}";
         }
     }
+
     /// <summary>
     /// Custom <see cref="IActionResult"/> that streams A2A events as text/event-stream
     /// so the browser receives chunks incrementally.
@@ -184,7 +187,10 @@ public sealed class AgentsModel : PageModel
         private readonly MessageSendParams _sendParams;
         private readonly ILogger _logger;
 
-        public StreamingA2AResult(A2A.A2AClient client, MessageSendParams sendParams, ILogger logger)
+        public StreamingA2AResult(
+            A2A.A2AClient client,
+            MessageSendParams sendParams,
+            ILogger logger)
         {
             _client = client;
             _sendParams = sendParams;

@@ -72,7 +72,6 @@ public sealed class SendNotificationTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -80,23 +79,19 @@ public sealed class SendNotificationTool : AIFunction
         var notificationService = arguments.Services.GetRequiredService<INotificationService>();
 
         if (!arguments.TryGetFirstString("userId", out var userId))
-
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "userId");
             return "Unable to find a userId argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("subject", out var subject))
-
         {
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "subject");
             return "Unable to find a subject argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirstString("summary", out var summary))
-
         {
-
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "summary");
             return "Unable to find a summary argument in the function arguments.";
         }
@@ -119,9 +114,7 @@ public sealed class SendNotificationTool : AIFunction
         var user = await userManager.FindByIdAsync(userId);
 
         if (user is null)
-
         {
-
             logger.LogWarning("AI tool '{ToolName}' could not find user with ID '{UserId}'.", Name, userId);
             return "Unable to find a user that matches the given userId: " + userId;
         }
@@ -132,7 +125,6 @@ public sealed class SendNotificationTool : AIFunction
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
             return "The user was notified successfully.";

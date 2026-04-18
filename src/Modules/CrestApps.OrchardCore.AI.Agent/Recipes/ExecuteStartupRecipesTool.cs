@@ -42,13 +42,11 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
@@ -62,12 +60,10 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
-
         {
             logger.LogWarning("AI tool '{ToolName}': missing 'recipeName' argument.", Name);
 
@@ -81,7 +77,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         var recipe = recipes.FirstOrDefault(c => c.Name == recipeName);
 
         if (recipe is null)
-
         {
             logger.LogWarning("AI tool '{ToolName}': no recipe found matching name '{RecipeName}'.", Name, recipeName);
 
@@ -92,9 +87,7 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         await recipeEnvironmentProviders.OrderBy(x => x.Order).InvokeAsync((provider, env) => provider.PopulateEnvironmentAsync(env), environment, logger);
 
         try
-
         {
-
             var executionId = Guid.NewGuid().ToString("n");
 
             await recipeExecutor.ExecuteAsync(executionId, recipe, environment, cancellationToken);
@@ -103,21 +96,18 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
             return $"The recipe '{recipe.DisplayName}' has been run successfully";
         }
         catch (RecipeExecutionException e)
-
         {
             logger.LogError(e, "Unable to import a recipe file.");
 
             return $"The recipe '{recipe.DisplayName}' failed to run due to the following errors: {string.Join(' ', e.StepResult.Errors)}";
         }
         catch (Exception e)
-
         {
             logger.LogError(e, "Unable to import a recipe file.");
 

@@ -40,13 +40,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -55,7 +53,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -71,14 +68,12 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
     protected static string MissingArgument(string name = "recipe")
     {
-
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
 #pragma warning disable IDE0060 // Remove unused parameter
     protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, CancellationToken cancellationToken)
 #pragma warning restore IDE0060 // Remove unused parameter
-
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
 
@@ -96,7 +91,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
         {
             if (stepSchemas.ContainsKey(stepName))
             {
-
                 continue;
 
             }
@@ -107,7 +101,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
             {
                 if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
                 {
-
                     continue;
 
                 }
@@ -125,7 +118,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
             if (added)
             {
-
                 continue;
             }
 
@@ -168,14 +160,11 @@ public abstract class ImportRecipeBaseTool : AIFunction
 
         var result = rootSchema.Evaluate(JsonSerializer.SerializeToElement(data, RecipeSerializerOptions), new EvaluationOptions()
         {
-
             OutputFormat = OutputFormat.List,
         });
 
         if (!result.IsValid)
-
         {
-
             logger.LogWarning("AI tool recipe import failed: invalid recipe format.");
 
             var schemaStructure = JsonSerializer.Serialize(rootSchema);
@@ -190,7 +179,6 @@ Please generate a valid recipe and try again:
         }
 
         if (await recipeExecutionService.ExecuteRecipeAsync(data))
-
         {
             logger.LogInformation("AI tool recipe import completed successfully.");
 

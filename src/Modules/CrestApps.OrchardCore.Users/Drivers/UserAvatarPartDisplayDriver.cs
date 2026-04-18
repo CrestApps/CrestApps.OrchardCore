@@ -177,7 +177,6 @@ public sealed class UserAvatarPartDisplayDriver : SectionDisplayDriver<User, Use
 
             _mediaFieldSettings = new MediaFieldSettings()
             {
-
                 AllowedExtensions = extensions.ToArray(),
                 AllowAnchors = true,
                 Required = _userAvatarOptions.Required,

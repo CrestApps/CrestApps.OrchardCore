@@ -6,8 +6,10 @@ using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
@@ -31,6 +33,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
             var store = scope.ServiceProvider.GetRequiredService<IStore>();
             var dbConnectionAccessor = scope.ServiceProvider.GetRequiredService<IDbConnectionAccessor>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIChatSessionPromptDataMigrations>>();
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
             var dialect = store.Configuration.SqlDialect;
 
@@ -97,7 +100,7 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                 continue;
                             }
 
-                            var createdUtc = DateTime.UtcNow;
+                            var createdUtc = clock.UtcNow;
 
                             if (sessionObject["CreatedUtc"] is JsonValue createdValue)
                             {

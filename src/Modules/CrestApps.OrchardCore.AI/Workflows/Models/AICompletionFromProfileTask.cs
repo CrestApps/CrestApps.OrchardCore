@@ -79,7 +79,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
-
         var profile = await _profileManager.FindByIdAsync(ProfileId);
 
         if (profile is null)
@@ -97,7 +96,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
 
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
-
             _logger.LogWarning("The generated prompt from the template is empty.");
 
             return Outcomes("Failed");
@@ -133,7 +131,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         }
         catch (Exception ex)
         {
-
             _logger.LogError(ex, "An error occurred while completing the AI task.");
 
             return Outcomes("Failed");

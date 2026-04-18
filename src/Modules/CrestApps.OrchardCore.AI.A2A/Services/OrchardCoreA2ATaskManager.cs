@@ -23,7 +23,6 @@ namespace CrestApps.Core.AI.A2A.Services;
 /// </summary>
 internal static class A2ATaskManagerFactory
 {
-
     public static ITaskManager Create(IServiceProvider serviceProvider)
     {
         var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
@@ -39,7 +38,6 @@ internal static class A2ATaskManagerFactory
             var profiles = await profileManager.GetAsync(AIProfileType.Agent);
 
             if (options.ExposeAgentsAsSkill)
-
             {
                 return BuildSkillModeCard(agentUrl, profiles);
             }
@@ -49,7 +47,6 @@ internal static class A2ATaskManagerFactory
             var targetProfile = ResolveAgentProfile(profiles, agentName);
 
             if (targetProfile is null)
-
             {
                 return BuildSkillModeCard(agentUrl, profiles);
 
@@ -158,9 +155,7 @@ internal static class A2ATaskManagerFactory
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{targetProfile.Name}'.");
 
             var messages = new List<ChatMessage>
-
             {
-
                 new(ChatRole.User, prompt),
             };
 
@@ -230,9 +225,7 @@ internal static class A2ATaskManagerFactory
         IHttpContextAccessor httpContextAccessor,
         A2AHostOptions options,
         AgentMessage lastMessage)
-
     {
-
         var profileManager = services.GetRequiredService<IAIProfileManager>();
         var profiles = await profileManager.GetAsync(AIProfileType.Agent);
 
@@ -330,7 +323,6 @@ internal static class A2ATaskManagerFactory
     private static AIProfile ResolveAgentProfile(IEnumerable<AIProfile> profiles, string agentName)
     {
         if (string.IsNullOrEmpty(agentName) || profiles is null)
-
         {
             return null;
         }

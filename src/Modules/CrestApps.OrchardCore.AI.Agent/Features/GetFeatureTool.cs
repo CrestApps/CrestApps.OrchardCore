@@ -39,13 +39,11 @@ public sealed class GetFeatureTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -54,7 +52,6 @@ public sealed class GetFeatureTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
         }
@@ -62,7 +59,6 @@ public sealed class GetFeatureTool : AIFunction
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirstString("featureId", out var featureId))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureId' argument.", Name);
 
@@ -73,7 +69,6 @@ public sealed class GetFeatureTool : AIFunction
             .FirstOrDefault(feature => !feature.IsTheme() && feature.Id.Equals(featureId, StringComparison.OrdinalIgnoreCase));
 
         if (feature is null)
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: feature '{FeatureId}' not found.", Name, featureId);
 
@@ -85,7 +80,6 @@ public sealed class GetFeatureTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

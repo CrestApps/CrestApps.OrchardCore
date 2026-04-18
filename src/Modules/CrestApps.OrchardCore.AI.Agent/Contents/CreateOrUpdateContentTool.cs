@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using YSession = YesSql.ISession;
 using Usr = OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
@@ -65,21 +66,19 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     public override JsonElement JsonSchema => _jsonSchema;
 
-    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
+    public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>
     {
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateContentTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
-
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
@@ -99,14 +98,12 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         else
         {
-
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItem argument in the function arguments.", TheName);
 
             return "Unable to find a contentItem argument in the function arguments.";
         }
 
         if (!arguments.TryGetFirst<bool>("isDraft", out var isDraft))
-
         {
             isDraft = false;
         }
@@ -127,14 +124,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         if (contentItem is null)
         {
-
             if (string.IsNullOrEmpty(model?.ContentType))
             {
-
                 logger.LogWarning("AI tool '{ToolName}': A Content type is required to create a new content item.", TheName);
 
                 return "A Content type is required";
-
             }
 
             var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
@@ -142,7 +136,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
             if (contentDefintions is null)
             {
-
                 logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, model.ContentType);
 
                 return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
@@ -154,7 +147,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
             contentItem.Merge(model);
 
             // When no user is authenticated, try to resolve an owner from optional parameters
-
             // so that contentItem.Owner is set correctly.
             await TrySetOwnerAsync(arguments, contentItem);
 
@@ -177,9 +169,7 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
         }
 
         else
-
         {
-
             contentItem.Merge(model, _updateJsonMergeSettings);
 
             await contentManager.UpdateAsync(contentItem);
@@ -206,14 +196,13 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
 
         else
         {
-
             await contentManager.PublishAsync(contentItem);
 
             response = $"A content item with id '{contentItem.ContentItemId}' was successfully published.";
         }
 
         // Flush the changes to allow other tools to access it in the same function execution, such as a tool that generates a link to the content item after creation.
-        var session = arguments.Services.GetRequiredService<global::YesSql.ISession>();
+        var session = arguments.Services.GetRequiredService<YSession>();
         await session.FlushAsync(cancellationToken);
 
         // HttpContext may be null when invoked from a background task (e.g., post-session processing).
@@ -221,13 +210,11 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
         var httpContext = httpContextAccessor.HttpContext;
 
         if (httpContext is not null)
-
         {
             var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
             var metadata = await contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
 
             if (metadata.AdminRouteValues is not null)
-
             {
                 response += "\nThe edit URI is: " + linkGenerator.GetUriByRouteValues(httpContext, null, metadata.AdminRouteValues);
             }
@@ -238,20 +225,18 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
             }
         }
         else if (logger.IsEnabled(LogLevel.Debug))
-
         {
             logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Skipping URI generation.", TheName);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
-
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
-
         }
 
         return response;
     }
+
     /// <summary>
     /// Attempts to resolve a content owner from optional tool parameters when no user is authenticated.
     /// This allows the AI model to specify who should own the content item when invoked from anonymous contexts.
@@ -263,11 +248,8 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
 
         // If a user is already authenticated, the content handlers will set the owner automatically.
         if (principal?.Identity?.IsAuthenticated == true)
-
         {
-
             return;
-
         }
 
         var userManager = arguments.Services.GetRequiredService<UserManager<Usr.IUser>>();
@@ -275,19 +257,16 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
         Usr.IUser user = null;
 
         if (arguments.TryGetFirstString("ownerUserId", out var ownerUserId))
-
         {
             user = await userManager.FindByIdAsync(ownerUserId);
         }
 
         if (user is null && arguments.TryGetFirstString("ownerUsername", out var ownerUsername))
-
         {
             user = await userManager.FindByNameAsync(ownerUsername);
         }
 
         if (user is null && arguments.TryGetFirstString("ownerEmail", out var ownerEmail))
-
         {
             user = await userManager.FindByEmailAsync(ownerEmail);
         }

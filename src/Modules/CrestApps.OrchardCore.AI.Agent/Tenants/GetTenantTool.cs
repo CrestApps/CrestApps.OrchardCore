@@ -38,13 +38,11 @@ public sealed class GetTenantTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -53,7 +51,6 @@ public sealed class GetTenantTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
         }
@@ -61,7 +58,6 @@ public sealed class GetTenantTool : AIFunction
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
 
         if (!arguments.TryGetFirstString("name", out var name))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
@@ -69,7 +65,6 @@ public sealed class GetTenantTool : AIFunction
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
 
@@ -78,7 +73,6 @@ public sealed class GetTenantTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

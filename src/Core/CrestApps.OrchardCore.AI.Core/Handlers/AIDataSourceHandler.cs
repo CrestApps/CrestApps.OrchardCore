@@ -74,9 +74,7 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
             dataSource.Properties ??= new Dictionary<string, object>();
 
             foreach (var (key, value) in properties)
-
             {
-
                 dataSource.Properties[key] = value;
 
             }

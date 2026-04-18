@@ -38,12 +38,10 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
     {
-
         var accessibleTools = await GetAccessibleToolsAsync();
 
         return Initialize<AIProfilePostSessionViewModel>("AIProfilePostSession_Edit", model =>
         {
-
             var settings = template.GetOrCreate<AIProfilePostSessionSettings>();
 
             model.EnablePostSessionProcessing = settings.EnablePostSessionProcessing;
@@ -67,7 +65,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
 
             if (accessibleTools.Count > 0)
             {
-
                 var selectedToolNames = settings.ToolNames ?? [];
 
                 model.PostSessionTools = accessibleTools

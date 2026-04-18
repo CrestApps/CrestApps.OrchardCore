@@ -46,8 +46,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         S = stringLocalizer;
     }
 
-    // ───────────────────── Scope override ─────────────────────
-
     /// <summary>
     /// Uses <c>ShellScope.UsingChildScopeAsync</c> so each hub invocation gets
     /// its own <c>ISession</c> / <c>IDocumentStore</c> lifecycle with proper
@@ -56,8 +54,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     protected override Task ExecuteInScopeAsync(Func<IServiceProvider, Task> action)
         => ShellScope.UsingChildScopeAsync(scope => action(scope.ServiceProvider));
 
-    // ──────────────────── Authorization ────────────────────
-
     protected override async Task<bool> AuthorizeProfileAsync(IServiceProvider services, AIProfile profile)
     {
         var authorizationService = services.GetRequiredService<IAuthorizationService>();
@@ -65,8 +61,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
         return await authorizationService.AuthorizeAsync(httpContext.User, AIPermissions.QueryAnyAIProfile, profile);
     }
-
-    // ──────────────── Time / ID generation ────────────────
 
     protected override DateTime GetUtcNow()
     {
@@ -80,8 +74,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     protected override string DefaultBlankSessionTitle
         => AIConstants.DefaultBlankSessionTitle;
 
-    // ─────────────── Deployment settings ───────────────
-
     protected override async Task<DefaultAIDeploymentSettings> GetDeploymentSettingsAsync(IServiceProvider services)
     {
         var siteService = services.GetRequiredService<ISiteService>();
@@ -89,8 +81,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
         return site.As<DefaultAIDeploymentSettings>();
     }
-
-    // ──────────────────── Error messages ────────────────────
 
     protected override string GetRequiredFieldMessage(string fieldName)
         => S["{0} is required.", fieldName].Value;
@@ -140,8 +130,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
     protected override string GetSpeechSynthesisErrorMessage(Exception ex = null)
         => S["An error occurred while synthesizing speech. Please try again."].Value;
 
-    // ────────────── Citation collection ──────────────
-
     protected override void CollectStreamingReferences(
         IServiceProvider services,
         ChatResponseHandlerContext handlerContext,
@@ -162,8 +150,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         // Collect tool references added during streaming.
         citationCollector.CollectToolReferences(references, contentItemIds);
     }
-
-    // ───────────── Post-completion analytics ─────────────
 
     protected override async Task OnMessageRatedAsync(
         IServiceProvider services,
@@ -190,8 +176,6 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             await eventService.RecordUserRatingAsync(chatSession.SessionId, thumbsUpCount, thumbsDownCount);
         }
     }
-
-    // ──────────── TemplatePrompt profile support ────────────
 
     /// <summary>
     /// Extends the base handler to support <see cref="AIProfileType.TemplatePrompt"/> profiles

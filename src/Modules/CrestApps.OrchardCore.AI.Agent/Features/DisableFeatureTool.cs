@@ -43,13 +43,11 @@ internal sealed class DisableFeatureTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -58,7 +56,6 @@ internal sealed class DisableFeatureTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
         }
@@ -66,7 +63,6 @@ internal sealed class DisableFeatureTool : AIFunction
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
 
         if (!arguments.TryGetFirst<HashSet<string>>("featureIds", out var featureIds))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'featureIds' argument.", Name);
 
@@ -74,7 +70,6 @@ internal sealed class DisableFeatureTool : AIFunction
         }
 
         if (featureIds.Count == 0)
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: 'featureIds' argument is empty.", Name);
 
@@ -85,7 +80,6 @@ internal sealed class DisableFeatureTool : AIFunction
             .Where(feature => featureIds.Contains(feature.Id) && !feature.EnabledByDependencyOnly && !feature.IsTheme());
 
         if (!features.Any())
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: no valid features found for the provided IDs.", Name);
 
@@ -97,7 +91,6 @@ internal sealed class DisableFeatureTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

@@ -16,15 +16,14 @@ internal sealed class GeneralAIOptionsConfiguration : IConfigureOptions<GeneralA
     public void Configure(GeneralAIOptions options)
     {
         var settings = _siteService.GetSettings<GeneralAISettings>();
-        var overrides = GeneralAIOptions.FromSettings(settings);
 
-        options.EnableAIUsageTracking = overrides.EnableAIUsageTracking;
-        options.EnablePreemptiveMemoryRetrieval = overrides.EnablePreemptiveMemoryRetrieval;
-        options.OverrideMaximumIterationsPerRequest = overrides.OverrideMaximumIterationsPerRequest;
-        options.MaximumIterationsPerRequest = overrides.MaximumIterationsPerRequest;
-        options.OverrideEnableDistributedCaching = overrides.OverrideEnableDistributedCaching;
-        options.EnableDistributedCaching = overrides.EnableDistributedCaching;
-        options.OverrideEnableOpenTelemetry = overrides.OverrideEnableOpenTelemetry;
-        options.EnableOpenTelemetry = overrides.EnableOpenTelemetry;
+        options.EnableAIUsageTracking = settings.EnableAIUsageTracking;
+        options.EnablePreemptiveMemoryRetrieval = settings.EnablePreemptiveMemoryRetrieval;
+        options.OverrideMaximumIterationsPerRequest = settings.OverrideMaximumIterationsPerRequest;
+        options.MaximumIterationsPerRequest = settings.MaximumIterationsPerRequest;
+        options.OverrideEnableDistributedCaching = settings.OverrideEnableDistributedCaching;
+        options.EnableDistributedCaching = settings.EnableDistributedCaching;
+        options.OverrideEnableOpenTelemetry = settings.OverrideEnableOpenTelemetry;
+        options.EnableOpenTelemetry = settings.EnableOpenTelemetry;
     }
 }

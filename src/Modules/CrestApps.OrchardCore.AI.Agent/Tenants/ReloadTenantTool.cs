@@ -38,13 +38,11 @@ public sealed class ReloadTenantTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
@@ -53,7 +51,6 @@ public sealed class ReloadTenantTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
@@ -61,7 +58,6 @@ public sealed class ReloadTenantTool : AIFunction
         var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
 
         if (!shellSettings.IsDefaultShell())
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
@@ -69,7 +65,6 @@ public sealed class ReloadTenantTool : AIFunction
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
@@ -77,7 +72,6 @@ public sealed class ReloadTenantTool : AIFunction
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
 
@@ -85,7 +79,6 @@ public sealed class ReloadTenantTool : AIFunction
         }
 
         if (tenantSettings.IsDefaultShell())
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: cannot reload the default tenant.", Name);
 
@@ -97,7 +90,6 @@ public sealed class ReloadTenantTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 

@@ -8,20 +8,17 @@ public class CopilotSettingsViewModel
 {
     public CopilotAuthenticationType AuthenticationType { get; set; }
 
-    // ── GitHub OAuth fields ──
-
     public string ClientId { get; set; }
 
     public string ClientSecret { get; set; }
 
     public bool HasSecret { get; set; }
+
     /// <summary>
     /// The auto-computed callback URL to display to the user (read-only).
     /// </summary>
     [BindNever]
     public string ComputedCallbackUrl { get; set; }
-
-    // ── BYOK (API Key) fields ──
 
     public string ProviderType { get; set; }
 

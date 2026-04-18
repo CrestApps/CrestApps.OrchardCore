@@ -379,7 +379,7 @@ internal sealed class Program
     private sealed class StubContentSchemaProvider(
         IReadOnlyList<string> partNames,
         IReadOnlyList<string> fieldTypeNames) : IContentSchemaProvider
-        {
+    {
         public Task<IEnumerable<string>> GetFieldTypeNamesAsync()
             => Task.FromResult<IEnumerable<string>>(fieldTypeNames);
 

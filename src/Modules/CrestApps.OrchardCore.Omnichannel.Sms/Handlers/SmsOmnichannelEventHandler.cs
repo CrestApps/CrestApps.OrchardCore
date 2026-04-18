@@ -86,9 +86,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             omnichannelEvent.Message.Channel == OmnichannelConstants.Channels.Sms &&
 
                 omnichannelEvent.Message.IsInbound)
-
         {
-
             return;
         }
 
@@ -97,7 +95,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var endpoint = await _channelEndpointsManager.GetByServiceAddressAsync(omnichannelEvent.Message.Channel, serviceAddress);
 
         if (endpoint is null)
-
         {
             _logger.LogWarning("No channel endpoint found for incoming SMS message. Channel: {Channel}, Service Address: {ServiceAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), omnichannelEvent.Message.ServiceAddress.SanitizeLogValue());
 
@@ -111,7 +108,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         ActivityInteractionType.Automated);
 
         if (activity is null)
-
         {
             _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), omnichannelEvent.Message.ServiceAddress.SanitizeLogValue(), omnichannelEvent.Message.CustomerAddress.SanitizeLogValue());
 
@@ -125,9 +121,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         await _omnichannelActivityStore.UpdateAsync(activity);
 
         if (string.IsNullOrWhiteSpace(activity.CampaignId))
-
         {
-
             _logger.LogWarning("The linked Activity {ActivityId} does not have an CampaignId associated with it. Cannot process incoming SMS message.", activity.ItemId);
 
             return;
@@ -136,7 +130,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var campaign = await _campaignManager.FindByIdAsync(activity.CampaignId);
 
         if (campaign == null)
-
         {
             _logger.LogWarning("The Campaign {CampaignId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.CampaignId, activity.ItemId);
 
@@ -145,9 +138,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         if (string.IsNullOrWhiteSpace(activity.AISessionId))
-
         {
-
             _logger.LogWarning("The linked Activity {ActivityId} does not have an AI Session associated with it. Cannot process incoming SMS message.", activity.ItemId);
 
             return;
@@ -156,7 +147,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var chatSession = await _chatSessionManager.FindByIdAsync(activity.AISessionId);
 
         if (chatSession is null)
-
         {
             _logger.LogWarning("The AI Chat Session {AISessionId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.AISessionId, activity.ItemId);
 
@@ -180,7 +170,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         string bestChoice = null;
 
         try
-
         {
             var prompts = await _promptStore.GetPromptsAsync(chatSession.SessionId);
 
@@ -225,7 +214,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         try
         {
             var result = await _smsService.SendAsync(new SmsMessage
-
             {
                 To = activity.PreferredDestination,
                 Body = bestChoice,
@@ -313,9 +301,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     var conclusionPrompt = await _aiTemplateService.RenderAsync(SmsConclusionAnalysisPromptId);
 
                     var transcript = new List<ChatMessage>
-
                     {
-
                         new (ChatRole.System, conclusionPrompt),
                         new (ChatRole.User, userPrompt),
                     };
@@ -327,9 +313,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         OmnichannelActivity omnichannelActivity = null;
 
                         if (campaign.AllowAIToUpdateSubject && result.Result.Subject is not null)
-
                         {
-
                             subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
                             subject.Merge(result.Result.Subject);
 
@@ -344,12 +328,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (campaign.AllowAIToUpdateContact && result.Result.Contact is not null)
                         {
-
                             contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
                             if (contact is not null)
                             {
-
                                 contact.Merge(result.Result.Contact);
 
                                 await contentManager.UpdateAsync(contact);
@@ -357,7 +339,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         }
 
                         if (result.Result.Concluded)
-
                         {
                             var clock = scope.ServiceProvider.GetRequiredService<IClock>();
                             var workflowManager = scope.ServiceProvider.GetRequiredService<IWorkflowManager>();
@@ -400,7 +381,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         catch (Exception ex)
         {
-
             _logger.LogError(ex, "Failed to send SMS message to {To} for Activity {ActivityId}.", activity.PreferredDestination.SanitizeLogValue(), activity.ItemId);
         }
 

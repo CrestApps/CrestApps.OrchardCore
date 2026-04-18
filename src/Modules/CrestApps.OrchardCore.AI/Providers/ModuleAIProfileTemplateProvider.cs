@@ -16,7 +16,6 @@ namespace CrestApps.OrchardCore.AI.Providers;
 /// </summary>
 internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvider
 {
-
     internal const string ProfilesDirectoryPath = "Templates/Profiles";
 
     private const string _profilesDirectorySubPath = ProfilesDirectoryPath + "/";

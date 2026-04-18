@@ -68,9 +68,7 @@ public sealed class ListAIProfilesTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<ListAIProfilesTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
-
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 

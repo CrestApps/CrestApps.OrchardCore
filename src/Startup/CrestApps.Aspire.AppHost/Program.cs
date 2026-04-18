@@ -39,7 +39,6 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__Endpoint", "http://localhost:11434");
         options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__ChatDeploymentName", ollamaModelName);
 
-        // ── Copilot BYOK (API Key) configuration ──
         // Uncomment the following lines to configure the Copilot orchestrator with BYOK authentication.
         // This bypasses GitHub OAuth and uses your own API key from a model provider.
         //

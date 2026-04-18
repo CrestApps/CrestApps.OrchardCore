@@ -91,7 +91,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
     {
-
         var model = new AICompletionWithConfigTaskViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -137,7 +136,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
         if (_toolDefinitions.Tools.Count > 0)
         {
-
             var toolsModel = new EditProfileToolsViewModel();
 
             await context.Updater.TryUpdateModelAsync(toolsModel, Prefix);
@@ -163,7 +161,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
     {
-
         var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
 
         return deployments
@@ -194,7 +191,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
     private async Task<AIDeployment> FindDeploymentAsync(string selector)
     {
-
         var deployment = await _deploymentManager.FindByNameAsync(selector);
 
         if (deployment != null)

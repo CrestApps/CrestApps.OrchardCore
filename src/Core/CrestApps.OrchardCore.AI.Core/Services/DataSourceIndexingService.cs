@@ -73,7 +73,6 @@ public sealed class DataSourceIndexingService
         if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) ||
             string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
         {
-
             return;
 
         }
@@ -90,7 +89,6 @@ public sealed class DataSourceIndexingService
 
         if (masterProfile.Type != DataSourceConstants.IndexingTaskType)
         {
-
             _logger.LogWarning("Master index profile '{IndexName}' has invalid index type for data source '{DataSourceId}'.",
             dataSource.AIKnowledgeBaseIndexProfileName, dataSource.ItemId);
 
@@ -131,7 +129,6 @@ public sealed class DataSourceIndexingService
 
         if (masterIndexProfiles.Count == 0)
         {
-
             return;
 
         }
@@ -142,7 +139,6 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
@@ -155,14 +151,12 @@ public sealed class DataSourceIndexingService
     /// </summary>
     public async Task SyncByIndexProfileIdsAsync(IEnumerable<string> indexProfileIds, CancellationToken cancellationToken = default)
     {
-
         ArgumentNullException.ThrowIfNull(indexProfileIds);
 
         var idList = indexProfileIds.ToList();
 
         if (idList.Count == 0)
         {
-
             return;
         }
 
@@ -173,7 +167,6 @@ public sealed class DataSourceIndexingService
 
         if (masterIndexProfiles.Count == 0)
         {
-
             return;
 
         }
@@ -184,7 +177,6 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
@@ -199,7 +191,6 @@ public sealed class DataSourceIndexingService
     {
         if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
         {
-
             return;
 
         }
@@ -211,7 +202,6 @@ public sealed class DataSourceIndexingService
 
         if (masterProfile == null)
         {
-
             return;
 
         }
@@ -220,7 +210,6 @@ public sealed class DataSourceIndexingService
 
         if (contentManager == null)
         {
-
             _logger.LogWarning("No vector search service found for provider '{ProviderName}'. Unable to delete documents for data source '{DataSourceId}'.",
             masterProfile.ProviderName, dataSource.ItemId);
 
@@ -228,7 +217,6 @@ public sealed class DataSourceIndexingService
         }
 
         try
-
         {
             var deleted = await contentManager.DeleteByDataSourceIdAsync(masterProfile.ToIndexProfileInfo(), dataSource.ItemId, cancellationToken);
 
@@ -252,16 +240,13 @@ public sealed class DataSourceIndexingService
     public async Task IndexDocumentsAsync(
         IEnumerable<string> documentIds,
         CancellationToken cancellationToken = default)
-
     {
-
         ArgumentNullException.ThrowIfNull(documentIds);
 
         var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
 
         if (idList.Count == 0)
         {
-
             return;
         }
 
@@ -270,7 +255,6 @@ public sealed class DataSourceIndexingService
 
         if (masterIndexProfiles.Count == 0)
         {
-
             return;
         }
 
@@ -278,14 +262,12 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
             if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) ||
                 string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
             {
-
                 continue;
             }
 
@@ -294,7 +276,6 @@ public sealed class DataSourceIndexingService
 
             if (masterProfile == null)
             {
-
                 continue;
 
             }
@@ -303,7 +284,6 @@ public sealed class DataSourceIndexingService
 
             if (sourceProfile == null)
             {
-
                 continue;
 
             }
@@ -312,7 +292,6 @@ public sealed class DataSourceIndexingService
 
             if (documentReader == null)
             {
-
                 continue;
             }
 
@@ -327,16 +306,13 @@ public sealed class DataSourceIndexingService
     public async Task RemoveDocumentsAsync(
         IEnumerable<string> documentIds,
         CancellationToken cancellationToken = default)
-
     {
-
         ArgumentNullException.ThrowIfNull(documentIds);
 
         var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
 
         if (idList.Count == 0)
         {
-
             return;
         }
 
@@ -345,7 +321,6 @@ public sealed class DataSourceIndexingService
 
         if (masterIndexProfiles.Count == 0)
         {
-
             return;
         }
 
@@ -353,13 +328,11 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
             if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName))
             {
-
                 continue;
             }
 
@@ -368,7 +341,6 @@ public sealed class DataSourceIndexingService
 
             if (masterProfile == null)
             {
-
                 continue;
 
             }
@@ -377,7 +349,6 @@ public sealed class DataSourceIndexingService
 
             if (documentIndexManager == null)
             {
-
                 continue;
             }
 
@@ -423,13 +394,11 @@ public sealed class DataSourceIndexingService
         IDataSourceDocumentReader documentReader,
         List<string> documentIds,
         CancellationToken cancellationToken)
-
     {
         var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
 
         if (documentIndexManager == null)
         {
-
             return;
 
         }
@@ -438,7 +407,6 @@ public sealed class DataSourceIndexingService
 
         if (indexManager == null || !await indexManager.ExistsAsync(masterProfile.IndexFullName))
         {
-
             return;
 
         }
@@ -451,7 +419,6 @@ public sealed class DataSourceIndexingService
 
         if (embeddingGenerator == null)
         {
-
             return;
         }
 
@@ -473,13 +440,11 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
             if (string.IsNullOrWhiteSpace(sourceDoc.Content))
             {
-
                 continue;
             }
 
@@ -493,25 +458,21 @@ public sealed class DataSourceIndexingService
 
             if (chunkTexts.Count == 0)
             {
-
                 continue;
             }
 
             // Prepend the title to the first chunk so it is embedded and becomes searchable.
             if (!string.IsNullOrWhiteSpace(sourceDoc.Title))
             {
-
                 chunkTexts[0] = normalizedTitle + "\n" + chunkTexts[0];
             }
 
             try
-
             {
                 var embeddings = await embeddingGenerator.GenerateAsync(chunkTexts, cancellationToken: cancellationToken);
 
                 if (embeddings == null || embeddings.Count != chunkTexts.Count)
                 {
-
                     continue;
                 }
 
@@ -524,7 +485,6 @@ public sealed class DataSourceIndexingService
                 var filters = BuildFilterFields(sourceDoc.Fields);
 
                 for (var i = 0; i < chunkTexts.Count; i++)
-
                 {
                     var chunkId = $"{referenceId}_{i}";
 
@@ -572,7 +532,6 @@ public sealed class DataSourceIndexingService
         if (documents.Count > 0)
         {
             try
-
             {
                 await documentIndexManager.AddOrUpdateDocumentsAsync(masterProfile, documents);
 
@@ -635,7 +594,6 @@ public sealed class DataSourceIndexingService
     {
         if (string.IsNullOrEmpty(dataSource.AIKnowledgeBaseIndexProfileName) || string.IsNullOrEmpty(dataSource.SourceIndexProfileName))
         {
-
             return;
         }
 
@@ -644,7 +602,6 @@ public sealed class DataSourceIndexingService
 
         if (masterProfile == null)
         {
-
             return;
         }
 
@@ -745,13 +702,11 @@ public sealed class DataSourceIndexingService
         {
             if (cancellationToken.IsCancellationRequested)
             {
-
                 break;
             }
 
             if (string.IsNullOrWhiteSpace(sourceDoc.Content))
             {
-
                 continue;
             }
 
@@ -762,20 +717,17 @@ public sealed class DataSourceIndexingService
 
             if (chunkTexts.Count == 0)
             {
-
                 continue;
             }
 
             // Prepend the title to the first chunk so it is embedded and becomes searchable.
             if (!string.IsNullOrWhiteSpace(sourceDoc.Title))
             {
-
                 chunkTexts[0] = sourceDoc.Title + "\n" + chunkTexts[0];
             }
 
             // Generate embeddings for all chunks.
             try
-
             {
                 var embeddings = await embeddingGenerator.GenerateAsync(chunkTexts, cancellationToken: cancellationToken);
 
@@ -792,7 +744,6 @@ public sealed class DataSourceIndexingService
 
                 // Create one document per chunk.
                 for (var i = 0; i < chunkTexts.Count; i++)
-
                 {
                     var chunkId = $"{referenceId}_{i}";
 
@@ -882,7 +833,6 @@ public sealed class DataSourceIndexingService
     {
         if (sourceFields == null || sourceFields.Count == 0)
         {
-
             return null;
 
         }

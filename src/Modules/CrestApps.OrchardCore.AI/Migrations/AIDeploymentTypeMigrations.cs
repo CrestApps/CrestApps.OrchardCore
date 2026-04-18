@@ -310,7 +310,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         ISiteService siteService,
         IReadOnlyDictionary<string, string> deploymentNameMap)
     {
-
         await TryConvertDefaultDeploymentSettingsAsync(siteService, deploymentNameMap);
 
         var profileCatalog = serviceProvider.GetRequiredService<IAIProfileStore>();
@@ -337,7 +336,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         foreach (var template in await templateCatalog.GetAllAsync())
         {
-
             var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
             var updated = false;
@@ -379,7 +377,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         IEnumerable<AIProviderConnection> connections,
         IEnumerable<AIDeployment> deployments)
     {
-
         var updated = false;
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -487,7 +484,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
             foreach (var connection in orderedConnections)
             {
-
                 var deploymentName = FindDefaultDeploymentId(type, connection.ItemId, connection.Name, deployments);
 
                 if (!string.IsNullOrEmpty(deploymentName))

@@ -11,8 +11,10 @@ public sealed class DefaultAIMemoryStore : DocumentCatalog<AIMemoryEntry, AIMemo
 {
     private readonly ILookupNormalizer _lookupNormalizer;
 
-    public DefaultAIMemoryStore(ISession session, ILookupNormalizer lookupNormalizer)
-    : base(session)
+    public DefaultAIMemoryStore(
+        ISession session,
+        ILookupNormalizer lookupNormalizer)
+        : base(session)
     {
         _lookupNormalizer = lookupNormalizer;
         CollectionName = MemoryConstants.CollectionName;

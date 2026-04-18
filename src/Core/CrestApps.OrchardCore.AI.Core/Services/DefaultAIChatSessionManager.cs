@@ -47,7 +47,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
     public async Task<AIChatSession> NewAsync(AIProfile profile, NewAIChatSessionContext context)
     {
-
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(context);
 
@@ -68,13 +67,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             chatSession.UserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         }
         else if (!context.AllowRobots)
-
         {
             var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
 
             if (string.IsNullOrEmpty(clientId))
             {
-
                 throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
             }
 
@@ -83,7 +80,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         if (profile.Type == AIProfileType.Chat)
         {
-
             var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
             var initialPrompt = profileMetadata.InitialPrompt;
 
@@ -116,7 +112,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
     public async Task<AIChatSessionResult> PageAsync(int page, int pageSize, AIChatSessionQueryContext context)
     {
-
         ArgumentNullException.ThrowIfNull(context);
 
         var user = _httpContextAccessor.HttpContext?.User;
@@ -138,7 +133,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
-
             query = query.Where(i => i.ProfileId == context.ProfileId);
         }
 
@@ -189,13 +183,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
     public async Task<AIChatSession> FindAsync(string id)
     {
-
         ArgumentException.ThrowIfNullOrEmpty(id);
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user.Identity?.IsAuthenticated == true)
-
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -203,13 +195,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                 .FirstOrDefaultAsync();
         }
         else
-
         {
             var clientId = await _clientIPAddressAccessor.GetClientIdAsync(_httpContextAccessor.HttpContext);
 
             if (string.IsNullOrEmpty(clientId))
             {
-
                 throw new InvalidOperationException("Unable to find the clientId. Possible Robot.");
             }
 
@@ -235,14 +225,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
     public async Task<bool> DeleteAsync(string sessionId)
     {
-
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {
-
             return false;
 
         }
@@ -257,7 +245,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         if (chatSession == null)
         {
-
             return false;
         }
 
@@ -278,14 +265,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
     public async Task<int> DeleteAllAsync(string profileId)
     {
-
         ArgumentException.ThrowIfNullOrEmpty(profileId);
 
         var user = _httpContextAccessor.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
         {
-
             return 0;
 
         }
@@ -303,7 +288,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         foreach (var session in sessions)
         {
-
             var deletingContext = new CrestApps.Core.Models.DeletingContext<AIChatSession>(session);
             await _handlers.InvokeAsync((handler, ctx) => handler.DeletingAsync(ctx), deletingContext, _logger);
 

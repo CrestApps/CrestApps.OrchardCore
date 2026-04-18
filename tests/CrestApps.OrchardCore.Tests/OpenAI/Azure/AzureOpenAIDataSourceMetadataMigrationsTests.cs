@@ -10,14 +10,12 @@ using Microsoft.Extensions.Logging;
 
 using Moq;
 
-
 #pragma warning disable CS0618 // Type or member is obsolete
 
 namespace CrestApps.OrchardCore.Tests.OpenAI.Azure;
 
 public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
 {
-
     [Fact]
 
     public async Task FindFirstEmbeddingMetadata_WhenEmbeddingConnectionExists_ShouldReturnMetadata()
@@ -38,8 +36,6 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
 
         Assert.Equal("embedding-1", metadata.EmbeddingDeploymentId);
     }
-
-
 
     [Fact]
 
@@ -66,8 +62,6 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
             It.IsAny<Func<It.IsAnyType, Exception, string>>()),
             Times.Once);
     }
-
-
 
     private static async Task<DataSourceIndexProfileMetadata> InvokeFindFirstEmbeddingMetadata(IServiceProvider serviceProvider, ILogger logger)
     {

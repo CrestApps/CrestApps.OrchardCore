@@ -18,9 +18,12 @@ public sealed class OmnichannelDisposition : CatalogItem, IDisplayTextAwareModel
 
     public string OwnerId { get; set; }
 
+    /// <summary>
+    /// Creates a copy of the current disposition.
+    /// </summary>
     public OmnichannelDisposition Clone()
     {
-        return new OmnichannelDisposition()
+        return new OmnichannelDisposition
         {
             ItemId = ItemId,
             DisplayText = DisplayText,

@@ -39,20 +39,17 @@ public sealed class ListDocumentsTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(
         AIFunctionArguments arguments,
         CancellationToken cancellationToken)
-
     {
         var logger = arguments.Services.GetRequiredService<ILogger<ListDocumentsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
         }
@@ -61,7 +58,6 @@ public sealed class ListDocumentsTool : AIFunction
 
         if (executionContext?.Resource is ChatInteraction interaction)
         {
-
             var chatInteractionId = interaction.ItemId;
             var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
@@ -93,7 +89,6 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
@@ -101,7 +96,6 @@ public sealed class ListDocumentsTool : AIFunction
         }
 
         if (executionContext?.Resource is AIProfile profile)
-
         {
             var documentStore = arguments.Services.GetService<IAIDocumentStore>();
 
@@ -120,14 +114,12 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (profileDocs is { Count: > 0 })
             {
-
                 allDocuments.AddRange(profileDocs);
             }
 
             if (AIInvocationScope.Current?.Items.TryGetValue(nameof(AIChatSession), out var sessionObj) == true &&
                 sessionObj is AIChatSession session &&
                     session.Documents is { Count: > 0 })
-
             {
                 var sessionDocs = await documentStore.GetDocumentsAsync(session.SessionId, AIConstants.DocumentReferenceTypes.ChatSession);
 
@@ -156,7 +148,6 @@ public sealed class ListDocumentsTool : AIFunction
 
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", Name);
             }
 
@@ -173,13 +164,11 @@ public sealed class ListDocumentsTool : AIFunction
     {
         if (bytes < 1024)
         {
-
             return $"{bytes} B";
         }
 
         if (bytes < 1024 * 1024)
         {
-
             return $"{bytes / 1024.0:F1} KB";
         }
 

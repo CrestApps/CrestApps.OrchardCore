@@ -48,7 +48,6 @@ public sealed class PromptTemplateSelectionService
     }
     public async Task<Template> GetAsync(string id)
     {
-
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
         var templates = await ListAsync();
@@ -93,7 +92,6 @@ public sealed class PromptTemplateSelectionService
     }
     private async Task<IEnumerable<Template>> GetRuntimeTemplatesAsync()
     {
-
         var templates = await _profileTemplateManager.GetAllAsync();
 
         return templates
@@ -118,7 +116,6 @@ public sealed class PromptTemplateSelectionService
     }
     private static Template ConvertToTemplate(AIProfileTemplate template)
     {
-
         var metadata = template.GetOrCreate<SystemPromptTemplateMetadata>();
 
         return new Template

@@ -80,7 +80,6 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         var strictness = dataSourceSettings.GetStrictness(model.Strictness);
         var topN = dataSourceSettings.GetTopNDocuments(model.TopNDocuments);
 
-
         if (strictness != model.Strictness)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Strictness),

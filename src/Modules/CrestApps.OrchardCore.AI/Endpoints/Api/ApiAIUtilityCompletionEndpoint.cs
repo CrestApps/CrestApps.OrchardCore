@@ -65,7 +65,6 @@ internal static class ApiAIUtilityCompletionEndpoint
 
         if (profile.Type != AIProfileType.Utility)
         {
-
             logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the utility-completion endpoint.", profile.ItemId, profile.Type.ToString());
 
             return TypedResults.NotFound();

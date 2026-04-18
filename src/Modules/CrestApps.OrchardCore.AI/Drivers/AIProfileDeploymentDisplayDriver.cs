@@ -51,7 +51,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
     {
-
         var model = new EditProfileDeploymentViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -86,7 +85,6 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
                 : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
-
             });
     }
 }

@@ -55,7 +55,6 @@ public sealed class SendSmsTool : AIFunction
         var logger = arguments.Services.GetRequiredService<ILogger<SendSmsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))
-
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
 
@@ -66,7 +65,6 @@ public sealed class SendSmsTool : AIFunction
 
         if (!arguments.TryGetFirstString("phone", out var phone))
         {
-
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "phone");
 
             return "Unable to find a phone argument in the function arguments.";
@@ -74,7 +72,6 @@ public sealed class SendSmsTool : AIFunction
 
         if (!arguments.TryGetFirstString("body", out var body))
         {
-
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "body");
 
             return "Unable to find a body argument in the function arguments.";
@@ -82,7 +79,6 @@ public sealed class SendSmsTool : AIFunction
 
         if (!phoneFormatValidator.IsValid(phone))
         {
-
             logger.LogWarning("AI tool '{ToolName}' received invalid phone format '{Phone}'.", Name, phone);
 
             return "The given phone number must be in a international format.";
@@ -90,7 +86,6 @@ public sealed class SendSmsTool : AIFunction
 
         var message = new SmsMessage()
         {
-
             To = phone,
 
             Body = body,

@@ -55,7 +55,6 @@ public sealed class ChatInteractionsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-
         services.AddSiteDisplayDriver<ChatInteractionMemorySettingsDisplayDriver>();
     }
 }

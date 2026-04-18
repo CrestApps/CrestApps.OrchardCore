@@ -10,6 +10,7 @@ public enum ContentDefinitionSchemaType
     Part,
     Field,
 }
+
 /// <summary>
 /// Produces a JSON Schema fragment describing the settings of a particular
 /// content part or field definition.
@@ -20,8 +21,12 @@ public interface IContentDefinitionSchemaDefinition
 
     string Name { get; }
 
+    /// <summary>
+    /// Builds the schema describing the settings payload for this content definition.
+    /// </summary>
     ValueTask<JsonSchemaBuilder> GetSettingsSchemaAsync();
 }
+
 /// <summary>
 /// Handy base that targets <see cref="ContentDefinitionSchemaType.Part"/>,
 /// caches the schema after first construction, and exposes a helper to
@@ -43,6 +48,7 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
     }
 
     protected abstract JsonSchemaBuilder BuildSettingsCore();
+
     /// <summary>
     /// Wraps <paramref name="innerSettings"/> under a top-level object
     /// property keyed by <paramref name="settingsKey"/>.
@@ -63,6 +69,7 @@ public abstract class PartSettingsSchemaBase : IContentDefinitionSchemaDefinitio
 
     protected static (string, JsonSchemaBuilder) Prop(string name, JsonSchemaBuilder schema)
         => (name, schema);
+
     /// <summary>
     /// Builds a settings-object with <c>additionalProperties: false</c>.
     /// </summary>

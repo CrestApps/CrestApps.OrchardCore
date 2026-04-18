@@ -40,13 +40,11 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
-
         ["Strict"] = false,
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
@@ -54,7 +52,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
-
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
         }
 
@@ -62,7 +59,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         var recipeExecutionService = arguments.Services.GetRequiredService<RecipeExecutionService>();
 
         if (!arguments.TryGetFirstString("name", out var name))
-
         {
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
@@ -73,7 +69,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         var partDefinition = await contentDefinitionManager.GetPartDefinitionAsync(name);
 
         if (partDefinition is null)
-
         {
             logger.LogWarning("AI tool '{ToolName}' could not find a part definition matching the name '{ContentPart}'.", TheName, name);
 
@@ -105,7 +100,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
-
                 logger.LogDebug("AI tool '{ToolName}' completed.", TheName);
             }
 
