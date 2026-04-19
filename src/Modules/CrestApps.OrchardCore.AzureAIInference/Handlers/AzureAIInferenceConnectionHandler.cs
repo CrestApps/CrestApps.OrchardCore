@@ -43,6 +43,11 @@ public sealed class AzureAIInferenceConnectionHandler : IAIProviderConnectionHan
             return;
         }
 
+        if (!context.Connection.Has<AzureAIInferenceConnectionMetadata>())
+        {
+            return;
+        }
+
         var metadata = context.Connection.GetOrCreate<AzureAIInferenceConnectionMetadata>();
 
         context.Values["Endpoint"] = metadata.Endpoint?.ToString();

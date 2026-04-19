@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Drivers;
 using CrestApps.OrchardCore.OpenAI.Handlers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -25,8 +26,9 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>());
         services.AddScoped<IAIClientProvider, OpenAIClientProvider>();
-        services.AddCoreAIProfile<OpenAICompletionClient>(OpenAIConstants.ImplementationName, OpenAIConstants.ClientName, o =>
+        services.AddCoreAIProfile<OpenAICompletionClient>(OpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["OpenAI"];
             o.Description = S["Provides AI profiles using OpenAI."];
@@ -53,7 +55,7 @@ public sealed class ConnectionManagementStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, OpenAIProviderConnectionSettingsHandler>();
-        services.AddTransient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, OpenAIProviderConnectionHandler>());
         services.AddDisplayDriver<AIProviderConnection, OpenAIProviderConnectionDisplayDriver>();
         services.AddCoreAIConnectionSource(OpenAIConstants.ClientName, o =>
         {

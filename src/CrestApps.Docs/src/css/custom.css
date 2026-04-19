@@ -82,3 +82,39 @@
     .footer--dark a:hover {
         color: #eaa52c;
     }
+
+.theme-doc-sidebar-menu .menu__list .menu__list {
+    margin-top: 0.35rem;
+    margin-left: 0.5rem;
+    padding: 0.4rem 0.45rem 0.45rem;
+    border-left: 1px solid rgba(24, 22, 24, 0.12);
+    border-radius: 0.5rem;
+}
+
+.theme-doc-sidebar-item-category-level-1 > .menu__list {
+    background-color: rgba(24, 22, 24, 0.04);
+}
+
+.theme-doc-sidebar-item-category-level-2 > .menu__list {
+    background-color: rgba(24, 22, 24, 0.08);
+}
+
+.theme-doc-sidebar-item-category-level-3 > .menu__list {
+    background-color: rgba(24, 22, 24, 0.12);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-menu .menu__list .menu__list {
+    border-left-color: rgba(217, 217, 217, 0.16);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-item-category-level-1 > .menu__list {
+    background-color: rgba(217, 217, 217, 0.04);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-item-category-level-2 > .menu__list {
+    background-color: rgba(217, 217, 217, 0.08);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-item-category-level-3 > .menu__list {
+    background-color: rgba(217, 217, 217, 0.12);
+}

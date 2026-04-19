@@ -2,63 +2,62 @@
 sidebar_label: Introduction
 sidebar_position: 1
 title: CrestApps Orchard Core Modules
-description: Overview of CrestApps open-source modules for Orchard Core CMS
+description: Orchard Core modules, startup apps, and integration guidance built on top of the shared CrestApps.Core framework.
 ---
 
 # CrestApps Orchard Core Modules
 
-CrestApps provides a collection of open-source modules designed to enhance **[Orchard Core](https://orchardcore.net/)**, a powerful application framework built on **ASP.NET Core**.
+This site documents the **Orchard Core-specific** packages in `CrestApps.OrchardCore`: modules, feature IDs, admin configuration, startup apps, samples, and CMS integration guidance.
 
-These modules build on the published **CrestApps.Core** packages, adding Orchard Core UI, admin experiences, feature wiring, recipes, and CMS-specific integrations.
+The shared platform underneath these modules now lives in **CrestApps.Core**. When you need framework concepts such as orchestration internals, service APIs, tool pipelines, provider implementation details, or reusable .NET host guidance, use **[core.crestapps.com](https://core.crestapps.com)**.
 
-## Key Focus Areas
+## What this documentation covers
 
-- **Modularity** – Independent modules allow for seamless integration based on project requirements.
-- **Security** – Designed following industry best practices to ensure application safety.
-- **Performance** – Optimized for speed and efficiency to maximize Orchard Core's potential.
-- **Orchard-Focused** – Documentation in this repository is scoped to Orchard Core modules, startup apps, and CMS integration guidance.
+- Orchard Core module installation and feature enablement
+- Orchard admin settings, recipes, and CMS integration surfaces
+- Orchard-specific AI, MCP, A2A, Documents, Data Sources, and Omnichannel modules
+- Startup applications and sample apps in this repository
 
-## Module Categories
+## Module groups
 
 ### Artificial Intelligence Suite
 
-Integrate most AI providers like **OpenAI**, **Azure OpenAI**, **Azure AI Inference**, **Ollama**, and more into your Orchard Core website. The AI suite includes:
+The AI modules add Orchard admin experiences and feature wiring on top of CrestApps.Core AI services.
 
-- **[Overview](orchardcore/ai/)** – Introduction to the AI Suite
-- **[AI](orchardcore/ai/overview)** – Foundation for all AI modules with profile and connection management
-- **[AI Chat](orchardcore/ai/chat)** – Chat interfaces for interacting with AI models
-- **[AI Chat Interactions](orchardcore/ai/chat-interactions)** – Ad-hoc chat with configurable parameters and document upload
-- **[Consuming AI Services](orchardcore/ai/consuming-ai-services)** – Using AI services programmatically via code
-- **[Copilot Integration](orchardcore/ai/copilot)** – GitHub Copilot SDK-based orchestration
-- **[Data Sources](orchardcore/ai/data-sources/)** – Retrieval-augmented generation (RAG) / knowledge base indexing and vector search
-- **[Documents](orchardcore/ai/documents/)** – Document upload, text extraction, and embedding
-- **[MCP](orchardcore/ai/mcp/)** – Model Context Protocol client and server support
-- **[Orchard Core Agent](orchardcore/ai/agent)** – Intelligent agents that perform tasks on your site
-- **[AI Providers](orchardcore/ai/providers/)** – Connect to OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more
+- **[Artificial Intelligence Suite](orchardcore/ai/)** - module map and Orchard-specific scope
+- **[AI Services](orchardcore/ai/overview)** - foundational Orchard AI features and admin surfaces
+- **[AI Chat](orchardcore/ai/chat)** - chat UI and profile-driven conversations
+- **[AI Chat Interactions](orchardcore/ai/chat-interactions)** - ad-hoc chat experiences without requiring a profile
+- **[AI Providers](orchardcore/ai/providers/)** - provider modules such as OpenAI, Azure OpenAI, Azure AI Inference, and Ollama
+- **[AI Documents](orchardcore/ai/documents/)** - document upload, parsing, storage, and indexing modules
+- **[AI Data Sources](orchardcore/ai/data-sources/)** - external knowledge source integrations
+- **[MCP](orchardcore/ai/mcp/)** - Orchard Core MCP client, server, and resource modules
+- **[A2A](orchardcore/ai/a2a/)** - Orchard Core client and host support for the Agent-to-Agent protocol
 
-### Standard Modules
+### Standard modules
 
-Essential CMS enhancements:
-
-- **[Content Access Control](orchardcore/modules/content-access-control)** – Role-based content restrictions
-- **[Recipes](orchardcore/modules/recipes)** – JSON-Schema support for recipes
-- **[Resources](orchardcore/modules/resources)** – Shared scripts and stylesheets
-- **[Roles](orchardcore/modules/roles)** – Enhanced role management
-- **[SignalR](orchardcore/modules/signalr)** – Real-time communication
-- **[Users](orchardcore/modules/users)** – Enhanced user management
+- **[Content Access Control](orchardcore/modules/content-access-control)**
+- **[Recipes](orchardcore/modules/recipes)**
+- **[Resources](orchardcore/modules/resources)**
+- **[Roles](orchardcore/modules/roles)**
+- **[SignalR](orchardcore/modules/signalr)**
+- **[Users](orchardcore/modules/users)**
 
 ### Omnichannel Communications
 
-Unified communication orchestration:
+- **[Omnichannel overview](orchardcore/omnichannel/)**
+- **[Event Grid integration](orchardcore/omnichannel/event-grid)**
+- **[Management UI](orchardcore/omnichannel/management)**
+- **[SMS automation](orchardcore/omnichannel/sms)**
 
-- **[Overview](orchardcore/omnichannel/)** – Core orchestration services
-- **[Event Grid](orchardcore/omnichannel/event-grid)** – Azure Event Grid integration
-- **[Management](orchardcore/omnichannel/management)** – Mini-CRM for contacts, campaigns, and activities
-- **[SMS Automation](orchardcore/omnichannel/sms)** – AI-driven SMS automation
+### Samples
 
-## Package Management
+- **[Samples overview](orchardcore/samples/)**
+- **[MCP client sample](orchardcore/samples/mcp-client)**
+- **[A2A client sample](orchardcore/samples/a2a-client)**
 
-- **Orchard Core 2.1–2.3**: Use package version `1.2.x`
-- **Orchard Core 3.0+**: Use version `2.0.0-preview-0001` or newer
+## Start here
 
-Stable releases are available on [NuGet.org](https://www.nuget.org/). Preview packages are available from the [CrestApps CloudSmith feed](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).
+1. Follow **[Getting Started](getting-started)** to build the repo or add packages to your own Orchard solution.
+2. Use the Orchard docs on this site to enable the right modules and configure the admin experience.
+3. Jump to **[core.crestapps.com](https://core.crestapps.com)** when you need framework-level implementation guidance.

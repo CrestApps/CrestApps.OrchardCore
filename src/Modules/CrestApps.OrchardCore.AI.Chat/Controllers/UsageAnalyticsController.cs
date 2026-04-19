@@ -82,7 +82,7 @@ public sealed class UsageAnalyticsController : Controller
             {
                 UserLabel = GetUserLabel(record),
                 record.IsAuthenticated,
-                ClientName = record.ClientName ?? record.ProviderName ?? "Unknown",
+                ClientName = record.ClientName ?? "Unknown",
                 ModelName = record.ModelName ?? record.DeploymentName ?? "Unknown",
             })
             .Select(group =>

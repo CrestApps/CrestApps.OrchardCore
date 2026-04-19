@@ -4,16 +4,20 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI;
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.AI.OpenAI.Azure.Handlers;
+using CrestApps.Core.AI.OpenAI.Azure.Models;
 using CrestApps.Core.AI.OpenAI.Azure.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.Drivers;
 using CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 using CrestApps.OrchardCore.OpenAI.Azure.Migrations;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure;
@@ -22,15 +26,21 @@ public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
 
-    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public Startup(
+        IStringLocalizer<Startup> stringLocalizer,
+        IShellConfiguration shellConfiguration)
     {
         S = stringLocalizer;
+        _shellConfiguration = shellConfiguration;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AzureOpenAIFeatureMigrations>();
         services.AddSingleton<IODataValidator, ODataFilterValidator>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>());
 
         services
             .AddScoped<IAIClientProvider, AzureOpenAIClientProvider>()
@@ -41,7 +51,7 @@ public sealed class Startup : StartupBase
                 o.DisplayName = S["Azure OpenAI"];
                 o.Description = S["Azure OpenAI model deployments."];
             })
-            .AddCoreAIDeploymentProvider(AzureOpenAIConstants.AzureSpeechProviderName, o =>
+            .AddCoreAIDeploymentProvider(AzureOpenAIConstants.AzureSpeechClientName, o =>
             {
                 o.SupportsContainedConnection = true;
                 o.DisplayName = S["Azure AI Services"];
@@ -49,10 +59,17 @@ public sealed class Startup : StartupBase
             })
             .AddDisplayDriver<AIDeployment, AzureSpeechDeploymentDisplayDriver>();
 
-        services.AddCoreAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, AzureOpenAIConstants.ClientName, o =>
+        services.AddCoreAIProfile<AzureOpenAICompletionClient>(AzureOpenAIConstants.ClientName, o =>
         {
             o.DisplayName = S["Azure OpenAI"];
             o.Description = S["Provides AI profiles using Azure OpenAI models."];
+        });
+
+        services.PostConfigure<AzureClientOptions>(options =>
+        {
+            _shellConfiguration
+                .GetSection("CrestApps:AI:AzureClient")
+                .Bind(options);
         });
     }
 }
@@ -80,7 +97,7 @@ public sealed class ConnectionManagementStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureOpenAIConnectionSettingsHandler>();
-        services.AddTransient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, AzureOpenAIConnectionHandler>());
         services.AddDisplayDriver<AIProviderConnection, AzureOpenAIConnectionDisplayDriver>();
         services.AddCoreAIConnectionSource(AzureOpenAIConstants.ClientName, o =>
         {

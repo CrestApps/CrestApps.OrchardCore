@@ -1,7 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
-using CrestApps.Core.AI.OpenAI.Azure.Models;
 using CrestApps.Core.Azure.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.OpenAI.Azure.ViewModels;
@@ -36,17 +35,16 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         return Initialize<AzureOpenAIConnectionViewModel>("AzureOpenAIConnection_Edit", model =>
         {
-            var metadata = connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
+            var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.AuthenticationTypes =
             [
                 new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
                     new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
-                    new (S["API Key"], nameof(AzureAuthenticationType.ApiKey)),
+                    new (S["API key"], nameof(AzureAuthenticationType.ApiKey)),
                 ];
 
-            model.EnableLogging = metadata.EnableLogging;
             model.AuthenticationType = metadata.AuthenticationType;
             model.HasApiKey = !string.IsNullOrEmpty(metadata.ApiKey);
             model.IdentityId = metadata.IdentityId;
@@ -64,7 +62,7 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var metadata = connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
@@ -93,8 +91,6 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
 
             metadata.ApiKey = protector.Protect(model.ApiKey);
         }
-
-        metadata.EnableLogging = model.EnableLogging;
 
         connection.Put(metadata);
 

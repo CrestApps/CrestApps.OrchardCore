@@ -2,118 +2,95 @@
 sidebar_label: Getting Started
 sidebar_position: 2
 title: Getting Started
-description: How to set up and run CrestApps Orchard Core modules
+description: Install, build, and run the Orchard Core modules in this repository or consume the published packages in your own Orchard solution.
 ---
 
 # Getting Started
 
-Follow these steps to get started with CrestApps Orchard Core modules.
+Use this repository when you want the Orchard Core host applications, Orchard-specific modules, or the Orchard documentation site. For shared framework guidance, see **[core.crestapps.com](https://core.crestapps.com)**.
 
 ## Prerequisites
 
-- [.NET SDK](https://dotnet.microsoft.com/download) (version matching your Orchard Core target)
-- An existing Orchard Core application, or use the CrestApps starter project
+- **.NET 10 SDK**
+- **Node.js** for the asset pipeline
+- Network access to:
+  - `https://api.nuget.org/v3/index.json`
+  - `https://nuget.cloudsmith.io/orchardcore/preview/v3/index.json`
+  - `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`
 
-## Installation
+## Install packages in your Orchard solution
 
-### Install All Modules
-
-Add the `CrestApps.OrchardCore.Cms.Core.Targets` package to include all modules at once:
+### Install all CrestApps Orchard modules
 
 ```bash
 dotnet add package CrestApps.OrchardCore.Cms.Core.Targets
 ```
 
-### Install Individual Modules
-
-Or install only the modules you need:
+### Install individual modules
 
 ```bash
 dotnet add package CrestApps.OrchardCore.AI
 dotnet add package CrestApps.OrchardCore.AI.Chat
-# ... add other modules as needed
+dotnet add package CrestApps.OrchardCore.OpenAI
 ```
 
-## Running Locally
+After installing packages, enable the required features in **Tools -> Features** inside the Orchard admin.
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
-   ```
+## Build this repository locally
 
-2. **Navigate to the Project Directory:**
-   ```bash
-   cd CrestApps.OrchardCore
-   ```
-
-3. **Install Frontend Dependencies and Rebuild Assets:**
-   ```bash
-   npm install
-   npm run rebuild
-   ```
-
-   The Gulp asset pipeline emits both the standard and minified frontend outputs into each module's `wwwroot` folder, such as `ai-chat.js` and `ai-chat.min.js`.
-
-4. **Build the Solution:**
-   ```bash
-   dotnet build
-   ```
-
-5. **Launch the Application:**
-   ```bash
-   dotnet run
-   ```
-
-6. **Enable Modules:**
-   Access the **Orchard Core Admin Dashboard** to enable desired CrestApps modules.
-
-## Package Feeds
-
-### Production Packages
-
-Stable releases are available on [NuGet.org](https://www.nuget.org/).
-
-### Preview Packages
-
-[![Hosted By: Cloudsmith](https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=for-the-badge)](https://cloudsmith.com)
-
-For the latest updates and preview packages, visit the [Cloudsmith CrestApps OrchardCore repository](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore).
-
-### Adding the Preview Feed
-
-#### In Visual Studio
-
-1. Open **NuGet Package Manager Settings** (under *Tools*).
-2. Add a new package source:
-   - **Name:** `CrestAppsPreview`
-   - **URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`
-
-#### Via NuGet.config
-
-Update your **NuGet.config** file:
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-    <add key="NuGet" value="https://api.nuget.org/v3/index.json" />
-    <add key="CrestAppsPreview" value="https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json" />
-  </packageSources>
-  <disabledPackageSources />
-</configuration>
+```powershell
+git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
+cd CrestApps.OrchardCore
+npm install
+npm run rebuild
+dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
+dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
 ```
 
-## Contributing
+> The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
 
-We welcome contributions from the community! To contribute:
+## Run the startup apps
 
-1. **Fork the repository.**
-2. **Create a new branch** for your feature or bug fix.
-3. **Make your changes** and commit them with clear messages.
-4. **Push your changes** to your fork.
-5. **Submit a pull request** to the main repository.
+### CMS host
 
-## License
+```powershell
+cd .\src\Startup\CrestApps.OrchardCore.Cms.Web
+dotnet run
+```
 
-CrestApps is licensed under the **MIT License**. See the [LICENSE](https://opensource.org/licenses/MIT) file for more details.
+Use this app when you want to test modules inside a full Orchard Core site.
+
+### Aspire host
+
+```powershell
+cd .\src\Startup\CrestApps.Aspire.AppHost
+dotnet run
+```
+
+Use this when you want the local orchestration environment for the sample clients and supporting services.
+
+### Sample clients
+
+```powershell
+cd .\src\Startup\CrestApps.OrchardCore.Samples.McpClient
+dotnet run
+```
+
+```powershell
+cd .\src\Startup\CrestApps.OrchardCore.Samples.A2AClient
+dotnet run
+```
+
+## Build the docs site
+
+```powershell
+cd .\src\CrestApps.Docs
+npm install
+npm run build
+```
+
+## Package feeds
+
+- **Stable packages:** [NuGet.org](https://www.nuget.org/)
+- **Preview packages:** [Cloudsmith CrestApps OrchardCore feed](https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore)
+- **Preview source URL:** `https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json`

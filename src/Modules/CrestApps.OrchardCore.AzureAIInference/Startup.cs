@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AzureAIInference.Drivers;
 using CrestApps.OrchardCore.AzureAIInference.Handlers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -25,9 +26,10 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>());
         services
             .AddScoped<IAIClientProvider, AzureAIInferenceClientProvider>()
-            .AddCoreAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ImplementationName, AzureAIInferenceConstants.ClientName, o =>
+            .AddCoreAIProfile<AzureAIInferenceCompletionClient>(AzureAIInferenceConstants.ClientName, o =>
             {
                 o.DisplayName = S["Azure AI Inference (GitHub Models)"];
                 o.Description = S["Provides AI profiles using Azure AI Inference (GitHub Models)."];
@@ -55,7 +57,7 @@ public sealed class ConnectionManagementStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICatalogEntryHandler<AIProviderConnection>, AzureAIInferenceConnectionSettingsHandler>();
-        services.AddTransient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IAIProviderConnectionHandler, AzureAIInferenceConnectionHandler>());
         services.AddDisplayDriver<AIProviderConnection, AzureAIInferenceConnectionDisplayDriver>();
         services.AddCoreAIConnectionSource(AzureAIInferenceConstants.ClientName, o =>
         {

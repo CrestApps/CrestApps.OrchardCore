@@ -2,21 +2,25 @@
 sidebar_label: Overview
 sidebar_position: 0
 title: Samples
-description: Sample projects demonstrating CrestApps Orchard Core module integrations.
+description: Sample applications included in the CrestApps.OrchardCore repository.
 ---
 
 # Samples
 
-This section contains sample projects that demonstrate how to integrate with CrestApps Orchard Core modules.
+This repository currently includes sample clients for the Orchard-hosted AI integration features.
 
-## Available Samples
+## Available samples
 
 | Sample | Description |
-|--------|-------------|
-| [MCP Client Sample](mcp-client) | ASP.NET Core Razor Pages app that connects to the MCP server hosted by CrestApps Orchard Core |
+| --- | --- |
+| [MCP Client Sample](mcp-client) | ASP.NET Core sample client for the Orchard MCP server |
+| [A2A Client Sample](a2a-client) | ASP.NET Core sample client for A2A-enabled agent hosts |
 
-## Running Samples
+## Startup projects
 
-Most samples are designed to run with the **Aspire AppHost** (`CrestApps.Aspire.AppHost`). Start the Aspire host first, then access the sample endpoints from the Aspire dashboard.
+The sample applications live under:
 
-See individual sample documentation for specific setup instructions.
+- `src\Startup\CrestApps.OrchardCore.Samples.McpClient`
+- `src\Startup\CrestApps.OrchardCore.Samples.A2AClient`
+
+For local multi-service development, pair them with `src\Startup\CrestApps.Aspire.AppHost` when appropriate.

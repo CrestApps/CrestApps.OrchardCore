@@ -1,73 +1,79 @@
 ---
-sidebar_label: Claude Integration
-sidebar_position: 6
+sidebar_label: Claude
+sidebar_position: 7
 title: Claude Integration
-description: Claude-based orchestrator and tenant settings for AI chat sessions in Orchard Core.
+description: Orchard Core module guidance for the Claude-based orchestrator.
 ---
+
+# Claude Integration
 
 | | |
 | --- | --- |
 | **Feature Name** | AI Claude Orchestrator |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Claude` |
 
-Provides a Claude-based orchestrator for AI chat sessions in Orchard Core.
+This module wires the shared Claude support from CrestApps.Core into Orchard Core and exposes the related Orchard settings and editors.
 
-## Summary
+## Enable the feature
 
-This module adds direct Anthropic Claude orchestration to Orchard Core through `CrestApps.Core.AI.Claude`. It includes tenant-level settings, model discovery, runtime availability checks, and per-item Claude configuration for AI Profiles, AI Profile templates, and Chat Interactions.
+Enable **AI Claude Orchestrator** when you want Claude to appear as an Orchard-managed orchestrator option for:
 
-## Capabilities
+- AI profiles
+- AI profile templates
+- chat interactions
 
-- **Claude Orchestration**: Runs chat sessions through `ClaudeOrchestrator`
-- **Tenant Settings**: Configure Claude under **Settings -> Artificial Intelligence -> Claude**
-- **Encrypted API Key Storage**: Stores the Claude API key with ASP.NET Core Data Protection
-- **Model Discovery**: Loads available Claude models from the Anthropic Models API when an API key is configured
-- **Per-Item Model Overrides**: AI Profiles, AI Profile templates, and Chat Interactions can override the default Claude model
-- **Reasoning Effort Selection**: AI Profiles, AI Profile templates, and Chat Interactions expose `Default`, `Low`, `Medium`, and `High` effort levels
-- **Template Propagation**: Claude model and effort settings saved on a Profile-source template are copied to the generated AI Profile
+## Orchard configuration
 
-## Configuration
+Claude configuration can come from both shell configuration and tenant site settings.
 
-Open **Settings -> Artificial Intelligence -> Claude** and configure:
+### appsettings.json
 
-- **Authentication type** - `NotConfigured` or `ApiKey`
-- **Base URL** - Defaults to `https://api.anthropic.com`
-- **API key** - Stored encrypted
-- **Default model** - Optional tenant-level default used when an item does not override the model
+The module binds shared Claude options from:
 
-When an API key is already stored, the settings editor attempts to load the available Claude models and switches the default-model field to a dropdown.
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Claude": {
+        "BaseUrl": "https://api.anthropic.com",
+        "DefaultModel": "claude-sonnet-4-5"
+      }
+    }
+  }
+}
+```
 
-## Usage
+### Site settings
 
-### AI Profiles
+In Orchard Core, go to **Settings -> Artificial Intelligence -> Claude**.
 
-1. Select **Claude** from the Orchestrator dropdown.
-2. The editor shows a **Claude configuration** section.
-3. Choose a model override or leave it empty to use the tenant default.
-4. Select the **Effort level** to control Claude reasoning effort.
+From there you can configure:
 
-### Chat Interactions
+- authentication type
+- API key
+- base URL
+- default model
 
-1. Select **Claude** from the Orchestrator picker.
-2. The interaction settings panel shows the Claude model and **Effort level** fields.
-3. Values are saved through the generic chat interaction settings pipeline and stored as `ClaudeSessionMetadata`.
+Tenant site settings override the shell configuration for values such as the base URL and default model. When API-key authentication is used, the key is stored encrypted.
 
-### AI Profile Templates
+## How Orchard users work with Claude
 
-1. Edit a template with **Source = Profile**.
-2. Select **Claude** as the orchestrator.
-3. Save the Claude model override and **Effort level** on the template.
-4. When the template is applied, the generated AI Profile receives the same Claude metadata.
+Once the feature is configured:
 
-## Architecture
+- AI profile editors can select Claude models
+- AI profile template editors can store Claude-related defaults
+- chat interaction editors can pick Claude-backed model settings
 
-- `ClaudeOptionsConfiguration` maps Orchard Core tenant settings onto `ClaudeOptions`
-- `ClaudeSettingsDisplayDriver` provides the tenant settings UI and secure API-key persistence
-- `AIProfileClaudeDisplayDriver`, `AIProfileTemplateClaudeDisplayDriver`, and `ChatInteractionClaudeDisplayDriver` surface Claude-specific model and effort settings
-- `ClaudeOrchestratorAvailabilityProvider` hides the orchestrator from availability-aware UIs until Claude has been configured
+If the site is not configured with an API key, the Claude model selectors remain effectively unavailable.
 
-## Related
+## Shared framework documentation
 
-- [AI Templates](profile-templates)
-- [Chat Interactions](chat-interactions)
-- [Artificial Intelligence Suite](./)
+Detailed Claude runtime guidance lives in **CrestApps.Core**:
+
+- [Claude](https://core.crestapps.com/docs/core/claude)
+
+## Related Orchard docs
+
+- [AI Services](overview)
+- [AI Chat](chat)
+- [AI Chat Interactions](chat-interactions)

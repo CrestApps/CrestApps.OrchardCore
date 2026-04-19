@@ -7,8 +7,8 @@ description: Release history and migration guides for CrestApps.OrchardCore modu
 
 # Changelog
 
-This section contains release notes, migration guides, and breaking changes for each version of **CrestApps.OrchardCore**.
+This section contains release notes, migration guides, and documentation updates for **CrestApps.OrchardCore**.
 
 | Version | Highlights |
-|---------|------------|
+| --- | --- |
 | [2.0.0](v2.0.0) | Major release — new modules, orchestrator architecture, Omnichannel Communications, MCP protocol support |

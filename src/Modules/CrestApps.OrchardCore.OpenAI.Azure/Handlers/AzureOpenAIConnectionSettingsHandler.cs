@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
-using CrestApps.Core.AI.OpenAI.Azure.Models;
 using CrestApps.Core.Azure.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
@@ -40,11 +39,11 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadata = context.Model.GetOrCreate<AzureOpenAIConnectionMetadata>();
+        var metadata = context.Model.GetOrCreate<AzureConnectionMetadata>();
 
         if (metadata.AuthenticationType == AzureAuthenticationType.ApiKey && string.IsNullOrEmpty(metadata.ApiKey))
         {
-            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureOpenAIConnectionMetadata.ApiKey)]));
+            context.Result.Fail(new ValidationResult(S["ApiKey is required when using ApiKey authentication."], [nameof(AzureConnectionMetadata.ApiKey)]));
         }
 
         return Task.CompletedTask;
@@ -57,14 +56,14 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureOpenAIConnectionMetadata)]?.AsObject();
+        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {
             return Task.CompletedTask;
         }
 
-        var metadata = connection.GetOrCreate<AzureOpenAIConnectionMetadata>();
+        var metadata = connection.GetOrCreate<AzureConnectionMetadata>();
 
         var endpoint = metadataNode[nameof(metadata.Endpoint)]?.GetValue<string>();
 

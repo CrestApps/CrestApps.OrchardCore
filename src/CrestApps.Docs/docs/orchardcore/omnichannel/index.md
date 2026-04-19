@@ -2,53 +2,48 @@
 sidebar_label: Overview
 sidebar_position: 1
 title: Omnichannel Communications
-description: Core orchestration services for inbound and outbound communication across channels such as SMS, Email, and Phone.
+description: Orchard Core modules for unified communication orchestration and management.
 ---
+
+# Omnichannel Communications
 
 | | |
 | --- | --- |
 | **Feature Name** | Omnichannel |
 | **Feature ID** | `CrestApps.OrchardCore.Omnichannel` |
 
-Provides a unified communication layer that works across any channel (SMS, email, chat, phone, and more).
+The Omnichannel modules provide Orchard Core building blocks for coordinating communication across channels such as SMS and event-driven integrations.
 
-## Overview
+## Available Orchard modules
 
-The `CrestApps.OrchardCore.Omnichannel` module is the foundation of CrestApps' Omnichannel suite. It provides the core concepts and services that allow Orchard Core to orchestrate inbound and outbound communication across channels such as **SMS**, **Email**, and **Phone** (and more).
+| Module | Docs |
+| --- | --- |
+| Base orchestration module | This page |
+| Event Grid integration | [Event Grid](event-grid) |
+| Management UI | [Management](management) |
+| SMS automation | [SMS](sms) |
 
-This module is intentionally "headless": it focuses on the orchestration layer and shared primitives and is meant to be paired with UI/CRM modules (like Omnichannel Management) and channel providers (like SMS automation).
+## What the base module does
 
-## Key concept overview
-
-- **Channel**: The medium of communication (SMS, Email, Phone, etc.).
-- **Generic webhook endpoint**: A channel-agnostic endpoint used by external services to notify Orchard Core about inbound communication events.
-- **Contact communication preferences**: Supports storing and enforcing the contact's communication preferences (Do Not Call / Do Not SMS / Do Not Email, etc.).
+- provides the shared Orchard communication layer
+- exposes the generic omnichannel webhook endpoint
+- supplies shared concepts used by the management and channel modules
 
 ## Enable the feature
 
-1. In Orchard Core Admin, go to `Tools` → `Features`.
-2. Enable `Omnichannel`.
+1. Go to **Tools -> Features** in Orchard Core.
+2. Enable **Omnichannel**.
+3. Add the related management or channel modules you need.
 
-## Webhooks
+## Webhook endpoint
 
-This module exposes a generic communication webhook endpoint:
+The base module exposes:
 
 - `~/Omnichannel/CommunicationService`
 
-Channel provider modules can forward their own provider-specific inbound events into this endpoint.
+Provider-specific integrations can forward inbound events into this endpoint.
 
 ## Notes
 
-- This module does not provide an end-user UI by itself.
-- Use Omnichannel Management to manage contacts, subjects, campaigns, dispositions, activities, and batching.
-
----
-
-## Azure Communication Services
-
-| | |
-| --- | --- |
-| **Feature Name** | Omnichannel (Azure Communication Services) |
-| **Feature ID** | `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` |
-
-Provides way to communicate using Azure Communication Services.
+- The base module does not provide the full management UI by itself.
+- Use the related module pages for channel-specific or management-specific setup.

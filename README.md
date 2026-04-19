@@ -1,50 +1,68 @@
 # CrestApps.OrchardCore
 
-`CrestApps.OrchardCore` contains the Orchard Core modules built on top of the shared CrestApps framework.
+`CrestApps.OrchardCore` contains the Orchard Core packages, modules, startup apps, and docs that build on top of the shared **CrestApps.Core** framework.
 
 ## Documentation
 
 - **Orchard Core docs:** <https://crestapps.crestapps.com>
-- **Shared framework docs:** <https://core.crestapps.com>
+- **CrestApps.Core docs:** <https://core.crestapps.com>
 
-## Repository Focus
+Use the Orchard site for Orchard module setup, admin configuration, startup apps, and CMS integration guidance. Use the Core site for shared framework concepts, APIs, orchestration internals, and reusable .NET building blocks.
 
-This repository is focused on Orchard Core-specific packages and applications:
+## Repository scope
 
-- Orchard Core abstractions
-- Orchard Core core libraries
-- Orchard Core modules
-- Orchard Core startup applications and targets
-- Orchard Core test and benchmark projects
+This repository focuses on:
 
-The shared framework libraries are being split into the separate `CrestApps.Core` repository and will later be consumed here through NuGet packages instead of project references.
+- Orchard Core abstractions and integration libraries
+- Orchard Core modules and feature wiring
+- Orchard-specific startup applications and samples
+- Orchard Core targets, tests, benchmarks, and documentation
 
-## Orchard Core Project Areas
+The underlying framework also powers non-Orchard hosts and is documented separately in the `CrestApps.Core` repository.
+
+## Current solution structure
 
 ```text
 src/
-├── OrchardCore/
-│   ├── Abstractions/
-│   ├── Core/
-│   ├── Modules/
-│   └── Targets/
+├── Abstractions/
+├── Common/
+├── Core/
+├── CrestApps.Docs/
+├── Modules/
 ├── Startup/
-│   ├── CrestApps.OrchardCore.Cms.Web/
-│   ├── CrestApps.OrchardCore.Samples.A2AClient/
-│   └── CrestApps.OrchardCore.Samples.McpClient/
-└── CrestApps.Docs/
+└── Targets/
+
+tests/
+├── CrestApps.OrchardCore.Benchmarks/
+└── CrestApps.OrchardCore.Tests/
 ```
 
-## Getting Started
+## Main project areas
+
+| Area | Purpose |
+| --- | --- |
+| `src\Abstractions` | Shared Orchard Core abstractions |
+| `src\Common` | Shared support code used by Orchard projects |
+| `src\Core` | Orchard-focused core libraries |
+| `src\Modules` | Orchard Core modules such as AI, Omnichannel, Roles, Users, and SignalR |
+| `src\Startup` | Runnable apps including the CMS host, Aspire host, and sample clients |
+| `src\Targets` | Package targets that bundle module references |
+| `src\CrestApps.Docs` | Docusaurus site for Orchard-specific documentation |
+
+## Getting started
 
 ```powershell
 git clone https://github.com/CrestApps/CrestApps.OrchardCore.git
 cd CrestApps.OrchardCore
+npm install
+npm run rebuild
 dotnet build .\CrestApps.OrchardCore.slnx -c Release /p:NuGetAudit=false
 dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.csproj -c Release /p:NuGetAudit=false
 ```
 
-## Packages
+The .NET build restores Orchard Core preview packages from Cloudsmith, so network access to the configured feeds is required.
+
+## Package feeds
 
 - **Stable:** <https://www.nuget.org/>
 - **Preview feed:** <https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore>
