@@ -1,8 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Core;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,11 +25,18 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 internal sealed class AIProfileDocumentMigrations : DataMigration
 {
     private const int _batchSize = 50;
-    private const string _legacyNestedPropertiesKey = nameof(AIProfile.Properties);
     private const string _legacyFunctionInvocationMetadataKey = "AIProfileFunctionInvocationMetadata";
     private const string _legacyDataSourceMetadataKey = "AIProfileDataSourceMetadata";
+    private const string _legacyDocumentsMetadataKey = "AIProfileDocumentsMetadata";
+    private const string _legacyAnalyticsMetadataKey = "AIProfileAnalyticsMetadata";
+    private const string _legacyAzureRagMetadataKey = "AzureRagChatMetadata";
     private const string _functionInvocationMetadataKey = nameof(FunctionInvocationMetadata);
     private const string _dataSourceMetadataKey = "DataSourceMetadata";
+    private const string _documentsMetadataKey = nameof(DocumentsMetadata);
+    private const string _analyticsMetadataKey = nameof(AnalyticsMetadata);
+    private const string _dataSourceRagMetadataKey = nameof(AIDataSourceRagMetadata);
+    private const string _legacyProfileTypePrefix = "CrestApps.OrchardCore.AI.Models.AIProfile,";
+    private const string _currentProfileTypePrefix = "CrestApps.Core.AI.Models.AIProfile,";
 
     // Match the DictionaryDocument<AIProfile> type name pattern used by YesSql.
     private const string _dictionaryDocumentTypePrefix =
@@ -35,16 +44,29 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
 
     public static int Create()
     {
-        ShellScope.AddDeferredTask(scope => ImportLegacyProfilesAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
 
-        return 2;
+        return 3;
     }
 
     public static int UpdateFrom1()
     {
-        ShellScope.AddDeferredTask(scope => ImportLegacyProfilesAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
 
-        return 2;
+        return 3;
+    }
+
+    public static int UpdateFrom2()
+    {
+        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
+
+        return 3;
+    }
+
+    private static async Task ImportAndNormalizeProfilesAsync(IServiceProvider serviceProvider)
+    {
+        await ImportLegacyProfilesAsync(serviceProvider);
+        await NormalizePersistedProfilesAsync(serviceProvider);
     }
 
     private static async Task ImportLegacyProfilesAsync(IServiceProvider serviceProvider)
@@ -142,8 +164,6 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
                                 }
                             }
 
-                            NormalizeMigratedProfile(profile);
-
                             var validationResult = await profileManager.ValidateAsync(profile);
                             if (!validationResult.Succeeded)
                             {
@@ -178,6 +198,70 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
         }
     }
 
+    private static async Task NormalizePersistedProfilesAsync(IServiceProvider serviceProvider)
+    {
+        var store = serviceProvider.GetRequiredService<IStore>();
+        var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
+        var logger = serviceProvider.GetRequiredService<ILogger<AIProfileDocumentMigrations>>();
+
+        var dialect = store.Configuration.SqlDialect;
+        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(AIConstants.AICollectionName);
+        var table = $"{store.Configuration.TablePrefix}{documentTableName}";
+        var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
+        var quotedIdColumnName = dialect.QuoteForColumnName(nameof(Document.Id));
+        var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
+        var quotedContentColumnName = dialect.QuoteForColumnName(nameof(Document.Content));
+
+        await using var connection = dbConnectionAccessor.CreateConnection();
+        await connection.OpenAsync();
+
+        var sqlBuilder = new SqlBuilder(store.Configuration.TablePrefix, store.Configuration.SqlDialect);
+        sqlBuilder.AddSelector(quotedIdColumnName);
+        sqlBuilder.AddSelector("," + quotedContentColumnName);
+        sqlBuilder.From(quotedTableName);
+        sqlBuilder.WhereAnd(
+            $" ({quotedTypeColumnName} LIKE '{_legacyProfileTypePrefix}%' OR {quotedTypeColumnName} LIKE '{_currentProfileTypePrefix}%') ");
+
+        var documents = (await connection.QueryAsync<Document>(sqlBuilder.ToSqlString())).ToList();
+        if (documents.Count == 0)
+        {
+            return;
+        }
+
+        var totalUpdated = 0;
+
+        foreach (var document in documents)
+        {
+            if (JsonNode.Parse(document.Content) is not JsonObject profileDocument)
+            {
+                continue;
+            }
+
+            if (!NormalizePersistedProfileDocument(profileDocument))
+            {
+                continue;
+            }
+
+            await connection.ExecuteAsync(
+                $"UPDATE {quotedTableName} SET {quotedContentColumnName} = @Content WHERE {quotedIdColumnName} = @Id",
+                new
+                {
+                    document.Id,
+                    Content = profileDocument.ToJsonString(),
+                });
+
+            totalUpdated++;
+        }
+
+        if (totalUpdated > 0 && logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Normalized {Count} persisted AI profiles in {TableName} to the current property structure.",
+                totalUpdated,
+                table);
+        }
+    }
+
     private static IEnumerable<IReadOnlyList<Document>> BatchDocuments(List<Document> documents)
     {
         for (var index = 0; index < documents.Count; index += _batchSize)
@@ -199,65 +283,50 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
         RenameLegacyProperty(propertiesObject, _legacyDataSourceMetadataKey, _dataSourceMetadataKey);
     }
 
-    private static void NormalizeMigratedProfile(AIProfile profile)
+    private static bool NormalizePersistedProfileDocument(JsonObject profileDocument)
     {
-        if (profile.Properties.TryGetValue(_legacyNestedPropertiesKey, out var nestedPropertiesValue) &&
-            TryConvertToJsonObject(nestedPropertiesValue) is { Count: > 0 } nestedProperties)
+        var updated = false;
+
+        if (profileDocument[nameof(AIProfile.Properties)] is JsonObject nestedProperties)
         {
             foreach (var property in nestedProperties)
             {
-                profile.Properties.TryAdd(property.Key, property.Value?.DeepClone());
+                if (profileDocument[property.Key] is null)
+                {
+                    profileDocument[property.Key] = property.Value?.DeepClone();
+                    updated = true;
+                }
             }
+
+            profileDocument.Remove(nameof(AIProfile.Properties));
+            updated = true;
         }
 
-        profile.Properties.Remove(_legacyNestedPropertiesKey);
-        RenameLegacyProperty(profile.Properties, _legacyFunctionInvocationMetadataKey, _functionInvocationMetadataKey);
-        RenameLegacyProperty(profile.Properties, _legacyDataSourceMetadataKey, _dataSourceMetadataKey);
+        updated |= RenameLegacyProperty(profileDocument, _legacyFunctionInvocationMetadataKey, _functionInvocationMetadataKey);
+        updated |= RenameLegacyProperty(profileDocument, _legacyDataSourceMetadataKey, _dataSourceMetadataKey);
+        updated |= RenameLegacyProperty(profileDocument, _legacyDocumentsMetadataKey, _documentsMetadataKey);
+        updated |= RenameLegacyProperty(profileDocument, _legacyAnalyticsMetadataKey, _analyticsMetadataKey);
+        updated |= RenameLegacyProperty(profileDocument, _legacyAzureRagMetadataKey, _dataSourceRagMetadataKey);
+
+        return updated;
     }
 
-    private static void RenameLegacyProperty(JsonObject propertiesObject, string legacyKey, string newKey)
+    private static bool RenameLegacyProperty(JsonObject propertiesObject, string legacyKey, string newKey)
     {
+        var updated = false;
+
         if (propertiesObject[newKey] is null &&
             propertiesObject[legacyKey] is JsonNode legacyNode)
         {
             propertiesObject[newKey] = legacyNode.DeepClone();
+            updated = true;
         }
 
-        propertiesObject.Remove(legacyKey);
-    }
-
-    private static void RenameLegacyProperty(IDictionary<string, object> properties, string legacyKey, string newKey)
-    {
-        if (!properties.TryGetValue(legacyKey, out var legacyValue))
+        if (propertiesObject.Remove(legacyKey))
         {
-            return;
+            updated = true;
         }
 
-        if (!properties.ContainsKey(newKey))
-        {
-            properties[newKey] = legacyValue;
-        }
-
-        properties.Remove(legacyKey);
-    }
-
-    private static JsonObject TryConvertToJsonObject(object value)
-    {
-        if (value is null)
-        {
-            return null;
-        }
-
-        if (value is JsonObject jsonObject)
-        {
-            return jsonObject;
-        }
-
-        if (value is JsonNode jsonNode)
-        {
-            return jsonNode as JsonObject;
-        }
-
-        return JsonSerializer.SerializeToNode(value) as JsonObject;
+        return updated;
     }
 }
