@@ -45,14 +45,38 @@ Most users don't need to do anything manually. The automatic migration handles t
 On application startup, the data migration automatically:
 
 1. Scans all existing `AIProviderConnection` records for deployment name fields
-2. Imports legacy branch-era `DictionaryDocument<AIProfile>`, `DictionaryDocument<AIProviderConnection>`, and `DictionaryDocument<AIDeployment>` rows into the current persisted AI stores when those older document records are still present in the database, including the legacy Azure connection metadata that was previously stored under `AzureOpenAIConnectionMetadata`
-3. Creates typed `AIDeployment` records for each non-empty deployment name
-4. Sets the `IsDefault` flag on the first deployment of each type per connection
-5. Preserves all existing functionality — no downtime or data loss
+2. Runs the established preview-era migration chain for tenants that were already upgraded through intermediate v2 preview builds
+3. Runs dedicated direct-upgrade migrations for tenants coming straight from `v1.x`, including legacy `DictionaryDocument<AIProfile>` rows that still carry earlier assembly version strings
+4. Creates typed `AIDeployment` records for each non-empty deployment name
+5. Sets the `IsDefault` flag on the first deployment of each type per connection
+6. Preserves all existing functionality — no downtime or data loss
 
-The AI profile import path also replays the legacy document payload through the current profile manager so nested legacy `Properties` and `Settings` data are interpreted correctly. After import, the migration also rewrites persisted AI profile documents in the AI collection to the current property layout so legacy nested `Properties` payloads and older metadata aliases are removed from storage instead of being normalized at runtime. This preserves stored profile metadata and settings such as system prompts, token limits, initial prompts, analytics, tools, data extraction, post-session processing, session-document flags, and attached profile documents when moving a tenant database forward from older `main`-branch builds.
+The AI connection import path also remaps the renamed Azure metadata payload (`AzureOpenAIConnectionMetadata` to `AzureConnectionMetadata`) so endpoints, authentication mode, managed identity settings, and encrypted API keys remain attached to the migrated connection record.
+
+For direct `v1.x` upgrades, the dedicated AI profile migration replays the legacy document payload through the current profile manager so nested legacy `Properties` and `Settings` data are interpreted correctly without modifying the older preview migration classes. After import, the direct-upgrade migration also rewrites persisted AI profile documents in the AI collection to the current property layout so legacy nested `Properties` payloads and older metadata aliases are removed from storage instead of being normalized at runtime. This preserves stored profile metadata and settings such as system prompts, token limits, initial prompts, analytics, tools, data extraction, post-session processing, session-document flags, and attached profile documents when moving a tenant database forward from older `main`-branch builds.
+
+Legacy AI chat sessions stored in the `AI_Document` table are also migrated forward. For direct `v1.x` upgrades, the dedicated chat-session migration now:
+
+1. Detects both legacy Orchard-layer and current Core-layer `AIChatSession` document type names
+2. Extracts every embedded prompt into standalone `AIChatSessionPrompt` documents
+3. Preserves prompt properties such as `Title`, `Content`, `IsGeneratedPrompt`, `ContentItemIds`, and `References`
+4. Removes the embedded `Prompts` array from the session document after extraction
+5. Backfills missing session fields such as `LastActivityUtc` from the original `CreatedUtc` value when older session documents did not store the newer field yet
+
+This upgrade path is intended to keep v1 tenant data usable in v2.1 without losing existing provider connections, deployments, AI profiles, chat-session transcripts, or related JSON metadata.
 
 After migration, review the auto-created deployments at **Artificial Intelligence > Deployments** to verify they look correct.
+
+## Recommended upgrade checks
+
+Before upgrading a production tenant, take a database backup.
+
+After the first v2.1 startup completes, verify:
+
+1. **Artificial Intelligence > Connections** still shows the expected provider connections
+2. **Artificial Intelligence > Deployments** lists the expected typed deployments and defaults
+3. **Artificial Intelligence > Profiles** still shows the migrated profiles with the expected settings
+4. Existing chat sessions still appear with their prior transcript history intact
 
 ---
 

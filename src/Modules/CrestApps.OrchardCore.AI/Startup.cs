@@ -79,16 +79,17 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services
-            .AddAIDeploymentServices()
-            .AddPermissionProvider<AIDeploymentPermissionProvider>()
-            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
-            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
-            .AddNavigationProvider<AIDeploymentAdminMenu>()
-            .AddDataMigration<AIDeploymentTypeMigrations>()
-            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
-            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>();
+         services
+             .AddAIDeploymentServices()
+             .AddPermissionProvider<AIDeploymentPermissionProvider>()
+             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
+             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
+             .AddNavigationProvider<AIDeploymentAdminMenu>()
+             .AddDataMigration<AIDeploymentTypeMigrations>()
+             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
+             .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
+             .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>();
 
         // Add tools core functionality.
         services
@@ -104,6 +105,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AIProfileDefaultContextMigrations>();
         services.AddDataMigration<AIProfileDocumentMigrations>();
         services.AddDataMigration<AILegacyDocumentTypeNameMigrations>();
+        services.AddDataMigration<AIProfileV1DocumentMigrations>();
 
         // AI Profile Template services.
         services
@@ -198,7 +200,8 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddScoped<DefaultAIChatSessionPromptStore>()
             .AddScoped<IAIChatSessionPromptStore>(sp => sp.GetRequiredService<DefaultAIChatSessionPromptStore>())
             .AddDataMigration<AIChatSessionPromptIndexMigrations>()
-            .AddDataMigration<AIChatSessionPromptDataMigrations>();
+            .AddDataMigration<AIChatSessionPromptDataMigrations>()
+            .AddDataMigration<AIChatSessionV1PromptDataMigrations>();
 
         services.AddCoreAIChatSessionProcessing();
 
