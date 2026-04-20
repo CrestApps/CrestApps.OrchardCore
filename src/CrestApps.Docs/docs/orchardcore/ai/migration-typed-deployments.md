@@ -45,10 +45,12 @@ Most users don't need to do anything manually. The automatic migration handles t
 On application startup, the data migration automatically:
 
 1. Scans all existing `AIProviderConnection` records for deployment name fields
-2. Imports legacy branch-era `DictionaryDocument<AIProviderConnection>` and `DictionaryDocument<AIDeployment>` rows into the current persisted AI stores when those older document records are still present in the database, including the legacy Azure connection metadata that was previously stored under `AzureOpenAIConnectionMetadata`
+2. Imports legacy branch-era `DictionaryDocument<AIProfile>`, `DictionaryDocument<AIProviderConnection>`, and `DictionaryDocument<AIDeployment>` rows into the current persisted AI stores when those older document records are still present in the database, including the legacy Azure connection metadata that was previously stored under `AzureOpenAIConnectionMetadata`
 3. Creates typed `AIDeployment` records for each non-empty deployment name
 4. Sets the `IsDefault` flag on the first deployment of each type per connection
 5. Preserves all existing functionality — no downtime or data loss
+
+The AI profile import path also replays the legacy document payload through the current profile manager so nested legacy `Properties` and `Settings` data are interpreted correctly. This preserves stored profile metadata and settings such as system prompts, initial prompts, analytics, tools, data extraction, post-session processing, session-document flags, and attached profile documents when moving a tenant database forward from older `main`-branch builds.
 
 After migration, review the auto-created deployments at **Artificial Intelligence > Deployments** to verify they look correct.
 
