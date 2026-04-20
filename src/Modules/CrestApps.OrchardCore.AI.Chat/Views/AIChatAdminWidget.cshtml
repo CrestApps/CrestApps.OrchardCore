@@ -21,7 +21,7 @@
     var maxSessions = (int)Model.MaxSessions;
     var primaryColor = (string)Model.PrimaryColor;
 
-    var hubLink = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext);
+    var hubLink = HubRouteManager.GetPathByHub<AIChatHub>();
     var showHistory = maxSessions > 0;
 
     var baseId = "AiAdminWidget";

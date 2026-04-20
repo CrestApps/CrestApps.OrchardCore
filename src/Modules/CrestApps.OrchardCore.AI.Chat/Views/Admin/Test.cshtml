@@ -80,7 +80,7 @@
 @{
     var chatConfig = new Dictionary<string, object>
     {
-        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext),
+        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
         ["appElementSelector"] = $"#{chatAppHtmlId}",
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
         ["inputElementSelector"] = $"#{userPromptHtmlId}",

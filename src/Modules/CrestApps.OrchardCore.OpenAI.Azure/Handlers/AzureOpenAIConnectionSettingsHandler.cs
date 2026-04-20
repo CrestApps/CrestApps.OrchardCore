@@ -14,6 +14,8 @@ namespace CrestApps.OrchardCore.OpenAI.Azure.Handlers;
 
 internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandlerBase<AIProviderConnection>
 {
+    private const string _legacyAzureConnectionMetadataPropertyName = "AzureOpenAIConnectionMetadata";
+
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
     internal readonly IStringLocalizer S;
@@ -56,7 +58,9 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
             return Task.CompletedTask;
         }
 
-        var metadataNode = data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject();
+        var metadataNode =
+            data[nameof(AIProviderConnection.Properties)]?[nameof(AzureConnectionMetadata)]?.AsObject() ??
+            data[nameof(AIProviderConnection.Properties)]?[_legacyAzureConnectionMetadataPropertyName]?.AsObject();
 
         if (metadataNode == null || metadataNode.Count == 0)
         {

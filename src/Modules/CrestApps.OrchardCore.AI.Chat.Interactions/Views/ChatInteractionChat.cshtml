@@ -235,7 +235,7 @@
 @{
     var chatInteractionConfig = new Dictionary<string, object>
     {
-        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<ChatInteractionHub>(ViewContext.HttpContext),
+        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<ChatInteractionHub>(),
         ["appElementSelector"] = $"#{chatAppHtmlId}",
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
         ["inputElementSelector"] = $"#{userPromptHtmlId}",

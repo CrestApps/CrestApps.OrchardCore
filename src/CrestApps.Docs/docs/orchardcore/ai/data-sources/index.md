@@ -176,6 +176,8 @@ When a content item is removed from a source index, the `DataSourceContentHandle
 
 Version 2 introduces **Knowledge Base (KB) indexing** with vector embeddings. During the migration, an "AI Knowledge Base Warehouse" index is automatically created for existing data sources. However, **you must configure an embedding connection** for the index to populate correctly.
 
+If you are moving a tenant database from an older branch that stored AI data sources inside legacy `DictionaryDocument<AIDataSource>` rows, the startup migration also imports those rows into the current data-source store before the metadata and KB-alignment migrations run. This keeps the **Artificial Intelligence > Data Sources** admin UI populated after the branch upgrade instead of leaving the legacy records stranded in the default document table.
+
 ### What changes
 
 - Each data source now requires a **Knowledge Base Index** that stores chunked document embeddings for vector search.

@@ -229,7 +229,7 @@
     var chatApp = openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
 
     if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
-        window.crestAppsAIChat.patchSessionProfileSync(chatApp);
+    window.crestAppsAIChat.patchSessionProfileSync(chatApp);
     }
 
     }
@@ -242,43 +242,24 @@
 
     {
 
-        ["signalRHubUrl"] = HubRouteManager.GetUriByHub<AIChatHub>(ViewContext.HttpContext),
-
+        ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
         ["appElementSelector"] = $"#{chatAppHtmlId}",
-
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
-
         ["inputElementSelector"] = $"#{userPromptHtmlId}",
-
         ["sendButtonElementSelector"] = $"#{buttonHtmlId}",
-
         ["placeholderElementSelector"] = $"#{placeholderHtmlId}",
-
         ["autoCreateSession"] = addInitialPrompt,
-
         ["initialPrompt"] = addInitialPrompt ? profileMetadata.InitialPrompt : null,
-
         ["messages"] = prompts,
-
         ["metricsEnabled"] = metricsEnabled,
-
         ["chatMode"] = chatMode.ToString(),
-
         ["micButtonElementSelector"] = $"#{micBtnHtmlId}",
-
         ["ttsVoiceName"] = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
-
         ["conversationButtonElementSelector"] = $"#{conversationBtnHtmlId}",
-
         ["textToSpeechEnabled"] = textToSpeechEnabled,
-
-        ["isOrchestratorAvailable"]= orchestratorAvailability.IsAvailable,
-
+        ["isOrchestratorAvailable"] = orchestratorAvailability.IsAvailable,
         ["orchestratorUnavailableMessage"] = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
-
     };
-
-
 
     if (sessionDocumentsEnabled)
 
