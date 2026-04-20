@@ -26,7 +26,7 @@ public abstract class AICompletionServiceBase
     {
         if (connectionName is not null && provider.Connections.TryGetValue(connectionName, out var connection))
         {
-            var deploymentName = connection.GetDefaultDeploymentName();
+            var deploymentName = connection.GetDefaultDeploymentName(false);
 
             if (!string.IsNullOrEmpty(deploymentName))
             {

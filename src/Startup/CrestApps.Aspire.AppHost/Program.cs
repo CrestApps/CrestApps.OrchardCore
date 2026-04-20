@@ -27,10 +27,15 @@ builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("OrchardCoreCMS")
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Redis__Configuration", "localhost,allowAdmin=true");
 
         var elasticsearchEndpoint = elasticsearch.GetEndpoint("http");
+        var elasticsearchUri = new Uri(elasticsearchEndpoint.Url);
+        var elasticsearchBaseUri = new UriBuilder(elasticsearchUri)
+        {
+            Port = -1,
+        }.Uri.GetLeftPart(UriPartial.Authority);
 
         // Configure the Elasticsearch connection.
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__ConnectionType", "SingleNodeConnectionPool");
-        options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Url", elasticsearchEndpoint.Url);
+        options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Url", elasticsearchBaseUri);
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Username", "elastic");
         options.EnvironmentVariables.Add("OrchardCore__OrchardCore_Elasticsearch__Password", elasticsearchSecret);
         if (elasticsearchEndpoint.TargetPort.HasValue)

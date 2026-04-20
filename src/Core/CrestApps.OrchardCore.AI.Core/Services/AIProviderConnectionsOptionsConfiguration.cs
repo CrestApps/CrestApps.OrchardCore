@@ -81,7 +81,7 @@ public sealed class AIProviderConnectionsOptionsConfiguration : IConfigureOption
             {
                 if (string.IsNullOrEmpty(provider.DefaultDeploymentName))
                 {
-                    provider.DefaultDeploymentName = provider.Connections.FirstOrDefault().Value.GetDefaultDeploymentName();
+                    provider.DefaultDeploymentName = provider.Connections.FirstOrDefault().Value.GetDefaultDeploymentName(false);
                 }
 
                 if (string.IsNullOrEmpty(provider.DefaultConnectionName))
