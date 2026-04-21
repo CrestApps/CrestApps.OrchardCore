@@ -17,14 +17,14 @@ public sealed class AIDeploymentAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Artificial Intelligence"], ai => ai
-            .Add(S["Deployments"], S["Deployments"].PrefixPosition(), deployments => deployments
-            .AddClass("ai-deployments")
-            .Id("aiDeployments")
-            .Action("Index", "Deployments", AIConstants.Feature.Area)
-            .Permission(AIPermissions.ManageAIDeployments)
-            .LocalNav()
-        )
-        );
+                .Add(S["Deployments"], S["Deployments"].PrefixPosition(), deployments => deployments
+                    .AddClass("ai-deployments")
+                    .Id("aiDeployments")
+                    .Action("Index", "Deployments", AIConstants.Feature.Area)
+                    .Permission(AIPermissions.ManageAIDeployments)
+                    .LocalNav()
+                )
+            );
 
         return ValueTask.CompletedTask;
     }

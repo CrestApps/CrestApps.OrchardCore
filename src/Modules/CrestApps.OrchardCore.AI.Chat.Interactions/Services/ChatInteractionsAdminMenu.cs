@@ -20,11 +20,11 @@ public sealed class ChatInteractionsAdminMenu : AdminNavigationProvider
             .Add(S["Artificial Intelligence"], artificialIntelligence =>
             {
                 artificialIntelligence
-                .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
-                .Action("Index", "Admin", ChatInteractionsConstants.Feature.ChatInteractions)
-                .Permission(AIPermissions.ListChatInteractions)
-                .LocalNav()
-                );
+                    .Add(S["Chat Interactions"], S["Chat Interactions"].PrefixPosition(), chatInteractions => chatInteractions
+                        .Action("Index", "Admin", ChatInteractionsConstants.Feature.ChatInteractions)
+                        .Permission(AIPermissions.ListChatInteractions)
+                        .LocalNav()
+                    );
             });
 
         return ValueTask.CompletedTask;

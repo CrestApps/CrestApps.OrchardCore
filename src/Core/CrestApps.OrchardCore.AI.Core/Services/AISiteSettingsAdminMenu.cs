@@ -26,11 +26,11 @@ public sealed class AISiteSettingsAdminMenu : AdminNavigationProvider
             .Add(S["Settings"], settings =>
             {
                 settings
-                .Add(S["Artificial Intelligence"], S["Artificial Intelligence"].PrefixPosition(), ai => ai
-                .Action("Index", "Admin", _routeValues)
-                .Permission(AIPermissions.ManageAIProfiles)
-                .LocalNav()
-                );
+                    .Add(S["Artificial Intelligence"], S["Artificial Intelligence"].PrefixPosition(), ai => ai
+                        .Action("Index", "Admin", _routeValues)
+                        .Permission(AIPermissions.ManageAIProfiles)
+                        .LocalNav()
+                    );
             });
 
         return ValueTask.CompletedTask;

@@ -37,7 +37,7 @@
 }
 
 <div class="@Orchard.GetWrapperClasses()">
-    <div class="@Orchard.GetEndClasses()">
+    <div class="@Orchard.GetEndClasses(true)">
         <h6>@T["Types"]</h6>
         <div>
             @foreach (var type in Model.Types)
