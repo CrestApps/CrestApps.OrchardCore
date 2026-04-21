@@ -77,7 +77,6 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
                 Description = entry.Value.Description,
                 IsSelected = selectedNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
-
         }).Location("Content:7#Capabilities;8");
     }
 
@@ -114,6 +113,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         return Edit(profile, context);
     }
+
     /// <summary>
     /// Reads tool names from the current key, falling back to the legacy key for backward compatibility.
     /// </summary>

@@ -44,18 +44,15 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             if (needsSave)
             {
                 await deploymentDocManager.UpdateAsync(deploymentDoc);
-
             }
 
             await TryBackfillDefaultDeploymentSettingsAsync(
                 siteService,
                 connectionDoc.Records.Values,
                 deploymentDoc.Records.Values);
-
         });
 
         return 1;
-
     }
 
     public static int UpdateFrom1()
@@ -80,7 +77,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 if (!string.IsNullOrEmpty(profile.ChatDeploymentName))
                 {
                     continue;
-
                 }
 
                 var deploymentName = FindDefaultChatDeploymentName(profile, deployments);
@@ -89,19 +85,16 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 {
                     skippedCount++;
                     continue;
-
                 }
 
                 profile.ChatDeploymentName = deploymentName;
                 await profileCatalog.UpdateAsync(profile);
                 updatedCount++;
-
             }
 
             if (updatedCount == 0 && skippedCount == 0)
             {
                 return;
-
             }
 
             if (logger.IsEnabled(LogLevel.Information))
@@ -111,11 +104,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                     updatedCount,
                     skippedCount);
             }
-
         });
 
         return 2;
-
     }
 
     public static int UpdateFrom2()
@@ -135,11 +126,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 siteService,
                 connectionDoc.Records.Values,
                 deploymentDoc.Records.Values);
-
         });
 
         return 3;
-
     }
 
     public static int UpdateFrom3()
@@ -160,32 +149,26 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 if (!string.IsNullOrWhiteSpace(deployment.ModelName))
                 {
                     continue;
-
                 }
 
                 deployment.ModelName = deployment.Name;
                 deploymentsUpdated = true;
-
             }
 
             if (deploymentsUpdated)
             {
                 await deploymentDocManager.UpdateAsync(deploymentDoc);
-
             }
 
             var deploymentNameMap = (await deploymentManager.GetAllAsync())
                 .Where(static deployment => !string.IsNullOrWhiteSpace(deployment.ItemId) && !string.IsNullOrWhiteSpace(deployment.Name))
                 .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
-
                 .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
             await TryConvertStoredDeploymentSelectorsAsync(scope.ServiceProvider, siteService, deploymentNameMap);
-
         });
 
         return 4;
-
     }
 
     public static int UpdateFrom4()
@@ -199,15 +182,12 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             var deploymentNameMap = (await deploymentManager.GetAllAsync())
             .Where(static deployment => !string.IsNullOrWhiteSpace(deployment.ItemId) && !string.IsNullOrWhiteSpace(deployment.Name))
             .GroupBy(static deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase)
-
             .ToDictionary(static group => group.Key, static group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
             await TryConvertStoredDeploymentSelectorsAsync(scope.ServiceProvider, siteService, deploymentNameMap);
-
         });
 
         return 5;
-
     }
 
     private static bool TryCreateDeployment(
@@ -219,7 +199,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         if (string.IsNullOrWhiteSpace(deploymentName))
         {
             return false;
-
         }
 
         var exists = deploymentDoc.Records.Values.Any(d =>
@@ -231,7 +210,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         if (exists)
         {
             return false;
-
         }
 
         var deployment = new AIDeployment
@@ -245,12 +223,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             CreatedUtc = connection.CreatedUtc,
             Author = connection.Author,
             OwnerId = connection.OwnerId,
-
         };
 
         deploymentDoc.Records[deployment.ItemId] = deployment;
         return true;
-
     }
 
     private static async Task TryBackfillDefaultDeploymentSettingsAsync(
@@ -269,11 +245,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         if (!updated)
         {
             return;
-
         }
 
         await siteService.UpdateSiteSettingsAsync(site);
-
     }
 
     private static async Task TryConvertDefaultDeploymentSettingsAsync(
@@ -292,17 +266,14 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, settings.DefaultImageDeploymentName, value => settings.DefaultImageDeploymentName = value);
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, settings.DefaultSpeechToTextDeploymentName, value => settings.DefaultSpeechToTextDeploymentName = value);
             updated |= TryConvertDeploymentSelectorToName(deploymentNameMap, settings.DefaultTextToSpeechDeploymentName, value => settings.DefaultTextToSpeechDeploymentName = value);
-
         });
 
         if (!updated)
         {
             return;
-
         }
 
         await siteService.UpdateSiteSettingsAsync(site);
-
     }
 
     private static async Task TryConvertStoredDeploymentSelectorsAsync(
@@ -327,11 +298,9 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             if (!updated)
             {
                 continue;
-
             }
 
             await profileCatalog.UpdateAsync(profile);
-
         }
 
         foreach (var template in await templateCatalog.GetAllAsync())
@@ -346,12 +315,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             if (!updated)
             {
                 continue;
-
             }
 
             template.Put(metadata);
             await templateCatalog.UpdateAsync(template);
-
         }
 
         foreach (var interaction in await interactionCatalog.GetAllAsync())
@@ -364,12 +331,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             if (!updated)
             {
                 continue;
-
             }
 
             await interactionCatalog.UpdateAsync(interaction);
         }
-
     }
 
     private static bool TryPopulateDefaultDeploymentSettings(
@@ -386,7 +351,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             connections,
             deployments,
             AIDeploymentType.Chat,
-
             static connection => connection.GetLegacyChatDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -396,7 +360,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             connections,
             deployments,
             AIDeploymentType.Utility,
-
             static connection => connection.GetLegacyUtilityDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -406,7 +369,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             connections,
             deployments,
             AIDeploymentType.Embedding,
-
             static connection => connection.GetLegacyEmbeddingDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -416,23 +378,19 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             connections,
             deployments,
             AIDeploymentType.Image,
-
             static connection => connection.GetLegacyImageDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultSpeechToTextDeploymentName,
             value => settings.DefaultSpeechToTextDeploymentName = value,
-
             FindDefaultDeploymentId(connections, deployments, AIDeploymentType.SpeechToText));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultTextToSpeechDeploymentName,
             value => settings.DefaultTextToSpeechDeploymentName = value,
-
             FindDefaultDeploymentId(connections, deployments, AIDeploymentType.TextToSpeech));
 
         return updated;
-
     }
 
     private static bool TryPopulateDefaultDeploymentId(
@@ -443,12 +401,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         if (!string.IsNullOrEmpty(currentValue) || string.IsNullOrEmpty(newValue))
         {
             return false;
-
         }
 
         assign(newValue);
         return true;
-
     }
 
     private static bool TryConvertDeploymentSelectorToName(
@@ -461,12 +417,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                 string.Equals(currentValue, deploymentName, StringComparison.OrdinalIgnoreCase))
         {
             return false;
-
         }
 
         assign(deploymentName);
         return true;
-
     }
 
     private static string FindDefaultDeploymentId(
@@ -479,7 +433,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         {
             var orderedConnections = connections
                 .Where(connection => !string.IsNullOrWhiteSpace(legacyDeploymentNameAccessor(connection)))
-
                 .OrderBy(connection => connection.Name, StringComparer.OrdinalIgnoreCase);
 
             foreach (var connection in orderedConnections)
@@ -491,7 +444,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                     return deploymentName;
                 }
             }
-
         }
 
         return deployments
@@ -501,7 +453,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(deployment => deployment.Name)
             .FirstOrDefault();
-
     }
 
     private static string FindDefaultChatDeploymentName(AIProfile profile, IEnumerable<AIDeployment> deployments)
@@ -509,7 +460,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         var legacyConnectionName = profile.GetLegacyConnectionName();
 
         return FindDefaultDeploymentId(AIDeploymentType.Chat, legacyConnectionName, legacyConnectionName, deployments);
-
     }
 
     private static string FindDefaultDeploymentId(
@@ -521,7 +471,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         if (string.IsNullOrWhiteSpace(connectionId) && string.IsNullOrWhiteSpace(connectionAlias))
         {
             return null;
-
         }
 
         var candidates = deployments
@@ -531,7 +480,6 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
                     string.Equals(deployment.GetConnectionNameAlias(), connectionId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.GetConnectionNameAlias(), connectionAlias, StringComparison.OrdinalIgnoreCase)))
-
             .ToList();
 
         return candidates.FirstOrDefault(deployment => deployment.GetIsDefault())?.Name

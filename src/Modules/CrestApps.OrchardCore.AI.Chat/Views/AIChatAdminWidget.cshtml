@@ -274,21 +274,21 @@
 
             var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
             window.openAIChatWidgetManager.initialize({
-            configElementSelector: '#@($"{baseId}_Config")',
-            messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
-            indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
-            shellSelector: '#@($"{baseId}_Shell")',
-            widgetContainerSelector: '#@widgetContainerId',
-            toggleButtonSelector: '#@toggleBtnId',
-            closeButtonSelector: '#@closeBtnId',
-            inputSelector: '#@userPromptHtmlId',
-            widgetStateName: widgetStateName,
-            widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
-            openStateValue: 'open',
-            closedStateValue: 'closed',
-            openIconHtml: '<i class="fas fa-times"></i>',
-            closedIconHtml: '<i class="fa fa-robot"></i>',
-            chatConfig: Object.assign(
+                configElementSelector: '#@($"{baseId}_Config")',
+                messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
+                indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
+                shellSelector: '#@($"{baseId}_Shell")',
+                widgetContainerSelector: '#@widgetContainerId',
+                toggleButtonSelector: '#@toggleBtnId',
+                closeButtonSelector: '#@closeBtnId',
+                inputSelector: '#@userPromptHtmlId',
+                widgetStateName: widgetStateName,
+                widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
+                openStateValue: 'open',
+                closedStateValue: 'closed',
+                openIconHtml: '<i class="fas fa-times"></i>',
+                closedIconHtml: '<i class="fa fa-robot"></i>',
+                chatConfig: Object.assign(
                 {},
                 JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
                 {

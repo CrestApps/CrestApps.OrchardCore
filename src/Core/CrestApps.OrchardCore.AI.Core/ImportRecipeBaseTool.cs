@@ -31,7 +31,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
         "recipe"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -92,7 +91,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
             if (stepSchemas.ContainsKey(stepName))
             {
                 continue;
-
             }
 
             var added = false;
@@ -102,7 +100,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
                 if (!string.Equals(recipeStep.Name, stepName, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
-
                 }
 
                 var stepSchema = await recipeStep.GetSchemaAsync();
@@ -112,7 +109,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     stepSchemas[stepName] = stepSchema;
                     added = true;
                     break;
-
                 }
             }
 
@@ -127,7 +123,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     ("name", new JsonSchemaBuilder()
                         .Type(SchemaValueType.String)
                         .Enum(stepName))
-
             )
                 .Required("name");
 
@@ -140,7 +135,6 @@ public abstract class ImportRecipeBaseTool : AIFunction
                 ("name", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)
                     .Enum(stepSchemas.Keys)))
-
                     .Required("name")
                     .AdditionalProperties(true);
 
@@ -151,9 +145,7 @@ public abstract class ImportRecipeBaseTool : AIFunction
                     .Type(SchemaValueType.Array)
                     .Items(stepsBuilder)
                     .MinItems(1)
-
         )
-
         ).Required("steps");
 
         var rootSchema = schemaBuilder.Build();
@@ -183,7 +175,6 @@ Please generate a valid recipe and try again:
             logger.LogInformation("AI tool recipe import completed successfully.");
 
             return "Recipe was successfully imported";
-
         }
 
         logger.LogWarning("AI tool recipe import failed: error occurred during execution.");

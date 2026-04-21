@@ -29,7 +29,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
         "recipeName"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -112,7 +111,6 @@ public sealed class ExecuteStartupRecipesTool : AIFunction
             logger.LogError(e, "Unable to import a recipe file.");
 
             return $"Unexpected error occurred while running the '{recipe.DisplayName}' recipe.";
-
         }
     }
 

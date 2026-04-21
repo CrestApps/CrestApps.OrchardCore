@@ -37,7 +37,6 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 Description = agent.Description,
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
         }).Location("Parameters:5#Capabilities;3");
     }
 

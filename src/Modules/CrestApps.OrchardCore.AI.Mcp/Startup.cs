@@ -162,7 +162,6 @@ public sealed class McpServerStartup : StartupBase
                 Name = "Orchard Core MCP Server",
                 Version = CrestAppsManifestConstants.Version,
             };
-
         })
         .WithHttpTransport()
         .WithCrestAppsHandlers();

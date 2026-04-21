@@ -130,7 +130,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
             model.ContactContentTypes = contactContentTypes.OrderBy(x => x.Text);
             model.Users = usersListItems.OrderBy(x => x.Text);
-
         }).Location("Content:5")
         .RenderWhen(() => Task.FromResult(activity.Status == ActivityStatus.NotStated && !isCompletingActivity));
 
@@ -162,7 +161,6 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 model.CompletedLocal = (await _localClock.ConvertToLocalAsync(activity.CompletedUtc.Value)).DateTime;
                 model.CompletedByName = await _displayNameProvider.GetAsync(await _userManager.FindByIdAsync(activity.CompletedById));
             }
-
         }).Location("Content:5")
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);
 

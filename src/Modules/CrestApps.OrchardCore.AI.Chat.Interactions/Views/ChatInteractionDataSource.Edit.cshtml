@@ -37,14 +37,12 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-
         const dataSourceSelect = document.getElementById('@Html.IdFor(x => x.DataSourceId)');
 
         function toggleDataSourceDependentElements() {
             const dependentElements = document.querySelectorAll('.data-source-filter-dependent');
 
             if (dataSourceSelect && dependentElements.length > 0) {
-
                 const hasDataSource = dataSourceSelect.value && dataSourceSelect.value.trim() !== '';
 
                 dependentElements.forEach(element => {

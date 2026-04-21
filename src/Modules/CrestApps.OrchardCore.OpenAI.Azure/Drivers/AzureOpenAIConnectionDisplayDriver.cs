@@ -97,4 +97,3 @@ internal sealed class AzureOpenAIConnectionDisplayDriver : DisplayDriver<AIProvi
         return Edit(connection, context);
     }
 }
-

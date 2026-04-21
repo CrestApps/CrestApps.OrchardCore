@@ -46,24 +46,22 @@
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
+        const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
+        const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
+        const identityIdWrapper = document.getElementById('@identityIdWrapperId');
 
-    const menuElement = document.getElementById('@Html.IdFor(m => m.AuthenticationType)');
-    const apiKeyWrapper = document.getElementById('@apiKeyWrapperId');
-    const identityIdWrapper = document.getElementById('@identityIdWrapperId');
+        menuElement.addEventListener('change', (e) => {
+            if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
+                apiKeyWrapper.classList.remove('d-none');
+            } else {
+                apiKeyWrapper.classList.add('d-none');
+            }
 
-    menuElement.addEventListener('change', (e) => {
-
-    if (e.target.value == '@nameof(AzureAuthenticationType.ApiKey)'){
-    apiKeyWrapper.classList.remove('d-none');
-    } else {
-    apiKeyWrapper.classList.add('d-none');
-    }
-
-    if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
-    identityIdWrapper.classList.remove('d-none');
-    } else {
-    identityIdWrapper.classList.add('d-none');
-    }
-    });
+            if (e.target.value == '@nameof(AzureAuthenticationType.ManagedIdentity)'){
+                identityIdWrapper.classList.remove('d-none');
+            } else {
+                identityIdWrapper.classList.add('d-none');
+            }
+        });
     });
 </script>

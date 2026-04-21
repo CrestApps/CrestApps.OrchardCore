@@ -68,6 +68,7 @@ public sealed partial class ResourceTemplatesModel : PageModel
             return new JsonResult(new { error = "An error occurred while reading the resource template." });
         }
     }
+
     /// <summary>
     /// Extracts parameter names from {param} placeholders in a URI template string.
     /// </summary>

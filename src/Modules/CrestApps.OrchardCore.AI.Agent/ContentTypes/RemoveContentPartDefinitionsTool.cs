@@ -27,7 +27,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
         "name"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -63,7 +62,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
             return "Unable to find a name argument in the function arguments.";
-
         }
 
         var partDefinition = await contentDefinitionManager.GetPartDefinitionAsync(name);
@@ -92,7 +90,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
                   ]
                 }
               ]
-
             }
             """);
 
@@ -104,7 +101,6 @@ public sealed class RemoveContentPartDefinitionsTool : AIFunction
             }
 
             return $"The content part {name} was removed successfully";
-
         }
 
         logger.LogWarning("AI tool '{ToolName}' failed to remove content part definition '{ContentPart}'.", TheName, name);

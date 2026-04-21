@@ -22,6 +22,7 @@ public sealed class CitationReferenceCollector
     {
         _linkResolver = linkResolver;
     }
+
     /// <summary>
     /// Collects preemptive RAG references that are known before the streaming loop starts.
     /// Call this immediately after building the orchestration context, before entering the
@@ -45,6 +46,7 @@ public sealed class CitationReferenceCollector
         // Resolve links for the collected references.
         ResolveLinks(references, contentItemIds);
     }
+
     /// <summary>
     /// Collects any new tool references added during streaming (e.g., from
     /// <c>DataSourceSearchTool</c> or <c>SearchDocumentsTool</c> invoked by the AI model).

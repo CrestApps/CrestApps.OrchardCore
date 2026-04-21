@@ -39,7 +39,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         _defaultAIOptions = defaultAIOptions;
         _liquidTemplateManager = liquidTemplateManager;
         S = stringLocalizer;
-
     }
 
     public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
@@ -58,15 +57,12 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
             model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : activity.PresencePenalty;
             model.SystemMessage = activity.SystemMessage;
             model.DeploymentNames = BuildGroupedDeploymentItems(
-
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Chat));
-
         }).Location("Content");
 
         if (_toolDefinitions.Tools.Count == 0)
         {
             return contents;
-
         }
 
         var tools = Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
@@ -82,11 +78,9 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                 Description = entry.Value.Description,
                 IsSelected = activity.ToolNames?.Contains(entry.Key) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray());
-
         }).Location("Content:7#Capabilities;8");
 
         return Combine(contents, tools);
-
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)
@@ -102,7 +96,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         else if (await FindDeploymentAsync(model.DeploymentName) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DeploymentName), S["The Deployment is invalid."]);
-
         }
 
         if (string.IsNullOrEmpty(model.PromptTemplate))
@@ -112,13 +105,11 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         else if (!_liquidTemplateManager.Validate(model.PromptTemplate, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.PromptTemplate), S["The Prompt template is invalid."]);
-
         }
 
         if (string.IsNullOrWhiteSpace(model.ResultPropertyName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ResultPropertyName), S["The Property name is required."]);
-
         }
 
         activity.PromptTemplate = model.PromptTemplate;
@@ -152,11 +143,9 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                     .Intersect(selectedToolKeys)
                     .ToArray();
             }
-
         }
 
         return Edit(activity, context);
-
     }
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
@@ -176,7 +165,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
                 {
                     group = new SelectListGroup { Name = groupKey };
                     groups[groupKey] = group;
-
                 }
 
                 var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
@@ -186,7 +174,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
 
                 return new SelectListItem(label, d.Name) { Group = group };
             });
-
     }
 
     private async Task<AIDeployment> FindDeploymentAsync(string selector)
@@ -196,11 +183,9 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         if (deployment != null)
         {
             return deployment;
-
         }
 
         return await _deploymentManager.FindByIdAsync(selector);
-
     }
 
     private async Task<string> NormalizeDeploymentSelectorAsync(string selector)
@@ -208,7 +193,6 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         if (string.IsNullOrWhiteSpace(selector))
         {
             return selector;
-
         }
 
         var deployment = await FindDeploymentAsync(selector);

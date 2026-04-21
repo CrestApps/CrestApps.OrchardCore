@@ -20,11 +20,9 @@ internal static class ApiAIUtilityCompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/utility", HandleAsync<T>)
             .DisableAntiforgery()
-
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
-
     }
 
     private static async Task<IResult> HandleAsync<T>(
@@ -40,13 +38,11 @@ internal static class ApiAIUtilityCompletionEndpoint
         if (string.IsNullOrWhiteSpace(requestData.ProfileId))
         {
             return TypedResults.BadRequest("ProfileId is required.");
-
         }
 
         if (string.IsNullOrWhiteSpace(requestData.Prompt))
         {
             return TypedResults.BadRequest("Prompt is required.");
-
         }
 
         var profile = await chatProfileManager.FindByIdAsync(requestData.ProfileId);
@@ -54,13 +50,11 @@ internal static class ApiAIUtilityCompletionEndpoint
         if (profile is null)
         {
             return TypedResults.NotFound();
-
         }
 
         if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, profile))
         {
             return TypedResults.Forbid();
-
         }
 
         if (profile.Type != AIProfileType.Utility)
@@ -68,7 +62,6 @@ internal static class ApiAIUtilityCompletionEndpoint
             logger.LogWarning("The requested profile '{ProfileId}' has a type of '{ProfileType}', but it must be of type 'Utility' to use the utility-completion endpoint.", profile.ItemId, profile.Type.ToString());
 
             return TypedResults.NotFound();
-
         }
 
         var context = await completionContextBuilder.BuildAsync(profile);
@@ -83,14 +76,12 @@ internal static class ApiAIUtilityCompletionEndpoint
             Success = completion.Messages.Count > 0,
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
-
         };
 
         if (completion.AdditionalProperties is not null &&
             completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
         {
             result.Message.References = referenceItems;
-
         }
 
         result.Message.Content = completion.Messages.FirstOrDefault()?.Text ?? AIConstants.DefaultBlankMessage;

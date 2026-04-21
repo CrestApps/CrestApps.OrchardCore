@@ -85,11 +85,11 @@
             try {
                 var obj = JSON.parse(val);
                 if (typeof obj !== 'object' || Array.isArray(obj))
-                    throw 'not object';
+                throw 'not object';
 
                 for (var k in obj) {
                     if (typeof obj[k] !== 'string')
-                        throw 'not string value';
+                    throw 'not string value';
                 }
                 paramsError.classList.add('d-none');
             } catch (e) {

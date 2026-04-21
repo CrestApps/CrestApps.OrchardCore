@@ -30,7 +30,6 @@ public sealed class EnableFeatureTool : AIFunction
       "required": [
         "featureIds"
       ]
-
     }
 
     """);
@@ -57,7 +56,6 @@ public sealed class EnableFeatureTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
@@ -84,7 +82,6 @@ public sealed class EnableFeatureTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: no valid features found for the provided IDs.", Name);
 
             return "Invalid feature ids provided";
-
         }
 
         await shellFeaturesManager.EnableFeaturesAsync(features, true);

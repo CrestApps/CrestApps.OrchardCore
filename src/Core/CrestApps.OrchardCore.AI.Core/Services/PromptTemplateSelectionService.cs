@@ -23,7 +23,6 @@ public sealed class PromptTemplateSelectionService
         _aiTemplateService = aiTemplateService;
         _aiTemplateEngine = aiTemplateEngine;
         _profileTemplateManager = profileTemplateManager;
-
     }
     public async Task<IReadOnlyList<Template>> ListAsync()
     {
@@ -34,17 +33,14 @@ public sealed class PromptTemplateSelectionService
         foreach (var template in await GetRuntimeTemplatesAsync())
         {
             AddTemplate(templates, seenIds, template);
-
         }
 
         foreach (var template in await _aiTemplateService.ListAsync())
         {
             AddTemplate(templates, seenIds, template);
-
         }
 
         return templates;
-
     }
     public async Task<Template> GetAsync(string id)
     {
@@ -53,7 +49,6 @@ public sealed class PromptTemplateSelectionService
         var templates = await ListAsync();
 
         return templates.FirstOrDefault(template => string.Equals(template.Id, id, StringComparison.OrdinalIgnoreCase));
-
     }
 
     public async Task<string> ComposeSystemMessageAsync(string systemMessage, PromptTemplateMetadata metadata)
@@ -61,7 +56,6 @@ public sealed class PromptTemplateSelectionService
         var parts = new List<string>();
         var selections = metadata?.Templates?
             .Where(selection => !string.IsNullOrWhiteSpace(selection.TemplateId))
-
             .ToList() ?? [];
 
         foreach (var selection in selections)
@@ -76,19 +70,16 @@ public sealed class PromptTemplateSelectionService
             {
                 parts.Add(rendered);
             }
-
         }
 
         if (!string.IsNullOrWhiteSpace(systemMessage))
         {
             parts.Add(systemMessage);
-
         }
 
         return parts.Count == 0
         ? null
         : string.Join(Environment.NewLine + Environment.NewLine, parts);
-
     }
     private async Task<IEnumerable<Template>> GetRuntimeTemplatesAsync()
     {
@@ -100,7 +91,6 @@ public sealed class PromptTemplateSelectionService
             !string.IsNullOrWhiteSpace(template.Name))
             .Select(ConvertToTemplate)
             .ToList();
-
     }
 
     private static void AddTemplate(List<Template> templates, HashSet<string> seenIds, Template template)
@@ -108,11 +98,9 @@ public sealed class PromptTemplateSelectionService
         if (template == null || string.IsNullOrWhiteSpace(template.Id) || !seenIds.Add(template.Id))
         {
             return;
-
         }
 
         templates.Add(template);
-
     }
     private static Template ConvertToTemplate(AIProfileTemplate template)
     {

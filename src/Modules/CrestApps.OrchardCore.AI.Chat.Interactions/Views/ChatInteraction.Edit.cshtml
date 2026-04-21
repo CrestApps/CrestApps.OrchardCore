@@ -52,34 +52,28 @@
         min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
         height: auto;
     }
-
     .chat-parameters-panel {
         width: 100%;
         max-width: 100%;
         display: flex;
         flex-direction: column;
     }
-
     .chat-parameters-content {
         overflow-y: auto;
         flex: 1;
         min-height: 0;
     }
-
     .chat-content-area {
         min-height: 400px;
         flex: 1;
     }
-
     .chat-main-area {
         min-height: 300px;
         overflow: hidden;
     }
-
     .min-h-0 {
         min-height: 0;
     }
-
     .chat-panel-expand-btn {
         display: none !important;
     }
@@ -90,30 +84,24 @@
             height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px);
             min-height: 100%;
         }
-
         .chat-parameters-panel {
             max-width: 22rem;
             max-height: none;
             height: 100%;
         }
-
         .chat-content-area {
             min-height: 0;
         }
-
         .chat-main-area {
             min-height: 0;
         }
-
         .chat-interaction-container.panel-collapsed .chat-parameters-panel {
             display: none !important;
         }
-
         .chat-interaction-container.panel-collapsed .chat-panel-expand-btn {
             display: inline-block !important;
             align-self: flex-start;
         }
-
         .chat-interaction-container.panel-collapsed .chat-content-area {
             padding-left: 0 !important;
         }

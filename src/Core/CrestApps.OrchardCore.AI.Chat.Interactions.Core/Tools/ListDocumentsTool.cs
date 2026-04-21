@@ -26,7 +26,6 @@ public sealed class ListDocumentsTool : AIFunction
       "type": "object",
       "properties": {},
       "additionalProperties": false
-
     }
 
     """);
@@ -51,7 +50,6 @@ public sealed class ListDocumentsTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var executionContext = AIInvocationScope.Current?.ToolExecutionContext;
@@ -66,7 +64,6 @@ public sealed class ListDocumentsTool : AIFunction
                 logger.LogWarning("AI tool '{ToolName}' failed: document store is not available.", Name);
 
                 return "Document store is not available.";
-
             }
 
             var documents = await documentStore.GetDocumentsAsync(chatInteractionId, AIConstants.DocumentReferenceTypes.ChatInteraction);
@@ -83,7 +80,6 @@ public sealed class ListDocumentsTool : AIFunction
                 d.ItemId,
                 d.FileName,
                 d.ContentType,
-
                 FileSize = FormatFileSize(d.FileSize),
             });
 
@@ -126,7 +122,6 @@ public sealed class ListDocumentsTool : AIFunction
                 if (sessionDocs is { Count: > 0 })
                 {
                     allDocuments.AddRange(sessionDocs);
-
                 }
             }
 
@@ -142,7 +137,6 @@ public sealed class ListDocumentsTool : AIFunction
                 d.ItemId,
                 d.FileName,
                 d.ContentType,
-
                 FileSize = FormatFileSize(d.FileSize),
             });
 
@@ -152,7 +146,6 @@ public sealed class ListDocumentsTool : AIFunction
             }
 
             return JsonSerializer.Serialize(result);
-
         }
 
         logger.LogWarning("AI tool '{ToolName}' failed: no active chat interaction session or AI profile.", Name);

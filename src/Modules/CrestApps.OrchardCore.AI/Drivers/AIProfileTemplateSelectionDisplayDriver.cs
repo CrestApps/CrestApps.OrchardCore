@@ -16,7 +16,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
     public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
     {
         _templateManager = templateManager;
-
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -24,7 +23,6 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
         if (!context.IsNew)
         {
             return null;
-
         }
 
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
@@ -48,11 +46,9 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
                         group = new SelectListGroup { Name = t.Category };
 
                         groups.Add(t.Category, group);
-
                     }
 
                     item.Group = group;
-
                 }
 
                 return item;

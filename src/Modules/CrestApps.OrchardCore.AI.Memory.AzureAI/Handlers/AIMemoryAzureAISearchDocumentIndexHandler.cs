@@ -1,8 +1,8 @@
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Models;
+using OrchardCore.AzureAI;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.AzureAI;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 

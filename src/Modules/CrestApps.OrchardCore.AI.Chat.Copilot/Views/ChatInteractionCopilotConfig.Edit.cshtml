@@ -171,8 +171,8 @@
                     const opt = document.createElement('option');
                     opt.value = m.id;
                     const costMultiplier = typeof m.costMultiplier === 'number'
-                        ? m.costMultiplier.toFixed(2).replace(/\.?0+$/, '')
-                        : '';
+                    ? m.costMultiplier.toFixed(2).replace(/\.?0+$/, '')
+                    : '';
                     opt.textContent = m.costMultiplier > 0 ? m.name + ' (x' + costMultiplier + ')' : m.name;
                     modelSelect.appendChild(opt);
                 });

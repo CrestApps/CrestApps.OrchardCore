@@ -49,6 +49,7 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
             .AdditionalProperties(true)
             .Build();
     }
+
     /// <summary>
     /// Common enum values used in media profile schemas.
     /// </summary>
@@ -56,6 +57,7 @@ public sealed class MediaProfilesRecipeStep : IRecipeStep
     {
         /// <summary>The resize mode values for media profiles.</summary>
         public static readonly string[] ResizeModes = ["Undefined", "Max", "Crop", "Pad", "BoxPad", "Min", "Stretch"];
+
         /// <summary>The output format values for media profiles.</summary>
         public static readonly string[] OutputFormats = ["Undefined", "Bmp", "Gif", "Jpg", "Png", "Tga", "WebP"];
     }

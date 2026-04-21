@@ -35,7 +35,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
         _shellSettings = shellSettings;
         _parsers = parsers;
         _logger = logger;
-
     }
 
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync()
@@ -46,7 +45,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
         var globalProfilesDir = Path.Combine(
             _shellOptions.ShellsApplicationDataPath,
             _aiTemplatesDirectory,
-
             _profilesSubDirectory);
 
         DiscoverTemplates(globalProfilesDir, templates);
@@ -57,7 +55,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
             _shellOptions.ShellsContainerName,
             _shellSettings.Name,
             _aiTemplatesDirectory,
-
             _profilesSubDirectory);
 
         DiscoverTemplates(tenantProfilesDir, templates);
@@ -65,11 +62,9 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Discovered {Count} AI profile templates from App_Data directories.", templates.Count);
-
         }
 
         return Task.FromResult<IReadOnlyList<AIProfileTemplate>>(templates);
-
     }
 
     private void DiscoverTemplates(string directory, List<AIProfileTemplate> templates)
@@ -77,7 +72,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
         if (!Directory.Exists(directory))
         {
             return;
-
         }
 
         foreach (var file in Directory.GetFiles(directory))
@@ -89,7 +83,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
             if (parser == null)
             {
                 continue;
-
             }
 
             try
@@ -106,7 +99,6 @@ internal sealed class AppDataAIProfileTemplateProvider : IAIProfileTemplateProvi
                 _logger.LogWarning(ex, "Failed to parse AI profile template file: {FilePath}", file);
             }
         }
-
     }
     private ITemplateParser GetParserForExtension(string extension)
     {

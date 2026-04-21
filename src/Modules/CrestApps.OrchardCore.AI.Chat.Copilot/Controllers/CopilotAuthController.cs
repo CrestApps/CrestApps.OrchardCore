@@ -48,6 +48,7 @@ public sealed class CopilotAuthController : Controller
         _adminOptions = adminOptions.Value;
         H = htmlLocalizer;
     }
+
     /// <summary>
     /// Initiates the GitHub OAuth flow.
     /// </summary>
@@ -76,6 +77,7 @@ public sealed class CopilotAuthController : Controller
             return HandleOAuthReturn(safeReturnUrl, success: false, username: null);
         }
     }
+
     /// <summary>
     /// Handles the OAuth callback from GitHub.
     /// </summary>
@@ -124,6 +126,7 @@ public sealed class CopilotAuthController : Controller
 
         return HandleOAuthReturn(state, success: false, username: null);
     }
+
     /// <summary>
     /// Routes the OAuth callback to a popup close page or a standard redirect.
     /// When the returnUrl/state is "__popup__", the callback was initiated from a popup window
@@ -146,6 +149,7 @@ public sealed class CopilotAuthController : Controller
 
         return RedirectToLocal(state);
     }
+
     /// <summary>
     /// Disconnects the user's GitHub account.
     /// </summary>
@@ -165,6 +169,7 @@ public sealed class CopilotAuthController : Controller
 
         return RedirectToLocal(returnUrl);
     }
+
     /// <summary>
     /// Returns the current user's GitHub authentication status.
     /// </summary>
@@ -195,6 +200,7 @@ public sealed class CopilotAuthController : Controller
             isConfigured = settings.IsConfigured(),
         });
     }
+
     /// <summary>
     /// Returns the list of available Copilot models for the authenticated user.
     /// </summary>
@@ -212,6 +218,7 @@ public sealed class CopilotAuthController : Controller
 
         return Json(models.Select(m => new { m.Id, m.Name, m.CostMultiplier }));
     }
+
     /// <summary>
     /// Disconnects the user's GitHub account via AJAX.
     /// </summary>

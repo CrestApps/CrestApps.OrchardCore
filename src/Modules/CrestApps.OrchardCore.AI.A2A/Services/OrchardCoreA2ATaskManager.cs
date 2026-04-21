@@ -49,7 +49,6 @@ internal static class A2ATaskManagerFactory
             if (targetProfile is null)
             {
                 return BuildSkillModeCard(agentUrl, profiles);
-
             }
 
             return BuildAgentCard(targetProfile, agentUrl);
@@ -75,7 +74,6 @@ internal static class A2ATaskManagerFactory
         TaskManager taskManager,
         IHttpContextAccessor httpContextAccessor,
         AgentTask agentTask,
-
         CancellationToken cancellationToken)
     {
         var services = httpContextAccessor.HttpContext?.RequestServices;
@@ -85,14 +83,11 @@ internal static class A2ATaskManagerFactory
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Failed,
-
                 CreateAgentMessage(agentTask.ContextId, "Request services are not available."),
             final: true,
-
             cancellationToken);
 
             return;
-
         }
 
         var logger = services.GetRequiredService<ILogger<TaskManager>>();
@@ -107,14 +102,11 @@ internal static class A2ATaskManagerFactory
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Failed,
-
                 CreateAgentMessage(agentTask.ContextId, "No text message was provided."),
             final: true,
-
             cancellationToken);
 
             return;
-
         }
 
         var targetProfile = await ResolveTargetProfileAsync(
@@ -125,10 +117,8 @@ internal static class A2ATaskManagerFactory
             await taskManager.UpdateStatusAsync(
                 agentTask.Id,
                 TaskState.Failed,
-
                 CreateAgentMessage(agentTask.ContextId, "No agents are available to process this request."),
             final: true,
-
             cancellationToken);
 
             return;
@@ -137,7 +127,6 @@ internal static class A2ATaskManagerFactory
         try
         {
             await taskManager.UpdateStatusAsync(
-
                 agentTask.Id,
                 TaskState.Working,
                 cancellationToken: cancellationToken);
@@ -165,7 +154,6 @@ internal static class A2ATaskManagerFactory
                 deployment,
                 messages,
                 context,
-
                 cancellationToken))
             {
                 var chunk = update.Text;
@@ -181,7 +169,6 @@ internal static class A2ATaskManagerFactory
                         {
                             Parts = [new TextPart { Text = chunk }],
                         },
-
                         cancellationToken);
                 }
             }
@@ -215,7 +202,6 @@ internal static class A2ATaskManagerFactory
                 TaskState.Failed,
                 CreateAgentMessage(agentTask.ContextId, $"An error occurred while executing agent '{targetProfile.Name}'."),
             final: true,
-
             cancellationToken: CancellationToken.None);
         }
     }
@@ -280,7 +266,6 @@ internal static class A2ATaskManagerFactory
                     Name = profile.DisplayText ?? profile.Name,
                     Description = profile.Description,
                     Tags = ["agent"],
-
                 });
             }
         }
@@ -297,7 +282,6 @@ internal static class A2ATaskManagerFactory
             {
                 Streaming = true,
             },
-
             Skills = skills,
         };
     }
@@ -315,7 +299,6 @@ internal static class A2ATaskManagerFactory
             Capabilities = new AgentCapabilities
             {
                 Streaming = true,
-
             },
         };
     }

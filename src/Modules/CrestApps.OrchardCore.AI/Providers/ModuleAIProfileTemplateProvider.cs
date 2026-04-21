@@ -36,7 +36,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
         _applicationContext = applicationContext;
         _parsers = parsers;
         _logger = logger;
-
     }
 
     public Task<IReadOnlyList<AIProfileTemplate>> GetTemplatesAsync()
@@ -54,7 +53,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
             if (string.IsNullOrEmpty(module.Name))
             {
                 continue;
-
             }
 
             var profilesRoot = module.Root + _profilesDirectorySubPath;
@@ -64,7 +62,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
                 if (!assetPath.StartsWith(profilesRoot, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
-
                 }
 
                 var relativePath = assetPath[profilesRoot.Length..];
@@ -72,7 +69,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
                 if (string.IsNullOrEmpty(relativePath))
                 {
                     continue;
-
                 }
 
                 var fileName = Path.GetFileName(relativePath);
@@ -83,7 +79,6 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
                 if (parser == null)
                 {
                     continue;
-
                 }
 
                 try
@@ -97,11 +92,9 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
                         if (_logger.IsEnabled(LogLevel.Debug))
                         {
                             _logger.LogDebug("AI profile template asset '{AssetPath}' exists in module asset paths but the embedded resource was not found.", assetPath);
-
                         }
 
                         continue;
-
                     }
 
                     using var stream = fileInfo.CreateReadStream();
@@ -120,17 +113,14 @@ internal sealed class ModuleAIProfileTemplateProvider : IAIProfileTemplateProvid
                     _logger.LogWarning(ex, "Failed to parse AI profile template file: {AssetPath}", assetPath);
                 }
             }
-
         }
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Discovered {Count} AI profile templates from modules.", templates.Count);
-
         }
 
         return Task.FromResult<IReadOnlyList<AIProfileTemplate>>(templates);
-
     }
     private ITemplateParser GetParserForExtension(string extension)
     {

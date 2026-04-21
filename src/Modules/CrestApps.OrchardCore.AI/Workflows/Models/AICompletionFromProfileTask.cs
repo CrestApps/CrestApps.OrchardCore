@@ -43,7 +43,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         _completionContextBuilder = completionContextBuilder;
         _logger = logger;
         S = stringLocalizer;
-
     }
 
     public override LocalizedString DisplayText => S["AI Completion using Profile"];
@@ -54,27 +53,23 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
     {
         get => GetProperty<string>();
         set => SetProperty(value);
-
     }
 
     public string PromptTemplate
     {
         get => GetProperty<string>();
         set => SetProperty(value);
-
     }
 
     public string ResultPropertyName
     {
         get => GetProperty<string>();
         set => SetProperty(value);
-
     }
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
         return Outcomes(S["Done"], S["Drew Blank"], S["Failed"]);
-
     }
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
@@ -84,14 +79,12 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
         if (profile is null)
         {
             return Outcomes("Failed");
-
         }
 
         var userPrompt = await _liquidTemplateManager.RenderStringAsync(PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>()
         {
             ["Profile"] = new ObjectValue(profile),
-
         });
 
         if (string.IsNullOrWhiteSpace(userPrompt))
@@ -99,7 +92,6 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
             _logger.LogWarning("The generated prompt from the template is empty.");
 
             return Outcomes("Failed");
-
         }
 
         try
@@ -116,13 +108,11 @@ public sealed class AICompletionFromProfileTask : TaskActivity<AICompletionFromP
             if (string.IsNullOrEmpty(bestChoice?.Text))
             {
                 return Outcomes("Drew Blank");
-
             }
 
             var value = new AIResponseMessage
             {
                 Content = bestChoice.Text,
-
             };
 
             workflowContext.Output[ResultPropertyName ?? "ChatResponse"] = value;

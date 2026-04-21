@@ -79,17 +79,17 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-         services
-             .AddAIDeploymentServices()
-             .AddPermissionProvider<AIDeploymentPermissionProvider>()
-             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
-             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
-             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
-             .AddNavigationProvider<AIDeploymentAdminMenu>()
-             .AddDataMigration<AIDeploymentTypeMigrations>()
-             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
-             .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
-             .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>();
+        services
+            .AddAIDeploymentServices()
+            .AddPermissionProvider<AIDeploymentPermissionProvider>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDeploymentDisplayDriver>()
+            .AddNavigationProvider<AIDeploymentAdminMenu>()
+            .AddDataMigration<AIDeploymentTypeMigrations>()
+            .AddDataMigration<AIDeploymentV1DocumentMigrations>()
+            .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
+            .AddTransient<ICatalogEntryHandler<AIProfile>, AIDeploymentProfileHandler>();
 
         // Add tools core functionality.
         services
@@ -289,4 +289,3 @@ public sealed class ChatAnalyticsStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAIChatSessionHandler, AnalyticsChatSessionHandler>());
     }
 }
-

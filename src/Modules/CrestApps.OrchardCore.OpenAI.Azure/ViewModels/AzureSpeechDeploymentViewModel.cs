@@ -20,4 +20,3 @@ public class AzureSpeechDeploymentViewModel
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
 }
-

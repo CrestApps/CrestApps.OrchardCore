@@ -36,11 +36,9 @@ public sealed class Startup : StartupBase
                 .AddScoped<IAIMemoryStore, DefaultAIMemoryStore>()
                 .AddScoped<ICatalogEntryHandler<AIMemoryEntry>, AIMemoryEntryHandler>()
                 .AddScoped<AIMemoryIndexingService>()
-
                 .AddDataMigration<MemoryMetadataMigrations>()
                 .AddDisplayDriver<AIProfile, AIProfileMemoryDisplayDriver>()
                 .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMemoryDisplayDriver>()
-
                 .AddDisplayDriver<IndexProfile, AIMemoryIndexProfileDisplayDriver>()
                 .AddSiteDisplayDriver<AIMemorySettingsDisplayDriver>()
                 .AddNavigationProvider<AISiteSettingsAdminMenu>();

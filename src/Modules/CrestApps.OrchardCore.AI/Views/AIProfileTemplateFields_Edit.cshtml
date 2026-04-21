@@ -65,11 +65,11 @@
             $title.on('input', function () {
                 if (!$name.data('manually-edited')) {
                     var val = $title.val()
-                        .toLowerCase()
-                        .replace(/[^a-z0-9\s-]/g, '')
-                        .replace(/[\s]+/g, '-')
-                        .replace(/-{2,}/g, '-')
-                        .replace(/^-|-$/g, '');
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s]+/g, '-')
+                    .replace(/-{2,}/g, '-')
+                    .replace(/^-|-$/g, '');
                     $name.val(val);
                 }
             });

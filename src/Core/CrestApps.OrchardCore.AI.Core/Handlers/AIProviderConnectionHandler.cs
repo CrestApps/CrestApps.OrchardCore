@@ -67,7 +67,6 @@ public sealed class AIProviderConnectionHandler : CatalogEntryHandlerBase<AIProv
         {
             context.Result.Fail(new ValidationResult(S["Invalid source."], [nameof(AIProviderConnection.Source)]));
         }
-
     }
 
     public override Task InitializedAsync(InitializedContext<AIProviderConnection> context)

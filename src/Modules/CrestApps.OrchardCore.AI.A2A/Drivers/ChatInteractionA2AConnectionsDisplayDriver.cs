@@ -41,7 +41,6 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
                 IsSelected = interaction.A2AConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Parameters:4#Capabilities;5");
     }
 

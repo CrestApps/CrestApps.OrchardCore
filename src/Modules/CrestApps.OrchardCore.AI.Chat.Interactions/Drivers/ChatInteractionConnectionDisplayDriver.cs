@@ -47,7 +47,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByTypeAsync(AIDeploymentType.Utility));
-
         }).Location("Parameters:3#Settings;1");
 
         return connectionResult;
@@ -89,7 +88,6 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                 : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
-
             });
     }
 }

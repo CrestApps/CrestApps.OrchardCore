@@ -45,4 +45,3 @@ This module uses the [PdfPig](https://github.com/UglyToad/PdfPig) library for PD
 | Extension | MIME Type |
 |-----------|-----------|
 | .pdf | application/pdf |
-

@@ -58,6 +58,7 @@ internal static class A2AWellKnownEndpointHandler
 
         return cards;
     }
+
     /// <summary>
     /// Populates the <see cref="AgentCard.SecuritySchemes"/> and <see cref="AgentCard.Security"/>
     /// fields based on the configured authentication type so clients know how to authenticate.

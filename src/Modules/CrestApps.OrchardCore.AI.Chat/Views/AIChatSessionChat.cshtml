@@ -183,7 +183,6 @@
 </div>
 
 @{
-
     var prompts = new List<object>();
 
     if (sessionPrompts.Count > 0)
@@ -210,38 +209,28 @@
 <style asp-name="highlightjs" at="Head"></style>
 
 @if (speechToTextEnabled)
-
 {
-
     <style asp-name="SpeechToText" at="Head"></style>
-
 }
 
 <script asp-name="AIChatApp" at="Foot"></script>
 <script asp-name="AIChatAppPatch" at="Foot"></script>
 
 <script at="Foot" depends-on="AIChatAppPatch">
-
     var configEl = document.getElementById('@($"{baseId}_Config")');
 
     if (configEl) {
+        var chatApp = openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
 
-    var chatApp = openAIChatManager.initialize(JSON.parse(configEl.getAttribute('data-config')));
-
-    if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
-    window.crestAppsAIChat.patchSessionProfileSync(chatApp);
+        if (window.crestAppsAIChat && window.crestAppsAIChat.patchSessionProfileSync) {
+            window.crestAppsAIChat.patchSessionProfileSync(chatApp);
+        }
     }
-
-    }
-
 </script>
 
 @{
-
     var chatConfig = new Dictionary<string, object>
-
     {
-
         ["signalRHubUrl"] = HubRouteManager.GetPathByHub<AIChatHub>(),
         ["appElementSelector"] = $"#{chatAppHtmlId}",
         ["chatContainerElementSelector"] = $"#{chatContainerHtmlId}",
@@ -262,9 +251,7 @@
     };
 
     if (sessionDocumentsEnabled)
-
     {
-
         chatConfig["sessionDocumentsEnabled"] = true;
 
         chatConfig["documentBarSelector"] = $"#{documentBarHtmlId}";
@@ -276,17 +263,12 @@
         chatConfig["allowedExtensions"] = allowedExtensions;
 
         chatConfig["existingDocuments"] = Model.Session.Documents ?? new List<ChatDocumentInfo>();
-
     }
-
 }
 
 <div id="@($"{baseId}_Config")" class="d-none" data-config="@JsonSerializer.Serialize(chatConfig, JOptions.CamelCase)"></div>
 
-
-
 <style at="Head">
-
     .chat-user-prompt-input:focus {
     border: none;
     box-shadow: none;

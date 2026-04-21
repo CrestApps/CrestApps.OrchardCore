@@ -26,7 +26,6 @@ public sealed class GetFeatureTool : AIFunction
       "required": [
         "featureId"
       ]
-
     }
 
     """);
@@ -53,7 +52,6 @@ public sealed class GetFeatureTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
@@ -73,7 +71,6 @@ public sealed class GetFeatureTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: feature '{FeatureId}' not found.", Name, featureId);
 
             return $"Unable to find a feature with the ID: {featureId}.";
-
         }
 
         var isEnabled = await shellFeaturesManager.IsFeatureEnabledAsync(feature.Id);

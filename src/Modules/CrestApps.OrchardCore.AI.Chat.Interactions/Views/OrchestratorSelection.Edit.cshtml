@@ -24,24 +24,22 @@ else
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-
         const orchestratorSelector = document.getElementById('@Html.IdFor(m => m.OrchestratorName)');
         const defaultOrchestrator = '@(DefaultOrchestrator.OrchestratorName)';
 
         if (!orchestratorSelector) return;
 
         function updateFieldVisibility() {
-
             const selectedOrchestrator =
-                orchestratorSelector.value || defaultOrchestrator;
+            orchestratorSelector.value || defaultOrchestrator;
 
             const elements = document.getElementsByClassName('orchestrator-dependent');
             const targetClass = 'orchestrator-dependent-' + selectedOrchestrator;
 
             for (const el of elements) {
                 el.classList.toggle(
-                    'd-none',
-                    !el.classList.contains(targetClass)
+                'd-none',
+                !el.classList.contains(targetClass)
                 );
             }
         }
@@ -59,8 +57,8 @@ else
 
             // Dispatch custom event so dependent views (e.g., Copilot) can react.
             document.dispatchEvent(new CustomEvent('orchestrator-changed', {
-                detail: { 
-                    orchestrator: orchestratorSelector.value || defaultOrchestrator 
+                detail: {
+                    orchestrator: orchestratorSelector.value || defaultOrchestrator
                 }
             }));
         });

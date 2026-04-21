@@ -20,6 +20,7 @@ public sealed class AIChatSessionEventService
         _session = session;
         _timeProvider = timeProvider;
     }
+
     /// <summary>
     /// Records a new session event when a chat session starts.
     /// Uses the session's UserId or ClientId as the visitor identifier.
@@ -46,6 +47,7 @@ public sealed class AIChatSessionEventService
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
+
     /// <summary>
     /// Updates the session event when a chat session ends.
     /// </summary>
@@ -88,6 +90,7 @@ public sealed class AIChatSessionEventService
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
+
     /// <summary>
     /// Accumulates token usage and response latency metrics for the session.
     /// Called after each message completion to update running totals.
@@ -122,6 +125,7 @@ public sealed class AIChatSessionEventService
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
+
     /// <summary>
     /// Updates the resolution status for a session based on AI analysis.
     /// </summary>
@@ -138,6 +142,7 @@ public sealed class AIChatSessionEventService
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
+
     /// <summary>
     /// Records conversion goal evaluation results for a session.
     /// </summary>
@@ -156,6 +161,7 @@ public sealed class AIChatSessionEventService
 
         await _session.SaveAsync(evt, collection: AIConstants.AICollectionName);
     }
+
     /// <summary>
     /// Records the user's feedback rating counts for a session.
     /// </summary>

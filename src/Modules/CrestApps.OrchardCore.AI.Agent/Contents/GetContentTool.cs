@@ -27,7 +27,6 @@ public sealed class GetContentTool : AIFunction
         "contentItemId"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -64,7 +63,6 @@ public sealed class GetContentTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
 
             return "Unable to find a contentItemId argument in the function arguments.";
-
         }
 
         var contentItem = await contentManager.GetAsync(contentItemId);

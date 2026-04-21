@@ -164,21 +164,21 @@
                 keySelect.disabled = true;
 
                 fetch('@Url.Content("~/")' + 'ai/data-sources/fields/' + encodeURIComponent(indexProfileName))
-                    .then(function (response) {
-                        if (!response.ok) throw new Error('Failed to load fields');
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        populateSelect(contentSelect, data.fields, preserveContentField || data.suggestedContentField, data.suggestedContentField, '@T["Select a content field"]');
-                        populateSelect(titleSelect, data.fields, preserveTitleField || data.suggestedTitleField, data.suggestedTitleField, '@T["Select a title field (optional)"]');
-                        populateSelect(keySelect, data.fields, preserveKeyField || data.suggestedKeyField, data.suggestedKeyField, '@T["Use document ID (_id)"]');
-                        contentSelect.disabled = false;
-                        titleSelect.disabled = false;
-                        keySelect.disabled = false;
-                    })
-                    .catch(function () {
-                        clearFields();
-                    });
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Failed to load fields');
+                    return response.json();
+                })
+                .then(function (data) {
+                    populateSelect(contentSelect, data.fields, preserveContentField || data.suggestedContentField, data.suggestedContentField, '@T["Select a content field"]');
+                    populateSelect(titleSelect, data.fields, preserveTitleField || data.suggestedTitleField, data.suggestedTitleField, '@T["Select a title field (optional)"]');
+                    populateSelect(keySelect, data.fields, preserveKeyField || data.suggestedKeyField, data.suggestedKeyField, '@T["Use document ID (_id)"]');
+                    contentSelect.disabled = false;
+                    titleSelect.disabled = false;
+                    keySelect.disabled = false;
+                })
+                .catch(function () {
+                    clearFields();
+                });
             }
 
             function populateSelect(select, fields, selectedValue, defaultField, placeholder) {

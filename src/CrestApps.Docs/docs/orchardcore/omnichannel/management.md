@@ -118,4 +118,3 @@ A common approach:
 - Handle `Completed Activity` event.
 - Branch based on the selected **Disposition**.
 - Create/schedule the next activity (or end the process).
-

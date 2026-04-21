@@ -25,7 +25,6 @@ public sealed class GetTenantTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -52,7 +51,6 @@ public sealed class GetTenantTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();

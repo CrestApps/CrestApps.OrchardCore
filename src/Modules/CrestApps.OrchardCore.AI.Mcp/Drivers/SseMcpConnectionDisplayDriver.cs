@@ -86,7 +86,6 @@ internal sealed class SseMcpConnectionDisplayDriver : DisplayDriver<McpConnectio
   }
 }
 """;
-
         }).Location("Content:1");
     }
 

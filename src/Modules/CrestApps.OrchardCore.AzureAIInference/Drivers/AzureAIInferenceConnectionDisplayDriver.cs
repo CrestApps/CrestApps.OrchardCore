@@ -98,4 +98,3 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         return Edit(connection, context);
     }
 }
-

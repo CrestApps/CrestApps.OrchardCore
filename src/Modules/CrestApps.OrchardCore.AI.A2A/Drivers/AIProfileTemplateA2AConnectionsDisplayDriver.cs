@@ -45,7 +45,6 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Content:4#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }

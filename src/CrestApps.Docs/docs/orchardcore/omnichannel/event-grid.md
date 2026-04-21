@@ -39,4 +39,3 @@ A typical flow is:
 2. Event is delivered to Azure Event Grid.
 3. Event Grid posts to `~/Omnichannel/EventGrid`.
 4. Omnichannel processes the communication event and routes it to the appropriate channel/service.
-

@@ -44,7 +44,6 @@ internal sealed class AIProfileA2AConnectionsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Content:4#Capabilities;8");
     }
 

@@ -31,7 +31,6 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .DisableAntiforgery()
-
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = "Api" });
 
         return builder;
@@ -82,7 +81,6 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
                     { nameof(requestData.SessionProfileId), ["SessionProfileId is required"] },
-
                 });
             }
 
@@ -109,7 +107,6 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.ValidationProblem(new Dictionary<string, string[]>()
                 {
                     { nameof(requestData.Prompt), ["Prompt is required"] },
-
                 });
             }
 
@@ -118,7 +115,6 @@ internal static class ApiAICompletionEndpoint
             if (profile.Type == AIProfileType.Utility)
             {
                 return await GetUtilityMessageAsync(completionService, profile, userPrompt, completionContextBuilder, deploymentManager);
-
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, profile, completionService, userPrompt, completionContextBuilder, aiTemplateService, deploymentManager);
@@ -239,7 +235,6 @@ internal static class ApiAICompletionEndpoint
                 ContentItemIds = contentItemIds.ToList(),
                 References = references,
             };
-
         }
 
         await promptStore.CreateAsync(message);
@@ -290,7 +285,6 @@ internal static class ApiAICompletionEndpoint
         if (string.IsNullOrEmpty(chatSession.Title))
         {
             chatSession.Title = Str.Truncate(titleUserPrompt, 255);
-
         }
 
         return (chatSession, true);
@@ -302,7 +296,6 @@ internal static class ApiAICompletionEndpoint
         IAICompletionService completionService,
         IAICompletionContextBuilder completionContextBuilder,
         ITemplateService aiTemplateService,
-
         IAIDeploymentManager deploymentManager)
     {
         var titleSystemMessage = await aiTemplateService.RenderAsync(AITemplateIds.TitleGeneration);
@@ -336,7 +329,6 @@ internal static class ApiAICompletionEndpoint
 
         var titleResponse = await completionService.CompleteAsync(
             deployment,
-
             [
             new (ChatRole.User, userPrompt),
         ], context);
@@ -361,7 +353,6 @@ internal static class ApiAICompletionEndpoint
         var result = new AIChatResponse
         {
             Success = completion.Messages.Count > 0,
-
             Type = nameof(AIProfileType.Utility),
             Message = new AIChatResponseMessageDetailed(),
         };
@@ -371,7 +362,6 @@ internal static class ApiAICompletionEndpoint
             if (completion.AdditionalProperties.TryGetValue<Dictionary<string, AICompletionReference>>("References", out var referenceItems))
             {
                 result.Message.References = referenceItems;
-
             }
         }
 

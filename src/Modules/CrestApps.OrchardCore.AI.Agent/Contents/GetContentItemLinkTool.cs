@@ -35,11 +35,8 @@ public sealed class GetContentItemLinkTool : AIFunction
       "required": [
 
         "contentItemId"
-
       ],
-
       "additionalProperties": false
-
     }
     """);
     public override string Name => TheName;
@@ -51,7 +48,6 @@ public sealed class GetContentItemLinkTool : AIFunction
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
-
     };
 
     protected async override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -82,11 +78,9 @@ public sealed class GetContentItemLinkTool : AIFunction
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("AI tool '{ToolName}': HttpContext is null (likely running in a background task). Returning content item ID only.", TheName);
-
             }
 
             return $"Unable to generate a URL because the request context is not available (background execution). The content item ID is '{contentItemId}'.";
-
         }
 
         var linkGenerator = arguments.Services.GetRequiredService<LinkGenerator>();
@@ -123,13 +117,10 @@ public sealed class GetContentItemLinkTool : AIFunction
             _ => new RouteValueDictionary()
             {
                 { "Area", "OrchardCore.Contents" },
-
                 { "Controller", "Admin" },
-
                 { "Action", "Display" },
                 { "contentItemId", contentItemId },
             },
-
         };
 
         var link = linkGenerator.GetUriByRouteValues(httpContext, null, routeValues);
@@ -139,7 +130,6 @@ public sealed class GetContentItemLinkTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to generate a link for content item '{ContentItemId}'.", TheName, contentItemId);
 
             return "Unable to generate a link for the given content item.";
-
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

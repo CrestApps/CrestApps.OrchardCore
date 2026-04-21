@@ -25,7 +25,6 @@ public sealed class EnableTenantTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -90,7 +89,6 @@ public sealed class EnableTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not disabled.", Name, name);
 
             return "You can only enable a disabled tenant.";
-
         }
 
         await shellHost.UpdateShellSettingsAsync(tenantSettings.AsRunning());

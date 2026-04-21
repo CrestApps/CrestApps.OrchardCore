@@ -85,4 +85,3 @@ internal sealed class AzureAIInferenceConnectionSettingsHandler : CatalogEntryHa
         return Task.CompletedTask;
     }
 }
-

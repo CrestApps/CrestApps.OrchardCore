@@ -44,11 +44,9 @@ public sealed class SendEmailTool : AIFunction
       "required": [
         "to",
         "subject",
-
         "body"
 
       ]
-
     }
 
     """);

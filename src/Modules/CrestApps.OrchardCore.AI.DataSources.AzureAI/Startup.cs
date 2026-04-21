@@ -7,11 +7,11 @@ using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.AzureAI;
-using OrchardCore.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.DataSources.AzureAI;
 

@@ -28,7 +28,6 @@ internal sealed class McpAdminMenu : AdminNavigationProvider
             .LocalNav()
         )
         )
-
         );
 
         return ValueTask.CompletedTask;

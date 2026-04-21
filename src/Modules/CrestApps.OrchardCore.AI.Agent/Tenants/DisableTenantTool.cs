@@ -25,7 +25,6 @@ public sealed class DisableTenantTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -90,7 +89,6 @@ public sealed class DisableTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not running.", Name, name);
 
             return "You can only disable a Running tenant.";
-
         }
 
         await shellHost.UpdateShellSettingsAsync(tenantSettings.AsDisabled());

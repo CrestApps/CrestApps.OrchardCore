@@ -3,12 +3,12 @@ using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Infrastructure.Entities;
-using OrchardCore.AzureAI;
-using OrchardCore.AzureAI.Models;
 
 namespace CrestApps.OrchardCore.AI.Memory.AzureAI.Handlers;
 

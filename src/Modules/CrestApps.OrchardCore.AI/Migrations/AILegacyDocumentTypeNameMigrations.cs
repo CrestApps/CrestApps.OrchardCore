@@ -77,19 +77,14 @@ internal sealed class AILegacyDocumentTypeNameMigrations : DataMigration
 
             totalUpdated += await connection.ExecuteAsync(
                 $"""
-
                 UPDATE {quotedTableName}
 
                 SET {quotedTypeColumnName} = REPLACE(
-
                 REPLACE({quotedTypeColumnName}, '{legacyNamespacePrefix}', '{currentNamespacePrefix}'),
-
                 '{legacyAssemblyName}',
-
                 '{CurrentAssemblyName}')
 
                 WHERE {whereClause}
-
                 """);
         }
 

@@ -104,7 +104,6 @@
         border: none;
         box-shadow: none;
     }
-
     .chat-parameters-content .nav-link {
         padding: 0.5rem !important;
     }
@@ -151,8 +150,8 @@
                     button.classList.toggle('tts-playing', isPlaying);
                     button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
                     button.innerHTML = isPlaying
-                        ? '<span class="fa-solid fa-circle-pause"></span>'
-                        : '<span class="fa-solid fa-circle-play"></span>';
+                    ? '<span class="fa-solid fa-circle-pause"></span>'
+                    : '<span class="fa-solid fa-circle-play"></span>';
                 }
             }
 
@@ -170,12 +169,12 @@
 
             app.$watch('ttsPlayingMessageIndex', queueTtsPlaybackRefresh);
             app.$watch(
-                function () {
-                    return (app.messages || [])
-                        .map(function (message) { return [message.role, !!message.isStreaming].join(':'); })
-                        .join('|');
-                },
-                queueTtsPlaybackRefresh);
+            function () {
+                return (app.messages || [])
+                .map(function (message) { return [message.role, !!message.isStreaming].join(':'); })
+                .join('|');
+            },
+            queueTtsPlaybackRefresh);
             app.$watch('isConversationMode', queueTtsPlaybackRefresh);
 
             new MutationObserver(queueTtsPlaybackRefresh).observe(chatAppElement, {

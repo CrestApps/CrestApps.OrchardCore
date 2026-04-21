@@ -96,7 +96,6 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
                 : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
-
             });
     }
 }

@@ -25,5 +25,4 @@ internal sealed class AIMemoryEntryMigrations : DataMigration
     {
         return Task.FromResult(2);
     }
-
 }

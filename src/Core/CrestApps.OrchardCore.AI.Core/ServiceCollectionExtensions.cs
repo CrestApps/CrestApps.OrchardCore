@@ -103,6 +103,7 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
     /// <summary>
     /// Replaces core CrestApps.Core.AI configuration-backed services that inject
     /// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> (host-level) with

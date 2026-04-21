@@ -38,4 +38,3 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 3. Configure your SMS provider webhook to deliver inbound SMS messages to Orchard Core.
 4. Load activities via Activity Batches.
 5. The Automated Activities Processor will run in the background and let AI handle the assigned SMS interactions.
-

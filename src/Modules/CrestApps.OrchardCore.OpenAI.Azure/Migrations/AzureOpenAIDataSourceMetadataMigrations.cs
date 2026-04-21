@@ -387,6 +387,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return 2;
     }
+
     /// <summary>
     /// Converts an IDictionary&lt;string, object&gt; (from ExtensibleEntity.Properties) to a JsonObject
     /// for legacy migration code that expects JsonObject-based property access.
@@ -400,6 +401,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return JsonSerializer.SerializeToNode(properties)?.AsObject();
     }
+
     /// <summary>
     /// Gets a property object from the Properties dictionary using string keys.
     /// </summary>
@@ -417,6 +419,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return null;
     }
+
     /// <summary>
     /// Gets a property value from the Properties dictionary using string keys.
     /// </summary>
@@ -435,6 +438,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return default;
     }
+
     /// <summary>
     /// Gets a nullable int value from a JsonObject.
     /// </summary>
@@ -458,6 +462,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
 
         return null;
     }
+
     /// <summary>
     /// Finds the first available embedding connection from configured AI providers.
     /// If no embedding connection is found, logs a warning and returns empty metadata.

@@ -189,4 +189,3 @@ internal static class PromptTemplateSelectionEditorHelper
     private static string BuildFieldName(string prefix, int index, string propertyName)
         => $"{prefix}.{nameof(AITemplateSelectionViewModel.PromptTemplates)}[{index}].{propertyName}";
 }
-

@@ -7,7 +7,6 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email;
 using OrchardCore.Mvc.ModelBinding;
-using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 

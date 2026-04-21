@@ -71,7 +71,6 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
               }
             }
             """;
-
         }).Location("Content:1");
     }
 

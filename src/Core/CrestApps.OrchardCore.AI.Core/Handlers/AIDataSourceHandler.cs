@@ -76,7 +76,6 @@ public sealed class AIDataSourceHandler : CatalogEntryHandlerBase<AIDataSource>
             foreach (var (key, value) in properties)
             {
                 dataSource.Properties[key] = value;
-
             }
         }
 

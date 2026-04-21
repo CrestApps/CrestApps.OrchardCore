@@ -96,4 +96,3 @@ internal sealed class AzureOpenAIConnectionSettingsHandler : CatalogEntryHandler
         return Task.CompletedTask;
     }
 }
-

@@ -10,8 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using YSession = YesSql.ISession;
 using Usr = OrchardCore.Users;
+using YSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Agent.Contents;
 
@@ -53,9 +53,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
         "contentItem",
         "isDraft"
       ],
-
       "additionalProperties": false
-
     }
 
     """);
@@ -139,7 +137,6 @@ public sealed class CreateOrUpdateContentTool : AIFunction
                 logger.LogWarning("AI tool '{ToolName}': Invalid content type '{ContentType}'.", TheName, model.ContentType);
 
                 return $"Invalid content type '{model.ContentType}'. In this is a new content type, first create content type definition then created the content item.";
-
             }
 
             contentItem = await contentManager.NewAsync(model.ContentType);
@@ -181,7 +178,6 @@ For reference, here is the correct content type definition {JsonSerializer.Seria
                 logger.LogWarning("AI tool '{ToolName}': Unable to update content item due to validation errors: {Errors}.", TheName, string.Join("; ", result.Errors.Select(x => x.ErrorMessage)));
 
                 return "Unable to update the content item due to the following errors: " + string.Join(';', result.Errors.Select(x => x.ErrorMessage));
-
             }
         }
 

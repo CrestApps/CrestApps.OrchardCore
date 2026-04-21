@@ -580,5 +580,4 @@ public sealed class ProfilesController : Controller
             }
         }
     }
-
 }

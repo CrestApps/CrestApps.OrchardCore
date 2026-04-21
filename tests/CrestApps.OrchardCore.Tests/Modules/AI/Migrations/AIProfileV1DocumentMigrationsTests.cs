@@ -1,8 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
-using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;

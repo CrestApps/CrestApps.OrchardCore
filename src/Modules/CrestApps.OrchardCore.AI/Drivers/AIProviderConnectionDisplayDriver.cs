@@ -45,7 +45,6 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
             model.IsNew = context.IsNew;
-
         }).Location("Content:1");
     }
 

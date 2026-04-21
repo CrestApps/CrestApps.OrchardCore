@@ -70,7 +70,6 @@ public sealed class CreateTenantTool : AIFunction
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
-
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -84,7 +83,6 @@ public sealed class CreateTenantTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
@@ -98,7 +96,6 @@ public sealed class CreateTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
-
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
@@ -106,7 +103,6 @@ public sealed class CreateTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
             return "Unable to find a name argument in the function arguments.";
-
         }
 
         if (!arguments.TryGetFirstString("recipeName", out var recipeName))
@@ -114,14 +110,12 @@ public sealed class CreateTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipeName' argument.", Name);
 
             return "Unable to find a recipeName argument in the function arguments.";
-
         }
 
         if (!arguments.TryGetFirstString("databaseProvider", out var databaseProvider) ||
             !databaseProviders.Any(x => x.Name == databaseProvider))
         {
             databaseProvider = databaseProviders.FirstOrDefault(x => x.IsDefault)?.Name;
-
         }
 
         if (shellHost.TryGetSettings(name, out var _))
@@ -129,13 +123,11 @@ public sealed class CreateTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' already exists.", Name, name);
 
             return "A tenant with the same name already exists.";
-
         }
 
         using var newShellSettings = shellSettingsManager
             .CreateDefaultSettings()
             .AsUninitialized()
-
             .AsDisposable();
 
         newShellSettings.Name = name;
@@ -146,13 +138,11 @@ public sealed class CreateTenantTool : AIFunction
         if (arguments.TryGetFirstString("requestUrlHost", out var requestUrlHost))
         {
             newShellSettings.RequestUrlHost = requestUrlHost;
-
         }
 
         if (arguments.TryGetFirstString("requestUrlPrefix", out var requestUrlPrefix))
         {
             newShellSettings.RequestUrlPrefix = requestUrlPrefix;
-
         }
 
         if (string.IsNullOrEmpty(newShellSettings.RequestUrlPrefix) && string.IsNullOrEmpty(newShellSettings.RequestUrlHost))
@@ -160,37 +150,31 @@ public sealed class CreateTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: neither 'requestUrlHost' nor 'requestUrlPrefix' was provided for tenant '{TenantName}'.", Name, name);
 
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";
-
         }
 
         if (arguments.TryGetFirstString("category", out var category))
         {
             newShellSettings["Category"] = category;
-
         }
 
         if (arguments.TryGetFirstString("description", out var description))
         {
             newShellSettings["Description"] = description;
-
         }
 
         if (arguments.TryGetFirstString("connectionString", out var connectionString))
         {
             newShellSettings["ConnectionString"] = connectionString;
-
         }
 
         if (arguments.TryGetFirstString("tablePrefix", out var tablePrefix))
         {
             newShellSettings["TablePrefix"] = tablePrefix;
-
         }
 
         if (arguments.TryGetFirstString("schema", out var schema))
         {
             newShellSettings["Schema"] = schema;
-
         }
 
         await shellHost.UpdateShellSettingsAsync(newShellSettings);
@@ -198,7 +182,6 @@ public sealed class CreateTenantTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
-
         }
 
         return $"The tenant {name} was created successfully.";

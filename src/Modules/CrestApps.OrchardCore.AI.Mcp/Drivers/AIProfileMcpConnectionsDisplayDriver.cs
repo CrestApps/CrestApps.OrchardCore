@@ -44,7 +44,6 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Content:3#Capabilities;8");
     }
 

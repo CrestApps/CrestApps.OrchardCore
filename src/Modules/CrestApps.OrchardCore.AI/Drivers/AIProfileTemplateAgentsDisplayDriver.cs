@@ -41,7 +41,6 @@ internal sealed class AIProfileTemplateAgentsDisplayDriver : DisplayDriver<AIPro
                 Description = agent.Description,
                 IsSelected = selectedNames.Contains(agent.Name),
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
         }).Location("Content:5#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }

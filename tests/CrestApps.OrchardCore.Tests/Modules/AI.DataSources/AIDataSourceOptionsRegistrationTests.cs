@@ -3,8 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Indexing.Core;
 using OrchardCore.AzureAI;
+using OrchardCore.Indexing.Core;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;

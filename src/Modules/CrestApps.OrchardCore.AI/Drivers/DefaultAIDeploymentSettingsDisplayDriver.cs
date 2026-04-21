@@ -111,7 +111,6 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
                     : $"{d.Name} ({d.ModelName})";
 
                 return new SelectListItem(label, d.Name) { Group = group };
-
             });
     }
 

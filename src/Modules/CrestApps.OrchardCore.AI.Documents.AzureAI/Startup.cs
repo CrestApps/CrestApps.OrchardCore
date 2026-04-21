@@ -4,11 +4,11 @@ using CrestApps.OrchardCore.AI.Documents.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.Documents.AzureAI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.AzureAI;
+using OrchardCore.AzureAI.Core;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
-using OrchardCore.AzureAI;
-using OrchardCore.AzureAI.Core;
 
 namespace CrestApps.OrchardCore.AI.Documents.AzureAI;
 

@@ -26,7 +26,6 @@ public sealed class FeaturesSearchTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -53,7 +52,6 @@ public sealed class FeaturesSearchTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellFeaturesManager = arguments.Services.GetRequiredService<IShellFeaturesManager>();
@@ -69,7 +67,6 @@ public sealed class FeaturesSearchTool : AIFunction
             .Where(feature => !feature.EnabledByDependencyOnly && !feature.IsTheme() && (feature.Name.Contains(name, StringComparison.OrdinalIgnoreCase) || feature.Id.Contains(name, StringComparison.OrdinalIgnoreCase)));
 
         var enabledFeatureIds = (await shellFeaturesManager.GetEnabledFeaturesAsync())
-
             .Select(x => x.Id)
             .ToHashSet();
 

@@ -134,7 +134,6 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         await layout.Zones["Footer"].AddAsync(shape, "999");
 
         await next();
-
     }
 
     private bool IsAdminPage(ResultExecutingContext context)
@@ -142,7 +141,6 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         if (context.Result is not (ViewResult or PageResult))
         {
             return false;
-
         }
 
         return context.HttpContext.Request.Path.StartsWithSegments('/' + _adminOptions.AdminUrlPrefix, StringComparison.OrdinalIgnoreCase);

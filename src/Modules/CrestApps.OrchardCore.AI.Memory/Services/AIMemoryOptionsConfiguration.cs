@@ -1,5 +1,4 @@
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Memory.Models;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
 

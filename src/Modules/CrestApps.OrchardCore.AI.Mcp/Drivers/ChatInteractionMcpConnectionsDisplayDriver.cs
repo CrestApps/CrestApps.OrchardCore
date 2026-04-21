@@ -41,7 +41,6 @@ internal sealed class ChatInteractionMcpConnectionsDisplayDriver : DisplayDriver
                 IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Parameters:3#Capabilities;5");
     }
 

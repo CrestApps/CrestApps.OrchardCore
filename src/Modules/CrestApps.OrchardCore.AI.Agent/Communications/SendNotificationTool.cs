@@ -44,11 +44,8 @@ public sealed class SendNotificationTool : AIFunction
         "userId",
         "subject",
         "summary"
-
       ],
-
       "additionalProperties": false
-
     }
 
     """);
@@ -101,11 +98,8 @@ public sealed class SendNotificationTool : AIFunction
         var message = new NotificationMessage
         {
             Subject = subject,
-
             Summary = summary,
-
             TextBody = textBody,
-
             HtmlBody = arguments.GetFirstValueOrDefault<string>("htmlBody"),
         };
 

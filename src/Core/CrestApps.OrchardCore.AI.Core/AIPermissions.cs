@@ -41,6 +41,7 @@ public static class AIPermissions
     private static readonly Permission _queryAIProfileTemplate = new("QueryAIProfile_{0}", "Query AI profile - {0}", [QueryAnyAIProfile]);
 
     private static readonly Permission _accessAIToolTemplate = new("AccessAITool_{0}", "Access AI tool - {0}", [AccessAnyAITool]);
+
     /// <summary>
     /// Generates a permission dynamically for a content type.
     /// </summary>
@@ -54,6 +55,7 @@ public static class AIPermissions
         _queryAIProfileTemplate.ImpliedBy ?? []
         );
     }
+
     /// <summary>
     /// Generates a permission dynamically for an AI tool.
     /// </summary>

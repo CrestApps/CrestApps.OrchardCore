@@ -25,7 +25,6 @@ public sealed class ReloadTenantTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -83,7 +82,6 @@ public sealed class ReloadTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: cannot reload the default tenant.", Name);
 
             return "You cannot enable the default tenant.";
-
         }
 
         await shellHost.ReloadShellContextAsync(tenantSettings);

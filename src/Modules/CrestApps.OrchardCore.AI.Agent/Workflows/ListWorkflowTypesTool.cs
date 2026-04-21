@@ -33,7 +33,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
         "term"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -72,7 +71,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
         if (page < 1)
         {
             page = 1;
-
         }
 
         var startingIndex = (page - 1) * pagerOptions.PageSize;
@@ -88,7 +86,6 @@ public sealed class ListWorkflowTypesTool : AIFunction
 
         var items = workflowTypes
             .Skip(startingIndex)
-
             .Take(pagerOptions.PageSize)
             .ToList();
 

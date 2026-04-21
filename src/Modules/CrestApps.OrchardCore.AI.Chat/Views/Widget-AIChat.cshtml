@@ -236,7 +236,6 @@
                     <i class="fa-solid fa-wave-square"></i>
 
                 </button>
-
             }
 
             <button id="@buttonHtmlId"
@@ -285,7 +284,6 @@
 <script asp-name="AIChatAppPatch" at="Foot"></script>
 
 @{
-
     var chatConfig = new Dictionary<string, object>
     {
         ["signalRHubUrl"] = hubLink,
@@ -323,78 +321,78 @@
 
 <script at="Foot" depends-on="AIChatAppPatch">
     (function () {
-    var shell = document.getElementById('@($"{baseId}_Shell")');
-    var initializationAttempts = 0;
-    var maxInitializationAttempts = 40;
-    var isInitialized = false;
+        var shell = document.getElementById('@($"{baseId}_Shell")');
+        var initializationAttempts = 0;
+        var maxInitializationAttempts = 40;
+        var isInitialized = false;
 
-    function revealShell() {
-    if (shell) {
-    shell.style.visibility = '';
-    }
-    }
+        function revealShell() {
+            if (shell) {
+                shell.style.visibility = '';
+            }
+        }
 
-    function initializeWidget() {
-    if (isInitialized) {
-    return;
-    }
+        function initializeWidget() {
+            if (isInitialized) {
+                return;
+            }
 
-    if (!window.openAIChatWidgetManager || !window.openAIChatManager) {
-    initializationAttempts++;
+            if (!window.openAIChatWidgetManager || !window.openAIChatManager) {
+                initializationAttempts++;
 
-    if (initializationAttempts < maxInitializationAttempts) {
-    window.requestAnimationFrame(initializeWidget);
-    return;
-    }
+                if (initializationAttempts < maxInitializationAttempts) {
+                    window.requestAnimationFrame(initializeWidget);
+                    return;
+                }
 
-    console.warn('AI chat widget runtime is not available.');
-    revealShell();
-    return;
-    }
+                console.warn('AI chat widget runtime is not available.');
+                revealShell();
+                return;
+            }
 
-    isInitialized = true;
+            isInitialized = true;
 
-    var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
-    window.openAIChatWidgetManager.initialize({
-    configElementSelector: '#@($"{baseId}_Config")',
-    messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
-    indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
-    shellSelector: '#@($"{baseId}_Shell")',
-    widgetContainerSelector: '#@widgetContainerId',
-    toggleButtonSelector: '#@toggleBtnId',
-    closeButtonSelector: '#@closeBtnId',
-    inputSelector: '#@userPromptHtmlId',
-    widgetStateName: widgetStateName,
-    widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
-    openStateValue: 'open',
-    closedStateValue: 'closed',
-    openIconHtml: '<i class="fas fa-times"></i>',
-    closedIconHtml: '<i class="fas fa-comments"></i>',
-    chatConfig: Object.assign(
-    {},
-    JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
-    {
-    widget: {
-    chatWidgetContainer: '#@widgetContainerId',
-    chatWidgetStateName: widgetStateName,
-    chatHistorySection: '#@historyPanelId',
-    closeHistoryButton: '#@closeHistoryBtnId',
-    showHistoryButton: '#@historyBtnId',
-    newChatButton: '#@newChatBtnId',
-    toggleButtonSelector: '#@toggleBtnId',
-    resetSizeButtonSelector: '#@restoreSizeBtnId',
-    dragHandleSelector: '.ai-chat-widget-header',
-    enableDragging: true,
-    enableResizing: true,
-    persistLayout: true,
-    minWidth: 288,
-    minHeight: 320
-    }
-    })
-    });
-    }
+            var widgetStateName = '@(storagePrefix + "-ai-admin-widget")';
+            window.openAIChatWidgetManager.initialize({
+                configElementSelector: '#@($"{baseId}_Config")',
+                messageTemplateSelector: '#@($"{baseId}_MessageTemplate")',
+                indicatorTemplateSelector: '#@($"{baseId}_IndicatorTemplate")',
+                shellSelector: '#@($"{baseId}_Shell")',
+                widgetContainerSelector: '#@widgetContainerId',
+                toggleButtonSelector: '#@toggleBtnId',
+                closeButtonSelector: '#@closeBtnId',
+                inputSelector: '#@userPromptHtmlId',
+                widgetStateName: widgetStateName,
+                widgetOpenStateKey: '@(storagePrefix + "-ai-admin-widget-state")',
+                openStateValue: 'open',
+                closedStateValue: 'closed',
+                openIconHtml: '<i class="fas fa-times"></i>',
+                closedIconHtml: '<i class="fas fa-comments"></i>',
+                chatConfig: Object.assign(
+                {},
+                JSON.parse(document.getElementById('@($"{baseId}_Config")').getAttribute('data-config')),
+                {
+                    widget: {
+                        chatWidgetContainer: '#@widgetContainerId',
+                        chatWidgetStateName: widgetStateName,
+                        chatHistorySection: '#@historyPanelId',
+                        closeHistoryButton: '#@closeHistoryBtnId',
+                        showHistoryButton: '#@historyBtnId',
+                        newChatButton: '#@newChatBtnId',
+                        toggleButtonSelector: '#@toggleBtnId',
+                        resetSizeButtonSelector: '#@restoreSizeBtnId',
+                        dragHandleSelector: '.ai-chat-widget-header',
+                        enableDragging: true,
+                        enableResizing: true,
+                        persistLayout: true,
+                        minWidth: 288,
+                        minHeight: 320
+                    }
+                })
+            });
+        }
 
-    initializeWidget();
+        initializeWidget();
     })();
 </script>
 

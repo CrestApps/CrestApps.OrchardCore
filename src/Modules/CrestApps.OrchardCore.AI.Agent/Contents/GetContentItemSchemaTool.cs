@@ -28,7 +28,6 @@ public sealed class GetContentItemSchemaTool : AIFunction
         "contentType"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -74,7 +73,6 @@ public sealed class GetContentItemSchemaTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': The given content type '{ContentType}' does not exist.", TheName, contentType);
 
             return "The given content type does not exists";
-
         }
 
         var contentItem = await contentManager.NewAsync(contentType);

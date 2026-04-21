@@ -61,18 +61,18 @@
 
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-    const authTypeSelect = document.getElementById('claude-auth-type');
-    const apiKeySection = document.getElementById('claude-api-key-section');
+        const authTypeSelect = document.getElementById('claude-auth-type');
+        const apiKeySection = document.getElementById('claude-api-key-section');
 
-    function toggleSections() {
-    const isApiKey = authTypeSelect.value === '@(nameof(ClaudeAuthenticationType.ApiKey))';
-    apiKeySection.classList.toggle('d-none', !isApiKey);
-    }
+        function toggleSections() {
+            const isApiKey = authTypeSelect.value === '@(nameof(ClaudeAuthenticationType.ApiKey))';
+            apiKeySection.classList.toggle('d-none', !isApiKey);
+        }
 
-    if (authTypeSelect) {
-    authTypeSelect.addEventListener('change', toggleSections);
-    }
+        if (authTypeSelect) {
+            authTypeSelect.addEventListener('change', toggleSections);
+        }
 
-    toggleSections();
+        toggleSections();
     });
 </script>

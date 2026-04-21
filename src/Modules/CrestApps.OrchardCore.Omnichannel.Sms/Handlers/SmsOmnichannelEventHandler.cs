@@ -104,7 +104,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         var activity = await _omnichannelActivityStore.GetAsync(omnichannelEvent.Message.Channel,
         endpoint.ItemId,
         omnichannelEvent.Message.CustomerAddress,
-
         ActivityInteractionType.Automated);
 
         if (activity is null)
@@ -112,7 +111,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             _logger.LogWarning("Unable to link incoming SMS message from a customer to an Activity. Channel: {Channel}, Service Address: {ServiceAddress}, Customer Address: {CustomerAddress}", omnichannelEvent.Message.Channel.SanitizeLogValue(), omnichannelEvent.Message.ServiceAddress.SanitizeLogValue(), omnichannelEvent.Message.CustomerAddress.SanitizeLogValue());
 
             return;
-
         }
 
         // Always set the activity status to AwaitingAgentResponse when a new message is received from the customer to ensure we don't miss responding to them.
@@ -134,7 +132,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
             _logger.LogWarning("The Campaign {CampaignId} associated with Activity {ActivityId} was not found. Cannot process incoming SMS message.", activity.CampaignId, activity.ItemId);
 
             return;
-
         }
 
         if (string.IsNullOrWhiteSpace(activity.AISessionId))
@@ -156,12 +153,9 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         await _promptStore.CreateAsync(new AIChatSessionPrompt
         {
             ItemId = UniqueId.GenerateId(),
-
             SessionId = chatSession.SessionId,
             Role = ChatRole.User,
-
             Content = omnichannelEvent.Message.Content
-
         });
 
         // TODO: add a way to extract data from the message when needed to update Subject or the Contact objects.
@@ -182,9 +176,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 Temperature = campaign.Temperature,
                 TopP = campaign.TopP,
                 FrequencyPenalty = campaign.FrequencyPenalty,
-
                 PresencePenalty = campaign.PresencePenalty,
-
                 MaxTokens = campaign.MaxTokens,
                 ToolNames = campaign.ToolNames,
             };
@@ -224,11 +216,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 await _promptStore.CreateAsync(new AIChatSessionPrompt
                 {
                     ItemId = UniqueId.GenerateId(),
-
                     SessionId = chatSession.SessionId,
-
                     Role = ChatRole.Assistant,
-
                     Content = bestChoice,
                 });
 
@@ -283,7 +272,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             $"""
                             Subject: {JsonSerializer.Serialize(activity.Subject, _jsonSerializerOptions.SerializerOptions)}
                             """;
-
                     }
 
                     if (campaign.AllowAIToUpdateContact)
@@ -323,7 +311,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                             // Update the activity with the new subject since the converation may not be concluded.
                             await _omnichannelActivityStore.UpdateAsync(omnichannelActivity);
-
                         }
 
                         if (campaign.AllowAIToUpdateContact && result.Result.Contact is not null)
@@ -364,7 +351,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             var input = new Dictionary<string, object>
                             {
                                 { "Activity", activity },
-
                                 { "Contact", contact },
                                 { "Subject", subject },
                                 { "Disposition", disposition },
@@ -385,7 +371,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         }
 
         await _session.SaveAsync(chatSession);
-
     }
 
     private sealed class ConverationConclusionResult

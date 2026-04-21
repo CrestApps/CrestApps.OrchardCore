@@ -25,7 +25,6 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
         "name"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -51,7 +50,6 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
-
         }
 
         var contentDefinitionManager = arguments.Services.GetRequiredService<IContentDefinitionManager>();
@@ -61,7 +59,6 @@ public sealed class GetContentTypeDefinitionsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
             return "Unable to find a name argument in the function arguments.";
-
         }
 
         var definition = await contentDefinitionManager.GetTypeDefinitionAsync(name);

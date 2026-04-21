@@ -142,5 +142,4 @@ public sealed partial class CatalogTests
         var catalog = FakeDocumentManager.CreateCatalog(new List<TestCatalogEntry>(), out _);
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await catalog.UpdateAsync(null));
     }
-
 }

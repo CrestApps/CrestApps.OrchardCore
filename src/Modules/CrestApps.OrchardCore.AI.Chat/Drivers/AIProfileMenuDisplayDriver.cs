@@ -19,7 +19,6 @@ public sealed class AIProfileMenuDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.IsOnAdminMenu = profile.Type == AIProfileType.Chat && context.IsNew;
             }
-
         }).Location("Content:7%General;1");
     }
 

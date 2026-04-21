@@ -45,7 +45,6 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-
         }).Location("Content:3#Capabilities;8")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }

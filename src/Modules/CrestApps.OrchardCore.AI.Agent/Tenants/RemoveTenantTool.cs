@@ -26,7 +26,6 @@ public sealed class RemoveTenantTool : AIFunction
       "required": [
         "name"
       ]
-
     }
 
     """);
@@ -93,7 +92,6 @@ public sealed class RemoveTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is not removable.", Name, name);
 
             return "This tenant cannot be removed.";
-
         }
 
         var result = await shellRemovalManager.RemoveAsync(tenantSettings);

@@ -27,7 +27,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
         "name"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -63,7 +62,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", TheName);
 
             return "Unable to find a name argument in the function arguments.";
-
         }
 
         var typeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(name);
@@ -92,7 +90,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
                   ]
                 }
               ]
-
             }
             """);
 
@@ -104,7 +101,6 @@ public sealed class RemoveContentTypeDefinitionsTool : AIFunction
             }
 
             return $"The content type {name} was removed successfully";
-
         }
 
         logger.LogWarning("AI tool '{ToolName}' failed to remove content type definition '{ContentType}'.", TheName, name);

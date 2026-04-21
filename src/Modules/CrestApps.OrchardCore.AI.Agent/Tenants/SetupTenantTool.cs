@@ -98,7 +98,6 @@ public sealed class SetupTenantTool : AIFunction
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
-
     };
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
@@ -112,7 +111,6 @@ public sealed class SetupTenantTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
-
         }
 
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
@@ -128,7 +126,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
 
             return "This function is not supported in this tenant. It can only be used in the default tenant.";
-
         }
 
         if (!arguments.TryGetFirstString("name", out var name))
@@ -136,7 +133,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'name' argument.", Name);
 
             return "Unable to find a name argument in the function arguments.";
-
         }
 
         if (!shellHost.TryGetSettings(name, out var tenantSettings))
@@ -144,7 +140,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' not found.", Name, name);
 
             return "Invalid tenant name provided.";
-
         }
 
         if (!arguments.TryGetFirstString("username", out var username))
@@ -152,7 +147,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'username' argument.", Name);
 
             return "Unable to find a username argument in the function arguments.";
-
         }
 
         if (!arguments.TryGetFirstString("email", out var email))
@@ -160,7 +154,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'email' argument.", Name);
 
             return "Unable to find a email argument in the function arguments.";
-
         }
 
         if (!arguments.TryGetFirstString("password", out var password))
@@ -168,7 +161,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'password' argument.", Name);
 
             return "Unable to find a password argument in the function arguments.";
-
         }
 
         if (!tenantSettings.IsUninitialized())
@@ -176,7 +168,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: tenant '{TenantName}' is already setup.", Name, name);
 
             return "The tenant is already setup.";
-
         }
 
         if (username.Any(c => !identityOptions.User.AllowedUserNameCharacters.Contains(c)))
@@ -184,7 +175,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: username contains invalid characters for tenant '{TenantName}'.", Name, name);
 
             return $"The username contains not allowed characters. Allowed characters are: {string.Join(' ', identityOptions.User.AllowedUserNameCharacters)}";
-
         }
 
         if (!emailAddressValidator.Validate(email))
@@ -192,7 +182,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: invalid email provided for tenant '{TenantName}'.", Name, name);
 
             return $"The email is invalid.";
-
         }
 
         var recipeName = arguments.GetFirstValueOrDefault("recipeName", tenantSettings["RecipeName"]);
@@ -202,7 +191,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'recipeName' argument for tenant '{TenantName}'.", Name, name);
 
             return "The recipeName argument is required.";
-
         }
 
         var recipe = (await setupService.GetSetupRecipesAsync()).FirstOrDefault(x => x.Name == recipeName);
@@ -212,7 +200,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: recipe '{RecipeName}' not found for tenant '{TenantName}'.", Name, recipeName, name);
 
             return "The recipe name is invalid.";
-
         }
 
         var databaseProvider = arguments.GetFirstValueOrDefault("databaseProvider", tenantSettings["DatabaseProvider"]);
@@ -222,7 +209,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: missing 'databaseProvider' argument for tenant '{TenantName}'.", Name, name);
 
             return "The databaseProvider argument is required.";
-
         }
 
         var requestUrlHost = arguments.GetFirstValueOrDefault("requestUrlHost", tenantSettings.RequestUrlHost);
@@ -234,7 +220,6 @@ public sealed class SetupTenantTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' failed: neither 'requestUrlHost' nor 'requestUrlPrefix' was provided for tenant '{TenantName}'.", Name, name);
 
             return "The requestUrlHost or requestUrlPrefix argument must be provided.";
-
         }
 
         tenantSettings["ConnectionString"] = arguments.GetFirstValueOrDefault("connectionString", tenantSettings["ConnectionString"]);
@@ -252,14 +237,12 @@ public sealed class SetupTenantTool : AIFunction
         if (arguments.TryGetFirstString("timeZoneId", out var id))
         {
             var zone = clock.GetTimeZones()
-
                 .FirstOrDefault(x => x.TimeZoneId.Equals(id, StringComparison.OrdinalIgnoreCase));
 
             if (zone is not null)
             {
                 timeZoneId = zone.TimeZoneId;
             }
-
         }
 
         timeZoneId ??= clock.GetSystemTimeZone().TimeZoneId;
@@ -278,7 +261,6 @@ public sealed class SetupTenantTool : AIFunction
                 { SetupConstants.AdminPassword, password },
                 { SetupConstants.SiteTimeZone, timeZoneId },
             },
-
         };
 
         if (!string.IsNullOrEmpty(tenantSettings["ConnectionString"]))
@@ -294,7 +276,6 @@ public sealed class SetupTenantTool : AIFunction
             setupContext.Properties[SetupConstants.DatabaseConnectionString] = null;
             setupContext.Properties[SetupConstants.DatabaseTablePrefix] = tenantSettings["TablePrefix"];
             setupContext.Properties[SetupConstants.DatabaseSchema] = tenantSettings["Schema"];
-
         }
 
         var executionId = await setupService.SetupAsync(setupContext);
@@ -313,17 +294,14 @@ public sealed class SetupTenantTool : AIFunction
                 builder.Append(error.Key);
                 builder.Append(": ");
                 builder.AppendLine(error.Value);
-
             }
 
             return builder.ToString();
-
         }
 
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
-
         }
 
         return $"The tenant {name} was setup successfully.";

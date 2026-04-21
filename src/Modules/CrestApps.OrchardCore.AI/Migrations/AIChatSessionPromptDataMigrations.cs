@@ -6,11 +6,10 @@ using Dapper;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using OrchardCore.Modules;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
@@ -148,7 +147,6 @@ internal sealed class AIChatSessionPromptDataMigrations : DataMigration
                                     content = updatedContent,
                                     id = document.Id,
                                 }
-
                                 );
                         }
                         catch (Exception ex)

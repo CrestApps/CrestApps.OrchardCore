@@ -8,6 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 internal sealed class TwillioRequestValidator
 {
     private readonly byte[] _secret;
+
     /// <summary>
     /// Create a new RequestValidator
     /// </summary>
@@ -18,6 +19,7 @@ internal sealed class TwillioRequestValidator
 
         _secret = Encoding.UTF8.GetBytes(secret);
     }
+
     /// <summary>
     /// Validate against a request.
     /// The validate function is provided to validate incoming webhook requests from Twilio.
@@ -34,6 +36,7 @@ internal sealed class TwillioRequestValidator
     {
         return Validate(url, ToDictionary(parameters), expected);
     }
+
     /// <summary>
     /// Validate against a request.
     /// The validate function is provided to validate incoming webhook requests from Twilio.
@@ -115,6 +118,7 @@ internal sealed class TwillioRequestValidator
 
         return Validate(url, (IDictionary<string, string>)null, expected) && ValidateBody(body, bodyHash);
     }
+
     /// <summary>
     /// Validate the body of a request.
     /// The validateBody function is provided to validate the body of incoming webhook requests from Twilio
@@ -189,6 +193,7 @@ internal sealed class TwillioRequestValidator
 
         return mismatch == 0;
     }
+
     /// <summary>
     /// Returns URL without port if given URL has port, returns URL with port if given URL has no port
     /// </summary>

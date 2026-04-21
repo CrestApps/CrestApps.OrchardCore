@@ -41,7 +41,6 @@ internal sealed class AIProfileAgentsDisplayDriver : DisplayDriver<AIProfile>
                 Description = agent.Description,
                 IsSelected = selectedNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-
         }).Location("Content:5#Capabilities;8");
     }
 

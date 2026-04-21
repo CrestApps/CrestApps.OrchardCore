@@ -38,7 +38,6 @@ public sealed class SearchForContentsTool : AIFunction
         "term"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -79,7 +78,6 @@ public sealed class SearchForContentsTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a term argument in the function arguments.", TheName);
 
             return "Unable to find a term argument in the function arguments.";
-
         }
 
         var page = arguments.GetFirstValueOrDefault("pageNumber", 1);
@@ -91,15 +89,12 @@ public sealed class SearchForContentsTool : AIFunction
             SearchText = term,
             OriginalSearchText = term,
             StartIndex = startingIndex,
-
             FilterResult = new QueryFilterResult<ContentItem>(new Dictionary<string, QueryTermOption<ContentItem>>()),
-
         }, updateModelAccessor.ModelUpdater);
 
         var contentItemsCount = await query.CountAsync(cancellationToken);
 
         var contentItems = await query.Skip(startingIndex)
-
             .Take(pagerOptions.PageSize)
             .ListAsync(contentManager);
 

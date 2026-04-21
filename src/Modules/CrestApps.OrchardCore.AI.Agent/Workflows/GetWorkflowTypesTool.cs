@@ -27,7 +27,6 @@ public sealed class GetWorkflowTypesTool : AIFunction
         "workflowTypeId"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -63,7 +62,6 @@ public sealed class GetWorkflowTypesTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' missing required argument '{ArgumentName}'.", Name, "workflowTypeId");
 
             return "Unable to find a workflowTypeId argument in the function arguments.";
-
         }
 
         var workflowType = await workflowTypeStore.GetAsync(workflowTypeId);

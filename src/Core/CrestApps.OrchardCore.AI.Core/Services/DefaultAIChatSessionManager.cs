@@ -55,9 +55,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             SessionId = UniqueId.GenerateId(),
             ProfileId = profile.ItemId,
             CreatedUtc = _clock.UtcNow,
-
             LastActivityUtc = _clock.UtcNow,
-
         };
 
         var user = _httpContextAccessor.HttpContext?.User;
@@ -93,7 +91,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                     Title = profile.PromptSubject,
                     Content = initialPrompt,
                     CreatedUtc = _clock.UtcNow,
-
                 });
             }
 
@@ -103,7 +100,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             if (!string.IsNullOrEmpty(handlerSettings.InitialResponseHandlerName))
             {
                 chatSession.ResponseHandlerName = handlerSettings.InitialResponseHandlerName;
-
             }
         }
 
@@ -122,9 +118,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             {
                 Count = 0,
                 Sessions = [],
-
             };
-
         }
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -168,7 +162,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
                 CreatedUtc = session.CreatedUtc,
                 LastActivityUtc = session.LastActivityUtc,
             }),
-
         };
     }
 
@@ -177,7 +170,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         ArgumentException.ThrowIfNullOrEmpty(id);
 
         return _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == id, collection: AIConstants.AICollectionName)
-
             .FirstOrDefaultAsync();
     }
 
@@ -212,7 +204,6 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             }
 
             return chatSession;
-
         }
     }
 
@@ -232,14 +223,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         if (user?.Identity?.IsAuthenticated != true)
         {
             return false;
-
         }
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var chatSession = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.SessionId == sessionId && i.UserId == userId && i.ProfileId != null,
-
             collection: AIConstants.AICollectionName)
                 .FirstOrDefaultAsync();
 
@@ -272,16 +261,13 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
         {
             return 0;
-
         }
 
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var sessions = await _session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.UserId == userId && i.ProfileId == profileId,
-
             collection: AIConstants.AICollectionName)
-
                 .ListAsync();
 
         var totalDeleted = 0;

@@ -33,7 +33,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
-
     }
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
@@ -60,7 +59,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             })
         .ToList(),
             })
-
             .ToList();
 
             if (accessibleTools.Count > 0)
@@ -80,7 +78,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             }
         }).Location("Content:10#Data Processing & Metrics;10")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
-
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)
@@ -88,7 +85,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
         if (template.Source != AITemplateSources.Profile)
         {
             return null;
-
         }
 
         var model = new AIProfilePostSessionViewModel();
@@ -102,20 +98,17 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             if (tasks.Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["At least one post-session task is required when post-session processing is enabled."]);
-
             }
 
             var duplicateNames = tasks
                 .GroupBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
-
                 .ToList();
 
             foreach (var duplicate in duplicateNames)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Duplicate task name: '{0}'. Names must be unique.", duplicate]);
-
             }
 
             foreach (var task in tasks)
@@ -123,7 +116,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
                 if (!IsValidKey(task.Name))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Task name '{0}' is invalid. Only alphanumeric characters and underscores are allowed.", task.Name]);
-
                 }
 
                 task.Options = task.Options?.Where(o => !string.IsNullOrWhiteSpace(o.Value)).ToList() ?? [];
@@ -133,14 +125,12 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
                     if (task.Options.Count == 0)
                     {
                         context.Updater.ModelState.AddModelError(Prefix, nameof(model.Tasks), S["Task '{0}' requires at least one option when using Predefined Options type.", task.Name]);
-
                     }
 
                     var duplicateOptions = task.Options
                         .GroupBy(o => o.Value, StringComparer.OrdinalIgnoreCase)
                         .Where(g => g.Count() > 1)
                         .Select(g => g.Key)
-
                         .ToList();
 
                     foreach (var duplicate in duplicateOptions)
@@ -149,7 +139,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
                     }
                 }
             }
-
         }
 
         var selectedToolKeys = model.PostSessionTools?.Values?.SelectMany(x => x)?.Where(x => x.IsSelected).Select(x => x.ItemId);
@@ -161,7 +150,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             toolNames = _toolDefinitions.Tools.Keys
                 .Intersect(selectedToolKeys)
                 .ToArray();
-
         }
 
         var postSessionSettings = template.GetOrCreate<AIProfilePostSessionSettings>();
@@ -185,7 +173,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
         template.Put(postSessionSettings);
 
         return await EditAsync(template, context);
-
     }
 
     private async Task<Dictionary<string, AIToolDefinitionEntry>> GetAccessibleToolsAsync()
@@ -199,18 +186,15 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             if (tool.Value.IsSystemTool)
             {
                 continue;
-
             }
 
             if (user is not null && await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }
-
         }
 
         return accessibleTools;
-
     }
 
     private static bool IsValidKey(string name)
@@ -218,7 +202,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
         if (string.IsNullOrEmpty(name))
         {
             return false;
-
         }
 
         foreach (var c in name)
@@ -227,7 +210,6 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
             {
                 return false;
             }
-
         }
 
         return true;

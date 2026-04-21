@@ -20,4 +20,3 @@ public class AzureOpenAIConnectionViewModel
     [BindNever]
     public IEnumerable<SelectListItem> AuthenticationTypes { get; set; }
 }
-

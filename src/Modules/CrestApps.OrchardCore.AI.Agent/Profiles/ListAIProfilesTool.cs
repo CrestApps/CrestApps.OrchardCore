@@ -40,9 +40,7 @@ public sealed class ListAIProfilesTool : AIFunction
           "type": "boolean",
           "description": "Optional. When true, only return profiles that have post-session processing enabled."
         }
-
       },
-
       "additionalProperties": false
     }
     """);

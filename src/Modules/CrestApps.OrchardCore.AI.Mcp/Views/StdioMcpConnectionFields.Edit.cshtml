@@ -62,16 +62,16 @@
             setTheme();
 
             const editors = [
-                {
-                    id: '@Html.IdFor(x => x.Arguments)',
-                    uri: 'x://crestapps.orchardcore.ai.mcp.Arguments.json',
-                    schemaUri: 'x://orchardcore.tenants.Arguments.schema.json'
-                },
-                {
-                    id: '@Html.IdFor(x => x.EnvironmentVariables)',
-                    uri: 'x://crestapps.orchardcore.ai.mcp.EnvironmentVariables.json',
-                    schemaUri: 'x://orchardcore.tenants.EnvironmentVariables.schema.json'
-                }
+            {
+                id: '@Html.IdFor(x => x.Arguments)',
+                uri: 'x://crestapps.orchardcore.ai.mcp.Arguments.json',
+                schemaUri: 'x://orchardcore.tenants.Arguments.schema.json'
+            },
+            {
+                id: '@Html.IdFor(x => x.EnvironmentVariables)',
+                uri: 'x://crestapps.orchardcore.ai.mcp.EnvironmentVariables.json',
+                schemaUri: 'x://orchardcore.tenants.EnvironmentVariables.schema.json'
+            }
             ];
 
             editors.forEach(({ id, uri, schemaUri }) => {

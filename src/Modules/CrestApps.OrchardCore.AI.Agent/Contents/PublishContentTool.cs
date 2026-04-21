@@ -25,7 +25,6 @@ public sealed class PublishContentTool : AIFunction
         "contentItemId"
       ],
       "additionalProperties": false
-
     }
 
     """);
@@ -52,7 +51,6 @@ public sealed class PublishContentTool : AIFunction
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' invoked.", TheName);
-
         }
 
         var contentManager = arguments.Services.GetRequiredService<IContentManager>();
@@ -62,7 +60,6 @@ public sealed class PublishContentTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a contentItemId argument in the function arguments.", TheName);
 
             return "Unable to find a contentItemId argument in the function arguments.";
-
         }
 
         var contentItem = await contentManager.GetAsync(contentItemId, VersionOptions.Draft);
@@ -72,7 +69,6 @@ public sealed class PublishContentTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
 
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
-
         }
 
         await contentManager.PublishAsync(contentItem);

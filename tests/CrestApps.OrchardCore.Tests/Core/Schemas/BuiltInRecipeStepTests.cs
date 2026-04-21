@@ -103,6 +103,7 @@ public sealed class BuiltInRecipeStepTests
 
         return (IRecipeStep)Activator.CreateInstance(stepType);
     }
+
     /// <summary>
     /// Verifies that every built-in recipe step returns the expected Name.
     /// </summary>
@@ -161,6 +162,7 @@ public sealed class BuiltInRecipeStepTests
         var step = CreateStep(stepType);
         Assert.Equal(expectedName, step.Name);
     }
+
     /// <summary>
     /// Verifies that every built-in recipe step produces a non-empty, serializable schema
     /// that contains the step's const name constraint.
@@ -226,6 +228,7 @@ public sealed class BuiltInRecipeStepTests
         Assert.StartsWith("{", json);
         Assert.Contains("\"const\"", json);
     }
+
     /// <summary>
     /// Verifies that every built-in recipe step caches the schema instance.
     /// </summary>

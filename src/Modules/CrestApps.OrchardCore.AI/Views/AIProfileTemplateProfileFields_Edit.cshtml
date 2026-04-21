@@ -98,13 +98,11 @@
 <script asp-src="~/OrchardCore.Liquid/codemirror/liquid.js" at="Foot"></script>
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
-
         const convertToKebabCase = (str) => {
             return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
         }
 
         const initializeLiquidEditor = (textArea) => {
-
             if (!textArea) {
                 return;
             }
