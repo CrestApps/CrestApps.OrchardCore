@@ -54,24 +54,6 @@ To configure the Ollama connection, add the following settings to the `appsettin
 }
 ```
 
-:::warning Legacy Format (Deprecated)
-The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
-
-```json
-{
-  "Connections": {
-    "Default": {
-      "Endpoint": "...",
-      "ChatDeploymentName": "deepseek-v2:16b",
-      "UtilityDeploymentName": "deepseek-v2:16b",
-      "EmbeddingDeploymentName": "",
-      "ImagesDeploymentName": ""
-    }
-  }
-}
-```
-:::
-
 ### Aspire
 
 If you are running this project using Aspire, Ollama will be automatically configured for you without needing to manually set the `appsettings.json` file.

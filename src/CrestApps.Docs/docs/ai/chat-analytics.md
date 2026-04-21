@@ -61,7 +61,7 @@ These metrics provide an overview of how your chatbot is being used.
 | **Unique Visitors** | The number of distinct visitors who interacted with the chat, identified by visitor ID or user account. |
 | **Containment Rate** | The percentage of sessions that were fully resolved by the bot without requiring human escalation. Higher is better. Also known as **Bot-Only Resolution Rate**. |
 | **Abandonment Rate** | The percentage of sessions where the user left without reaching a resolution. May indicate user frustration or irrelevant responses. |
-| **Avg Session Duration** | The average time from the first message to the last message in a session. Previously called "Avg Handle Time." |
+| **Avg Session Duration** | The average time from the first message to the last message in a session. |
 | **Avg Messages/Session** | The average number of messages (user + assistant) exchanged per session. Indicates conversation depth and engagement. Also known as **Messages per Bot Session**. |
 | **Returning User Rate** | The percentage of unique visitors who engaged with the bot in more than one session. A high rate indicates users find the bot useful enough to come back. |
 | **Avg Steps to Resolve** | The average number of messages needed to reach a resolution in resolved sessions. Fewer steps means faster problem-solving. |

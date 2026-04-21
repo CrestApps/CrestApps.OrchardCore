@@ -109,15 +109,15 @@ const config = {
               },
               {
                 label: 'AI Suite',
-                to: '/docs/orchardcore/ai',
+                to: '/docs/ai',
               },
               {
                 label: 'AI Providers',
-                to: '/docs/orchardcore/ai/providers',
+                to: '/docs/ai/providers',
               },
               {
                 label: 'Consuming AI Services',
-                to: '/docs/orchardcore/ai/consuming-ai-services',
+                to: '/docs/ai/consuming-ai-services',
               },
             ],
           },

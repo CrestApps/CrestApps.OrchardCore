@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
@@ -32,7 +31,6 @@ public sealed class AdminController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IShapeFactory _shapeFactory;
 
-    private readonly AIOptions _aiOptions;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -46,7 +44,6 @@ public sealed class AdminController : Controller
         IDisplayManager<AIChatSessionListOptions> optionsDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IShapeFactory shapeFactory,
-        IOptions<AIOptions> aiOptions,
         INotifier notifier,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer
@@ -59,7 +56,6 @@ public sealed class AdminController : Controller
         _optionsDisplayManager = optionsDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _shapeFactory = shapeFactory;
-        _aiOptions = aiOptions.Value;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;

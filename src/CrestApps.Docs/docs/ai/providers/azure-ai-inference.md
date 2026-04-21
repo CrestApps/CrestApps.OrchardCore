@@ -45,26 +45,6 @@ To configure the OpenAI connection, add the following settings to the `appsettin
 }
 ```
 
-:::warning Legacy Format (Deprecated)
-The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
-
-```json
-{
-  "Connections": {
-    "default": {
-      "Endpoint": "https://my-resource.services.ai.azure.com/models",
-      "AuthenticationType": "ApiKey",
-      "ApiKey": "...",
-      "ChatDeploymentName": "Phi-3-medium-4k-instruct",
-      "UtilityDeploymentName": "Phi-3-medium-4k-instruct",
-      "EmbeddingDeploymentName": "",
-      "ImagesDeploymentName": ""
-    }
-  }
-}
-```
-:::
-
 Authentication Type in the connection can be `Default`, `ManagedIdentity` or `ApiKey`. When using `ApiKey` authentication type, `ApiKey` is required.
 
 When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.

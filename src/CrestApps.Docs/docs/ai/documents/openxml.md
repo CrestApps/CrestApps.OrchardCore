@@ -43,14 +43,14 @@ This module uses the [DocumentFormat.OpenXml](https://github.com/OfficeDev/Open-
 
 ## Limitations
 
-### Legacy Formats Not Supported
+### Binary Office Formats Not Supported
 
-The following legacy formats are **not supported** because they use the older binary format:
+The following binary Office formats are **not supported**:
 - `.doc` (Word 97-2003)
 - `.xls` (Excel 97-2003)
 - `.ppt` (PowerPoint 97-2003)
 
-To use these files, please convert them to the newer formats (.docx, .xlsx, .pptx) first.
+To use these files, convert them to .docx, .xlsx, or .pptx first.
 
 ### Content Extraction Notes
 

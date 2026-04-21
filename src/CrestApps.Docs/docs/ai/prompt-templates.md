@@ -1,7 +1,6 @@
 ---
 sidebar_label: Prompt Templates
 sidebar_position: 10
-slug: /orchardcore/ai/prompt-templates
 title: AI Prompt Templates
 description: Orchard Core module guidance for reusable AI prompt templates.
 ---
@@ -48,9 +47,9 @@ In Orchard editors, prompt templates appear through a picker in the relevant AI 
 - compose reusable instructions for chat interactions
 - keep profile templates consistent across environments
 
-## What moved to the Core docs
+## Core documentation
 
-The template engine itself is shared across hosts, so the detailed guidance now lives in **CrestApps.Core**:
+The template engine itself is shared across hosts, so the detailed guidance is published in **CrestApps.Core**:
 
 - [AI templates](https://core.crestapps.com/docs/core/ai-templates)
 

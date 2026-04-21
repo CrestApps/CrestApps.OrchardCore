@@ -9,7 +9,7 @@ description: Orchard Core modules, startup apps, and integration guidance built 
 
 This site documents the **Orchard Core-specific** packages in `CrestApps.OrchardCore`: modules, feature IDs, admin configuration, startup apps, samples, and CMS integration guidance.
 
-The shared platform underneath these modules now lives in **CrestApps.Core**. When you need framework concepts such as orchestration internals, service APIs, tool pipelines, provider implementation details, or reusable .NET host guidance, use **[core.crestapps.com](https://core.crestapps.com)**.
+The shared platform underneath these modules is documented at **[core.crestapps.com](https://core.crestapps.com)**. Use that site for framework concepts such as orchestration internals, service APIs, tool pipelines, provider implementation details, or reusable .NET host guidance.
 
 ## What this documentation covers
 
@@ -24,37 +24,37 @@ The shared platform underneath these modules now lives in **CrestApps.Core**. Wh
 
 The AI modules add Orchard admin experiences and feature wiring on top of CrestApps.Core AI services.
 
-- **[Artificial Intelligence Suite](orchardcore/ai/)** - module map and Orchard-specific scope
-- **[AI Services](orchardcore/ai/overview)** - foundational Orchard AI features and admin surfaces
-- **[AI Chat](orchardcore/ai/chat)** - chat UI and profile-driven conversations
-- **[AI Chat Interactions](orchardcore/ai/chat-interactions)** - ad-hoc chat experiences without requiring a profile
-- **[AI Providers](orchardcore/ai/providers/)** - provider modules such as OpenAI, Azure OpenAI, Azure AI Inference, and Ollama
-- **[AI Documents](orchardcore/ai/documents/)** - document upload, parsing, storage, and indexing modules
-- **[AI Data Sources](orchardcore/ai/data-sources/)** - external knowledge source integrations
-- **[MCP](orchardcore/ai/mcp/)** - Orchard Core MCP client, server, and resource modules
-- **[A2A](orchardcore/ai/a2a/)** - Orchard Core client and host support for the Agent-to-Agent protocol
+- **[Artificial Intelligence Suite](ai/)** - module map and Orchard-specific scope
+- **[AI Services](ai/overview)** - foundational Orchard AI features and admin surfaces
+- **[AI Chat](ai/chat)** - chat UI and profile-driven conversations
+- **[AI Chat Interactions](ai/chat-interactions)** - ad-hoc chat experiences without requiring a profile
+- **[AI Providers](ai/providers/)** - provider modules such as OpenAI, Azure OpenAI, Azure AI Inference, and Ollama
+- **[AI Documents](ai/documents/)** - document upload, parsing, storage, and indexing modules
+- **[AI Data Sources](ai/data-sources/)** - external knowledge source integrations
+- **[MCP](ai/mcp/)** - Orchard Core MCP client, server, and resource modules
+- **[A2A](ai/a2a/)** - Orchard Core client and host support for the Agent-to-Agent protocol
 
 ### Standard modules
 
-- **[Content Access Control](orchardcore/modules/content-access-control)**
-- **[Recipes](orchardcore/modules/recipes)**
-- **[Resources](orchardcore/modules/resources)**
-- **[Roles](orchardcore/modules/roles)**
-- **[SignalR](orchardcore/modules/signalr)**
-- **[Users](orchardcore/modules/users)**
+- **[Content Access Control](modules/content-access-control)**
+- **[Recipes](modules/recipes)**
+- **[Resources](modules/resources)**
+- **[Roles](modules/roles)**
+- **[SignalR](modules/signalr)**
+- **[Users](modules/users)**
 
 ### Omnichannel Communications
 
-- **[Omnichannel overview](orchardcore/omnichannel/)**
-- **[Event Grid integration](orchardcore/omnichannel/event-grid)**
-- **[Management UI](orchardcore/omnichannel/management)**
-- **[SMS automation](orchardcore/omnichannel/sms)**
+- **[Omnichannel overview](omnichannel/)**
+- **[Event Grid integration](omnichannel/event-grid)**
+- **[Management UI](omnichannel/management)**
+- **[SMS automation](omnichannel/sms)**
 
 ### Samples
 
-- **[Samples overview](orchardcore/samples/)**
-- **[MCP client sample](orchardcore/samples/mcp-client)**
-- **[A2A client sample](orchardcore/samples/a2a-client)**
+- **[Samples overview](samples/)**
+- **[MCP client sample](samples/mcp-client)**
+- **[A2A client sample](samples/a2a-client)**
 
 ## Start here
 

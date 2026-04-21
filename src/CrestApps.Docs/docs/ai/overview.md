@@ -128,9 +128,9 @@ This module also wires Orchard integrations beyond the admin UI:
 - workflow activities for profile-based and direct AI completion
 - workflow events for chat-session extraction, closure, and post-processing
 
-## Development note
+## Framework references
 
-The modules in this repository now sit on top of **CrestApps.Core**. That means framework-oriented topics such as service APIs, orchestration loops, response handlers, tool registration, and programmatic host composition are documented on the Core site:
+The modules in this repository build on **CrestApps.Core**. Framework-oriented topics such as service APIs, orchestration loops, response handlers, tool registration, and programmatic host composition are documented on the Core site:
 
 - [AI core](https://core.crestapps.com/docs/core/ai-core)
 - [AI profiles](https://core.crestapps.com/docs/core/ai-profiles)

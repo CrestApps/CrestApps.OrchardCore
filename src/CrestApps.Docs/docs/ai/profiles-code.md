@@ -1,11 +1,11 @@
 ---
 title: AI Profiles in Code
-description: Framework-level AI profile construction guidance has moved to CrestApps.Core documentation.
+description: Framework-level AI profile construction guidance for Orchard modules lives in CrestApps.Core documentation.
 ---
 
 # AI Profiles in Code
 
-Creating and managing AI profiles programmatically is a **shared framework concern** and is now documented in **CrestApps.Core**:
+Creating and managing AI profiles programmatically is a **shared framework concern** and is documented in **CrestApps.Core**:
 
 - [AI profiles](https://core.crestapps.com/docs/core/ai-profiles)
 - [AI templates](https://core.crestapps.com/docs/core/ai-templates)

@@ -5,7 +5,7 @@ description: Shared tool registration and orchestration concepts are documented 
 
 # AI Tools
 
-The shared tool system now belongs primarily to the **CrestApps.Core** documentation:
+The shared tool system is documented primarily in **CrestApps.Core**:
 
 - [Tools](https://core.crestapps.com/docs/core/tools)
 - [Agents](https://core.crestapps.com/docs/core/agents)
@@ -23,8 +23,6 @@ Within Orchard Core, tools become useful through the modules that register or ex
 
 ## Invocation Context (AIInvocationScope)
 
-Older Orchard docs and changelog entries may still refer to `AIInvocationScope` as the shared per-request context for references, tool state, and other invocation-scoped data.
-
-For the current framework-level explanation, see the shared Core documentation:
+`AIInvocationScope` is the shared per-request context for references, tool state, and other invocation-scoped data. For the framework-level explanation, see the shared Core documentation:
 
 - [Tools](https://core.crestapps.com/docs/core/tools)

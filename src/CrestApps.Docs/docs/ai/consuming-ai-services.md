@@ -1,11 +1,11 @@
 ---
 title: Consuming AI Services via Code
-description: Where to find the shared AI service API documentation now that the Orchard modules build on top of CrestApps.Core.
+description: Where to find the shared AI service API documentation for the Orchard modules built on CrestApps.Core.
 ---
 
 # Consuming AI Services via Code
 
-Programmatic service usage is now documented primarily in **CrestApps.Core** because the Orchard modules consume the same shared APIs.
+Programmatic service usage is documented primarily in **CrestApps.Core** because the Orchard modules consume the same shared APIs.
 
 ## Use the Core docs for API details
 

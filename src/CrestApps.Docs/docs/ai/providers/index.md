@@ -132,7 +132,7 @@ services.AddAIDeploymentProvider("CustomProvider", options =>
 
 ### Typed Deployments
 
-Deployments are now first-class typed entities. Each deployment has a `Type` property that indicates its purpose:
+Deployments are typed entities. Each deployment has a `Type` property that indicates its purpose:
 
 | Type | Purpose |
 |------|---------|

@@ -179,6 +179,3 @@ To enable image generation, create an `AIDeployment` record with type `Image` fo
 }
 ```
 
-:::info
-The legacy format with `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName` on the connection is still supported for backward compatibility but is deprecated. See the [migration guide](migration-typed-deployments) for details.
-:::

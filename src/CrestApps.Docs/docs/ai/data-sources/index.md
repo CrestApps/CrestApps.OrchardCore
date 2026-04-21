@@ -172,39 +172,28 @@ When a data source is deleted (via the admin UI or programmatically), all of its
 
 When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
 
-## Migrating from v1 to v2
+## Knowledge base indexing requirements
 
-Version 2 introduces **Knowledge Base (KB) indexing** with vector embeddings. During the migration, an "AI Knowledge Base Warehouse" index is automatically created for existing data sources. However, **you must configure an embedding connection** for the index to populate correctly.
+Each data source requires a **Knowledge Base Index** that stores chunked document embeddings for vector search.
 
-If you are moving a tenant database from an older branch that stored AI data sources inside legacy `DictionaryDocument<AIDataSource>` rows, the startup migration also imports those rows into the current data-source store before the metadata and KB-alignment migrations run. This keeps the **Artificial Intelligence > Data Sources** admin UI populated after the branch upgrade instead of leaving the legacy records stranded in the default document table.
-
-### What changes
-
-- Each data source now requires a **Knowledge Base Index** that stores chunked document embeddings for vector search.
-- The migration creates the KB index automatically, but it needs an **embedding deployment** (e.g. `text-embedding-ada-002`, `text-embedding-3-small`) to generate embeddings.
-
-### Required: Configure an embedding connection
-
-If you have not already configured an AI provider connection with an embedding deployment, the KB index will be created **without embedding support**. This means the AI Knowledge Base index will have no data to feed the AI models when a data source is selected.
-
-To fix this:
+To populate the index correctly:
 
 1. **Configure an AI provider connection with an embedding deployment:**
    - Navigate to **Artificial Intelligence > Connections** in the admin dashboard.
-   - Edit or create a connection (e.g. Azure OpenAI, OpenAI).
-   - Set the **Embedding Deployment Name** field to your embedding model deployment (e.g. `text-embedding-ada-002` or `text-embedding-3-small`).
+   - Edit or create a connection (for example Azure OpenAI or OpenAI).
+   - Set the embedding deployment to your embedding model (for example `text-embedding-ada-002` or `text-embedding-3-small`).
    - Save the connection.
 
-2. **Update the AI Knowledge Base Warehouse index:**
+2. **Configure the AI Knowledge Base Warehouse index:**
    - Navigate to **Search > Indexing** in the admin dashboard.
    - Find the **AI Knowledge Base Warehouse** index.
-   - Edit it and select the embedding connection you configured in step 1.
+   - Edit it and select the embedding connection.
    - Save the index.
 
 3. **Trigger a sync:**
    - Go to **Artificial Intelligence > Data Sources**.
-   - Click **Sync** on each data source to re-index documents with embeddings.
+   - Click **Sync** on each data source to index documents with embeddings.
 
-:::note Note
-Without an embedding connection, data sources will appear configured but the KB index will remain empty. AI profiles using these data sources will not have any context documents to enhance their responses.
+:::note
+Without an embedding connection, the AI Knowledge Base index remains empty and AI profiles using these data sources do not receive contextual documents.
 :::

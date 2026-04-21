@@ -32,7 +32,7 @@ At runtime the feature can compose all known step schemas into a single "recipe"
 
 ## Exporting recipe step schemas for AI skills
 
-This repository also includes a temporary exporter utility for synchronizing the runtime recipe schemas into the Orchard Core AgentSkills repository:
+This repository also includes an exporter utility for synchronizing the runtime recipe schemas into the Orchard Core AgentSkills repository:
 
 ```powershell
 dotnet run --project .\tests\CrestApps.OrchardCore.RecipeSchemaExporter\CrestApps.OrchardCore.RecipeSchemaExporter.csproj --framework net10.0 --no-build
@@ -50,11 +50,11 @@ to the sibling AgentSkills repository path:
 
 This keeps the `orchardcore-recipes` skill aligned with the runtime JSON schema definitions used by `RecipeSchemaService`.
 
-If the sibling `CrestApps.AgentSkills` repository is missing, the exporter now fails with an actionable `DirectoryNotFoundException` that tells contributors to clone `https://github.com/CrestApps/CrestApps.AgentSkills.git` next to `CrestApps.OrchardCore`, or to pass an explicit output directory manually.
+If the sibling `CrestApps.AgentSkills` repository is missing, the exporter throws a `DirectoryNotFoundException` that tells contributors to clone `https://github.com/CrestApps/CrestApps.AgentSkills.git` next to `CrestApps.OrchardCore`, or to pass an explicit output directory manually.
 
-The `ReplaceContentDefinition` step now reuses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
+The `ReplaceContentDefinition` step uses the same expanded `ContentTypes` and `ContentParts` schema structure as `ContentDefinition`, so AI-generated replacement steps can rely on the same predefined nested shape instead of loose object arrays.
 
-The exported set now also covers Orchard Core's built-in settings, identity, and localization recipe steps that were previously missing from CrestApps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
+The exported set covers Orchard Core's built-in settings, identity, and localization recipe steps, including `Users`, `custom-user-settings`, `AzureADSettings`, `MicrosoftAccountSettings`, `FacebookCoreSettings`, `FacebookLoginSettings`, `GitHubAuthenticationSettings`, `TwitterSettings`, `OpenIdApplication`, `OpenIdClientSettings`, `OpenIdScope`, `OpenIdServerSettings`, `OpenIdValidationSettings`, `Translations`, and `DynamicDataTranslations`.
 
 ## Creating a Recipe Step
 

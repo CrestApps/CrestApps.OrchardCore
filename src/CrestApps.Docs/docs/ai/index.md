@@ -9,7 +9,7 @@ description: Orchard Core AI modules built on top of CrestApps.Core, with Orchar
 
 The AI modules in this repository bring **CrestApps.Core** AI capabilities into **Orchard Core**. They add feature manifests, admin editors, site settings, recipes, module startup wiring, document storage choices, and CMS-friendly runtime surfaces.
 
-Framework documentation for shared concepts such as orchestration, tool pipelines, prompt rendering, provider abstractions, and reusable service APIs now lives at **[core.crestapps.com](https://core.crestapps.com)**.
+Framework documentation for shared concepts such as orchestration, tool pipelines, prompt rendering, provider abstractions, and reusable service APIs is available at **[core.crestapps.com](https://core.crestapps.com)**.
 
 ## Orchard-focused scope
 

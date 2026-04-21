@@ -47,24 +47,6 @@ To configure a connection, add the following settings to the `appsettings.json` 
 }
 ```
 
-:::warning Legacy Format (Deprecated)
-The following format using `ChatDeploymentName`, `UtilityDeploymentName`, etc. is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
-
-```json
-{
-  "Connections": {
-    "openai-cloud": {
-      "ApiKey": "...",
-      "ChatDeploymentName": "gpt-4o",
-      "UtilityDeploymentName": "gpt-4o-mini",
-      "EmbeddingDeploymentName": "text-embedding-3-large",
-      "ImagesDeploymentName": "dall-e-3"
-    }
-  }
-}
-```
-:::
-
 ---
 
 ### Using AI Deployments  

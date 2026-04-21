@@ -294,7 +294,7 @@ services.AddKeyedScoped<IChatNotificationTransport, MyCustomChatNotificationTran
     MyChatContextType);
 ```
 
-Now any call to `IChatNotificationSender.SendAsync(sessionId, MyChatContextType, notification)` automatically routes to your transport.
+Any call to `IChatNotificationSender.SendAsync(sessionId, MyChatContextType, notification)` automatically routes to your transport.
 
 ## Scenarios & Examples
 

@@ -104,14 +104,11 @@
                     : Array.Empty<AIChatSessionPrompt>();
             }
 
-            @if (sessionPrompts.Count == 0)
-            {
-                <div id="@placeholderHtmlId" class="text-center p-3 @(addInitialPrompt ? "d-none" : string.Empty)">
-                    <h1 class="mb-3">
-                        @(addInitialPrompt || string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
-                    </h1>
-                </div>
-            }
+            <div id="@placeholderHtmlId" class="text-center p-3 @((sessionPrompts.Count > 0 || addInitialPrompt) ? "d-none" : string.Empty)">
+                <h1 class="mb-3">
+                    @(addInitialPrompt || string.IsNullOrEmpty(Model.Profile?.WelcomeMessage) ? T["What do you want to know?"] : Model.Profile?.WelcomeMessage)
+                </h1>
+            </div>
 
             <div id="@chatAppHtmlId"></div>
         </div>

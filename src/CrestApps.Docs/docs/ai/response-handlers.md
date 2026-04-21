@@ -5,7 +5,7 @@ description: Shared response-handler architecture is documented in CrestApps.Cor
 
 # Response Handlers
 
-The response-handler pipeline is now documented on the **CrestApps.Core** site because it is shared across hosts:
+The response-handler pipeline is documented on the **CrestApps.Core** site because it is shared across hosts:
 
 - [Response handlers](https://core.crestapps.com/docs/core/response-handlers)
 - [Chat concepts](https://core.crestapps.com/docs/core/chat)

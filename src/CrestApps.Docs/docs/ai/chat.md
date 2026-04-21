@@ -14,9 +14,9 @@ Provides UI to interact with AI models using the profiles.
 
 ## AI Chat Feature
 
-The **AI Chat** feature builds upon the **AI Services** feature by adding AI chat capabilities. Once enabled, any chat-type AI profile with the "Show On Admin Menu" option will appear under the **Artificial Intelligence** section in the admin menu, allowing you to interact with your chat profiles.
+The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu.
 
-AI profiles are now source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core opens the profile editor directly instead of asking you to choose a source first. The selected chat and utility deployments now determine which client and model are used.
+AI profiles are source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core opens the profile editor directly, and the selected chat and utility deployments determine which client and model are used.
 
 ### AI Profile and Template Editor Layout
 
@@ -28,7 +28,7 @@ The AI Profile editor groups the most common profile settings into five cards at
 - **Instructions** — prompt template selection, template-specific prompt text, and system instructions
 - **Parameters** — model tuning values and data-source retrieval parameters
 
-Profile-source AI Templates now follow the same top-level card grouping:
+Profile-source AI Templates use the same top-level card grouping:
 
 - **General** — title, technical name, category, profile type, orchestrator, response handler, data source, and admin menu visibility
 - **Deployments** — chat deployment and utility deployment
@@ -38,7 +38,7 @@ Profile-source AI Templates now follow the same top-level card grouping:
 
 Additional advanced sections such as capabilities, response handling, analytics, documents, and post-session processing continue to appear below these cards in their existing sections.
 
-For chat profiles, the required **Past messages included** parameter now loads with the current default value automatically when a profile is opened without an explicit saved value, so administrators do not have to populate it manually before saving.
+For chat profiles, the required **Past messages included** parameter loads the default value automatically when a profile is opened without an explicit saved value.
 
 **Note**: This feature does not provide completion client implementations (e.g., OpenAI, Azure OpenAI, etc.). To enable chat capabilities, you must enable at least one feature that implements an AI completion client, such as:
 
@@ -68,7 +68,7 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 - **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
 - **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
-- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions now fall back to **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
+- If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
 
 #### Configuring Chat Mode
 
@@ -129,16 +129,16 @@ TTS playback can be enabled at two levels:
 #### Behavior
 
 - When a user clicks the playback button on a message, the text is sent to the configured TTS provider and audio is streamed back to the browser.
-- Message actions now sit at the bottom-right of each response so they stay aligned above the divider line instead of covering the top edge of the message.
+- Message actions appear at the bottom-right of each response so they stay aligned above the divider line instead of covering the top edge of the message.
 - During playback, the playback button switches between play and pause, stays highlighted while audio is active, and starting another message playback automatically stops the current one.
 - In Conversation mode, the per-message playback button is hidden so the live voice conversation is not interrupted by manual playback.
 - Users can stop playback by clicking the button again.
 
 ### Session document uploads
 
-If a profile allows session documents, the chat UI now keeps restored widget sessions aligned with the current profile before uploading files. This prevents stale session state from sending the attachment request through a different profile and triggering a misleading "session document uploads are not enabled" response.
+If a profile allows session documents, the chat UI keeps restored widget sessions aligned with the current profile before uploading files. This avoids sending attachment requests through a different profile.
 
-The admin and frontend chat widgets now also restore their saved toggle and panel positions before the chat app finishes initializing. This removes the brief flash where an open widget could render in its default corner and then jump to the persisted position.
+The admin and frontend chat widgets restore their saved toggle and panel positions before the chat app finishes initializing.
 
 By default, session-document uploads are stored on the local file system through the shared AI Documents storage pipeline. If you want widget uploads stored in Azure Blob Storage instead, enable `CrestApps.OrchardCore.AI.Documents.Azure` and configure it as described in [AI Documents - Azure Blob Storage](./documents/azure-blob-storage.md).
 

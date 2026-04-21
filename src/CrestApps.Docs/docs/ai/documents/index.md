@@ -200,7 +200,7 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 3. **Configure settings**: Navigate to **Settings > Artificial Intelligence** and select your new index. After this is configured in production, avoid changing the index profile to prevent losing access to documents in existing sessions.
 4. **Enable the feature**: Enable `AI Documents for Chat Sessions` in the admin dashboard.
 5. **Opt in per profile**: Edit the desired AI Profile and check **Allow Documents & Attachments**.
-6. Open a chat session — the attach button and drag-and-drop zone are now available.
+6. Open a chat session. The attach button and drag-and-drop zone are available.
 
 ## Supported Document Formats
 
@@ -218,7 +218,7 @@ For **AI Chat Widget** content items, the same checkbox appears on the widget ed
 | HTML | .html, .htm | Built-in support |
 | YAML | .yml, .yaml | Built-in support |
 
-> Note: Legacy Office formats (.doc, .xls, .ppt) are not supported. Please convert them to the newer formats (.docx, .xlsx, .pptx).
+> Note: Binary Office formats (.doc, .xls, .ppt) are not supported. Convert them to .docx, .xlsx, or .pptx before upload.
 
 ## Configuration
 

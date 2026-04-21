@@ -47,26 +47,6 @@ Add the following section to your `appsettings.json` to configure Azure OpenAI:
 }
 ```
 
-:::warning Legacy Format (Deprecated)
-The following format using `ChatDeploymentName`, `UtilityDeploymentName`, `EmbeddingDeploymentName`, and `ImagesDeploymentName` at both provider and connection levels is still supported but deprecated. Existing configurations will be auto-migrated at runtime.
-
-```json
-{
-  "Connections": {
-    "my-azure-account": {
-      "Endpoint": "https://my-account.openai.azure.com/",
-      "AuthenticationType": "ApiKey",
-      "ApiKey": "...",
-      "ChatDeploymentName": "gpt-4o",
-      "UtilityDeploymentName": "gpt-4o-mini",
-      "EmbeddingDeploymentName": "text-embedding-ada-002",
-      "ImagesDeploymentName": "dall-e-3"
-    }
-  }
-}
-```
-:::
-
 Valid values for `AuthenticationType` are: `Default`, `ManagedIdentity`, or `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
 When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use a **user-assigned managed identity**. If `IdentityId` is omitted or empty, the **system-assigned managed identity** is used.
@@ -134,13 +114,9 @@ Define an AI profile with the following step in your recipe:
 }
 ```
 
-:::tip
-AI Profiles now use `ChatDeploymentId` and `UtilityDeploymentId` instead of the previous single `DeploymentId` field. This allows profiles to specify separate deployments for chat completions and auxiliary utility tasks.
-:::
-
 ## RAG / Data Sources
 
-Data sources and RAG are now implemented in the provider-agnostic `CrestApps.OrchardCore.AI.DataSources` module.
+Data sources and RAG are implemented in the provider-agnostic `CrestApps.OrchardCore.AI.DataSources` module.
 
 See: [AI Data Sources](../data-sources/)
 

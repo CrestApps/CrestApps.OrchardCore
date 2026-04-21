@@ -27,7 +27,7 @@ Two transport types are supported:
 
 The **MCP Client Feature** enables your application to connect to remote MCP servers using standard HTTP requests with **Server-Sent Events (SSE)** transport, which allows real-time data flow between LLMs and external services.
 
-Internally, the Orchard Core module now composes the shared `CrestApps.Core.AI.Mcp` client registrations instead of re-registering those runtime services locally. The base feature enables the shared MCP client runtime with SSE transport, while the optional Stdio feature layers in the local-process transport separately.
+The Orchard Core module composes the shared `CrestApps.Core.AI.Mcp` client registrations. The base feature enables the shared MCP client runtime with SSE transport, while the optional Stdio feature layers in the local-process transport separately.
 
 ### Connect to a Remote MCP Server
 
@@ -99,7 +99,7 @@ The module authenticates to the token endpoint using the client certificate for 
 
 #### Custom Headers
 
-For advanced scenarios, provide a JSON object of HTTP header key-value pairs. This is the legacy approach and is useful when none of the standard authentication types fit your needs.
+For advanced scenarios, provide a JSON object of HTTP header key-value pairs. Use this when none of the standard authentication types fit your needs.
 
 :::note
 All sensitive credentials (API keys, passwords, client secrets, private keys, client certificates) are **encrypted at rest** using ASP.NET Core Data Protection and are **never included** in deployment exports.
