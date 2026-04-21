@@ -11,7 +11,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    ChatInteractionsConstants.Feature.ChatDocuments,
-    "OrchardCore.Elasticsearch",
+        ChatInteractionsConstants.Feature.ChatDocuments,
+        "OrchardCore.Elasticsearch",
     ]
-    )]
+)]

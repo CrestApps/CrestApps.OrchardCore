@@ -13,4 +13,4 @@ using OrchardCore.Modules.Manifest;
     {
         "OrchardCore.Recipes.Core",
     }
-    )]
+)]

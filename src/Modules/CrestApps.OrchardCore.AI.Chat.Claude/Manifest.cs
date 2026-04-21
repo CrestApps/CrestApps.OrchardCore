@@ -7,7 +7,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-    )]
+)]
 
 [assembly: Feature(
     Id = "CrestApps.OrchardCore.AI.Chat.Claude",
@@ -18,4 +18,4 @@ using OrchardCore.Modules.Manifest;
     [
         AIConstants.Feature.Area,
     ]
-    )]
+)]

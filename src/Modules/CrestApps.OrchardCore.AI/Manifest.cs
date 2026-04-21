@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version
-    )]
+)]
 
 [assembly: Feature(
     Id = AIConstants.Feature.Area,
@@ -18,9 +18,9 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-    "CrestApps.OrchardCore.Resources",
+        "CrestApps.OrchardCore.Resources",
     ]
-    )]
+)]
 
 [assembly: Feature(
     Id = AIConstants.Feature.ChatCore,
@@ -30,12 +30,12 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-    "OrchardCore.Liquid",
-    "CrestApps.OrchardCore.Resources",
-    AIPromptingConstants.Feature.Area,
-    AIConstants.Feature.Area,
+        "OrchardCore.Liquid",
+        "CrestApps.OrchardCore.Resources",
+        AIPromptingConstants.Feature.Area,
+        AIConstants.Feature.Area,
     ]
-    )]
+)]
 
 [assembly: Feature(
     Id = AIConstants.Feature.ChatApi,
@@ -44,9 +44,9 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    AIConstants.Feature.ChatCore,
+        AIConstants.Feature.ChatCore,
     ]
-    )]
+)]
 
 [assembly: Feature(
     Id = AIConstants.Feature.ConnectionManagement,
@@ -55,6 +55,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    AIConstants.Feature.Area,
+        AIConstants.Feature.Area,
     ]
-    )]
+)]

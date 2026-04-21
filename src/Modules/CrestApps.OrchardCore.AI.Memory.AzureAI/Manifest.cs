@@ -11,8 +11,8 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    MemoryConstants.Feature.Memory,
-    "OrchardCore.Indexing",
-    "OrchardCore.AzureAI",
+        MemoryConstants.Feature.Memory,
+        "OrchardCore.Indexing",
+        "OrchardCore.AzureAI",
     ]
-    )]
+)]

@@ -12,6 +12,6 @@ using OrchardCore.Modules.Manifest;
     EnabledByDependencyOnly = true,
     Dependencies =
     [
-    AIConstants.Feature.Area,
+        AIConstants.Feature.Area,
     ]
-    )]
+)]

@@ -12,7 +12,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    AIConstants.Feature.Area,
-    "CrestApps.OrchardCore.Recipes",
+        AIConstants.Feature.Area,
+        "CrestApps.OrchardCore.Recipes",
     ]
-    )]
+)]

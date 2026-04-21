@@ -8,7 +8,7 @@ using OrchardCore.Modules.Manifest;
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
     Category = "Users"
-    )]
+)]
 
 [assembly: Feature(
     Name = "Users Core Components",
@@ -16,7 +16,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Users",
     Description = "Provides user components core services",
     EnabledByDependencyOnly = true
-    )]
+)]
 
 [assembly: Feature(
     Name = "User Display Name",
@@ -25,10 +25,10 @@ using OrchardCore.Modules.Manifest;
     Id = UsersConstants.Feature.DisplayName,
     Dependencies =
     [
-    "OrchardCore.ContentFields",
-    UsersConstants.Feature.Area,
+        "OrchardCore.ContentFields",
+        UsersConstants.Feature.Area,
     ]
-    )]
+)]
 
 [assembly: Feature(
     Name = "User Avatar",
@@ -37,7 +37,7 @@ using OrchardCore.Modules.Manifest;
     Id = UsersConstants.Feature.Avatars,
     Dependencies =
     [
-    "OrchardCore.Media",
-    UsersConstants.Feature.Area,
+        "OrchardCore.Media",
+        UsersConstants.Feature.Area,
     ]
-    )]
+)]

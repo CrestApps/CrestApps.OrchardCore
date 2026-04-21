@@ -10,6 +10,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Content Management",
     Dependencies =
     [
-    "CrestApps.OrchardCore.Roles",
+        "CrestApps.OrchardCore.Roles",
     ]
-    )]
+)]

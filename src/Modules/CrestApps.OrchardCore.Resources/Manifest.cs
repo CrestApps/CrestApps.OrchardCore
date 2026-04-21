@@ -9,4 +9,4 @@ using OrchardCore.Modules.Manifest;
     Description = "Extends the Resources module with additional reusable scripts and stylesheets.",
     Category = "Resources",
     IsAlwaysEnabled = false
-    )]
+)]

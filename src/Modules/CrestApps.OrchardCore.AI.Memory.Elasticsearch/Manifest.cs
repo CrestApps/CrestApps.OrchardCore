@@ -11,7 +11,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Artificial Intelligence",
     Dependencies =
     [
-    MemoryConstants.Feature.Memory,
-    "OrchardCore.Elasticsearch",
+        MemoryConstants.Feature.Memory,
+        "OrchardCore.Elasticsearch",
     ]
-    )]
+)]
