@@ -35,10 +35,16 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
 
     public async Task<int> UpdateFrom3Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
+        try
         {
-            table.AddColumn<ChatSessionStatus>("Status");
-        }, collection: _option.AICollectionName);
+            await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
+            {
+                table.AddColumn<ChatSessionStatus>("Status");
+            }, collection: _option.AICollectionName);
+        }
+        catch
+        {
+        }
 
         return 4;
     }
