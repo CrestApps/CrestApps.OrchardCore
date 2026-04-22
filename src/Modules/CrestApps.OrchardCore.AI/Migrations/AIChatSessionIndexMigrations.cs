@@ -38,7 +38,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<AIChatSessionIndex>(table =>
         {
             table.AddColumn<ChatSessionStatus>("Status");
-        });
+        }, collection: _option.AICollectionName);
 
         return 4;
     }
