@@ -6,8 +6,8 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.OpenAI.Azure;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
-using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundJobs;
@@ -377,7 +377,7 @@ internal sealed class AzureOpenAIDataSourceMetadataMigrations : DataMigration
                 {
                     return HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("sync-datasource", async scope =>
                     {
-                        var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+                        var indexingService = scope.ServiceProvider.GetRequiredService<IAIDataSourceIndexingService>();
 
                         await indexingService.SyncDataSourceAsync(dataSource);
                     });

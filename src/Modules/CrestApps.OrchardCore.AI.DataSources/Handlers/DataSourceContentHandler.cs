@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.Core.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -88,22 +88,20 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
 
         try
         {
-            var indexingService = scope.ServiceProvider.GetRequiredService<DataSourceIndexingService>();
+            var indexingService = scope.ServiceProvider.GetRequiredService<IAIDataSourceIndexingService>();
 
             // Re-index updated content items.
-
             if (updatedItems.Count > 0)
             {
                 var contentItemIds = updatedItems.Keys.ToList();
 
-                await indexingService.IndexDocumentsAsync(contentItemIds);
+                await indexingService.SyncSourceDocumentsAsync(contentItemIds);
             }
 
             // Remove deleted content items from the KB index.
-
             if (removedIds.Count > 0)
             {
-                await indexingService.RemoveDocumentsAsync(removedIds);
+                await indexingService.RemoveSourceDocumentsAsync(removedIds);
             }
         }
         catch (Exception ex)

@@ -1,9 +1,6 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
-using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
 using CrestApps.OrchardCore.AI.DataSources.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Endpoints;
@@ -16,11 +13,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Indexing.Models;
 using OrchardCore.Modules;
@@ -49,11 +46,8 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
 
-        services.AddScoped<DataSourceIndexingService>();
+        services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
-        services.AddSingleton<IBackgroundTask, DataSourceSyncBackgroundTask>();
-        services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
-        services.AddTransient<ICatalogEntryHandler<AIDataSource>, DataSourceIndexingHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -24,6 +24,7 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Filter execution** — Executes Elasticsearch DSL filter queries translated from OData for filtered vector search.
 - **OData filter translation** — Translates OData filter expressions into Elasticsearch-compatible bool queries targeting root-level filter fields.
 - **Batch document reading** — Reads source documents from Elasticsearch indexes in batches for efficient indexing.
+- **Automatic source sync** — When Orchard Core updates or deletes documents in Elasticsearch, the module forwards those provider notifications into the shared data-source indexing queue so mapped knowledge-base indexes stay aligned.
 
 ## Getting Started
 

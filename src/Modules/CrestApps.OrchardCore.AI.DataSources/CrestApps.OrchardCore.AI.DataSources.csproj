@@ -21,6 +21,7 @@
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Indexing.Abstractions" Condition="'$(LocalOrchardCoreRepo)' == ''" />
     <PackageReference Include="OrchardCore.Indexing.Core" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
@@ -31,6 +32,10 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <PackageReference Include="CrestApps.Core.Support" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(LocalOrchardCoreRepo)' != '' and Exists('$(LocalOrchardCoreRepo)\\src\\OrchardCore\\OrchardCore.Indexing.Abstractions\\OrchardCore.Indexing.Abstractions.csproj')">
+    <ProjectReference Include="$(LocalOrchardCoreRepo)\src\OrchardCore\OrchardCore.Indexing.Abstractions\OrchardCore.Indexing.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

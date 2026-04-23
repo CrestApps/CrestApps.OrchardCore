@@ -22,8 +22,8 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 - **Knowledge Base Indexing** — Automatically chunks, embeds, and indexes source documents into a master AI Knowledge Base index for efficient vector search.
 - **RAG Search Tool** — An AI tool (`DataSourceSearchTool`) that performs vector search against the KB index and injects relevant context into AI conversations.
 - **Early (Preemptive) RAG** — Optionally pre-fetches relevant context before AI completion to reduce latency and improve response quality.
-- **Real-Time Sync** — Automatically updates the KB index when source content changes via content event handlers.
-- **Background Sync** — Periodic background tasks keep the KB index aligned with source data.
+- **Real-Time Sync** — Automatically queues incremental KB updates when source content changes or when provider indexes are updated through Orchard Core indexing.
+- **Background Sync** — The shared CrestApps.Core queue and alignment services process incremental updates and nightly reconciliation to keep the KB index aligned with source data.
 - **OData Filtering** — Supports OData filter expressions translated to provider-specific queries for precise data retrieval.
 - **Deployment & Recipe Support** — Export and import data source configurations via Orchard Core deployment plans and recipes.
 
@@ -142,33 +142,23 @@ Enable one of the following provider modules to get started:
 - `CrestApps.OrchardCore.AI.DataSources.Elasticsearch`
 - `CrestApps.OrchardCore.AI.DataSources.AzureAI`
 
-## Keeping the AI KB index in sync (custom Index Profiles)
+## Keeping the AI KB index in sync
 
-When your data source points to Orchard Core's built-in **Content** indexes, the module keeps the AI Knowledge Base (KB) index synchronized automatically by listening to content events and triggering incremental re-indexing.
+When your data source points to Orchard Core's built-in **Content** indexes, the module keeps the AI Knowledge Base (KB) index synchronized automatically by listening to content events and calling the shared `IAIDataSourceIndexingService`.
 
-This behavior is implemented in:
+When the source index is updated directly in Elasticsearch or Azure AI Search, Orchard Core now raises `IDocumentIndexHandler` notifications after successful upserts and deletes. CrestApps.OrchardCore bridges those notifications into the shared CrestApps.Core `IAIDataSourceIndexingQueue`, so mapped knowledge-base indexes are refreshed automatically without custom provider-specific observer code.
 
-- `Handlers\DataSourceContentHandler.cs`
+This means the default synchronization flow is:
 
-If you are using a **custom Index Profile** that is updated by something other than Orchard Core content events (e.g. external data ingested directly into Elasticsearch/Azure AI Search, or a custom indexing pipeline), you must ensure that the AI KB index is updated when the source index changes.
+1. A source document is added, updated, or deleted through Orchard Core indexing.
+2. The Orchard bridge queues a targeted data-source sync through `IAIDataSourceIndexingQueue`.
+3. The shared CrestApps.Core background services process the queue and run nightly alignment to repair any drift.
 
-### Options
-
-1. **Trigger a manual sync** from the Data Sources UI (Sync action), or run a scheduled background sync.
-2. **Implement a custom event handler** in your module (recommended for near real-time): detect source changes (whatever "source of truth" events you have), then call `DataSourceIndexingService` to upsert/remove the affected documents.
-
-### Incremental sync API
-
-Use these methods to keep the AI KB index aligned:
-
-- `DataSourceIndexingService.IndexDocumentsAsync(IEnumerable<string> documentIds)`
-- `DataSourceIndexingService.RemoveDocumentsAsync(IEnumerable<string> documentIds)`
-
-The IDs passed must match your data source's configured **Key Field** (e.g. `_id`, `ContentItemId`, etc.).
+For manual recovery or one-off reprocessing, use the **Sync** action in the Data Sources admin UI.
 
 ### Deletion cleanup
 
-When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. This runs as a background job so it does not block the admin UI.
+When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. Cleanup is queued asynchronously so it does not block the admin UI.
 
 When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
 

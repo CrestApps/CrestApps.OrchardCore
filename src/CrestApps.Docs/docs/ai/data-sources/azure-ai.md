@@ -24,6 +24,7 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Filter execution** — Applies OData filter expressions translated to Azure AI Search OData filters targeting root-level filter fields.
 - **OData filter translation** — Translates user OData filters into Azure AI Search-compatible OData with proper field prefixing.
 - **Batch document reading** — Reads source documents from Azure AI Search indexes in batches for efficient indexing.
+- **Automatic source sync** — When Orchard Core updates or deletes documents in Azure AI Search, the module forwards those provider notifications into the shared data-source indexing queue so mapped knowledge-base indexes stay aligned.
 
 ## Getting Started
 

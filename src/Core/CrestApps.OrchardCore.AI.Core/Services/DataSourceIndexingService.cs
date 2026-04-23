@@ -235,6 +235,18 @@ public sealed class DataSourceIndexingService
         IEnumerable<string> documentIds,
         CancellationToken cancellationToken = default)
     {
+        await IndexDocumentsAsync(null, documentIds, cancellationToken);
+    }
+
+    /// <summary>
+    /// Re-indexes specific documents from a matching source index into mapped AI KB indexes.
+    /// Used for real-time incremental updates when source documents change.
+    /// </summary>
+    public async Task IndexDocumentsAsync(
+        string sourceIndexProfileName,
+        IEnumerable<string> documentIds,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(documentIds);
 
         var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
@@ -244,7 +256,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var allDataSources = await _dataSourceStore.GetAllAsync();
+        var allDataSources = await GetMatchingDataSourcesAsync(sourceIndexProfileName);
         var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
 
         if (masterIndexProfiles.Count == 0)
@@ -266,7 +278,7 @@ public sealed class DataSourceIndexingService
             }
 
             var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-            string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(p.Name, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
             if (masterProfile == null)
             {
@@ -299,6 +311,18 @@ public sealed class DataSourceIndexingService
         IEnumerable<string> documentIds,
         CancellationToken cancellationToken = default)
     {
+        await RemoveDocumentsAsync(null, documentIds, cancellationToken);
+    }
+
+    /// <summary>
+    /// Removes specific documents from AI KB indexes mapped to the matching source profile.
+    /// Used for real-time removal when source documents are deleted.
+    /// </summary>
+    public async Task RemoveDocumentsAsync(
+        string sourceIndexProfileName,
+        IEnumerable<string> documentIds,
+        CancellationToken cancellationToken = default)
+    {
         ArgumentNullException.ThrowIfNull(documentIds);
 
         var idList = documentIds.Where(id => !string.IsNullOrEmpty(id)).ToList();
@@ -308,7 +332,7 @@ public sealed class DataSourceIndexingService
             return;
         }
 
-        var allDataSources = await _dataSourceStore.GetAllAsync();
+        var allDataSources = await GetMatchingDataSourcesAsync(sourceIndexProfileName);
         var masterIndexProfiles = (await _indexProfileStore.GetByTypeAsync(DataSourceConstants.IndexingTaskType)).ToList();
 
         if (masterIndexProfiles.Count == 0)
@@ -525,6 +549,20 @@ public sealed class DataSourceIndexingService
                 _logger.LogError(ex, "Error writing re-indexed documents to master index '{IndexName}'.", masterProfile.IndexName);
             }
         }
+    }
+
+    private async Task<IReadOnlyCollection<AIDataSource>> GetMatchingDataSourcesAsync(string sourceIndexProfileName)
+    {
+        var dataSources = (await _dataSourceStore.GetAllAsync()).ToArray();
+
+        if (string.IsNullOrWhiteSpace(sourceIndexProfileName))
+        {
+            return dataSources;
+        }
+
+        return dataSources
+            .Where(dataSource => string.Equals(dataSource.SourceIndexProfileName, sourceIndexProfileName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
     }
 
     private async Task SyncDataSourceWithRetryAsync(
