@@ -1,9 +1,12 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.AzureAI;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Settings;
 
@@ -35,6 +38,32 @@ public sealed class AIDataSourceOptionsRegistrationTests
         Assert.Equal(9, options.DefaultTopNDocuments);
         Assert.NotNull(mapping);
         Assert.Equal("ContentItemId", mapping.DefaultKeyField);
+    }
+
+    [Fact]
+    public void ConfigureServices_OverridesSharedQueueWithOrchardDeferredQueueProcessor()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(CreateSiteService(new AIDataSourceSettings()));
+
+        new CrestApps.OrchardCore.AI.DataSources.Startup().ConfigureServices(services);
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IAIDataSourceIndexingQueue) &&
+                descriptor.ImplementationType?.Name == "OrchardAIDataSourceIndexingQueue" &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IBackgroundTask) &&
+                descriptor.ImplementationType == typeof(DataSourceAlignmentBackgroundTask));
+
+        using var serviceProvider = services.BuildServiceProvider();
+
+        Assert.Equal(
+            "OrchardAIDataSourceIndexingQueue",
+            serviceProvider.GetRequiredService<IAIDataSourceIndexingQueue>().GetType().Name);
     }
 
     private static ISiteService CreateSiteService(AIDataSourceSettings settings)

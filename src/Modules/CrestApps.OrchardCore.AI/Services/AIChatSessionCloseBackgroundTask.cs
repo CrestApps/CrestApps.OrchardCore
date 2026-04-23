@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -62,7 +63,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         var cutoffUtc = utcNow - GetInactivityTimeout(profile);
 
         var inactiveSessions = await session.Query<AIChatSession, AIChatSessionIndex>(
-            i => i.ProfileId == profile.ItemId && i.Status == (int)ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
+            i => i.ProfileId == profile.ItemId && i.Status == ChatSessionStatus.Active && i.LastActivityUtc < cutoffUtc,
             collection: AIConstants.AICollectionName)
             .ListAsync(cancellationToken);
 
@@ -73,10 +74,10 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
                 break;
             }
 
-            chatSession.Status = ChatSessionStatus.Closed;
+            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
+            chatSession.Status = DetermineInactiveSessionStatus(prompts);
             chatSession.ClosedAtUtc = utcNow;
 
-            var prompts = await promptStore.GetPromptsAsync(chatSession.SessionId);
             var result = await RunPostCloseProcessingAsync(postCloseProcessor, profile, chatSession, prompts, logger, cancellationToken);
 
             await session.SaveAsync(chatSession, false, collection: AIConstants.AICollectionName, cancellationToken);
@@ -102,7 +103,7 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
     {
         var pendingSessions = (await session.Query<AIChatSession, AIChatSessionIndex>(
             i => i.ProfileId == profile.ItemId
-                && i.Status == (int)ChatSessionStatus.Closed,
+                && (i.Status == ChatSessionStatus.Closed || i.Status == ChatSessionStatus.Abandoned),
             collection: AIConstants.AICollectionName)
             .ListAsync(cancellationToken))
             .Where(chatSession => chatSession.PostSessionProcessingStatus == PostSessionProcessingStatus.Pending)
@@ -176,6 +177,13 @@ public sealed class AIChatSessionCloseBackgroundTask : IBackgroundTask
         return settings.SessionInactivityTimeoutInMinutes > 0
             ? TimeSpan.FromMinutes(settings.SessionInactivityTimeoutInMinutes)
             : _defaultInactivityTimeout;
+    }
+
+    private static ChatSessionStatus DetermineInactiveSessionStatus(IReadOnlyList<AIChatSessionPrompt> prompts)
+    {
+        return prompts.Any(prompt => prompt.Role == ChatRole.User)
+            ? ChatSessionStatus.Closed
+            : ChatSessionStatus.Abandoned;
     }
 
     private static async Task TriggerSessionClosedWorkflowAsync(

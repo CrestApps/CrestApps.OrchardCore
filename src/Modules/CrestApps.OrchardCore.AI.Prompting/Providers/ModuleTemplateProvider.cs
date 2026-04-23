@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Prompting.Providers;
 /// </summary>
 public sealed class ModuleTemplateProvider : ITemplateProvider
 {
-    private const string PromptsDirectorySubPath = FileSystemTemplateProvider.PromptsDirectoryPath + "/";
+    private const string PromptsDirectorySubPath = PromptsFileSystemTemplateProvider.PromptsDirectoryPath + "/";
 
     private readonly IExtensionManager _extensionManager;
     private readonly IApplicationContext _applicationContext;
