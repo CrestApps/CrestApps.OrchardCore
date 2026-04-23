@@ -23,7 +23,7 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 - **RAG Search Tool** — An AI tool (`DataSourceSearchTool`) that performs vector search against the KB index and injects relevant context into AI conversations.
 - **Early (Preemptive) RAG** — Optionally pre-fetches relevant context before AI completion to reduce latency and improve response quality.
 - **Real-Time Sync** — Automatically queues incremental KB updates when source content changes or when provider indexes are updated through Orchard Core indexing.
-- **Background Sync** — CrestApps.OrchardCore defers incremental sync work until the current request completes, then hands it to an Orchard background job so the KB index stays aligned without blocking the UI. A nightly alignment task still repairs drift.
+- **Background Sync** — CrestApps.OrchardCore defers incremental sync work until the current request completes, then hands it to an Orchard background job through the Orchard-specific indexing service adapter so the KB index stays aligned without blocking the UI. A nightly alignment task still repairs drift.
 - **OData Filtering** — Supports OData filter expressions translated to provider-specific queries for precise data retrieval.
 - **Deployment & Recipe Support** — Export and import data source configurations via Orchard Core deployment plans and recipes.
 
@@ -153,9 +153,11 @@ This means the default synchronization flow is:
 1. A source document is added, updated, or deleted through Orchard Core indexing.
 2. The Orchard bridge queues a targeted data-source sync through `IAIDataSourceIndexingQueue`.
 3. The Orchard queue batches the work for the current request and schedules `HttpBackgroundJob.ExecuteAfterEndOfRequestAsync(...)` from a deferred task.
-4. The background job reindexes the mapped knowledge-base documents, and the nightly alignment task still repairs any drift that remains.
+4. The background job resolves the Orchard-specific `IAIDataSourceIndexingService` implementation, reindexes the mapped knowledge-base documents, and the nightly alignment task still repairs any drift that remains.
 
-For manual recovery or one-off reprocessing, use the **Sync** action in the Data Sources admin UI.
+Synchronizing a **source** index profile from **Search > Indexing** also queues a full re-sync for every AI data source whose **Source Index** matches that profile. This is the expected recovery path when you rebuild Orchard's built-in **Content** index and want the mapped `ai_knowledge_base_warehouse` documents regenerated from the rebuilt source index.
+
+For manual recovery or one-off reprocessing of a single mapping, use the **Sync** action in the Data Sources admin UI.
 
 ### Deletion cleanup
 

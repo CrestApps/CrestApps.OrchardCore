@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.DataSources.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Migrations;
 using CrestApps.OrchardCore.AI.DataSources.Recipes;
 using CrestApps.OrchardCore.AI.DataSources.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -53,9 +54,14 @@ public sealed class Startup : StartupBase
         services.RemoveAll<IAIDataSourceIndexingQueue>()
             .AddScoped<IAIDataSourceIndexingQueue, OrchardAIDataSourceIndexingQueue>();
 
+        services.RemoveAll<IAIDataSourceIndexingService>()
+            .AddScoped<DataSourceIndexingService>()
+            .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
+
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();
+        services.AddIndexProfileHandler<DataSourceSourceIndexProfileHandler>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

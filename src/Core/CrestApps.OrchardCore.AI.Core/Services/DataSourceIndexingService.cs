@@ -612,7 +612,7 @@ public sealed class DataSourceIndexingService
         }
 
         var masterProfile = masterIndexProfiles.FirstOrDefault(p =>
-        string.Equals(p.IndexName, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
+        string.Equals(p.Name, dataSource.AIKnowledgeBaseIndexProfileName, StringComparison.OrdinalIgnoreCase));
 
         if (masterProfile == null)
         {

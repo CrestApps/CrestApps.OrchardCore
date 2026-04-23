@@ -66,6 +66,28 @@ public sealed class AIDataSourceOptionsRegistrationTests
             serviceProvider.GetRequiredService<IAIDataSourceIndexingQueue>().GetType().Name);
     }
 
+    [Fact]
+    public void ConfigureServices_RegistersOrchardIndexingAdapterAndProfileHandlers()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(CreateSiteService(new AIDataSourceSettings()));
+
+        new CrestApps.OrchardCore.AI.DataSources.Startup().ConfigureServices(services);
+
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IAIDataSourceIndexingService) &&
+                descriptor.ImplementationType?.Name == "OrchardAIDataSourceIndexingServiceAdapter" &&
+                descriptor.Lifetime == ServiceLifetime.Scoped);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ImplementationType?.Name == "DataSourceIndexProfileHandler");
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ImplementationType?.Name == "DataSourceSourceIndexProfileHandler");
+    }
+
     private static ISiteService CreateSiteService(AIDataSourceSettings settings)
     {
         var site = new Mock<ISite>();

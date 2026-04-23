@@ -19,7 +19,8 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
-    private readonly IStringLocalizer S;
+
+    internal readonly IStringLocalizer S;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
